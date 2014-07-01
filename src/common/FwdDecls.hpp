@@ -48,29 +48,37 @@ namespace ESMC {
 
     // SmartPtrs and such
     class RefCountable;
-    template<typename T> class SmartPtr;
-    template<typename T> class CSmartPtr;
+    template <typename T> class SmartPtr;
+    template <typename T> class CSmartPtr;
 
-    // Expressions
-    class ExprMgr;
-    class ExpressionBase;
-    class ConstExpression;
-    class VarExpression;
-    class BoundVarExpression;
-    class OpExpression;
-    class QuantifiedExpressionBase;
-    class AQuantifiedExpression;
-    class EQuantifiedExpression;
+    // Expression managers
+    // and semanticizers
+    namespace Exprs {
+        template <typename LEType> class SemanticizerBase;
+        class Z3Semanticizer;
+        template <typename ExtType, typename SemType=Z3Semanticizer> class ExprManager;
 
-    class ExpressionPtrHasher;
-    class ExpressionPtrEquals;
-    class ExpressionPtrCompare;
+        template <typename ExtType> class ExprMgr;
+        template <typename ExtType> class ExpressionBase;
+        template <typename ExtType> class ConstExpression;
+        template <typename ExtType> class VarExpression;
+        template <typename ExtType> class BoundVarExpression;
+        template <typename ExtType> class OpExpression;
+        template <typename ExtType> class QuantifiedExpressionBase;
+        template <typename ExtType> class AQuantifiedExpression;
+        template <typename ExtType> class EQuantifiedExpression;
+
+        class ExpressionPtrHasher;
+        class ExpressionPtrEquals;
+        class ExpressionPtrCompare;
     
-    typedef CSmartPtr<ExpressionBase> Expression;
-    typedef SmartPtr<ExpressionBase> ExprInternal;
+        template <typename ExtType> using Expression = CSmartPtr<ExpressionBase<ExtType>>;
+        template <typename ExtType> using ExprInternal = SmartPtr<ExpressionBase<ExtType>>;
 
-    // Expression Visitors
-    class ExpressionVisitorBase;
+        // Expression Visitors
+        class ExpressionVisitorBase;
+    } /* end namespace Exprs */
+    
 
     // UID Generators
     class UIDGenerator;

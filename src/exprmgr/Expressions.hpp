@@ -48,236 +48,264 @@
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
 
+// This classes in this file are heavily templatized
+// to allow for flexibility via arbitrary extension objects
+
+
 namespace ESMC {
-
-    class ExpressionPtrEquals
-    {
-    public:
-        template <typename T>
-        inline bool operator () (const ExpressionBase<T>* Exp1, 
-                                 const ExpressionBase<T>* Exp2) const;
-    };
-
-    class ExpressionPtrHasher
-    {
-    public:
-        template <typename T>
-        inline u64 operator () (const ExpressionBase<T>* Exp) const;
-    };
-
-    class ExpressionPtrCompare
-    {
-    public:
-        template <typename T>
-        inline bool operator () (const ExpressionBase<T>* Exp1, 
-                                 const ExpressionBase<T>* Exp2) const;
-    };
-
-    // Type ExtType must be default constructible
-    template <typename ExtType, typename LExpType>
-    class ExpressionBase : public RefCountable
-    {
-    private:
-        ExprMgr<LExpType, ExtType>* Manager;
-        mutable bool HashValid;
-        ExtType ExtensionData;
-
-    protected:
-        mutable u64 HashCode;
-
-    public:
-        ExpressionBase(ExprMgr<LExpType, ExtType>* Manager);
-        virtual ~ExpressionBase();
-
-        ExprMgr* GetMgr() const;
-        u64 Hash() const;
-        bool Equals(const ExpressionBase* Other) const;
-        bool NEquals(const ExpressionBase* Other) const;
-        bool LT(const ExpressionBase* Other) const;
-        bool LE(const ExpressionBase* Other) const;
-        bool GE(const ExpressionBase* Other) const;
-        bool GT(const ExpressionBase* Other) const;
-
-        const T& GetExtensionData() const;
+    namespace Exprs {
         
-        string ToString() const;
+        // Comparators
+        class ExpressionPtrEquals
+        {
+        public:
+            template <typename ExtType>
+            inline bool operator () (const ExpressionBase<ExtType>* Exp1, 
+                                     const ExpressionBase<ExtType>* Exp2) const;
+        };
 
-        // Abstract methods
-    protected:
-        virtual void ComputeHash() const = 0;
 
-    public:
-        virtual i32 Compare(const ExpressionBase* Other) const = 0;
-        virtual void Accept(ExpressionVisitorBase* Visitor) const = 0;
+        class ExpressionPtrHasher
+        {
+        public:
+            template <typename ExtType>
+            inline u64 operator () (const ExpressionBase<ExtType>* Exp) const;
+        };
+
+
+        class ExpressionPtrCompare
+        {
+        public:
+            template <typename ExtType>
+            inline bool operator () (const ExpressionBase<ExtType>* Exp1, 
+                                     const ExpressionBase<ExtType>* Exp2) const;
+        };
+
+
+        // Type ExtType must be default constructible
+        template <typename ExtType>
+        class ExpressionBase : public RefCountable
+        {
+        public:
+            typedef ExprMgr<ExtType, SemType> MgrType;
+            typedef ExpressionVisitorBase<ExtType, SemType> VisitorType;
+            typedef Expression<ExtType, SemType> ExprType;
+            ExtType ExtensionData;
+
+        private:
+            MgrType* Manager;
+            mutable bool HashValid;
+            mutable ExtType ExtensionData;
+
+        protected:
+            mutable u64 HashCode;
+
+        public:
+            inline ExpressionBase(MgrType* Manager, const ExtType& ExtData = ExtType());
+            virtual inline ~ExpressionBase();
+
+            inline MgrType* GetMgr() const;
+            inline u64 Hash() const;
+            inline bool Equals(const ExpressionBase* Other) const;
+            inline bool NEquals(const ExpressionBase* Other) const;
+            inline bool LT(const ExpressionBase* Other) const;
+            inline bool LE(const ExpressionBase* Other) const;
+            inline bool GE(const ExpressionBase* Other) const;
+            inline bool GT(const ExpressionBase* Other) const;
+            inline string ToString() const;
+
+            // Abstract methods
+        protected:
+            virtual void ComputeHash() const = 0;
+
+        public:
+            virtual i32 Compare(const ExpressionBase* Other) const = 0;
+            virtual void Accept(VisitorType* Visitor) const = 0;
         
-        // Downcasts
-        template<typename U> inline U* As();
-        template<typename U> inline const U* As() const;
-        template<typename U> inline U* SAs();
-        template<typename U> inline const U* SAs() const;
-    };
+            // Downcasts
+            template<typename U> inline U* As();
+            template<typename U> inline const U* As() const;
+            template<typename U> inline U* SAs();
+            template<typename U> inline const U* SAs() const;
+        };
 
-    template <typename T>
-    class ConstExpression : public ExpressionBase<T>
-    {
-    private:
-        const string& ConstValue;
-        i64 ConstType;
 
-    public:
-        ConstExpression(ExprMgr<T>* Manager, const string& ConstValue,
-                        i64 ConstType);
-        virtual ~ConstExpression();
+        template <typename ExtType, typename SemType>
+        class ConstExpression : public ExpressionBase<ExtType, SemType>
+        {
+        private:
+            const string& ConstValue;
+            i64 ConstType;
 
-        const string& GetConstValue() const;
-        i64 GetConstType() const;
+        public:
+            inline ConstExpression(MgrType* Manager, const string& ConstValue,
+                                   i64 ConstType, const ExtType& ExtData = ExtType());
+            inline virtual ~ConstExpression();
 
-    protected:
-        virtual void ComputeHash() const override;
+            inline const string& GetConstValue() const;
+            inline i64 GetConstType() const;
+
+        protected:
+            inline virtual void ComputeHash() const override;
         
-    public:
-        virtual i32 Compare(const ExpressionBase* Other) const override;
-        virtual void Accept(ExpressionVisitorBase* Visitor) const = 0;
-    };
+        public:
+            inline virtual i32 Compare(const ExpressionBase* Other) const override;
+            inline virtual void Accept(VisitorType* Visitor) const = 0;
+        };
+    
 
-    class VarExpression : public ExpressionBase
-    {
-    private:
-        string VarName;
-        i64 VarType;
+        template <typename ExtType, typename SemType>
+        class VarExpression : public ExpressionBase<ExtType, SemType>
+        {
+        private:
+            string VarName;
+            i64 VarType;
 
-    public:
-        VarExpression(ExprMgr* Manager, const string& VarName,
-                      i64 VarType);
-        virtual ~VarExpression();
-        const string& GetVarName() const;
-        i64 GetVarType() const;
+        public:
+            inline VarExpression(MgrType* Manager, const string& VarName,
+                                 i64 VarType, const ExtType& ExtData = ExtType());
+            inline virtual ~VarExpression();
+            inline const string& GetVarName() const;
+            inline i64 GetVarType() const;
 
-    protected:
-        virtual void ComputeHash() const override;
+        protected:
+            inline virtual void ComputeHash() const override;
 
-    public:
-        virtual i32 Compare(const ExpressionBase* Other) const override;
-        virtual void Accept(ExpressionVisitorBase* Visitor) const override;
-    };
+        public:
+            inline virtual i32 Compare(const ExpressionBase* Other) const override;
+            inline virtual void Accept(VisitorType* Visitor) const override;
+        };
 
-    class BoundVarExpression : public VarExpression
-    {
-    private:
-        u64 VarUID;
-        static UIDGenerator UIDGen;
 
-    public:
-        BoundVarExpression(ExprMgr* Manager, const string& VarName,
-                           i64 VarType, i64 VarUID = -1);
-        virtual ~BoundVarExpression();
-        u64 GetVarUID() const;
+        template<typename ExtType, typename SemType>
+        class BoundVarExpression : public VarExpression<ExtType, SemType>
+        {
+        private:
+            u64 VarUID;
+            static UIDGenerator UIDGen;
+
+        public:
+            inline BoundVarExpression(MgrType* Manager, const string& VarName,
+                                      i64 VarType, i64 VarUID = -1,
+                                      const ExtType& ExtData = ExtType());
+            inline virtual ~BoundVarExpression();
+            inline u64 GetVarUID() const;
         
-    protected:
-        virtual void ComputeHash() const override;
+        protected:
+            inline virtual void ComputeHash() const override;
         
-    public:
-        virtual i32 Compare(const ExpressionBase* Other) const override;
-        virtual void Accept(ExpressionVisitorBase* Visitor) const override;
-    };
+        public:
+            inline virtual i32 Compare(const ExpressionBase* Other) const override;
+            inline virtual void Accept(VisitorType* Visitor) const override;
+        };
 
-    class OpExpression : public ExpressionBase
-    {
-    private:
-        i64 OpCode;
-        vector<Expression> Children;
 
-    public:
-        OpExpression(ExprMgr* Manager, i64 OpCode,
-                     const vector<Expression> Children);
-        virtual ~OpExpression();
-        i64 GetOpCode() const;
-        const vector<Expression>& GetChildren() const;
+        template<typename ExtType, typename SemType>
+        class OpExpression : public ExpressionBase<ExtType, SemType>
+        {
+        private:
+            i64 OpCode;
+            vector<ExprType> Children;
 
-    protected:
-        virtual void ComputeHash() const override;
+        public:
+            inline OpExpression(MgrType* Manager, i64 OpCode,
+                                const vector<ExprType>& Children,
+                                const ExtType& ExtData = ExtType());
+            inline virtual ~OpExpression();
+            inline i64 GetOpCode() const;
+            inline const vector<ExprType>& GetChildren() const;
 
-    public:
-        virtual i32 Compare(const ExpressionBase* Other) const override;
-        virtual void Accept(ExpressionVisitorBase* Visitor) const override;
-    };
+        protected:
+            inline virtual void ComputeHash() const override;
 
-    class QuantifiedExpressionBase : public ExpressionBase
-    {
-    private:
-        vector<Expression> QVarList;
-        Expression QExpression;
+        public:
+            inline virtual i32 Compare(const ExpressionBase* Other) const override;
+            inline virtual void Accept(VisitorType* Visitor) const override;
+        };
 
-    public:
-        QuantifiedExpressionBase(ExprMgr* Manager,
-                                 const vector<Expression>& QVarList,
-                                 const Expression& QExpression);
-        virtual ~QuantifiedExpressionBase();
-        const vector<Expression>& GetQVarList() const;
-        const Expression& GetQExpression() const;
 
-    protected:
-        i32 CompareInternal(const QuantifiedExpressionBase* Other) const;
-        void ComputeHashInternal() const;
+        template<typename ExtType, typename SemType>
+        class QuantifiedExpressionBase : public ExpressionBase<ExtType, SemType>
+        {
+        private:
+            vector<ExprType> QVarList;
+            Expression QExpression;
 
-    public:
-        virtual bool IsForAll() const = 0;
-        virtual bool IsExists() const = 0;
-    };
+        public:
+            inline QuantifiedExpressionBase(MgrType* Manager,
+                                            const vector<ExprType>& QVarList,
+                                            const ExprType& QExpression,
+                                            const ExtType& ExtData = ExtType());
+            inline virtual ~QuantifiedExpressionBase();
+            inline const vector<ExprType>& GetQVarList() const;
+            inline const ExprType& GetQExpression() const;
 
-    class EQuantifiedExpression : public QuantifiedExpressionBase
-    {
-    public:
-        using QuantifiedExpressionBase::QuantifiedExpressionBase;
-        virtual ~EQuantifiedExpression();
+        protected:
+            inline i32 CompareInternal(const QuantifiedExpressionBase* Other) const;
+            inline void ComputeHashInternal() const;
 
-    protected:
-        virtual void ComputeHash() const override;
+        public:
+            virtual bool IsForAll() const = 0;
+            virtual bool IsExists() const = 0;
+        };
+
+
+        template<typename ExtType, typename SemType>
+        class EQuantifiedExpression : public QuantifiedExpressionBase<ExtType, SemType>
+        {
+        public:
+            using QuantifiedExpressionBase::QuantifiedExpressionBase;
+            inline virtual ~EQuantifiedExpression();
+
+        protected:
+            inline virtual void ComputeHash() const override;
         
-    public:
-        virtual i32 Compare(const ExpressionBase* Other) const override;
-        virtual void Accept(ExpressionVisitorBase* Visitor) const override;
-        virtual bool IsForAll() const override;
-        virtual bool IsExists() const override;
-    };
+        public:
+            inline virtual i32 Compare(const ExpressionBase* Other) const override;
+            inline virtual void Accept(VisitorType* Visitor) const override;
+            inline virtual bool IsForAll() const override;
+            inline virtual bool IsExists() const override;
+        };
 
-    class AQuantifiedExpression : public QuantifiedExpressionBase
-    {
-    public:
-        using QuantifiedExpressionBase::QuantifiedExpressionBase;
-        virtual ~AQuantifiedExpression();
 
-    protected:
-        virtual void ComputeHash() const override;
+        template<typename ExtType, typename SemType>
+        class AQuantifiedExpression : public QuantifiedExpressionBase<ExtType, SemType>
+        {
+        public:
+            using QuantifiedExpressionBase::QuantifiedExpressionBase;
+            inline virtual ~AQuantifiedExpression();
+
+        protected:
+            inline virtual void ComputeHash() const override;
         
-    public:
-        virtual i32 Compare(const ExpressionBase* Other) const override;
-        virtual void Accept(ExpressionVisitorBase* Visitor) const override;
-        virtual bool IsForAll() const override;
-        virtual bool IsExists() const override;
-    };
+        public:
+            inline virtual i32 Compare(const ExpressionBase* Other) const override;
+            inline virtual void Accept(VisitorType* Visitor) const override;
+            inline virtual bool IsForAll() const override;
+            inline virtual bool IsExists() const override;
+        };
 
-    // implementation of downcasts
-    template <typename T> inline T* ExpressionBase::As()
-    {
-        return dynamic_cast<T*>(this);
-    }
+        template <typename T> inline T* ExpressionBase::As()
+        {
+            return dynamic_cast<T*>(this);
+        }
 
-    template <typename T> inline const T* ExpressionBase::As() const
-    {
-        return dynamic_cast<const T*>(this);
-    }
+        template <typename T> inline const T* ExpressionBase::As() const
+        {
+            return dynamic_cast<const T*>(this);
+        }
 
-    template <typename T> inline T* ExpressionBase::SAs()
-    {
-        return static_cast<T*>(this);
-    }
+        template <typename T> inline T* ExpressionBase::SAs()
+        {
+            return static_cast<T*>(this);
+        }
 
-    template <typename T> inline const T* ExpressionBase::SAs() const
-    {
-        return static_cast<const T*>(this);
-    }
+        template <typename T> inline const T* ExpressionBase::SAs() const
+        {
+            return static_cast<const T*>(this);
+        }
 
+    } /* end namespace */
 } /* end namespace */
 
 #endif /* ESMC_EXPRESSIONS_HPP_ */
