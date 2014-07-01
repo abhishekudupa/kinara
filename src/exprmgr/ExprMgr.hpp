@@ -45,8 +45,24 @@
 #include "../common/FwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 
+#include <unordered_map>
+
+
 namespace ESMC {
 
+    class ExprTypeError : public exception
+    {
+    private:
+        string Message;
+
+    public:
+        ExprTypeError(const string& Message);
+        virtual ~ExprTypeError();
+
+        virtual const char* what() const noexcept override;
+    };
+
+    template <typename LExpType>
     class ExprSemanticizerBase
     {
     private:
@@ -54,17 +70,52 @@ namespace ESMC {
 
     public:
         ExprSemanticizerBase(const string& Name);
+
+        virtual void TypeCheck(const Expression& Exp) const = 0;
+        virtual Expression Canonicalize(const Expression& Exp) const = 0;
+        virtual LExpType LowerExpr(const Expression& Exp) const = 0;
+        virtual Expression RaiseExpr(const LExpType& LExp) const = 0;
         virtual string ExprToString(const ExpressionBase* Exp) const = 0;
+        virtual string TypeToString(i64 Type) const = 0;
+        virtual Expression Simplify(const Expression& Exp) const = 0;
+        virtual Expression ElimQuantifiers(const Expression& Exp) const = 0;
+        virtual i64 RegisterUninterpretedFunction(const string& Name,
+                                                  const vector<i64> DomTypes,
+                                                  i64 RangeType) const = 0;
     };
 
+    template <typename LExpType>
     class ExprMgr
     {
     private:
-        ExprSemanticizerBase* Sem;
+        ExprSemanticizerBase<LExpType>* Sem;
     public:
-        ExprMgr(ExprSemanticizerBase* Sem);
+        typedef unordered_map<Expression, Expression, 
+                              ExpressionPtrHasher,
+                              ExpressionPtrEquals> SubstMap;
+
+        ExprMgr(ExprSemanticizerBase<LExpType>* Sem);
         ~ExprMgr();
 
+        Expression MakeVal(const string& ValString, i64 ValType);
+        Expression MakeVar(const string& VarName, i64 VarType);
+        Expression MakeBoundVar(const string& VarName, i64 VarType,
+                                i64 VarUID = -1);
+        Expression MakeExpr(i64 OpCode, const vector<Expression>& Children);
+        Expression MakeExists(const vector<Expression>& QVars, 
+                              const Expression& QExpr);
+        Expression MakeForAll(const vector<Expression>& QVars, 
+                              const Expression& QExpr);
+        i64 MakeUninterpretedFunction(const string& Name, 
+                                      const vector<i64> Range,
+                                      i64 Domain);
+
+        Expression ElimQuantifiers(const Expression& Exp);
+        Expression Simplify(const Expression& Exp);
+
+        Expression Substitute(const SubstMap& SMap,
+                              const Expression& Exp);
+                                
         ExprSemanticizerBase* GetSemanticizer() const;
     };
 

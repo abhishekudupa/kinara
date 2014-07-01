@@ -15,6 +15,7 @@ PROJECT_MODULES= \
 
 PROJECT_SOURCES= \
 	Expressions.cpp \
+	Visitors.cpp \
 
 
 VPATH=$(addsuffix /:, $(addprefix $(SRC_DIR)/, $(PROJECT_MODULES)))
@@ -114,15 +115,15 @@ endif
 .PHONY:	clean distclean
 
 clean:
-	# rm -rf obj/debug/*
-	# rm -rf obj/opt/*
-	# rm -rf obj/prof/*
-	# rm -rf lib/debug/*
-	# rm -rf lib/opt/*
-	# rm -rf lib/prof/*
-	# rm -rf bin/debug/*
-	# rm -rf bin/opt/*
-	# rm -rf bin/prof/*
+	rm -rf obj/debug/*
+	rm -rf obj/opt/*
+	rm -rf obj/prof/*
+	rm -rf lib/debug/*
+	rm -rf lib/opt/*
+	rm -rf lib/prof/*
+	rm -rf bin/debug/*
+	rm -rf bin/opt/*
+	rm -rf bin/prof/*
 	# $(MAKE) $(MAKECMDGOALS) -C $(ESOLVER_ROOT)/src/synthlib2parser
 
 distclean:

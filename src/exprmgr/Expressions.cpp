@@ -39,11 +39,31 @@
 
 #include "Expressions.hpp"
 #include "ExprMgr.hpp"
+#include "Visitors.hpp"
+
 #include "../utils/UIDGenerator.hpp"
 
 #include <boost/functional/hash.hpp>
 
 namespace ESMC {
+
+    // hashers, equality testers and comparisons
+    bool ExpressionPtrEquals::operator () (const ExpressionBase* Exp1,
+                                           const ExpressionBase* Exp2) const
+    {
+        return (Exp1->Equals(Exp2));
+    }
+
+    u64 ExpressionPtrHasher::operator () (const ExpressionBase* Exp) const
+    {
+        return Exp->Hash();
+    }
+
+    bool ExpressionPtrCompare::operator () (const ExpressionBase* Exp1, 
+                                            const ExpressionBase* Exp2) const
+    {
+        return (Exp1->LT(Exp2));
+    }
 
     // ExpressionBase implementation
     ExpressionBase::ExpressionBase(ExprMgr* Manager)
@@ -501,63 +521,6 @@ namespace ESMC {
         return false;
     }
 
-    ExpressionVisitorBase::ExpressionVisitorBase(const string& Name)
-        : Name(Name)
-    {
-        // Nothing here
-    }
-
-    ExpressionVisitorBase::~ExpressionVisitorBase()
-    {
-        // Nothing here
-    }
-
-    const string& ExpressionVisitorBase::GetName() const
-    {
-        return Name;
-    }
-
-    void ExpressionVisitorBase::VisitConstExpression(const ConstExpression* Exp)
-    {
-        // Nothing here
-    }
-
-    void ExpressionVisitorBase::VisitVarExpression(const VarExpression* Exp)
-    {
-        // Nothing here
-    }
-
-    void ExpressionVisitorBase::VisitBoundVarExpression(const BoundVarExpression* Exp)
-    {
-        // Nothing here
-    }
-
-    void ExpressionVisitorBase::VisitOpExpression(const OpExpression* Exp)
-    {
-        auto const& Children = Exp->GetChildren();
-        for (auto const& Child : Children) {
-            Child->Accept(this);
-        }
-    }
-
-    void ExpressionVisitorBase::VisitAQuantifiedExpression(const AQuantifiedExpression *Exp)
-    {
-        auto const& QVars = Exp->GetQVarList();
-        for(auto const& QVar : QVars) {
-            QVar->Accept(this);
-        }
-        Exp->GetQExpression()->Accept(this);
-    }
-
-    void ExpressionVisitorBase::VisitEQuantifiedExpression(const EQuantifiedExpression *Exp)
-    {
-        auto const& QVars = Exp->GetQVarList();
-        for(auto const& QVar : QVars) {
-            QVar->Accept(this);
-        }
-        Exp->GetQExpression()->Accept(this);
-    }
-    
 } /* end namespace */
 
 // 

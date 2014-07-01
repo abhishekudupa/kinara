@@ -1,8 +1,8 @@
-// Types.hpp --- 
+// Visitors.cpp --- 
 // 
-// Filename: Types.hpp
+// Filename: Visitors.cpp
 // Author: Abhishek Udupa
-// Created: Sun Jun 29 13:43:04 2014 (-0400)
+// Created: Mon Jun 30 16:03:02 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,33 +37,69 @@
 
 // Code:
 
-// Common types used throughout the solver
+#include "Visitors.hpp"
+#include "Expressions.hpp"
 
-#if !defined ESMC_TYPES_HPP_
-#define ESMC_TYPES_HPP_
+namespace ESMC {
 
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <inttypes.h>
-#include <exception>
+    ExpressionVisitorBase::ExpressionVisitorBase(const string& Name)
+        : Name(Name)
+    {
+        // Nothing here
+    }
 
-using namespace std;
+    ExpressionVisitorBase::~ExpressionVisitorBase()
+    {
+        // Nothing here
+    }
 
-typedef int8_t i08;
-typedef uint8_t u08;
-typedef int16_t i16;
-typedef uint16_t u16;
-typedef int32_t i32;
-typedef uint32_t u32;
-typedef int64_t i64;
-typedef uint64_t u64;
+    const string& ExpressionVisitorBase::GetName() const
+    {
+        return Name;
+    }
 
-#endif /* ESMC_TYPES_HPP_ */
+    void ExpressionVisitorBase::VisitConstExpression(const ConstExpression* Exp)
+    {
+        // Nothing here
+    }
+
+    void ExpressionVisitorBase::VisitVarExpression(const VarExpression* Exp)
+    {
+        // Nothing here
+    }
+
+    void ExpressionVisitorBase::VisitBoundVarExpression(const BoundVarExpression* Exp)
+    {
+        // Nothing here
+    }
+
+    void ExpressionVisitorBase::VisitOpExpression(const OpExpression* Exp)
+    {
+        auto const& Children = Exp->GetChildren();
+        for (auto const& Child : Children) {
+            Child->Accept(this);
+        }
+    }
+
+    void ExpressionVisitorBase::VisitAQuantifiedExpression(const AQuantifiedExpression *Exp)
+    {
+        auto const& QVars = Exp->GetQVarList();
+        for(auto const& QVar : QVars) {
+            QVar->Accept(this);
+        }
+        Exp->GetQExpression()->Accept(this);
+    }
+
+    void ExpressionVisitorBase::VisitEQuantifiedExpression(const EQuantifiedExpression *Exp)
+    {
+        auto const& QVars = Exp->GetQVarList();
+        for(auto const& QVar : QVars) {
+            QVar->Accept(this);
+        }
+        Exp->GetQExpression()->Accept(this);
+    }
+    
+} /* end namespace */
 
 // 
-// Types.hpp ends here
+// Visitors.cpp ends here

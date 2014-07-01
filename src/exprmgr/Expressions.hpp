@@ -53,32 +53,40 @@ namespace ESMC {
     class ExpressionPtrEquals
     {
     public:
-        bool operator () (const ExpressionBase* Exp1, const ExpressionBase* Exp2) const;
+        template <typename T>
+        inline bool operator () (const ExpressionBase<T>* Exp1, 
+                                 const ExpressionBase<T>* Exp2) const;
     };
 
     class ExpressionPtrHasher
     {
     public:
-        u64 operator () (const ExpressionBase* Exp) const;
+        template <typename T>
+        inline u64 operator () (const ExpressionBase<T>* Exp) const;
     };
 
     class ExpressionPtrCompare
     {
     public:
-        bool operator () (const ExpressionBase* Exp1, const ExpressionBase* Exp2) const;
+        template <typename T>
+        inline bool operator () (const ExpressionBase<T>* Exp1, 
+                                 const ExpressionBase<T>* Exp2) const;
     };
 
+    // Type ExtType must be default constructible
+    template <typename ExtType, typename LExpType>
     class ExpressionBase : public RefCountable
     {
     private:
-        ExprMgr* Manager;
+        ExprMgr<LExpType, ExtType>* Manager;
         mutable bool HashValid;
+        ExtType ExtensionData;
 
     protected:
         mutable u64 HashCode;
 
     public:
-        ExpressionBase(ExprMgr* Manager);
+        ExpressionBase(ExprMgr<LExpType, ExtType>* Manager);
         virtual ~ExpressionBase();
 
         ExprMgr* GetMgr() const;
@@ -89,6 +97,8 @@ namespace ESMC {
         bool LE(const ExpressionBase* Other) const;
         bool GE(const ExpressionBase* Other) const;
         bool GT(const ExpressionBase* Other) const;
+
+        const T& GetExtensionData() const;
         
         string ToString() const;
 
@@ -101,20 +111,21 @@ namespace ESMC {
         virtual void Accept(ExpressionVisitorBase* Visitor) const = 0;
         
         // Downcasts
-        template<typename T> inline T* As();
-        template<typename T> inline const T* As() const;
-        template<typename T> inline T* SAs();
-        template<typename T> inline const T* SAs() const;
+        template<typename U> inline U* As();
+        template<typename U> inline const U* As() const;
+        template<typename U> inline U* SAs();
+        template<typename U> inline const U* SAs() const;
     };
 
-    class ConstExpression : public ExpressionBase
+    template <typename T>
+    class ConstExpression : public ExpressionBase<T>
     {
     private:
         const string& ConstValue;
         i64 ConstType;
 
     public:
-        ConstExpression(ExprMgr* Manager, const string& ConstValue,
+        ConstExpression(ExprMgr<T>* Manager, const string& ConstValue,
                         i64 ConstType);
         virtual ~ConstExpression();
 
@@ -244,25 +255,6 @@ namespace ESMC {
         virtual void Accept(ExpressionVisitorBase* Visitor) const override;
         virtual bool IsForAll() const override;
         virtual bool IsExists() const override;
-    };
-
-    // ExpressionVisitorBase
-    class ExpressionVisitorBase 
-    {
-    private:
-        string Name;
-        
-    public:
-        ExpressionVisitorBase(const string& Name);
-        virtual ~ExpressionVisitorBase();
-        const string& GetName() const;
-        
-        virtual void VisitConstExpression(const ConstExpression* Exp);
-        virtual void VisitVarExpression(const VarExpression* Exp);
-        virtual void VisitBoundVarExpression(const BoundVarExpression* Exp);
-        virtual void VisitOpExpression(const OpExpression* Exp);
-        virtual void VisitAQuantifiedExpression(const AQuantifiedExpression* Exp);
-        virtual void VisitEQuantifiedExpression(const EQuantifiedExpression* Exp);
     };
 
     // implementation of downcasts

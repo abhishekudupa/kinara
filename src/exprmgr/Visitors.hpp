@@ -1,8 +1,8 @@
-// Types.hpp --- 
+// Visitors.hpp --- 
 // 
-// Filename: Types.hpp
+// Filename: Visitors.hpp
 // Author: Abhishek Udupa
-// Created: Sun Jun 29 13:43:04 2014 (-0400)
+// Created: Mon Jun 30 16:02:08 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,33 +37,35 @@
 
 // Code:
 
-// Common types used throughout the solver
+#if !defined ESMC_VISITORS_HPP_
+#define ESMC_VISITORS_HPP_
 
-#if !defined ESMC_TYPES_HPP_
-#define ESMC_TYPES_HPP_
+#include "../common/FwdDecls.hpp"
 
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <inttypes.h>
-#include <exception>
+namespace ESMC {
 
-using namespace std;
+    // ExpressionVisitorBase
+    class ExpressionVisitorBase 
+    {
+    private:
+        string Name;
+        
+    public:
+        ExpressionVisitorBase(const string& Name);
+        virtual ~ExpressionVisitorBase();
+        const string& GetName() const;
+        
+        virtual void VisitConstExpression(const ConstExpression* Exp);
+        virtual void VisitVarExpression(const VarExpression* Exp);
+        virtual void VisitBoundVarExpression(const BoundVarExpression* Exp);
+        virtual void VisitOpExpression(const OpExpression* Exp);
+        virtual void VisitAQuantifiedExpression(const AQuantifiedExpression* Exp);
+        virtual void VisitEQuantifiedExpression(const EQuantifiedExpression* Exp);
+    };
 
-typedef int8_t i08;
-typedef uint8_t u08;
-typedef int16_t i16;
-typedef uint16_t u16;
-typedef int32_t i32;
-typedef uint32_t u32;
-typedef int64_t i64;
-typedef uint64_t u64;
+} /* end namespace */
 
-#endif /* ESMC_TYPES_HPP_ */
+#endif /* ESMC_VISITORS_HPP_ */
 
 // 
-// Types.hpp ends here
+// Visitors.hpp ends here

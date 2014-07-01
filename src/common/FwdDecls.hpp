@@ -54,6 +54,18 @@ namespace ESMC {
     // Expressions
     class ExprMgr;
     class ExpressionBase;
+    class ConstExpression;
+    class VarExpression;
+    class BoundVarExpression;
+    class OpExpression;
+    class QuantifiedExpressionBase;
+    class AQuantifiedExpression;
+    class EQuantifiedExpression;
+
+    class ExpressionPtrHasher;
+    class ExpressionPtrEquals;
+    class ExpressionPtrCompare;
+    
     typedef CSmartPtr<ExpressionBase> Expression;
     typedef SmartPtr<ExpressionBase> ExprInternal;
 
