@@ -43,28 +43,90 @@
 #include "../common/FwdDecls.hpp"
 
 namespace ESMC {
-
-    // ExpressionVisitorBase
-    class ExpressionVisitorBase 
-    {
-    private:
-        string Name;
+    namespace Exprs {
+        // ExpressionVisitorBase
+        template <typename E, template <typename> class S>
+        class ExpressionVisitorBase 
+        {
+        private:
+            string Name;
+            
+        public:
+            ExpressionVisitorBase(const string& Name);
+            virtual ~ExpressionVisitorBase();
+            const string& GetName() const;
+            
+            virtual void VisitConstExpression(const ConstExpression<E, S>* Exp);
+            virtual void VisitVarExpression(const VarExpression<E, S>* Exp);
+            virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp);
+            virtual void VisitOpExpression(const OpExpression<E, S>* Exp);
+            virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp);
+            virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp);
+        };
         
-    public:
-        ExpressionVisitorBase(const string& Name);
-        virtual ~ExpressionVisitorBase();
-        const string& GetName() const;
-        
-        virtual void VisitConstExpression(const ConstExpression* Exp);
-        virtual void VisitVarExpression(const VarExpression* Exp);
-        virtual void VisitBoundVarExpression(const BoundVarExpression* Exp);
-        virtual void VisitOpExpression(const OpExpression* Exp);
-        virtual void VisitAQuantifiedExpression(const AQuantifiedExpression* Exp);
-        virtual void VisitEQuantifiedExpression(const EQuantifiedExpression* Exp);
-    };
 
+        template <typename E, template <typename> class S>
+        ExpressionVisitorBase<E, S>::ExpressionVisitorBase(const string& Name)
+            : Name(Name)
+        {
+            // Nothing here
+        }
+
+        template <typename E, template <typename> class S>
+        ExpressionVisitorBase<E, S>::~ExpressionVisitorBase()
+        {
+            // Nothing here
+        }
+
+        template <typename E, template <typename> class S>
+        const string& ExpressionVisitorBase<E, S>::GetName() const
+        {
+            return Name;
+        }
+
+        template <typename E, template <typename> class S>
+        void ExpressionVisitorBase<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+        {
+            return;
+        }
+
+        template <typename E, template <typename> class S>
+        void ExpressionVisitorBase<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+        {
+            return;
+        }
+
+        template <typename E, template <typename> class S>
+        void ExpressionVisitorBase<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+        {
+            return;
+        }
+
+        template <typename E, template <typename> class S>
+        void ExpressionVisitorBase<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+        {
+            auto const& Children = Exp->GetChildren();
+            for (auto const& Child : Children) {
+                Child->Accept(this);
+            }
+            return;
+        }
+
+        template <typename E, template <typename> class S>
+        void ExpressionVisitorBase<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+        {
+            Exp->GetQExpression()->Accept(this);
+        }
+
+        template <typename E, template <typename> class S>
+        void ExpressionVisitorBase<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+        {
+            Exp->GetQExpression()->Accept(this);
+        }
+        
+    } /* end namespace */
 } /* end namespace */
-
+    
 #endif /* ESMC_VISITORS_HPP_ */
 
 // 

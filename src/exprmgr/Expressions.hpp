@@ -43,75 +43,86 @@
 #define ESMC_EXPRESSIONS_HPP_
 
 #include <vector>
+#include <boost/functional/hash.hpp>
+
+#include "Visitors.hpp"
 
 #include "../common/FwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
+#include "../utils/UIDGenerator.hpp"
+
 
 // This classes in this file are heavily templatized
 // to allow for flexibility via arbitrary extension objects
 
-
 namespace ESMC {
     namespace Exprs {
-        
+
         // Comparators
         class ExpressionPtrEquals
         {
         public:
-            template <typename ExtType>
-            inline bool operator () (const ExpressionBase<ExtType>* Exp1, 
-                                     const ExpressionBase<ExtType>* Exp2) const;
+            template <typename E, template <typename> class S>
+            inline bool operator () (const ExpressionBase<E, S>* Exp1,
+                                     const ExpressionBase<E, S>* Exp2) const;
+        };
+
+        class FastExpressionPtrEquals
+        {
+        public:
+            template <typename E, template <typename> class S>
+            inline bool operator () (const ExpressionBase<E, S>* Exp1,
+                                     const ExpressionBase<E, S>* Exp2) const;
         };
 
 
         class ExpressionPtrHasher
         {
         public:
-            template <typename ExtType>
-            inline u64 operator () (const ExpressionBase<ExtType>* Exp) const;
+            template <typename E, template <typename> class S>
+            inline u64 operator () (const ExpressionBase<E, S>* Exp) const;
         };
 
 
         class ExpressionPtrCompare
         {
         public:
-            template <typename ExtType>
-            inline bool operator () (const ExpressionBase<ExtType>* Exp1, 
-                                     const ExpressionBase<ExtType>* Exp2) const;
+            template <typename E, template <typename> class S>
+            inline bool operator () (const ExpressionBase<E, S>* Exp1, 
+                                     const ExpressionBase<E, S>* Exp2) const;
         };
 
+        // An empty extension type
+        struct EmptyExtType 
+        {
+            // Nothing here
+        };
 
-        // Type ExtType must be default constructible
-        template <typename ExtType>
+        template <typename E, template <typename> class S>
         class ExpressionBase : public RefCountable
         {
-        public:
-            typedef ExprMgr<ExtType, SemType> MgrType;
-            typedef ExpressionVisitorBase<ExtType, SemType> VisitorType;
-            typedef Expression<ExtType, SemType> ExprType;
-            ExtType ExtensionData;
-
         private:
-            MgrType* Manager;
+            ExprManager<E, S>* Mgr;
             mutable bool HashValid;
-            mutable ExtType ExtensionData;
-
+            mutable E ExtensionData;
+            
         protected:
             mutable u64 HashCode;
 
         public:
-            inline ExpressionBase(MgrType* Manager, const ExtType& ExtData = ExtType());
+            inline ExpressionBase(ExprManager<E, S>* Manager, 
+                                  const E& ExtData = E());
             virtual inline ~ExpressionBase();
 
-            inline MgrType* GetMgr() const;
+            inline ExprManager<E, S>* GetMgr() const;
             inline u64 Hash() const;
-            inline bool Equals(const ExpressionBase* Other) const;
-            inline bool NEquals(const ExpressionBase* Other) const;
-            inline bool LT(const ExpressionBase* Other) const;
-            inline bool LE(const ExpressionBase* Other) const;
-            inline bool GE(const ExpressionBase* Other) const;
-            inline bool GT(const ExpressionBase* Other) const;
+            inline bool Equals(const ExpressionBase<E, S>* Other) const;
+            inline bool NEquals(const ExpressionBase<E, S>* Other) const;
+            inline bool LT(const ExpressionBase<E, S>* Other) const;
+            inline bool LE(const ExpressionBase<E, S>* Other) const;
+            inline bool GE(const ExpressionBase<E, S>* Other) const;
+            inline bool GT(const ExpressionBase<E, S>* Other) const;
             inline string ToString() const;
 
             // Abstract methods
@@ -119,27 +130,39 @@ namespace ESMC {
             virtual void ComputeHash() const = 0;
 
         public:
-            virtual i32 Compare(const ExpressionBase* Other) const = 0;
-            virtual void Accept(VisitorType* Visitor) const = 0;
+            virtual i32 Compare(const ExpressionBase<E, S>* Other) const = 0;
+            virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const = 0;
+            // Fast eq which assumes that children can be compared for
+            // equality by simple pointer equality
+            virtual bool FastEQ(const ExpressionBase<E, S>* Other) const;
         
             // Downcasts
-            template<typename U> inline U* As();
-            template<typename U> inline const U* As() const;
-            template<typename U> inline U* SAs();
-            template<typename U> inline const U* SAs() const;
+            template<template <typename, template <typename> class> class U> 
+
+            inline U<E, S>* As();
+            template<template <typename, template <typename> class> class U> 
+            inline const U<E, S>* As() const;
+
+            template<template <typename, template <typename> class> class U> 
+            inline U<E, S>* SAs();
+
+            template<template <typename, template <typename> class> class U> 
+            inline const U<E, S>* SAs() const;
         };
 
 
-        template <typename ExtType, typename SemType>
-        class ConstExpression : public ExpressionBase<ExtType, SemType>
+        template <typename E, template <typename> class S>
+        class ConstExpression : public ExpressionBase<E, S>
         {
         private:
             const string& ConstValue;
             i64 ConstType;
 
         public:
-            inline ConstExpression(MgrType* Manager, const string& ConstValue,
-                                   i64 ConstType, const ExtType& ExtData = ExtType());
+            inline ConstExpression(ExprManager<E, S>* Mgr,
+                                   const string& ConstValue,
+                                   i64 ConstType, 
+                                   const E& ExtData = E());
             inline virtual ~ConstExpression();
 
             inline const string& GetConstValue() const;
@@ -149,21 +172,23 @@ namespace ESMC {
             inline virtual void ComputeHash() const override;
         
         public:
-            inline virtual i32 Compare(const ExpressionBase* Other) const override;
-            inline virtual void Accept(VisitorType* Visitor) const = 0;
+            inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
+            inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
         };
     
 
-        template <typename ExtType, typename SemType>
-        class VarExpression : public ExpressionBase<ExtType, SemType>
+        template <typename E, template <typename> class S>
+        class VarExpression : public ExpressionBase<E, S>
         {
         private:
             string VarName;
             i64 VarType;
 
         public:
-            inline VarExpression(MgrType* Manager, const string& VarName,
-                                 i64 VarType, const ExtType& ExtData = ExtType());
+            inline VarExpression(ExprManager<E, S>* Manager, 
+                                 const string& VarName,
+                                 i64 VarType, 
+                                 const E& ExtData = E());
             inline virtual ~VarExpression();
             inline const string& GetVarName() const;
             inline i64 GetVarType() const;
@@ -172,77 +197,81 @@ namespace ESMC {
             inline virtual void ComputeHash() const override;
 
         public:
-            inline virtual i32 Compare(const ExpressionBase* Other) const override;
-            inline virtual void Accept(VisitorType* Visitor) const override;
+            inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
+            inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
         };
 
 
-        template<typename ExtType, typename SemType>
-        class BoundVarExpression : public VarExpression<ExtType, SemType>
+        template<typename E, template <typename> class S>
+        class BoundVarExpression : public ExpressionBase<E, S>
         {
         private:
-            u64 VarUID;
-            static UIDGenerator UIDGen;
+            i64 VarType;
+            u64 VarIdx;
 
         public:
-            inline BoundVarExpression(MgrType* Manager, const string& VarName,
-                                      i64 VarType, i64 VarUID = -1,
-                                      const ExtType& ExtData = ExtType());
+            inline BoundVarExpression(ExprManager<E, S>* Manager, 
+                                      i64 VarType, i64 VarIdx,
+                                      const E& ExtData = E());
             inline virtual ~BoundVarExpression();
-            inline u64 GetVarUID() const;
+            inline u64 GetVarIdx() const;
         
         protected:
             inline virtual void ComputeHash() const override;
         
         public:
-            inline virtual i32 Compare(const ExpressionBase* Other) const override;
-            inline virtual void Accept(VisitorType* Visitor) const override;
+            inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
+            inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
         };
 
 
-        template<typename ExtType, typename SemType>
-        class OpExpression : public ExpressionBase<ExtType, SemType>
+        template<typename E, template <typename> class S>
+        class OpExpression : public ExpressionBase<E, S>
         {
         private:
             i64 OpCode;
-            vector<ExprType> Children;
+            vector<Expr<E, S>> Children;
 
         public:
-            inline OpExpression(MgrType* Manager, i64 OpCode,
-                                const vector<ExprType>& Children,
-                                const ExtType& ExtData = ExtType());
+            inline OpExpression(ExprManager<E, S>* Manager, 
+                                i64 OpCode,
+                                const vector<Expr<E, S>>& Children,
+                                const E& ExtData = E());
+
             inline virtual ~OpExpression();
             inline i64 GetOpCode() const;
-            inline const vector<ExprType>& GetChildren() const;
+            inline const vector<Expr<E, S>>& GetChildren() const;
 
         protected:
             inline virtual void ComputeHash() const override;
 
         public:
-            inline virtual i32 Compare(const ExpressionBase* Other) const override;
-            inline virtual void Accept(VisitorType* Visitor) const override;
+            inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
+            inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
+            inline virtual bool FastEQ(const ExpressionBase<E, S>* Other) const override;
         };
 
 
-        template<typename ExtType, typename SemType>
-        class QuantifiedExpressionBase : public ExpressionBase<ExtType, SemType>
+        template<typename E, template <typename> class S>
+        class QuantifiedExpressionBase : public ExpressionBase<E, S>
         {
         private:
-            vector<ExprType> QVarList;
-            Expression QExpression;
+            vector<Expr<E, S>> QVarList;
+            Expr<E, S> QExpression;
 
         public:
-            inline QuantifiedExpressionBase(MgrType* Manager,
-                                            const vector<ExprType>& QVarList,
-                                            const ExprType& QExpression,
-                                            const ExtType& ExtData = ExtType());
+            inline QuantifiedExpressionBase(ExprManager<E, S>* Manager,
+                                            const vector<Expr<E, S>>& QVarList,
+                                            const Expr<E, S>& QExpression,
+                                            const E& ExtData = E());
             inline virtual ~QuantifiedExpressionBase();
-            inline const vector<ExprType>& GetQVarList() const;
-            inline const ExprType& GetQExpression() const;
+            inline const vector<Expr<E, S>>& GetQVarList() const;
+            inline const Expr<E, S>& GetQExpression() const;
 
         protected:
-            inline i32 CompareInternal(const QuantifiedExpressionBase* Other) const;
+            inline i32 CompareInternal(const QuantifiedExpressionBase<E, S>* Other) const;
             inline void ComputeHashInternal() const;
+            inline bool FastEQInternal(const QuantifiedExpressionBase<E, S>* Other) const;
 
         public:
             virtual bool IsForAll() const = 0;
@@ -250,106 +279,123 @@ namespace ESMC {
         };
 
 
-        template<typename ExtType, typename SemType>
-        class EQuantifiedExpression : public QuantifiedExpressionBase<ExtType, SemType>
+        template<typename E, template <typename> class S>
+        class EQuantifiedExpression : public QuantifiedExpressionBase<E, S>
         {
         public:
-            using QuantifiedExpressionBase::QuantifiedExpressionBase;
+            using QuantifiedExpressionBase<E, S>::QuantifiedExpressionBase;
             inline virtual ~EQuantifiedExpression();
 
         protected:
             inline virtual void ComputeHash() const override;
         
         public:
-            inline virtual i32 Compare(const ExpressionBase* Other) const override;
-            inline virtual void Accept(VisitorType* Visitor) const override;
+            inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
+            inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
             inline virtual bool IsForAll() const override;
             inline virtual bool IsExists() const override;
+            inline virtual bool FastEQ(const ExpressionBase<E, S>* Other) const override;
         };
 
 
-        template<typename ExtType, typename SemType>
-        class AQuantifiedExpression : public QuantifiedExpressionBase<ExtType, SemType>
+        template<typename E, template <typename> class S>
+        class AQuantifiedExpression : public QuantifiedExpressionBase<E, S>
         {
         public:
-            using QuantifiedExpressionBase::QuantifiedExpressionBase;
+            using QuantifiedExpressionBase<E, S>::QuantifiedExpressionBase;
             inline virtual ~AQuantifiedExpression();
 
         protected:
             inline virtual void ComputeHash() const override;
         
         public:
-            inline virtual i32 Compare(const ExpressionBase* Other) const override;
-            inline virtual void Accept(VisitorType* Visitor) const override;
+            inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
+            inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
             inline virtual bool IsForAll() const override;
             inline virtual bool IsExists() const override;
+            inline virtual bool FastEQ(const ExpressionBase<E, S>* Other) const override;
         };
 
-        template <typename T> inline T* ExpressionBase::As()
+        template <typename E, template <typename> class S>
+        template <template <typename, template <typename> class> class U>
+        inline U<E, S>* ExpressionBase<E, S>::As()
         {
-            return dynamic_cast<T*>(this);
+            return dynamic_cast<U<E, S>*>(this);
         }
 
-        template <typename T> inline const T* ExpressionBase::As() const
+        template <typename E, template <typename> class S> 
+        template <template <typename, template <typename> class> class U>
+        inline const U<E, S>* ExpressionBase<E, S>::As() const
         {
-            return dynamic_cast<const T*>(this);
+            return dynamic_cast<const U<E, S>*>(this);
         }
 
-        template <typename T> inline T* ExpressionBase::SAs()
+        template <typename E, template <typename> class S> 
+        template <template <typename, template <typename> class> class U>
+        inline U<E, S>* ExpressionBase<E, S>::SAs()
         {
-            return static_cast<T*>(this);
+            return static_cast<U<E, S>*>(this);
         }
 
-        template <typename T> inline const T* ExpressionBase::SAs() const
+        template <typename E, template <typename> class S> 
+        template <template <typename, template <typename> class> class U>
+        inline const U<E, S>* ExpressionBase<E, S>::SAs() const
         {
-            return static_cast<const T*>(this);
+            return static_cast<const U<E, S>*>(this);
         }
 
         // hashers, equality testers and comparisons
-        template <typename ExtType>
-        inline bool ExpressionPtrEquals::operator () (const ExpressionBase<ExtType>* Exp1,
-                                               const ExpressionBase<ExtType>* Exp2) const
+        template <typename E, template <typename> class S>
+        inline bool ExpressionPtrEquals::operator () (const ExpressionBase<E, S>* Exp1,
+                                                      const ExpressionBase<E, S>* Exp2) const
         {
             return (Exp1->Equals(Exp2));
         }
+
+        template <typename E, template <typename> class S>
+        inline bool FastExpressionPtrEquals::operator () (const ExpressionBase<E, S>* Exp1,
+                                                          const ExpressionBase<E, S>* Exp2) const
+        {
+            return (Exp1->FastEQ(Exp2));
+        }
         
-        template <typename ExtType>
-        inline u64 ExpressionPtrHasher::operator () (const ExpressionBase<ExtType>* Exp) const
+        template <typename E, template <typename> class S>
+        inline u64 ExpressionPtrHasher::operator () (const ExpressionBase<E, S>* Exp) const
         {
             return Exp->Hash();
         }
 
-        template <typename ExtType>
-        inline bool ExpressionPtrCompare::operator () (const ExpressionBase<ExtType>* Exp1, 
-                                                       const ExpressionBase<ExtType>* Exp2) const
+        template <typename E, template <typename> class S>
+        inline bool ExpressionPtrCompare::operator () (const ExpressionBase<E, S>* Exp1, 
+                                                       const ExpressionBase<E, S>* Exp2) const
         {
             return (Exp1->LT(Exp2));
         }
 
         // ExpressionBase implementation
-        template <typename ExtType>
-        inline ExpressionBase<ExtType>::ExpressionBase(ExpressionBase<ExtType>::MgrType* Manager,
-                                                       const ExtType& ExtVal)
-            : ExtensionData(ExtVal), Manager(Manager), HashValid(false), HashCode(0)
+        template <typename E, template <typename> class S>
+        inline ExpressionBase<E, S>::ExpressionBase(ExprManager<E, S>* Manager,
+                                                    const E& ExtVal)
+            : ExtensionData(ExtVal), Mgr(Manager), HashValid(false), HashCode(0)
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline ExpressionBase<ExtType>::~ExpressionBase()
+        template <typename E, template <typename> class S>
+        inline ExpressionBase<E, S>::~ExpressionBase()
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline ExpressionBase<ExtType>::MgrType* 
-        ExpressionBase<ExtType>::GetMgr() const 
+        template <typename E, template <typename> class S>
+        inline ExprManager<E, S>*
+        ExpressionBase<E, S>::GetMgr() const 
         {
-            return Manager;
+            return Mgr;
         }
 
-        template <typename ExtType>
-        inline u64 ExpressionBase<ExtType>::Hash() const
+        template <typename E, template <typename> class S>
+        inline u64 ExpressionBase<E, S>::Hash() const
         {
             if (!HashValid) {
                 ComputeHash();
@@ -358,8 +404,8 @@ namespace ESMC {
             return HashCode;
         }
 
-        template <typename ExtType>
-        inline bool ExpressionBase<ExtType>::Equals(const ExpressionBase<ExtType>* Other) const
+        template <typename E, template <typename> class S>
+        inline bool ExpressionBase<E, S>::Equals(const ExpressionBase<E, S>* Other) const
         {
             if (Hash() != Other->Hash()) {
                 return false;
@@ -367,8 +413,8 @@ namespace ESMC {
             return (Compare(Other) == 0);
         }
 
-        template <typename ExtType>
-        inline bool ExpressionBase<ExtType>::NEquals(const ExpressionBase<ExtType>* Other) const
+        template <typename E, template <typename> class S>
+        inline bool ExpressionBase<E, S>::NEquals(const ExpressionBase<E, S>* Other) const
         {
             if (Hash() != Other->Hash()) {
                 return true;
@@ -376,71 +422,78 @@ namespace ESMC {
             return (Compare(Other) != 0);
         }
 
-        template <typename ExtType>
-        inline bool ExpressionBase<ExtType>::LT(const ExpressionBase<ExtType>* Other) const
+        template <typename E, template <typename> class S>
+        inline bool ExpressionBase<E, S>::LT(const ExpressionBase<E, S>* Other) const
         {
             return (Compare(Other) < 0);
         }
 
-        template <typename ExtType>
-        inline bool ExpressionBase<ExtType>::LE(const ExpressionBase<ExtType>* Other) const
+        template <typename E, template <typename> class S>
+        inline bool ExpressionBase<E, S>::LE(const ExpressionBase<E, S>* Other) const
         {
             return (Compare(Other) <= 0);
         }
 
-        template <typename ExtType>
-        inline bool ExpressionBase<ExtType>::GT(const ExpressionBase<ExtType>* Other) const
+        template <typename E, template <typename> class S>
+        inline bool ExpressionBase<E, S>::GT(const ExpressionBase<E, S>* Other) const
         {
             return (Compare(Other) > 0);
         }
 
-        template <typename ExtType>
-        inline bool ExpressionBase<ExtType>::GE(const ExpressionBase<ExtType>* Other) const
+        template <typename E, template <typename> class S>
+        inline bool ExpressionBase<E, S>::GE(const ExpressionBase<E, S>* Other) const
         {
             return (Compare(Other) >= 0);
         }
 
-        template <typename ExtType>
-        inline string ExpressionBase<ExtType>::ToString() const
+        template <typename E, template <typename> class S>
+        inline bool ExpressionBase<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
         {
-            auto Sem = Manager->GetSemanticizer();
+            return (Equals(Other));
+        }
+
+        template <typename E, template <typename> class S>
+        inline string ExpressionBase<E, S>::ToString() const
+        {
+            auto Sem = Mgr->GetSemanticizer();
             return (Sem->ExprToString(this));
         }
 
         // ConstExpression implementation
-        template <typename ExtType>
-        inline ConstExpression<ExtType>::ConstExpression(ExpressionBase<ExtType>::MgrType* Manager, 
-                                                         const string& ConstValue,
-                                                         i64 ConstType, const ExtType& ExtVal)
-            : ExpressionBase<ExtType>(Manager, ExtVal), 
+        template <typename E, template <typename> class S>
+        inline ConstExpression<E, S>::ConstExpression(ExprManager<E, S>* Manager, 
+                                                      const string& ConstValue,
+                                                      i64 ConstType, 
+                                                      const E& ExtVal)
+            : ExpressionBase<E, S>(Manager, ExtVal), 
               ConstValue(ConstValue), 
               ConstType(ConstType)
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline ConstExpression<ExtType>::~ConstExpression()
+        template <typename E, template <typename> class S>
+        inline ConstExpression<E, S>::~ConstExpression()
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline const string& ConstExpression<ExtType>::GetConstValue() const
+        template <typename E, template <typename> class S>
+        inline const string& ConstExpression<E, S>::GetConstValue() const
         {
             return ConstValue;
         }
 
-        template <typename ExtType>
-        inline i64 ConstExpression<ExtType>::GetConstType() const
+        template <typename E, template <typename> class S>
+        inline i64 ConstExpression<E, S>::GetConstType() const
         {
             return ConstType;
         }
 
-        template <typename ExtType>
-        inline i32 ConstExpression<ExtType>::Compare(const ExpressionBase<ExtType>* Other) const
+        template <typename E, template <typename> class S>
+        inline i32 ConstExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
         {
-            auto OtherAsConst = Other->As<ConstExpression<ExtType>>();
+            auto OtherAsConst = Other->template As<ConstExpression>();
             // All other exp types > ConstExpression
             if (OtherAsConst == nullptr) {
                 return -1;
@@ -458,53 +511,54 @@ namespace ESMC {
             }
         }
 
-        template <typename ExtType>
-        inline void ConstExpression<ExtType>::ComputeHash() const
+        template <typename E, template <typename> class S>
+        inline void ConstExpression<E, S>::ComputeHash() const
         {
-            boost::hash_combine(HashCode, ConstValue);
-            boost::hash_combine(HashCode, ConstType);
+            boost::hash_combine(this->HashCode, ConstValue);
+            boost::hash_combine(this->HashCode, ConstType);
         }
 
-        template <typename ExtType>
-        inline void ConstExpression<ExtType>::Accept(ExpressionBase<ExtType>::VisitorType* Visitor) const 
+        template <typename E, template <typename> class S>
+        inline void ConstExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const 
         {
             Visitor->VisitConstExpression(this);
         }
 
         // VarExpression implementation
-        template <typename ExtType>
-        inline VarExpression<ExtType>::VarExpression(ExpressionBase<ExtType>::MgrType* Manager, 
-                                                     const string& VarName,
-                                                     i64 VarType, const ExtType& ExtVal)
-            : ExpressionBase<ExtType>(Manager, ExtVal),
+        template <typename E, template <typename> class S>
+        inline VarExpression<E, S>::VarExpression(ExprManager<E, S>* Manager, 
+                                                  const string& VarName,
+                                                  i64 VarType, 
+                                                  const E& ExtVal)
+            : ExpressionBase<E, S>(Manager, ExtVal),
               VarName(VarName), VarType(VarType)
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline VarExpression<ExtType>::~VarExpression()
+        template <typename E, template <typename> class S>
+        inline VarExpression<E, S>::~VarExpression()
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline const string& VarExpression<ExtType>::GetVarName() const 
+        template <typename E, template <typename> class S>
+        inline const string& VarExpression<E, S>::GetVarName() const 
         {
             return VarName;
         }
 
-        template <typename ExtType>
-        inline i64 VarExpression<ExtType>::GetVarType() const
+        template <typename E, template <typename> class S>
+        inline i64 VarExpression<E, S>::GetVarType() const
         {
             return VarType;
         }
 
-        template <typename ExtType>
-        inline i32 VarExpression<ExtType>::Compare(const ExpressionBase<ExtType>* Other) const
+        template <typename E, template <typename> class S>
+        inline i32 VarExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
         {
-            auto OtherAsVar = Other->As<VarExpression<ExtType>>();
-            auto OtherAsConst = Other->As<ConstExpression<ExtType>>();
+            auto OtherAsVar = Other->template As<VarExpression>();
+            auto OtherAsConst = Other->template As<ConstExpression>();
             // ConstExpression < VarExpression
             if (OtherAsConst != nullptr) {
                 return 1;
@@ -527,203 +581,218 @@ namespace ESMC {
             }
         }
 
-        template <typename ExtType>
-        inline void VarExpression<ExtType>::ComputeHash() const
+        template <typename E, template <typename> class S>
+        inline void VarExpression<E, S>::ComputeHash() const
         {
-            boost::hash_combine(HashCode, VarName);
-            boost::hash_combine(HashCode, VarType);
+            boost::hash_combine(this->HashCode, VarName);
+            boost::hash_combine(this->HashCode, VarType);
         }
 
-        template <typename ExtType>
-        inline void VarExpression<ExtType>::Accept(ExpressionBase<ExtType>::VisitorType* Visitor) const
+        template <typename E, template <typename> class S>
+        inline void VarExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
         {
             Visitor->VisitVarExpression(this);
         }
 
     
         // BoundVarExpression implementation
-        template <typename ExtType>
-        inline BoundVarExpression<ExtType>::BoundVarExpression(ExpressionBase<ExtType>::MgrType* Manager, 
-                                                               const string& VarName,
-                                                               i64 VarType, i64 VarUID,
-                                                               const ExtType& ExtVal)
-            : VarExpression(Manager, VarName, VarType, ExtVal),
-              VarUID(VarUID == -1 ? UIDGen.GetUID() : VarUID)
+        template <typename E, template <typename> class S>
+        inline BoundVarExpression<E, S>::BoundVarExpression(ExprManager<E, S>* Manager, 
+                                                            i64 VarType, i64 VarIdx,
+                                                            const E& ExtVal)
+            : ExpressionBase<E, S>(Manager, ExtVal),
+              VarType(VarType), VarIdx(VarIdx)
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline BoundVarExpression<ExtType>::~BoundVarExpression()
+        template <typename E, template <typename> class S>
+        inline BoundVarExpression<E, S>::~BoundVarExpression()
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline u64 BoundVarExpression<ExtType>::GetVarUID() const
+        template <typename E, template <typename> class S>
+        inline u64 BoundVarExpression<E, S>::GetVarIdx() const
         {
-            return VarUID;
+            return VarIdx;
         }
 
-        template <typename ExtType>
-        inline i32 BoundVarExpression<ExtType>::Compare(const ExpressionBase<ExtType>* Other) const
+        template <typename E, template <typename> class S>
+        inline i32 BoundVarExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
         {
-            auto OtherAsConst = Other->As<ConstExpression<ExtType>>();
-            // ConstExpression < BoundVarExpression
-            if (OtherAsConst != nullptr) {
+            if ((Other->template As<ConstExpression>() != nullptr) ||
+                (Other->template As<VarExpression>() != nullptr)) {
                 return 1;
             }
-            auto OtherAsVar = Other->As<VarExpression<ExtType>>();
-            if (OtherAsVar != nullptr) {
-                auto OtherAsBound = Other->As<BoundVarExpression<ExtType>>();
-                // VarExpression < BoundVarExpression
-                if (OtherAsBound == nullptr) {
+            auto OtherAsBound = Other->template As<BoundVarExpression>();
+            // VarExpression < BoundVarExpression
+            if (OtherAsBound == nullptr) {
+                return -1;
+            } else {
+                if (VarIdx < OtherAsBound->VarIdx) {
+                    return -1;
+                } else if (VarIdx > OtherAsBound->VarIdx) {
+                    return 1;
+                } else if (VarType < OtherAsBound->VarType) {
+                    return -1;
+                } else if (VarType > OtherAsBound->VarType) {
                     return 1;
                 } else {
-                    auto Cmp = VarExpression<ExtType>::Compare(Other);
-                    if (Cmp != 0) {
-                        return Cmp;
-                    } else {
-                        if (VarUID < OtherAsBound->VarUID) {
-                            return -1;
-                        } else if (VarUID > OtherAsBound->VarUID) {
-                            return 1;
-                        } else {
-                            return 0;
-                        }
-                    }
+                    return 0;
                 }
-            } else {
-                // All other exp types > BoundVarExpression
-                return -1;
             }
         }
 
-        template <typename ExtType>
-        inline void BoundVarExpression<ExtType>::ComputeHash() const
+        template <typename E, template <typename> class S>
+        inline void BoundVarExpression<E, S>::ComputeHash() const
         {
-            VarExpression<ExtType>::ComputeHash();
-            boost::hash_combine(HashCode, VarUID);
+            boost::hash_combine(this->HashCode, VarType);
+            boost::hash_combine(this->HashCode, VarIdx);
         }
 
-        template <typename ExtType>
-        inline void BoundVarExpression<ExtType>::Accept(ExpressionBase<ExtType>::VisitorType* Visitor) const
+        template <typename E, template <typename> class S>
+        inline void BoundVarExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
         {
             Visitor->VisitBoundVarExpression(this);
         }
 
-    
         // OpExpression implementation
-        template <typename ExtType>
-        inline OpExpression<ExtType>::OpExpression(ExpressionBase<ExtType>::MgrType* Manager, i64 OpCode,
-                                                   const vector<ExpressionBase<ExtType>::ExprType> Children,
-                                                   const ExtType& ExtVal)
-            : ExpressionBase(Manager, ExtVal), OpCode(OpCode), Children(Children)
+        template <typename E, template <typename> class S>
+        inline OpExpression<E, S>::OpExpression(ExprManager<E, S>* Manager, 
+                                                i64 OpCode,
+                                                const vector<Expr<E, S>>& Children,
+                                                const E& ExtVal)
+            : ExpressionBase<E, S>(Manager, ExtVal), OpCode(OpCode), Children(Children)
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline OpExpression<ExtType>::~OpExpression()
+        template <typename E, template <typename> class S>
+        inline OpExpression<E, S>::~OpExpression()
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline i64 OpExpression<ExtType>::GetOpCode() const
+        template <typename E, template <typename> class S>
+        inline i64 OpExpression<E, S>::GetOpCode() const
         {
             return OpCode;
         }
-
-        template <typename ExtType>
-        inline const vector<ExpressionBase<ExtType>::ExprType>& OpExpression<ExtType>::GetChildren() const
+        
+        template <typename E, template <typename> class S>
+        inline const vector<Expr<E, S>>&
+        OpExpression<E, S>::GetChildren() const
         {
             return Children;
         }
 
-       template <typename ExtType>
-       inline i32 OpExpression<ExtType>::Compare(const ExpressionBase<ExtType>* Other) const
-       {
-           if ((Other->As<ConstExpression<ExtType>>() != nullptr) ||
-               (Other->As<VarExpression<ExtType>>() != nullptr) ||
-               (Other->As<BoundVarExpression<ExtType>>() != nullptr)) {
-               return 1;
-           } 
-           auto OtherAsOp = Other->As<OpExpression<ExtType>>();
-           if (OtherAsOp == nullptr) {
-               return -1;
-           }
-           
-           if (OpCode < OtherAsOp->OpCode) {
-               return -1;
-           } else if (OpCode > OtherAsOp->OpCode) {
-               return 1; 
-           } else if (Children.size() < OtherAsOp->Children.size()) {
-               return -1;
-           } else if (Children.size() > OtherAsOp->Children.size()) {
-               return 1;
-           } else {
-               for(u32 i = 0; i < Children.size(); ++i) {
-                   auto Res = Children[i]->Compare(OtherAsOp->Children[i]);
-                   if (Res != 0) {
-                       return Res;
-                   }
-               }
-               return 0;
-           }
-       }
-
-        template <typename ExtType>
-        inline void OpExpression<ExtType>::ComputeHash() const
+        template <typename E, template <typename> class S>
+        inline i32 OpExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
         {
-            boost::hash_combine(HashCode, OpCode);
-            for (auto const& Child : Children) {
-                boost::hash_combine(HashCode, Child->Hash());
+            if ((Other->template As<ConstExpression>() != nullptr) ||
+                (Other->template As<VarExpression>() != nullptr) ||
+                (Other->template As<BoundVarExpression>() != nullptr)) {
+                return 1;
+            } 
+            auto OtherAsOp = Other->template As<OpExpression>();
+            if (OtherAsOp == nullptr) {
+                return -1;
+            }
+           
+            if (OpCode < OtherAsOp->OpCode) {
+                return -1;
+            } else if (OpCode > OtherAsOp->OpCode) {
+                return 1; 
+            } else if (Children.size() < OtherAsOp->Children.size()) {
+                return -1;
+            } else if (Children.size() > OtherAsOp->Children.size()) {
+                return 1;
+            } else {
+                for(u32 i = 0; i < Children.size(); ++i) {
+                    auto Res = Children[i]->Compare(OtherAsOp->Children[i]);
+                    if (Res != 0) {
+                        return Res;
+                    }
+                }
+                return 0;
             }
         }
 
-        template <typename ExtType>
-        inline void OpExpression<ExtType>::Accept(ExpressionBase<ExtType>::VisitorType *Visitor) const
+        template <typename E, template <typename> class S>
+        inline bool OpExpression<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
+        {
+            if (this->HashCode != Other->HashCode()) {
+                return false;
+            }
+            auto OtherAsOp = Other->template As<OpExpression>();
+            if (OtherAsOp == nullptr) {
+                return false;
+            }
+
+            if (OtherAsOp->OpCode != OpCode ||
+                OtherAsOp->Children.size() != Children.size()) {
+                return false;
+            }
+
+            const u32 NumChildren = Children.size();
+            for (u32 i = 0; i < NumChildren; ++i) {
+                if (Children[i] != Other->Children[i]) {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        template <typename E, template <typename> class S>
+        inline void OpExpression<E, S>::ComputeHash() const
+        {
+            boost::hash_combine(this->HashCode, OpCode);
+            for (auto const& Child : Children) {
+                boost::hash_combine(this->HashCode, Child->Hash());
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void OpExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
         {
             Visitor->VisitOpExpression(this);
         }
 
-        template <typename ExtType>
-        inline QuantifiedExpressionBase<ExtType>::QuantifiedExpressionBase(ExpressionBase<ExtType>::MgrType* 
-                                                                           Manager,
-                                                                           const 
-                                                                           vector<ExpressionBase<ExtType>::
-                                                                           ExprType>& 
-                                                                           QVarList,
-                                                                           const ExpressionBase<ExtType>::ExprType& 
-                                                                           QExpression,
-                                                                           const ExtType& ExtVal)
-        : ExpressionBase(Manager, ExtVal), QVarList(QVarList), QExpression(QExpression)
+        template <typename E, template <typename> class S>
+        inline QuantifiedExpressionBase<E, S>::QuantifiedExpressionBase
+        (
+         ExprManager<E, S>* Manager,
+         const vector<Expr<E, S>>& QVarList,
+         const Expr<E, S>& QExpression,
+         const E& ExtVal
+         )
+            : ExpressionBase<E, S>(Manager, ExtVal), QVarList(QVarList), QExpression(QExpression)
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline QuantifiedExpressionBase<ExtType>::~QuantifiedExpressionBase()
+        template <typename E, template <typename> class S>
+        inline QuantifiedExpressionBase<E, S>::~QuantifiedExpressionBase()
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline const vector<ExpressionBase<ExtType>::ExprType>& QuantifiedExpressionBase::GetQVarList() const
+        template <typename E, template <typename> class S>
+        inline const vector<Expr<E, S>>& QuantifiedExpressionBase<E, S>::GetQVarList() const
         {
             return QVarList;
         }
 
-        template <typename ExtType>
-        inline const ExpressionBase<ExtType>::ExprType& QuantifiedExpressionBase::GetQExpression() const
+        template <typename E, template <typename> class S>
+        inline const Expr<E, S>& QuantifiedExpressionBase<E, S>::GetQExpression() const
         {
             return QExpression;
         }
 
-        template <typename ExtType>
+        template <typename E, template <typename> class S>
         inline i32 
-        QuantifiedExpressionBase<ExtType>::CompareInternal(const QuantifiedExpressionBase<ExtType>* Other) const
+        QuantifiedExpressionBase<E, S>::CompareInternal(const QuantifiedExpressionBase<E, S>* Other) const
         {
             if (QVarList.size() < Other->QVarList.size()) {
                 return -1;
@@ -741,114 +810,160 @@ namespace ESMC {
             }
         }
 
-        template <typename ExtType>
-        inline void QuantifiedExpressionBase<ExtType>::ComputeHashInternal() const
+        template <typename E, template <typename> class S>
+        inline void QuantifiedExpressionBase<E, S>::ComputeHashInternal() const
         {
             for (auto const& QVar : QVarList) {
-                boost::hash_combine(HashCode, QVar->Hash());
+                boost::hash_combine(this->HashCode, QVar->Hash());
             }
         
-            boost::hash_combine(HashCode, QExpression->Hash());
+            boost::hash_combine(this->HashCode, QExpression->Hash());
+        }
+
+        template <typename E, template <typename> class S>
+        inline bool QuantifiedExpressionBase<E, S>::FastEQInternal(const QuantifiedExpressionBase<E, S>* Other) 
+            const
+        {
+            if (Other->QVarList.size() != QVarList.size()) {
+                return false;
+            }
+
+            const u32 NumQVars = QVarList.size();
+
+            for (u32 i = 0; i < NumQVars; ++i) {
+                if (QVarList[i] != Other->QVarList[i]) {
+                    return false;
+                }
+            }
+            return (QExpression == Other->QExpression);
         }
 
     
         // EQuantifiedExpression implementation
-        template <typename ExtType>
-        inline EQuantifiedExpression<ExtType>::~EQuantifiedExpression()
+        template <typename E, template <typename> class S>
+        inline EQuantifiedExpression<E, S>::~EQuantifiedExpression()
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline i32 EQuantifiedExpression<ExtType>::Compare(const ExpressionBase<ExtType> *Other) const
+        template <typename E, template <typename> class S>
+        inline i32 EQuantifiedExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
         {
-            if ((Other->As<VarExpression<ExtType>>() != nullptr) ||
-                (Other->As<ConstExpression<ExtType>>() != nullptr) ||
-                (Other->As<BoundVarExpression<ExtType>>() != nullptr) ||
-                (Other->As<OpExpression<ExtType>>() != nullptr)) {
+            if ((Other->template As<VarExpression>() != nullptr) ||
+                (Other->template As<ConstExpression>() != nullptr) ||
+                (Other->template As<BoundVarExpression>() != nullptr) ||
+                (Other->template As<OpExpression>() != nullptr)) {
                 return 1;
             }
-            auto OtherAsExists = Other->As<EQuantifiedExpression<ExtType>>();
+            auto OtherAsExists = Other->template As<EQuantifiedExpression>();
             if (OtherAsExists == nullptr) {
                 return -1;
             }
 
-            return QuantifiedExpressionBase<ExtType>::Compare(OtherAsExists);
+            return QuantifiedExpressionBase<E, S>::Compare(OtherAsExists);
         }
 
-        template <typename ExtType>
-        inline void EQuantifiedExpression<ExtType>::ComputeHash() const
+        template <typename E, template <typename> class S>
+        inline bool EQuantifiedExpression<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
         {
-            ComputeHashInternal();
-            boost::hash_combine(HashCode, (string)"exists");
+            if (this->HashCode != Other->HashCode) {
+                return false;
+            }
+            auto OtherAsExists = Other->template As<EQuantifiedExpression>();
+            if (OtherAsExists == nullptr) {
+                return false;
+            }
+
+            return this->FastEQInternal(OtherAsExists);
         }
 
-        template <typename ExtType>
-        inline void EQuantifiedExpression<ExtType>::Accept(ExpressionBase<ExtType>::VisitorType* Visitor) const
+        template <typename E, template <typename> class S>
+        inline void EQuantifiedExpression<E, S>::ComputeHash() const
+        {
+            this->ComputeHashInternal();
+            boost::hash_combine(this->HashCode, (string)"exists");
+        }
+
+        template <typename E, template <typename> class S>
+        inline void EQuantifiedExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
         {
             Visitor->VisitEQuantifiedExpression(this);
         }
 
-        template <typename ExtType>
-        inline bool EQuantifiedExpression<ExtType>::IsForAll() const
+        template <typename E, template <typename> class S>
+        inline bool EQuantifiedExpression<E, S>::IsForAll() const
         {
             return false;
         }
 
-        template <typename ExtType>
-        inline bool EQuantifiedExpression<ExtType>::IsExists() const
+        template <typename E, template <typename> class S>
+        inline bool EQuantifiedExpression<E, S>::IsExists() const
         {
             return true;
         }
 
 
         // AQuantifiedExpression implementation
-        template <typename ExtType>
-        inline AQuantifiedExpression<ExtType>::~AQuantifiedExpression()
+        template <typename E, template <typename> class S>
+        inline AQuantifiedExpression<E, S>::~AQuantifiedExpression()
         {
             // Nothing here
         }
 
-        template <typename ExtType>
-        inline i32 AQuantifiedExpression<ExtType>::Compare(const ExpressionBase<ExtType> *Other) const
+        template <typename E, template <typename> class S>
+        inline i32 AQuantifiedExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
         {
-            if ((Other->As<VarExpression<ExtType>>() != nullptr) ||
-                (Other->As<ConstExpression<ExtType>>() != nullptr) ||
-                (Other->As<BoundVarExpression<ExtType>>() != nullptr) ||
-                (Other->As<OpExpression<ExtType>>() != nullptr) || 
-                (Other->As<EQuantifiedExpression<ExtType>>() != nullptr)) {
+            if ((Other->template As<VarExpression>() != nullptr) ||
+                (Other->template As<ConstExpression>() != nullptr) ||
+                (Other->template As<BoundVarExpression>() != nullptr) ||
+                (Other->template As<OpExpression>() != nullptr) || 
+                (Other->template As<EQuantifiedExpression>() != nullptr)) {
                 return 1;
             }
-            auto OtherAsForall = Other->As<AQuantifiedExpression<ExtType>>();
+            auto OtherAsForall = Other->template As<AQuantifiedExpression>();
             // In case we decide to add more expression types
             if (OtherAsForall != nullptr) {
                 return -1;
             }
 
-            return QuantifiedExpressionBase<ExtType>::Compare(OtherAsForall);
+            return QuantifiedExpressionBase<E, S>::Compare(OtherAsForall);
         }
 
-        template <typename ExtType>
-        inline void AQuantifiedExpression<ExtType>::ComputeHash() const
+        template <typename E, template <typename> class S>
+        inline bool AQuantifiedExpression<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
         {
-            ComputeHashInternal();
-            boost::hash_combine(HashCode, (string)"forall");
+            if (this->HashCode != Other->HashCode) {
+                return false;
+            }
+            auto OtherAsForAll = Other->template As<EQuantifiedExpression>();
+            if (OtherAsForAll == nullptr) {
+                return false;
+            }
+
+            return this->FastEQInternal(OtherAsForAll);
         }
 
-        template <typename ExtType>
-        inline void AQuantifiedExpression<ExtType>::Accept(ExpressionBase<ExtType>::VisitorType* Visitor) const
+        template <typename E, template <typename> class S>
+        inline void AQuantifiedExpression<E, S>::ComputeHash() const
+        {
+            this->ComputeHashInternal();
+            boost::hash_combine(this->HashCode, (string)"forall");
+        }
+
+        template <typename E, template <typename> class S>
+        inline void AQuantifiedExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
         {
             Visitor->VisitAQuantifiedExpression(this);
         }
 
-        template <typename ExtType>
-        inline bool AQuantifiedExpression<ExtType>::IsForAll() const
+        template <typename E, template <typename> class S>
+        inline bool AQuantifiedExpression<E, S>::IsForAll() const
         {
             return true;
         }
 
-        template <typename ExtType>
-        inline bool AQuantifiedExpression<ExtType>::IsExists() const
+        template <typename E, template <typename> class S>
+        inline bool AQuantifiedExpression<E, S>::IsExists() const
         {
             return false;
         }

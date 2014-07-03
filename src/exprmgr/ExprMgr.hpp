@@ -44,14 +44,15 @@
 
 #include "../common/FwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
+#include "Expressions.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 
 namespace ESMC {
     namespace Exprs {
-
 
         class ExprTypeError : public exception
         {
@@ -68,144 +69,129 @@ namespace ESMC {
             }
         };
 
-
-        template<typename LEType>
+        // This is a default semanticizer.
+        // All semanticizers must implement this signature.
+        template<typename E>
         class SemanticizerBase
         {
         private:
-            const string& Name;
+            const string Name;
 
         public:
-            // Subclasses need to redefine this
-            typedef LEType LExpType;
+            // The type of the lowered expressions
+            // Since we don't do anything special, we 
+            // set it to the type of expressions itself
+            typedef Expr<E, ESMC::Exprs::SemanticizerBase> LExpType;
+            typedef Expr<E, ESMC::Exprs::SemanticizerBase> ExpType;
 
-            SemanticizerBase(const string& Name);
-            virtual ~SemanticizerBase
+            SemanticizerBase() : Name("SemanticizerBase") {}
+            ~SemanticizerBase() {}
             
-            template <typename ExtType>
-            virtual void TypeCheck(const Expression<ExtType>& Exp) const = 0;
+            inline void TypeCheck(ExpType Exp) const {}
 
-            template <typename ExtType>
-            virtual Expression<ExtType> Canonicalize(const Expression<ExtType>& Exp) const = 0;
+            inline ExpType Canonicalize(const ExpType& Exp) const { return Exp; }
+            inline LExpType LowerExpr(const ExpType& Exp) { return Exp; }
+            inline ExpType RaiseExpr(const LExpType& LExp) { return LExp; }
+            inline string ExprToString(const LExpType& Exp) { return "NoExp"; }
+            inline string TypeToString(i64 Type) const { return "NoType"; }
 
-            template <typename ExtType>
-            virtual LExpType LowerExpr(const Expression<ExtType>& Exp) const = 0;
-
-            template <typename ExtType>
-            virtual Expression<ExtType> RaiseExpr(const LExpType& LExp) const = 0;
-
-            template <typename ExtType>
-            virtual string ExprToString(const Expression<ExtType>& Exp) const = 0;
-
-            virtual string TypeToString(i64 Type) const = 0;
-
-            virtual i64 RegisterUninterpretedFunction(const string& Name,
-                                                      const vector<i64> DomTypes,
-                                                      i64 RangeType) const = 0;
+            inline i64 RegisterUninterpretedFunction(const string& Name,
+                                                     const vector<i64> DomTypes,
+                                                     i64 RangeType) const
+            {
+                return 0;
+            }
         };
 
-
-        template <typename ExtType, typename SemType>
+        template <typename E, template <typename> class S>
         class ExprMgr
         {
         public:
-            typedef SemType::LExpType LExpType;
-            typedef Expression<ExtType> ExpType;
+            typedef S<E> SemT;
+            typedef typename SemT::LExpType LExpT;
+            typedef Expr<E, S> ExpT;
+            typedef ExprI<E, S> IExpT;
 
-            typedef unordered_map<ExpType, ExpType, 
+            typedef unordered_map<ExpT, ExpT, 
                                   ExpressionPtrHasher,
                                   ExpressionPtrEquals> SubstMap;
-            
+
         private:
-            SemType* Sem;
-            typedef unordered_set<Expression<ExtType>, 
-                                  ExpressionPtrHasher,
-                                  ExpressionPtrEquals> ExpSetType;
+            SemT* Sem;
+            typedef unordered_set<ExpT, ExpressionPtrHasher, FastExpressionPtrEquals> ExpSetType;
             ExpSetType ExpSet;
             
-            inline ExpType GetCachedOrInsert(const ExpType& Exp);
+            inline ExpT GetCachedOrInsert(const ExpT& Exp);
             
             template <typename T, typename... ArgTypes>
-            inline ExpType GetCachedOrInsert(ArgTypes&&... Args);
-            inline void CheckMgr(const vector<ExpType>& Children) const;
+            inline ExpT GetCachedOrInsert(ArgTypes&&... Args);
+            inline void CheckMgr(const vector<ExpT>& Children) const;
             template <typename T>
-            inline ExpType MakeQExpression(const vector<ExpType>& QVars,
-                                           const ExpType& QExpr,
-                                           const ExtType& ExtVal);
+            inline ExpT MakeQExpression(const vector<ExpT>& QVars,
+                                        const ExpT& QExpr,
+                                        const ExpT& ExtVal);
 
+            // Insert the expression and all subexpressions
+            // into the set of expressions owned by this manager
+            inline ExpT Internalize(const ExpT& Exp);
+            
         public:
             template <typename... ArgTypes>
             inline ExprMgr(ArgTypes&&... Args);
             inline ~ExprMgr();
 
-            inline ExpType MakeVal(const string& ValString, i64 ValType, 
-                                   const ExtType& ExtVal = ExtType());
+            inline ExpT MakeVal(const string& ValString, i64 ValType, 
+                                const E& ExtVal = E());
             
-            inline ExpType MakeVar(const string& VarName, i64 VarType,
-                                   const ExtType& ExtVal = ExtType());
+            inline ExpT MakeVar(const string& VarName, i64 VarType,
+                                const E& ExtVal = E());
 
-            inline ExpType MakeBoundVar(const string& VarName, i64 VarType,
-                                        i64 VarUID = -1, const ExtType& ExtVal = ExtType());
+            inline ExpT MakeBoundVar(i64 VarType, i64 VarIdx,
+                                     const E& ExtVal = E());
 
-            inline ExpType MakeExpr(i64 OpCode, const vector<ExpType>& Children,
-                                    const ExtType& ExtVal = ExtType());
+            inline ExpT MakeExpr(i64 OpCode, const vector<ExpT>& Children,
+                                 const E& ExtVal = E());
 
-            inline ExpType MakeExists(const vector<ExpType>& QVars, 
-                                      const ExpType& QExpr,
-                                      const ExtType& ExtVal = ExtType());
+            inline ExpT MakeExists(const vector<ExpT>& QVars, 
+                                   const ExpT& QExpr,
+                                   const E& ExtVal = E());
 
-            inline ExpType MakeForAll(const vector<ExpType>& QVars, 
-                                      const ExpType& QExpr,
-                                      const ExtType& ExtVal = ExtType());
+            inline ExpT MakeForAll(const vector<ExpT>& QVars, 
+                                   const ExpT& QExpr,
+                                   const E& ExtVal = E());
 
             inline i64 MakeUninterpretedFunction(const string& Name, 
                                                  const vector<i64>& Range,
                                                  i64 Domain);
 
             template <typename T, typename... ArgTypes>
-            inline ExpType ApplyTransform(const ExpType& Exp, ArgTypes&&... Args);
+            inline ExpT ApplyTransform(const ExpT& Exp, ArgTypes&&... Args);
 
-            inline SemType* GetSemanticizer() const;
-            inline LExpType LowerExpr(const ExpType& Exp);
-            inline ExpType RaiseExpr(const LExpType& Exp);
+            inline SemT* GetSemanticizer() const;
+            inline LExpT LowerExpr(const ExpT& Exp);
+            inline ExpT RaiseExpr(const LExpT& Exp);
             inline void GC();
         };
 
-
-        // SemanticizerBase implementation
-        template <typename LEType>
-        SemanticizerBase::SemanticizerBase(const string& Name) 
-            : Name(Name)
-        {
-            // Nothing here
-        }
-
-        template <typename LEType>
-        SemanticizerBase::~SemanticizerBase()
-        {
-            // Nothing here
-        }
-        
-        
         // ExprMgr implementation
-        template <typename ExtType, typename SemType>
+        template <typename E, template <typename> class S>
         template <typename... ArgTypes>
-        inline ExprMgr<ExtType, SemType>::ExprMgr(ArgTypes&&... Args)
-            : Sem(new SemType(forward<ArgTypes>(Args)...))
+        inline ExprMgr<E, S>::ExprMgr(ArgTypes&&... Args)
+            : Sem(new SemT(forward<ArgTypes>(Args)...))
         {
             // Nothing here
         }
 
-        template <typename ExtType, typename SemType>
-        inline ExprMgr<ExtType, SemType>::~ExprMgr()
+        template <typename E, template <typename> class S>
+        inline ExprMgr<E, S>::~ExprMgr()
         {
             delete Sem;
             ExpSet.clear();
         }
 
-        template <typename ExtType, typename SemType>
-        inline ExprMgr<ExtType, SemType>::ExpType
-        ExprMgr<ExtType, SemType>::GetCachedOrInsert(const ExpType& Exp)
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::GetCachedOrInsert(const ExpT& Exp)
         {
             auto it = ExpSet.find(Exp);
             if (it == ExpSet.end()) {
@@ -213,21 +199,20 @@ namespace ESMC {
                 return Exp;
             } else {
                 return (*it);
-            }            
+            }
         }
 
-        template <typename ExtType, typename SemType>
+        template <typename E, template <typename> class S>
         template <typename T, typename... ArgTypes>
-        inline ExprMgr<ExtType, SemType>::ExpType 
-        ExprMgr<ExtType, SemType>::GetCachedOrInsert(ArgTypes&&... Args)
+        inline typename ExprMgr<E, S>::ExpT 
+        ExprMgr<E, S>::GetCachedOrInsert(ArgTypes&&... Args)
         {
-            ExpType NewExp = new T(forward<ArgTypes>(Args)...);
-            auto it = ExpSet.find(NewExp);
+            ExpT NewExp = new T(forward<ArgTypes>(Args)...);
             return GetCachedOrInsert(NewExp);
         }
 
-        template <typename ExtType, typename SemType>
-        void ExprMgr<ExtType, SemType>::CheckMgr(const vector<ExpType>& Children) const
+        template <typename E, template <typename> class S>
+        void ExprMgr<E, S>::CheckMgr(const vector<ExpT>& Children) const
         {
             for (auto const& Child : Children) {
                 if (Child->GetMgr() != this) {
@@ -236,13 +221,57 @@ namespace ESMC {
             }
         }
 
-        template <typename ExtType, typename SemType>
-        inline ExprMgr<ExtType, SemType>::ExpType 
-        ExprMgr<ExtType, SemType>::MakeVal(const string& ValString, i64 ValType,
-                                           const ExtType& ExtVal)
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::Internalize(const ExpT& Exp)
+        {
+            if ((Exp->template As<ConstExpression>() != nullptr) ||
+                (Exp->template As<VarExpression>() != nullptr) ||
+                (Exp->template As<BoundVarExpression>() != nullptr)) {
+                return GetCachedOrInsert(Exp);
+            }
+            auto ExpAsOp = Exp->template As<OpExpression>();
+            if (ExpAsOp != nullptr) {
+                auto const& Children = ExpAsOp->GetChildren();
+                const u32 NumChildren = Children.size();
+                vector<ExpT> IntChildren(NumChildren);
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    IntChildren[i] = Internalize(Children[i]);
+                }
+                return GetCachedOrInsert<OpExpression<E, S>>(Exp->GetOpCode(),
+                                                             IntChildren,
+                                                             Exp->ExtData);
+            }
+            auto ExpAsQuantified = Exp->template As<QuantifiedExpressionBase>();
+            if (ExpAsQuantified != nullptr) {
+                auto const& QVars = ExpAsQuantified->GetQVarList();
+                const u32 NumQVars = QVars.size();
+                vector<ExpT> IntQVars(NumQVars);
+                for (u32 i = 0; i < NumQVars; ++i) {
+                    IntQVars[i] = Internalize(QVars[i]);
+                }
+                auto IntQExpr = Internalize(ExpAsQuantified->GetQExpression());
+                if (ExpAsQuantified->IsForAll()) {
+                    return GetCachedOrInsert<AQuantifiedExpression<E,S>>(IntQVars,
+                                                                         IntQExpr,
+                                                                         Exp->ExtData);
+                } else {
+                    return GetCachedOrInsert<EQuantifiedExpression<E,S>>(IntQVars,
+                                                                         IntQExpr,
+                                                                         Exp->ExtData);
+                }
+            } else {
+                throw ExprTypeError("Strange type of expression encountered");
+            }
+        }
+
+        template <typename E, template<typename> class S>
+        inline typename ExprMgr<E, S>::ExpT 
+        ExprMgr<E, S>::MakeVal(const string& ValString, i64 ValType,
+                               const E& ExtVal)
         {
             auto Retval =
-                GetCachedOrInsert<ConstExpression>(ValString, ValType, ExtVal);
+                GetCachedOrInsert<ConstExpression<E,S>>(ValString, ValType, ExtVal);
             Sem->TypeCheck(Retval);
             return Retval;
         }
