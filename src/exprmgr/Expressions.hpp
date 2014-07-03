@@ -103,9 +103,10 @@ namespace ESMC {
         class ExpressionBase : public RefCountable
         {
         private:
+            mutable E ExtensionData;
             ExprMgr<E, S>* Mgr;
             mutable bool HashValid;
-            mutable E ExtensionData;
+            mutable i64 ExpType;
             
         protected:
             mutable u64 HashCode;
@@ -117,6 +118,8 @@ namespace ESMC {
 
             inline ExprMgr<E, S>* GetMgr() const;
             inline u64 Hash() const;
+            inline i64 GetType() const;
+            inline void SetType(i64 Type) const;
             inline bool Equals(const ExpressionBase<E, S>* Other) const;
             inline bool NEquals(const ExpressionBase<E, S>* Other) const;
             inline bool LT(const ExpressionBase<E, S>* Other) const;
@@ -351,13 +354,16 @@ namespace ESMC {
             SemanticizerBase() : Name("SemanticizerBase") {}
             ~SemanticizerBase() {}
             
-            inline void TypeCheck(ExpType Exp) const {}
+            inline void TypeCheck(const ExpType& Exp) const {}
 
             inline ExpType Canonicalize(const ExpType& Exp) const { return Exp; }
             inline LExpType LowerExpr(const ExpType& Exp) { return Exp; }
             inline ExpType RaiseExpr(const LExpType& LExp) { return LExp; }
+            inline ExpType Simplify(const ExpType& Exp) { return Exp; }
+            inline ExpType ElimQuantifiers(const ExpType& Exp) { return Exp; }
             inline string ExprToString(const LExpType& Exp) { return "NoExp"; }
             inline string TypeToString(i64 Type) const { return "NoType"; }
+            
 
             inline i64 RegisterUninterpretedFunction(const string& Name,
                                                      const vector<i64> DomTypes,
@@ -379,17 +385,19 @@ namespace ESMC {
             typedef unordered_map<ExpT, ExpT, 
                                   ExpressionPtrHasher,
                                   ExpressionPtrEquals> SubstMap;
-
         private:
             SemT* Sem;
             typedef unordered_set<ExpT, ExpressionPtrHasher, FastExpressionPtrEquals> ExpSetType;
             ExpSetType ExpSet;
+            u32 NextGC;
+            const float GCGrowthFactor = 1.5f;
             
             inline ExpT GetCachedOrInsert(const ExpT& Exp);
             
             template <typename T, typename... ArgTypes>
             inline ExpT GetCachedOrInsert(ArgTypes&&... Args);
             inline void CheckMgr(const vector<ExpT>& Children) const;
+            inline void CheckMgr(const ExpT& Exp) const;
             template <typename T>
             inline ExpT MakeQExpression(const vector<ExpT>& QVars,
                                         const ExpT& QExpr,
@@ -398,6 +406,7 @@ namespace ESMC {
             // Insert the expression and all subexpressions
             // into the set of expressions owned by this manager
             inline ExpT Internalize(const ExpT& Exp);
+            inline void AutoGC();
             
         public:
             template <typename... ArgTypes>
@@ -428,13 +437,17 @@ namespace ESMC {
                                                  const vector<i64>& Range,
                                                  i64 Domain);
 
-            template <typename T, typename... ArgTypes>
+            template <template <typename, template <typename> class> class T, typename... ArgTypes>
             inline ExpT ApplyTransform(const ExpT& Exp, ArgTypes&&... Args);
 
             inline SemT* GetSemanticizer() const;
             inline LExpT LowerExpr(const ExpT& Exp);
             template <typename... ArgTypes>
             inline ExpT RaiseExpr(const LExpT& Exp, ArgTypes&&... Args);
+            inline ExpT ElimQuantifiers(const ExpT& Exp);
+            inline ExpT Simplify(const ExpT& Exp);
+            inline ExpT Substitute(const SubstMap& Subst, const ExpT& Exp);
+            inline string TypeToString(i64 TypeID) const;
             inline void GC();
         };
 
@@ -458,7 +471,34 @@ namespace ESMC {
             virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp);
             virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp);
         };
-        
+
+        // The substitution transform, which is the only
+        // built-in transform. We only allow variable substitutions
+        template <typename E, template <typename> class S>
+        class Substitutor : ExpressionVisitorBase<E, S>
+        {
+        private:
+            typedef typename ExprMgr<E, S>::ExpT ExpT;
+            typedef typename ExprMgr<E, S>::SubstMap SubstMap;
+            SubstMap Subst;
+            vector<typename ExprMgr<E, S>::ExpT> SubstStack;
+
+        public:
+            inline Substitutor(const SubstMap& Subst);
+            inline virtual ~Substitutor();
+
+            inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+            inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+            inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
+                override;
+            inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+            inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+                override;
+            inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+                override;
+
+            inline static ExpT Do(const SubstMap& Subst, const ExpT& Exp);
+        };
 
         template <typename E, template <typename> class S>
         ExpressionVisitorBase<E, S>::ExpressionVisitorBase(const string& Name)
@@ -536,7 +576,90 @@ namespace ESMC {
         {
             Exp->GetQExpression()->Accept(this);
         }
+
+        // Substitutor implementation
+        template <typename E, template <typename> class S>
+        inline Substitutor<E, S>::Substitutor(const SubstMap& Subst)
+            : Subst(Subst)
+        {
+            // Nothing here
+        }
         
+        template <typename E, template <typename> class S>
+        inline Substitutor<E,S>::~Substitutor()
+        {
+            // Nothing here
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        Substitutor<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+        {
+            auto it = Subst.find(Exp);
+            if (it != Subst.end()) {
+                SubstStack.push_back(it->second);
+            } else {
+                SubstStack.push_back(Exp);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void
+        Substitutor<E, S>::VisitConstExpression(const ConstExpression<E,S>* Exp)
+        {
+            SubstStack.push_back(Exp);
+        }
+
+        template <typename E, template <typename> class S>
+        inline void
+        Substitutor<E, S>::VisitBoundVarExpression(const BoundVarExpression<E,S>* Exp)
+        {
+            SubstStack.push_back(Exp);
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        Substitutor<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+        {
+            ExpressionVisitorBase<E,S>::VisitOpExpression(Exp);
+            const u32 NumChildren = Exp->GetChildren().size();
+            vector<ExpT> SubstChildren(NumChildren);
+            for (u32 i = 0; i < NumChildren; ++i) {
+                SubstChildren[NumChildren - i - 1] = SubstStack.back();
+                SubstStack.pop_back();
+            }
+            SubstStack.push_back(new OpExpression<E, S>(nullptr, Exp->GetOpCode(),
+                                                        SubstChildren));
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        Substitutor<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E,S>* Exp)
+        {
+            Exp->GetQExpression().Accept(this);
+            auto SubstQExpr = SubstStack.back();
+            SubstStack.push_back(new EQuantifiedExpression<E, S>(nullptr, Exp->GetQVarList(),
+                                                                 SubstQExpr));
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        Substitutor<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E,S>* Exp)
+        {
+            Exp->GetQExpression().Accept(this);
+            auto SubstQExpr = SubstStack.back();
+            SubstStack.push_back(new AQuantifiedExpression<E, S>(nullptr, Exp->GetQVarList(),
+                                                                 SubstQExpr));
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename Substitutor<E, S>::ExpT
+        Substitutor<E, S>::Do(const SubstMap& Subst, const ExpT& Exp)
+        {
+            Substitutor TheSubstitutor(Subst);
+            Exp->Accept(&TheSubstitutor);
+            return TheSubstitutor.SubstStack[0];
+        }
 
         template <typename E, template <typename> class S>
         template <template <typename, template <typename> class> class U>
@@ -598,7 +721,8 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline ExpressionBase<E, S>::ExpressionBase(ExprMgr<E, S>* Manager,
                                                     const E& ExtVal)
-            : ExtensionData(ExtVal), Mgr(Manager), HashValid(false), HashCode(0)
+            : ExtensionData(ExtVal), Mgr(Manager), HashValid(false), 
+              ExpType(-1), HashCode(0)
         {
             // Nothing here
         }
@@ -624,6 +748,18 @@ namespace ESMC {
                 HashValid = true;
             }
             return HashCode;
+        }
+
+        template <typename E, template <typename> class S>
+        inline i64 ExpressionBase<E, S>::GetType() const
+        {
+            return ExpType;
+        }
+
+        template <typename E, template <typename> class S>
+        inline void ExpressionBase<E, S>::SetType(i64 Type) const
+        {
+            ExpType = Type;
         }
 
         template <typename E, template <typename> class S>
@@ -1192,10 +1328,11 @@ namespace ESMC {
         }
 
         // ExprMgr implementation
+        // Initial GC param is 1024
         template <typename E, template <typename> class S>
         template <typename... ArgTypes>
         inline ExprMgr<E, S>::ExprMgr(ArgTypes&&... Args)
-            : Sem(new SemT(forward<ArgTypes>(Args)...))
+            : Sem(new SemT(forward<ArgTypes>(Args)...)), NextGC(1024)
         {
             // Nothing here
         }
@@ -1211,6 +1348,7 @@ namespace ESMC {
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::GetCachedOrInsert(const ExpT& Exp)
         {
+            AutoGC();
             auto it = ExpSet.find(Exp);
             if (it == ExpSet.end()) {
                 ExpSet.insert(Exp);
@@ -1225,6 +1363,7 @@ namespace ESMC {
         inline typename ExprMgr<E, S>::ExpT 
         ExprMgr<E, S>::GetCachedOrInsert(ArgTypes&&... Args)
         {
+            AutoGC();
             ExpT NewExp = new T(forward<ArgTypes>(Args)...);
             return GetCachedOrInsert(NewExp);
         }
@@ -1233,9 +1372,15 @@ namespace ESMC {
         void ExprMgr<E, S>::CheckMgr(const vector<ExpT>& Children) const
         {
             for (auto const& Child : Children) {
-                if (Child->GetMgr() != this) {
-                    throw ExprTypeError("ExprMgr: I don't own this expression!");
-                }
+                CheckMgr(Child);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        void ExprMgr<E, S>::CheckMgr(const ExpT& Exp) const
+        {
+            if (Exp->GetMgr() != this) {
+                throw ExprTypeError("ExprMgr: I don't own this expression!");
             }
         }
 
@@ -1337,9 +1482,7 @@ namespace ESMC {
                                        const E& ExtVal)
         {
             CheckMgr(QVars);
-            if (QExpr->GetMgr() != this) {
-                throw ExprTypeError("ExprMgr: I don't own this expression!");
-            }
+            CheckMgr(QExpr);
             for (auto const& QVar : QVars) {
                 if (QVar->template As<BoundVarExpression>() == nullptr) {
                     throw ExprTypeError("ExprMgr: Only bound vars can be quantified!");
@@ -1378,7 +1521,7 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        template <typename T, typename... ArgTypes>
+        template <template <typename, template <typename> class> class T, typename... ArgTypes>
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::ApplyTransform(const ExpT& Exp, 
                                       ArgTypes&&... Args)
@@ -1386,7 +1529,7 @@ namespace ESMC {
             if (Exp->GetMgr() != this) {
                 throw ExprTypeError("ExprMgr: I don't own this expression");
             }
-            return Internalize(T::Do(this, Exp, forward<ArgTypes>(Args)...));
+            return Internalize(T<E, S>::Do(this, Exp, forward<ArgTypes>(Args)...));
         }
 
         template <typename E, template <typename> class S>
@@ -1414,7 +1557,42 @@ namespace ESMC {
         {
             Sem->RaiseExpr(LExp, forward<ArgTypes>(Args)...);
         }
+        
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::Simplify(const ExpT& Exp)
+        {
+            auto Retval = Sem->Simplify(Exp);
+            Internalize(Retval);
+            return Retval;
+        }
 
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::ElimQuantifiers(const ExpT& Exp)
+        {
+            auto Retval = Sem->ElimQuantifiers(Exp);
+            Internalize(Retval);
+            return Retval;
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::Substitute(const SubstMap& Subst, const ExpT& Exp)
+        {
+            return ApplyTransform<Substitutor>(Subst, Exp);
+        }
+        
+
+        template <typename E, template <typename> class S>
+        inline void ExprMgr<E, S>::AutoGC()
+        {
+            if (ExpSet.size() >= NextGC) {
+                GC();
+                NextGC = (u32)(GCGrowthFactor * (float)ExpSet.size());
+            }
+        }
+        
         template <typename E, template <typename> class S>
         inline void ExprMgr<E, S>::GC()
         {
