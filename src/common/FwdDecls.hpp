@@ -56,7 +56,7 @@ namespace ESMC {
     namespace Exprs {
         template <typename ExtType> class SemanticizerBase;
         template <typename ExtType> class Z3Semanticizer;
-        template <typename ExtType, template <typename> class SemType> class ExprManager;
+        template <typename ExtType, template <typename> class SemType> class ExprMgr;
         template <typename ExtType, template <typename> class SemType> class ExpressionBase;
         template <typename ExtType, template <typename> class SemType> class ConstExpression;
         template <typename ExtType, template <typename> class SemType> class VarExpression;
