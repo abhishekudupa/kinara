@@ -54,29 +54,32 @@ namespace ESMC {
     // Expression managers
     // and semanticizers
     namespace Exprs {
-        template <typename LEType> class SemanticizerBase;
-        class Z3Semanticizer;
-        template <typename ExtType, typename SemType=Z3Semanticizer> class ExprManager;
+        template <typename ExtType> class SemanticizerBase;
+        template <typename ExtType> class Z3Semanticizer;
+        template <typename ExtType, template <typename> class SemType> class ExprManager;
+        template <typename ExtType, template <typename> class SemType> class ExpressionBase;
+        template <typename ExtType, template <typename> class SemType> class ConstExpression;
+        template <typename ExtType, template <typename> class SemType> class VarExpression;
+        template <typename ExtType, template <typename> class SemType> class BoundVarExpression;
+        template <typename ExtType, template <typename> class SemType> class OpExpression;
+        template <typename ExtType, template <typename> class SemType> class QuantifiedExpressionBase;
+        template <typename ExtType, template <typename> class SemType> class AQuantifiedExpression;
+        template <typename ExtType, template <typename> class SemType> class EQuantifiedExpression;
 
-        template <typename ExtType> class ExprMgr;
-        template <typename ExtType> class ExpressionBase;
-        template <typename ExtType> class ConstExpression;
-        template <typename ExtType> class VarExpression;
-        template <typename ExtType> class BoundVarExpression;
-        template <typename ExtType> class OpExpression;
-        template <typename ExtType> class QuantifiedExpressionBase;
-        template <typename ExtType> class AQuantifiedExpression;
-        template <typename ExtType> class EQuantifiedExpression;
+        // Smart ptr types for expressions
+        template <typename E, template <typename> class S>
+        using Expr = CSmartPtr<ExpressionBase<E, S>>;
+        template <typename E, template <typename> class S>
+        using ExprI = SmartPtr<ExpressionBase<E, S>>;
 
         class ExpressionPtrHasher;
+        class FastExpressionPtrEquals;
         class ExpressionPtrEquals;
         class ExpressionPtrCompare;
     
-        template <typename ExtType> using Expression = CSmartPtr<ExpressionBase<ExtType>>;
-        template <typename ExtType> using ExprInternal = SmartPtr<ExpressionBase<ExtType>>;
-
         // Expression Visitors
-        class ExpressionVisitorBase;
+        template <typename E, template <typename> class S> class ExpressionVisitorBase;
+
     } /* end namespace Exprs */
     
 

@@ -61,7 +61,7 @@ namespace ESMC {
     {
         NextUID = InitSeed;
     }
-
+    
     string UIDGenerator::GetStrUID()
     {
         return (to_string(NextUID++));
