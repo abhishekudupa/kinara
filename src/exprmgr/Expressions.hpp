@@ -44,6 +44,8 @@
 
 #include <vector>
 #include <boost/functional/hash.hpp>
+#include <boost/algorithm/string/trim.hpp>
+#include <functional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -259,16 +261,16 @@ namespace ESMC {
         class QuantifiedExpressionBase : public ExpressionBase<E, S>
         {
         private:
-            vector<Expr<E, S>> QVarList;
+            vector<i64> QVarTypes;
             Expr<E, S> QExpression;
 
         public:
             inline QuantifiedExpressionBase(ExprMgr<E, S>* Manager,
-                                            const vector<Expr<E, S>>& QVarList,
+                                            const vector<i64>& QVarTypes,
                                             const Expr<E, S>& QExpression,
                                             const E& ExtData = E());
             inline virtual ~QuantifiedExpressionBase();
-            inline const vector<Expr<E, S>>& GetQVarList() const;
+            inline const vector<i64>& GetQVarTypes() const;
             inline const Expr<E, S>& GetQExpression() const;
 
         protected:
@@ -367,7 +369,7 @@ namespace ESMC {
 
             inline i64 RegisterUninterpretedFunction(const string& Name,
                                                      const vector<i64> DomTypes,
-                                                     i64 RangeType) const
+                                                     i64 RangeType)
             {
                 return 0;
             }
@@ -385,9 +387,11 @@ namespace ESMC {
             typedef unordered_map<ExpT, ExpT, 
                                   ExpressionPtrHasher,
                                   ExpressionPtrEquals> SubstMap;
+
         private:
-            SemT* Sem;
             typedef unordered_set<ExpT, ExpressionPtrHasher, FastExpressionPtrEquals> ExpSetType;
+
+            SemT* Sem;
             ExpSetType ExpSet;
             u32 NextGC;
             const float GCGrowthFactor = 1.5f;
@@ -399,7 +403,7 @@ namespace ESMC {
             inline void CheckMgr(const vector<ExpT>& Children) const;
             inline void CheckMgr(const ExpT& Exp) const;
             template <typename T>
-            inline ExpT MakeQExpression(const vector<ExpT>& QVars,
+            inline ExpT MakeQExpression(const vector<i64>& QVars,
                                         const ExpT& QExpr,
                                         const E& ExtVal);
 
@@ -425,11 +429,11 @@ namespace ESMC {
             inline ExpT MakeExpr(i64 OpCode, const vector<ExpT>& Children,
                                  const E& ExtVal = E());
 
-            inline ExpT MakeExists(const vector<ExpT>& QVars, 
+            inline ExpT MakeExists(const vector<i64>& QVarTypes, 
                                    const ExpT& QExpr,
                                    const E& ExtVal = E());
 
-            inline ExpT MakeForAll(const vector<ExpT>& QVars, 
+            inline ExpT MakeForAll(const vector<i64>& QVarTypes,
                                    const ExpT& QExpr,
                                    const E& ExtVal = E());
 
@@ -447,6 +451,10 @@ namespace ESMC {
             inline ExpT ElimQuantifiers(const ExpT& Exp);
             inline ExpT Simplify(const ExpT& Exp);
             inline ExpT Substitute(const SubstMap& Subst, const ExpT& Exp);
+            inline unordered_set<ExpT> 
+            Gather(const ExpT& Exp, 
+                   const function<bool(const ExpressionBase<E, S>*)>& Pred) const;
+
             inline string TypeToString(i64 TypeID) const;
             inline void GC();
         };
@@ -498,6 +506,29 @@ namespace ESMC {
                 override;
 
             inline static ExpT Do(const SubstMap& Subst, const ExpT& Exp);
+        };
+
+        template <typename E, template <typename> class S>
+        class Gatherer : ExpressionVisitorBase<E, S>
+        {
+        private:
+            typedef Expr<E, S> ExpT;
+            function<bool(const ExpressionBase<E, S>*)> Pred;
+            unordered_set<ExpT> GatheredExps;
+
+        public:
+            inline Gatherer(const function<bool(const ExpressionBase<E, S>*)>& Pred);
+            inline virtual ~Gatherer();
+
+            inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+            inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+            inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) override;
+            inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+            inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) override;
+            inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override;
+            
+            static inline unordered_set<ExpT> 
+            Do(const ExpT& Exp, const function<bool(const ExpressionBase<E, S>*)>& Pred);
         };
 
         template <typename E, template <typename> class S>
@@ -638,7 +669,7 @@ namespace ESMC {
         {
             Exp->GetQExpression().Accept(this);
             auto SubstQExpr = SubstStack.back();
-            SubstStack.push_back(new EQuantifiedExpression<E, S>(nullptr, Exp->GetQVarList(),
+            SubstStack.push_back(new EQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
                                                                  SubstQExpr));
         }
 
@@ -648,7 +679,7 @@ namespace ESMC {
         {
             Exp->GetQExpression().Accept(this);
             auto SubstQExpr = SubstStack.back();
-            SubstStack.push_back(new AQuantifiedExpression<E, S>(nullptr, Exp->GetQVarList(),
+            SubstStack.push_back(new AQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
                                                                  SubstQExpr));
         }
 
@@ -660,6 +691,87 @@ namespace ESMC {
             Exp->Accept(&TheSubstitutor);
             return TheSubstitutor.SubstStack[0];
         }
+
+
+        // Gatherer implementation
+        template <typename E, template <typename> class S>
+        inline Gatherer<E, S>::Gatherer(const function<bool(const ExpressionBase<E, S>*)>& Pred)
+            : ExpressionVisitorBase<E, S>("Gatherer"), Pred(Pred)
+        {
+            // Nothing here
+        }
+
+        template <typename E, template <typename> class S>
+        inline Gatherer<E, S>::~Gatherer()
+        {
+            // Nothing here
+        }
+
+        template <typename E, template <typename> class S>
+        inline void Gatherer<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+        {
+            ExpressionVisitorBase<E, S>::VisitVarExpression(Exp);
+            if (Pred(Exp)) {
+                GatheredExps.insert(Exp);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void Gatherer<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+        {
+            ExpressionVisitorBase<E, S>::VisitConstExpression(Exp);
+            if (Pred(Exp)) {
+                GatheredExps.insert(Exp);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void Gatherer<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+        {
+            ExpressionVisitorBase<E, S>::VisitBoundVarExpression(Exp);
+            if (Pred(Exp)) {
+                GatheredExps.insert(Exp);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void Gatherer<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+        {
+            ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+            if (Pred(Exp)) {
+                GatheredExps.insert(Exp);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void Gatherer<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+        {
+            ExpressionVisitorBase<E, S>::VisitEQuantifiedExpression(Exp);
+            if (Pred(Exp)) {
+                GatheredExps.insert(Exp);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void Gatherer<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+        {
+            ExpressionVisitorBase<E, S>::VisitAQuantifiedExpression(Exp);
+            if (Pred(Exp)) {
+                GatheredExps.insert(Exp);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline unordered_set<typename Gatherer<E, S>::ExpT>
+        Gatherer<E, S>::Do(const ExpT& Exp, const function<bool (const ExpressionBase<E, S> *)>& Pred)
+        {
+            Gatherer<E, S> TheGatherer(Pred);
+            Exp->Accept(&TheGatherer);
+            return TheGatherer.GatheredExps;
+        }
+
+
+        // Implementation of down casts
 
         template <typename E, template <typename> class S>
         template <template <typename, template <typename> class> class U>
@@ -1121,11 +1233,11 @@ namespace ESMC {
         inline QuantifiedExpressionBase<E, S>::QuantifiedExpressionBase
         (
          ExprMgr<E, S>* Manager,
-         const vector<Expr<E, S>>& QVarList,
+         const vector<i64>& QVarTypes,
          const Expr<E, S>& QExpression,
          const E& ExtVal
          )
-            : ExpressionBase<E, S>(Manager, ExtVal), QVarList(QVarList), QExpression(QExpression)
+            : ExpressionBase<E, S>(Manager, ExtVal), QVarTypes(QVarTypes), QExpression(QExpression)
         {
             // Nothing here
         }
@@ -1137,9 +1249,9 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline const vector<Expr<E, S>>& QuantifiedExpressionBase<E, S>::GetQVarList() const
+        inline const vector<i64>& QuantifiedExpressionBase<E, S>::GetQVarTypes() const
         {
-            return QVarList;
+            return QVarTypes;
         }
 
         template <typename E, template <typename> class S>
@@ -1152,13 +1264,13 @@ namespace ESMC {
         inline i32 
         QuantifiedExpressionBase<E, S>::CompareInternal(const QuantifiedExpressionBase<E, S>* Other) const
         {
-            if (QVarList.size() < Other->QVarList.size()) {
+            if (QVarTypes.size() < Other->QVarTypes.size()) {
                 return -1;
-            } else if (QVarList.size() > Other->QVarList.size()) {
+            } else if (QVarTypes.size() > Other->QVarTypes.size()) {
                 return 1;
             } else {
-                for (u32 i = 0; i < QVarList.size(); ++i) {
-                    auto Res = QVarList[i]->Compare(Other->QVarList[i]);
+                for (u32 i = 0; i < QVarTypes.size(); ++i) {
+                    auto Res = QVarTypes[i]->Compare(Other->QVarTypes[i]);
                     if (Res != 0) {
                         return Res;
                     }
@@ -1171,8 +1283,8 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline void QuantifiedExpressionBase<E, S>::ComputeHashInternal() const
         {
-            for (auto const& QVar : QVarList) {
-                boost::hash_combine(this->HashCode, QVar->Hash());
+            for (auto const& QVarType : QVarTypes) {
+                boost::hash_combine(this->HashCode, QVarType);
             }
         
             boost::hash_combine(this->HashCode, QExpression->Hash());
@@ -1183,14 +1295,14 @@ namespace ESMC {
         FastEQInternal(const QuantifiedExpressionBase<E, S>* Other) 
             const
         {
-            if (Other->QVarList.size() != QVarList.size()) {
+            if (Other->QVarTypes.size() != QVarTypes.size()) {
                 return false;
             }
 
-            const u32 NumQVars = QVarList.size();
+            const u32 NumQVars = QVarTypes.size();
 
             for (u32 i = 0; i < NumQVars; ++i) {
-                if (QVarList[i] != Other->QVarList[i]) {
+                if (QVarTypes[i] != Other->QVarTypes[i]) {
                     return false;
                 }
             }
@@ -1407,19 +1519,14 @@ namespace ESMC {
             }
             auto ExpAsQuantified = Exp->template As<QuantifiedExpressionBase>();
             if (ExpAsQuantified != nullptr) {
-                auto const& QVars = ExpAsQuantified->GetQVarList();
-                const u32 NumQVars = QVars.size();
-                vector<ExpT> IntQVars(NumQVars);
-                for (u32 i = 0; i < NumQVars; ++i) {
-                    IntQVars[i] = Internalize(QVars[i]);
-                }
+                auto const& QVarTypes = ExpAsQuantified->GetQVarTypes();
                 auto IntQExpr = Internalize(ExpAsQuantified->GetQExpression());
                 if (ExpAsQuantified->IsForAll()) {
-                    return GetCachedOrInsert<AQuantifiedExpression<E,S>>(IntQVars,
+                    return GetCachedOrInsert<AQuantifiedExpression<E,S>>(QVarTypes,
                                                                          IntQExpr,
                                                                          Exp->ExtData);
                 } else {
-                    return GetCachedOrInsert<EQuantifiedExpression<E,S>>(IntQVars,
+                    return GetCachedOrInsert<EQuantifiedExpression<E,S>>(QVarTypes,
                                                                          IntQExpr,
                                                                          Exp->ExtData);
                 }
@@ -1433,8 +1540,10 @@ namespace ESMC {
         ExprMgr<E, S>::MakeVal(const string& ValString, i64 ValType,
                                const E& ExtVal)
         {
+            auto TrimmedValString = boost::algorithm::trim_copy(ValString);
             auto Retval =
-                GetCachedOrInsert<ConstExpression<E,S>>(ValString, ValType, ExtVal);
+                GetCachedOrInsert<ConstExpression<E,S>>(TrimmedValString, 
+                                                        ValType, ExtVal);
             Sem->TypeCheck(Retval);
             return Retval;
         }
@@ -1471,45 +1580,39 @@ namespace ESMC {
             ExpT NewExp = new OpExpression<E, S>(OpCode, Children, ExtVal);
             Sem->TypeCheck(NewExp);
             auto Retval = Sem->Canonicalize(NewExp);
-            return GetCachedOrInsert(Retval);
+            return Internalize(Retval);
         }
 
         template <typename E, template <typename> class S>
         template <typename T>
         inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeQExpression(const vector<ExpT>& QVars,
+        ExprMgr<E, S>::MakeQExpression(const vector<i64>& QVarTypes,
                                        const ExpT& QExpr,
                                        const E& ExtVal)
         {
-            CheckMgr(QVars);
             CheckMgr(QExpr);
-            for (auto const& QVar : QVars) {
-                if (QVar->template As<BoundVarExpression>() == nullptr) {
-                    throw ExprTypeError("ExprMgr: Only bound vars can be quantified!");
-                }
-            }
-            ExpT NewExp = new T(QVars, QExpr, ExtVal);
+            ExpT NewExp = new T(QVarTypes, QExpr, ExtVal);
             Sem->TypeCheck(NewExp);
             auto Retval = Sem->Canonicalize(NewExp);
-            return GetCachedOrInsert(Retval);
+            return Internalize(Retval);
         }
 
         template <typename E, template <typename> class S>
         inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeExists(const vector<ExpT>& QVars,
+        ExprMgr<E, S>::MakeExists(const vector<i64>& QVarTypes,
                                   const ExpT& QExpr,
                                   const E& ExtVal)
         {
-            return MakeQExpression<EQuantifiedExpression>(QVars, QExpr, ExtVal);
+            return MakeQExpression<EQuantifiedExpression>(QVarTypes, QExpr, ExtVal);
         }
 
         template <typename E, template <typename> class S>
         inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeForAll(const vector<ExpT>& QVars,
-                                              const ExpT& QExpr,
-                                              const E& ExtVal)
+        ExprMgr<E, S>::MakeForAll(const vector<i64>& QVarTypes,
+                                  const ExpT& QExpr,
+                                  const E& ExtVal)
         {
-            return MakeQExpression<AQuantifiedExpression>(QVars, QExpr, ExtVal);
+            return MakeQExpression<AQuantifiedExpression>(QVarTypes, QExpr, ExtVal);
         }
 
         template <typename E, template <typename> class S>
@@ -1526,9 +1629,7 @@ namespace ESMC {
         ExprMgr<E, S>::ApplyTransform(const ExpT& Exp, 
                                       ArgTypes&&... Args)
         {
-            if (Exp->GetMgr() != this) {
-                throw ExprTypeError("ExprMgr: I don't own this expression");
-            }
+            CheckMgr(Exp);
             return Internalize(T<E, S>::Do(this, Exp, forward<ArgTypes>(Args)...));
         }
 
@@ -1555,7 +1656,8 @@ namespace ESMC {
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::RaiseExpr(const LExpT& LExp, ArgTypes&&... Args)
         {
-            Sem->RaiseExpr(LExp, forward<ArgTypes>(Args)...);
+            auto Retval = Sem->RaiseExpr(LExp, forward<ArgTypes>(Args)...);
+            return Internalize(Retval);
         }
         
         template <typename E, template <typename> class S>
@@ -1574,6 +1676,14 @@ namespace ESMC {
             auto Retval = Sem->ElimQuantifiers(Exp);
             Internalize(Retval);
             return Retval;
+        }
+
+        template <typename E, template <typename> class S>
+        unordered_set<typename ExprMgr<E, S>::ExpT> 
+        ExprMgr<E, S>::Gather(const ExpT& Exp, 
+                              const function<bool(const ExpressionBase<E, S>*)>& Pred) const
+        {
+            return Gatherer<E, S>::Do(Exp, Pred);
         }
 
         template <typename E, template <typename> class S>
