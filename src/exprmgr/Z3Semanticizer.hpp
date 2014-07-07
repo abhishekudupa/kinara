@@ -46,6 +46,7 @@
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/multiprecision.hpp>
 #include <algorithm>
 
 #include "Expressions.hpp"
@@ -199,12 +200,14 @@ namespace ESMC {
                 const vector<i64> DomainTypes;
                 i64 RangeType;
                 string Name;
+                string MangledName;
 
             public:
                 UFDescriptor();
                 UFDescriptor(const UFDescriptor& Other);
-                UFDescriptor(const vector<i64> DomainTypes, 
+                UFDescriptor(const vector<i64>& DomainTypes, 
                              i64 RangeType, const string& Name);
+                ~UFDescriptor();
 
                 UFDescriptor& operator = (const UFDescriptor& Other);
                 bool operator == (const UFDescriptor& Other);
@@ -212,6 +215,7 @@ namespace ESMC {
                 const vector<i64>& GetDomainTypes() const;
                 i64 GetRangeType() const;
                 const string& GetName() const;
+                const string& GetMangledName() const;
             };
 
             typedef unordered_map<i64, UFDescriptor> UFID2DMapT;
@@ -262,7 +266,8 @@ namespace ESMC {
                 }
                 
                 
-                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) override
+                inline virtual void 
+                VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) override
                 {
                     Exp->SetType(-1);
                 }
@@ -278,12 +283,14 @@ namespace ESMC {
                     Exp->GetQExpression()->Accept(this);
                 }
 
-                inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) override
+                inline virtual void 
+                VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) override
                 {
                     VisitQuantifiedExpression(Exp);
                 }
 
-                inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override
+                inline virtual void 
+                VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override
                 {
                     VisitQuantifiedExpression(Exp);
                 }
@@ -320,11 +327,13 @@ namespace ESMC {
             {
             private:
                 vector<string> StringStack;
+                typedef Expr<E, S> ExpT;
+                const UFID2DMapT& UFMap;
 
                 inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp);
 
             public:
-                Stringifier()
+                Stringifier(const UFID2DMapT& UFMap);
                 virtual ~Stringifier();
 
                 inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
@@ -337,7 +346,38 @@ namespace ESMC {
                 inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
                                                                Exp) override;
                 
-                static inline string Do(const ExpT& Exp);
+                static inline string Do(const ExpT& Exp, const UFID2DMapT& UFMap);
+                static inline string TypeToString(i64 Type);
+            };
+
+            template <typename E, template <typename> class S>
+            class Lowerer : public ExpressionVisitorBase<E, S>
+            {
+            private:
+                typedef Expr<E, S> ExpT;
+                typedef Z3Expr LExpT;
+                const UFID2DMapT& UFMap;
+                Z3Ctx Ctx;
+                vector<LExpT> ExpStack;
+
+                inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp);
+                inline Z3_sort LowerType(i64 Type);
+
+            public:
+                Lowerer(const UFID2DMapT& UFMap, const Z3Ctx& Ctx)
+                virtual ~Lowerer();
+
+                inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+                inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
+                    override;
+                inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+                inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>*
+                                                               Exp) override;
+                inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
+                                                               Exp) override;
+                
+                static inline LExpT Do(const ExpT& Exp, const UFID2DMapT& UFMap);
             };
 
             static inline string MangleName(const string& Name, const vector<i64>& DomainTypes)
@@ -598,7 +638,8 @@ namespace ESMC {
                 case OpMOD:
                 case OpPOWER:
                     if (ChildTypes.size() != 2) {
-                        throw ExprTypeError ((string)"div/rem/mod/pow ops need exactly two operands");
+                        throw ExprTypeError ((string)"div/rem/mod/pow ops need " + 
+                                             "exactly two operands");
                     }
                     if (!CheckAllInt(ChildTypes)) {
                         throw ExprTypeError((string)"div/rem/mod/pow ops expect Integer operands");
@@ -681,7 +722,8 @@ namespace ESMC {
                     auto const& UFDesc = it->second;
                     auto const& DomType = UFDesc.GetDomainTypes();
                     if (DomType.size() != ChildTypes.size()) {
-                        throw ExprTypeError ((string)"UF \"" + UFDesc.GetName() + "\" with opcode " + 
+                        throw ExprTypeError ((string)"UF \"" + UFDesc.GetName() + 
+                                             "\" with opcode " + 
                                              to_string(OpCode) + 
                                              " expects " + to_string(DomType.size()) + " operands" + 
                                              " but applied to " + to_string(ChildTypes.size()) + 
@@ -689,7 +731,8 @@ namespace ESMC {
                     }
                     for (u32 i = 0; i < DomType.size(); ++i) {
                         if (!CheckTypeResolution(DomType[i], ChildTypes[i])) {
-                            throw ExprTypeError((string)"Invalid operands for UF \"" + UFDesc.GetName() + 
+                            throw ExprTypeError((string)"Invalid operands for UF \"" + 
+                                                UFDesc.GetName() + 
                                                 "\" with opcode " + to_string(OpCode));
                         }
                     }
@@ -700,7 +743,8 @@ namespace ESMC {
 
             template <typename E, template <typename> class S>
             inline void 
-            TypeCheckVisitor<E, S>::VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
+            TypeCheckVisitor<E, S>::VisitQuantifiedExpression(const 
+                                                              QuantifiedExpressionBase<E, S>* Exp)
             {
                 auto const& QVarTypes = Exp->GetQVarTypes();
                 for (auto const& Type : QVarTypes) {
@@ -724,14 +768,16 @@ namespace ESMC {
 
             template <typename E, template <typename> class S>
             inline void 
-            TypeCheckVisitor<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+            TypeCheckVisitor<E, S>::VisitEQuantifiedExpression(const 
+                                                               EQuantifiedExpression<E, S>* Exp)
             {
                 VisitQuantifiedExpression(Exp);
             }
 
             template <typename E, template <typename> class S>
             inline void 
-            TypeCheckVisitor<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+            TypeCheckVisitor<E, S>::VisitAQuantifiedExpression(const 
+                                                               AQuantifiedExpression<E, S>* Exp)
             {
                 VisitQuantifiedExpression(Exp);
             }
@@ -763,7 +809,8 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            inline void Canonicalizer<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+            inline void Canonicalizer<E, S>::VisitBoundVarExpression(const 
+                                                                     BoundVarExpression<E, S>* Exp)
             {
                 ExpressionVisitorBase<E, S>::VisitBoundVarExpression(Exp);
                 ExpStack.push_back(Exp);
@@ -817,7 +864,8 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            inline void Canonicalizer<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+            inline void 
+            Canonicalizer<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
             {
                 ExpressionVisitorBase<E, S>::VisitEQuantifiedExpression(Exp);
                 auto NewQExpr = ExpStack.back();
@@ -827,7 +875,8 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            inline void Canonicalizer<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+            inline void 
+            Canonicalizer<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
             {
                 ExpressionVisitorBase<E, S>::VisitAQuantifiedExpression(Exp);
                 auto NewQExpr = ExpStack.back();
@@ -849,8 +898,9 @@ namespace ESMC {
             
             // Stringifier implementation
             template <typename E, template <typename> class S>
-            Stringifier<E, S>::Stringifier()
-                : ExpressionVisitorBase("Z3Stringifier")
+            Stringifier<E, S>::Stringifier(const UFID2DMapT& UFMap)
+                : ExpressionVisitorBase<E, S>("Z3Stringifier"), 
+                  UFMap(UFMap)
             {
                 // Nothing here
             }
@@ -876,7 +926,8 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            inline void Stringifier<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+            inline void 
+            Stringifier<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
             {
                 ExpressionVisitorBase<E, S>::VisitBoundVarExpression(Exp);
                 StringStack.push_back(BoundVarPrefix + "@" + to_string(Exp->GetVarIdx()));
@@ -885,8 +936,185 @@ namespace ESMC {
             template <typename E, template <typename> class S>
             inline void Stringifier<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
             {
-                // TODO: Implement me
+                auto const& OpCode = Exp->GetOpCode();
+                ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+                const u32 NumChildren = Exp->GetChildren().size();
+                vector<string> SubExps(NumChildren);
+                string OpString;
+                auto it = OpCodeToNameMap.find(OpCode);
+                if (it != OpCodeToNameMap.end()) {
+                    OpString = it->second;
+                } else {
+                    auto it = UFMap.find(OpCode);
+                    if (it == UFMap.end()) {
+                        throw InternalError((string)"Unknown uninterpreted function. At: " + 
+                                            __FILE__ + ":" + to_string(__LINE__));
+                    }
+                    auto const& Desc = it->second;
+                    OpString = Desc.GetName();
+                }
+
+                string ExpString = (string)"(" + OpString;
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    SubExps[NumChildren - i - 1] = StringStack.back();
+                    StringStack.pop_back();
+                }
+                for (auto const& SubExp : SubExps) {
+                    ExpString += (" " + SubExp);
+                }
+                ExpString += ")";
+                StringStack.push_back(ExpString);
             }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            Stringifier<E, S>::VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
+            {
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                string ExpString;
+                if (Exp->IsForAll()) {
+                    ExpString = "(forall (";
+                } else {
+                    ExpString = "(exists (";
+                }
+                bool First = true;
+
+                for (auto const& QVarType : QVarTypes) {
+                    if (!First) {
+                        ExpString += " ";
+                    }
+                    First = false;
+                    ExpString += "(" + TypeToString(QVarType) + ")";
+                }
+                ExpString += ") ";
+                Exp->GetQExpression()->Accept(this);
+                ExpString += StringStack.back();
+                ExpString += ")";
+                StringStack.pop_back();
+                StringStack.push_back(ExpString);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            Stringifier<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+            {
+                VisitQuantifiedExpression(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            Stringifier<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+            {
+                VisitQuantifiedExpression(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline string
+            Stringifier<E, S>::Do(const ExpT& Exp, const UFID2DMapT& UFMap)
+            {
+                Stringifier TheStringifier(UFMap);
+                Exp->Accept(TheStringifier);
+                return TheStringifier.StringStack[0];
+            }
+
+            template <typename E, template <typename> class S>
+            inline string
+            Stringifier<E, S>::TypeToString(i64 Type)
+            {
+                if (Type == IntType) {
+                    return "Int";
+                }
+                if (Type == BoolType) {
+                    return "Bool";
+                }
+                if (Type == BVTypeAll) {
+                    return "(BV _)";
+                } 
+                if (Type > BVTypeAll &&
+                    Type < BVTypeEnd) {
+                    return (string)"(BV " + to_string(Type - BVTypeAll) + ")";
+                }
+                throw InternalError((string)"Unknown type " + to_string(Type) + " At : " + 
+                                    __FILE__ + to_string(__LINE__));
+            }
+
+            
+            // Lowerer implementation
+            template <typename E, template <typename> class S>
+            Lowerer<E, S>::Lowerer(const UFID2DMapT& UFMap, const Z3Ctx& Ctx)
+                : ExpressionVisitorBase<E,S>("Z3Lowerer"), UFMap(UFMap),
+                  Ctx(Ctx)
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            Lowerer<E, S>::~Lowerer()
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline Z3_sort Lowerer<E, S>::LowerType(i64 Type)
+            {
+                if (Type == BoolType) {
+                    return Z3_mk_bool_sort(*Ctx);
+                } else if (Type == IntType) {
+                    return Z3_mk_int_sort(*Ctx);
+                } else {
+                    if (Type <= BVTypeAll || Type >= BVTypeEnd) {
+                        throw InternalError((string)"Unknown type " + to_string(Type) + 
+                                            " At: " + __FILE__ + ":" + to_string(__LINE__));
+                    }
+                    auto Size = Type - BVTypeAll;
+                    return Z3_mk_bv_sort(*Ctx, Size);
+                }
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            Lowerer<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+            {
+                auto VarSym = Z3_mk_string_symbol(*Ctx, Exp->GetVarName().c_str());
+                Z3Expr LoweredExp(*Ctx, Z3_mk_const(*Ctx, VarSym, 
+                                                    LowerType(Exp->GetVarType())));
+                ExpStack.push_back(LoweredExp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            Lowerer<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+            {
+                const string& ConstVal = Exp->GetConstValue();
+                auto Type = Exp->GetConstType();
+                
+                if (Type == IntType) {
+                    Z3Expr LoweredExp(*Ctx, Z3_mk_numeral(*Ctx, ConstVal, 
+                                                          LowerType(Type)));
+                    ExpStack.push_back(LoweredExp);
+                } else if (Type == BoolType) {
+                    if (ConstVal == "true") {
+                        Z3Expr LoweredExp(*Ctx, Z3_mk_true(*Ctx));
+                        ExpStack.push_back(LoweredExp);
+                    } else {
+                        Z3Expr LoweredExp(*Ctx, Z3_mk_false(*Ctx));
+                        ExpStack.push_back(LoweredExp);
+                    }
+                } else {
+                    if (boost::algorithm::starts_with(ConstVal, "#b")) {
+                        boost::multiprecision::cpp_int Val = 0;
+                        for (u32 i = 2; i < ConstVal.length(); ++i) {
+                            if (ConstVal[i] == '1') {
+                                Val *= 2;
+                                Val += 1;
+                            } else {
+                                Val *= 2;
+                            }
+                        }
+                    }
+                }
+            }
+                      
             
         } /* end namespace Detail */
 
@@ -924,6 +1152,7 @@ namespace ESMC {
         // Implementation of Z3Semanticizer
         template <typename E>
         Z3Semanticizer<E>::Z3Semanticizer()
+            UFUIDGen(UFOffset)
         {
             // Nothing here
         }
@@ -1000,8 +1229,20 @@ namespace ESMC {
                                                                     const vector<i64> &DomTypes, 
                                                                     i64 RangeType)
         {
-            // TODO: Implement me
-            return 0;
+            CheckType(RangeType);
+            for (auto const& DomType : DomTypes) {
+                CheckType(DomType);
+            }
+
+            auto NewID = UFUIDGen.NextUID();
+            UFDescriptor Desc(DomTypes, RangeType, Name);
+            if (UFName2DMap.find(Desc.GetMangledName()) != UFName2DMap.end()) {
+                throw ExprTypeError((string)"Uninterpreted function with name " + 
+                                    Name + " already registered!");
+            }
+            UFName2DMap[Desc.GetMangledName()] = Desc;
+            UFID2DMap[NewID] = Desc;
+            return NewID;
         }
 
     } /* end namespace Z3Sem */

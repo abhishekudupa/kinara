@@ -151,6 +151,71 @@ namespace ESMC {
                 return Ctx;
             }
 
+            ostream& operator << (ostream& Out, const Z3Expr& Exp)
+            {
+                Out << Exp->ToString();
+                return Out;
+            }
+
+            UFDescriptor::UFDescriptor()
+                : RangeType(-1), Name(""), MangledName("")
+            {
+                // Nothing here
+            }
+
+            UFDescriptor::UFDescriptor(const UFDescriptor& Other) 
+                : DomainTypes(Other.DomainTypes), RangeType(Other.RangeType), 
+                  Name(Other.Name), MangledName(Other.MangledName)
+            {
+                // Nothing here
+            }
+
+            UFDescriptor(const vector<i64>& DomainTypes,
+                         const i64 RangeType,
+                         const string& Name)
+                : DomainTypes(DomainTypes), RangeType(RangeType),
+                  Name(Name), MangledName(MangleName(Name, DomainTypes))
+            {
+                // Nothing here
+            }
+
+            UFDescriptor::~UFDescriptor()
+            {
+                // Nothing here
+            }
+
+            UFDescriptor& UFDescriptor::operator = (const UFDescriptor& Other)
+            {
+                if (&Other == this) {
+                    return *this;
+                }
+                DomainTypes = Other.DomainTypes;
+                RangeType = Other.RangeType;
+                Name = Other.Name;
+                MangledName = Other.MangledName;
+                return *this;
+            }
+
+            const vector<i64>& UFDescriptor::GetDomainTypes() const
+            {
+                return DomainTypes;
+            }
+
+            i64 UFDescriptor::GetRangeType() const
+            {
+                return RangeType;
+            }
+
+            const string& UFDescriptor::GetName() const
+            {
+                return Name;
+            }
+
+            const string& UFDescriptor::GetMangledName() const
+            {
+                return MangledName;
+            }
+
         } /* end namespace Detail */
     } /* end namespace Z3Sem */
 } /* end namespace ESMC */
