@@ -1270,7 +1270,7 @@ namespace ESMC {
                 return 1;
             } else {
                 for (u32 i = 0; i < QVarTypes.size(); ++i) {
-                    auto Res = QVarTypes[i]->Compare(Other->QVarTypes[i]);
+                    auto Res = (QVarTypes[i] < Other->QVarTypes[i] ? -1 : 1);
                     if (Res != 0) {
                         return Res;
                     }

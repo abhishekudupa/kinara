@@ -62,7 +62,6 @@ namespace ESMC {
         const i64 UFOffset = 100000;
         const i64 UFEnd = 1000000;
         const i64 SortOffset = 1000000;
-
         const i64 OpEQ = 1000;
         const i64 OpNOT = 1001;
         const i64 OpITE = 1002;
@@ -146,8 +145,9 @@ namespace ESMC {
                   { OpBVOR, "bvor" },
                   { OpBVXOR, "bvxor" } };
 
+            const string BoundVarPrefix = "dbvar";
             
-            // A wrapper for Z3 contexts
+            // A wrapper for ref counting Z3 contexts
             class Z3CtxWrapper : public RefCountable
             {
             private:
@@ -157,7 +157,7 @@ namespace ESMC {
                 Z3CtxWrapper(Z3_context Ctx);
                 virtual ~Z3CtxWrapper();
 
-                operator Z3_context ();
+                operator Z3_context () const;
                 Z3_context GetCtx() const;
             };
 
@@ -166,30 +166,32 @@ namespace ESMC {
             class Z3Expr
             {
             protected:
-                Z3_context Ctx;
+                Z3Ctx Ctx;
 
             private:
                 Z3_ast AST;
             
             public:
-                inline Z3Expr();
-                inline Z3Expr(const Z3Expr& Other);
-                inline Z3Expr(Z3_context Ctx, Z3_ast AST);
-                inline Z3Expr(Z3Expr&& Other);
-                inline virtual ~Z3Expr();
+                Z3Expr();
+                Z3Expr(const Z3Expr& Other);
+                Z3Expr(Z3Ctx Ctx, Z3_ast AST);
+                Z3Expr(Z3Expr&& Other);
+                virtual ~Z3Expr();
 
-                inline Z3Expr& operator = (Z3Expr Other);
-                inline bool operator == (const Z3Expr& Other);
+                Z3Expr& operator = (Z3Expr Other);
+                bool operator == (const Z3Expr& Other) const;
             
-                inline string ToString() const;
-                inline u64 Hash() const;
+                string ToString() const;
+                u64 Hash() const;
 
 
                 // unsafe! use only if you know what you're doing
                 operator Z3_ast () const;
-                inline Z3_ast GetAST() const;
-                inline Z3_context GetCtx() const;
+                Z3_ast GetAST() const;
+                const Z3Ctx& GetCtx() const;
             };
+
+            extern ostream& operator << (ostream& Out, const Z3Expr& Exp);
 
             class UFDescriptor
             {
@@ -313,6 +315,31 @@ namespace ESMC {
                 static inline ExpT Do(const ExpT& Exp);
             };
 
+            template <typename E, template <typename> class S>
+            class Stringifier : public ExpressionVisitorBase<E, S>
+            {
+            private:
+                vector<string> StringStack;
+
+                inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp);
+
+            public:
+                Stringifier()
+                virtual ~Stringifier();
+
+                inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+                inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
+                    override;
+                inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+                inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>*
+                                                               Exp) override;
+                inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
+                                                               Exp) override;
+                
+                static inline string Do(const ExpT& Exp);
+            };
+
             static inline string MangleName(const string& Name, const vector<i64>& DomainTypes)
             {
                 string Retval = Name;
@@ -326,8 +353,8 @@ namespace ESMC {
                                                  i64 VarIdx)
             {
                 i64 LeftIdx = VarIdx;
-                for (i32 i = ScopeStack.size(); i > 0; --i) {
-                    if (LeftIdx < ScopeStack[i].size()) {
+                for (i64 i = ScopeStack.size(); i > 0; --i) {
+                    if (LeftIdx < (i64)ScopeStack[i].size()) {
                         return ScopeStack[i][ScopeStack[i].size() - 1 - LeftIdx];
                     } else {
                         LeftIdx -= ScopeStack[i].size();
@@ -652,21 +679,21 @@ namespace ESMC {
                         throw ExprTypeError ((string)"Unknown op " + to_string(OpCode));
                     }
                     auto const& UFDesc = it->second;
-                    auto const& RangeType = UFDesc.GetRangeType();
-                    if (RangeType.size() != ChildTypes.size()) {
+                    auto const& DomType = UFDesc.GetDomainTypes();
+                    if (DomType.size() != ChildTypes.size()) {
                         throw ExprTypeError ((string)"UF \"" + UFDesc.GetName() + "\" with opcode " + 
                                              to_string(OpCode) + 
-                                             " expects " + to_string(RangeType.size()) + " operands" + 
+                                             " expects " + to_string(DomType.size()) + " operands" + 
                                              " but applied to " + to_string(ChildTypes.size()) + 
                                              " operands");
                     }
-                    for (u32 i = 0; i < RangeType.size(); ++i) {
-                        if (!CheckTypeResolution(RangeType[i], ChildTypes[i])) {
+                    for (u32 i = 0; i < DomType.size(); ++i) {
+                        if (!CheckTypeResolution(DomType[i], ChildTypes[i])) {
                             throw ExprTypeError((string)"Invalid operands for UF \"" + UFDesc.GetName() + 
                                                 "\" with opcode " + to_string(OpCode));
                         }
                     }
-                    Exp->SetType(RangeType);
+                    Exp->SetType(UFDesc.GetRangeType());
                     break;
                 }
             }
@@ -818,6 +845,48 @@ namespace ESMC {
                 assert(TheCanonicalizer.ExpStack.size() == 1);
                 return (TheCanonicalizer.ExpStack[0]);
             }
+
+            
+            // Stringifier implementation
+            template <typename E, template <typename> class S>
+            Stringifier<E, S>::Stringifier()
+                : ExpressionVisitorBase("Z3Stringifier")
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            Stringifier<E, S>::~Stringifier()
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline void Stringifier<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+            {
+                ExpressionVisitorBase<E, S>::VisitVarExpression(Exp);
+                StringStack.push_back(Exp->GetVarName());
+            }
+
+            template <typename E, template <typename> class S>
+            inline void Stringifier<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+            {
+                ExpressionVisitorBase<E, S>::VisitConstExpression(Exp);
+                StringStack.push_back(Exp->GetConstValue());
+            }
+
+            template <typename E, template <typename> class S>
+            inline void Stringifier<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+            {
+                ExpressionVisitorBase<E, S>::VisitBoundVarExpression(Exp);
+                StringStack.push_back(BoundVarPrefix + "@" + to_string(Exp->GetVarIdx()));
+            }
+
+            template <typename E, template <typename> class S>
+            inline void Stringifier<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+            {
+                // TODO: Implement me
+            }
             
         } /* end namespace Detail */
 
@@ -885,6 +954,7 @@ namespace ESMC {
         Z3Semanticizer<E>::RaiseExpr(const LExpT& LExp)
         {
             // TODO: Implement me
+            return ExpT::NullPtr;
         }
 
         template <typename E>
@@ -892,6 +962,7 @@ namespace ESMC {
         Z3Semanticizer<E>::LowerExpr(const ExpT& Exp)
         {
             // TODO: Implement me
+            return Z3Expr();
         }
 
         template <typename E>
@@ -899,6 +970,7 @@ namespace ESMC {
         Z3Semanticizer<E>::Simplify(const ExpT& Exp)
         {
             // TODO: Implement me
+            return ExpT::NullPtr;
         }
 
         template <typename E>
@@ -906,18 +978,21 @@ namespace ESMC {
         Z3Semanticizer<E>::ElimQuantifiers(const ExpT& Exp)
         {
             // TODO: Implement me
+            return ExpT::NullPtr;
         }
 
         template <typename E>
         inline string Z3Semanticizer<E>::ExprToString(const ExpT& Exp) const
         {
             // TODO: Implement me
+            return "";
         }
 
         template <typename E>
         inline string Z3Semanticizer<E>::TypeToString(i64 Type) const
         {
             // TODO: Implement me
+            return "";
         }
 
         template <typename E>
@@ -926,6 +1001,7 @@ namespace ESMC {
                                                                     i64 RangeType)
         {
             // TODO: Implement me
+            return 0;
         }
 
     } /* end namespace Z3Sem */

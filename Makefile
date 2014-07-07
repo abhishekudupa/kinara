@@ -14,7 +14,7 @@ PROJECT_MODULES= \
 
 
 PROJECT_SOURCES= \
-	Visitors.cpp \
+	Z3Semanticizer.cpp \
 
 
 VPATH=$(addsuffix /:, $(addprefix $(SRC_DIR)/, $(PROJECT_MODULES)))
@@ -123,7 +123,6 @@ clean:
 	rm -rf bin/debug/*
 	rm -rf bin/opt/*
 	rm -rf bin/prof/*
-	# $(MAKE) $(MAKECMDGOALS) -C $(ESOLVER_ROOT)/src/synthlib2parser
 
 distclean:
 	# rm -rf obj/debug/*
