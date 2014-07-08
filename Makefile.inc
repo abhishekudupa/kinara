@@ -1,59 +1,8 @@
-BUILD_SUFFIX=debug
-OPTFLAGS=-ggdb3 -O0 -fno-inline
-FEAT_FLAGS=-fPIC
 
 Z3DIR=$(PROJECT_ROOT)/src/extern/z3-4.3.1
 Z3LIBLINK=-lz3
 Z3BUILDDIR=$(Z3DIR)/build
 
-ifeq ($(MAKECMDGOALS), opt)
-BUILD_SUFFIX=opt
-OPTFLAGS=-O2
-endif
-ifeq ($(MAKECMDGOALS), optlto)
-BUILD_SUFFIX=opt
-OPTFLAGS=-O2 -flto
-Z3LIBNAME=-lz3
-endif
-ifeq ($(MAKECMDGOALS), prof)
-BUILD_SUFFIX=prof
-OPTFLAGS=-O2 -pg
-endif
-ifeq ($(MAKECMDGOALS), proflto)
-BUILD_SUFFIX=prof
-OPTFLAGS=-O2 -pg -flto
-Z3LIBLINK=-lz3
-endif
-ifeq ($(MAKECMDGOALS), eopt)
-BUILD_SUFFIX=opt
-OPTFLAGS=-O3
-endif
-ifeq ($(MAKECMDGOALS), eoptlto)
-BUILD_SUFFIX=opt
-OPTFLAGS=-O3 -flto
-Z3LIBLINK=-lz3
-endif
-ifeq ($(MAKECMDGOALS), eprof)
-BUILD_SUFFIX=prof
-OPTFLAGS=-O3 -pg
-endif
-ifeq ($(MAKECMDGOALS), eproflto)
-BUILD_SUFFIX=prof
-OPTFLAGS=-O3 -pg -flto
-Z3LIBLINK=-lz3
-endif
-ifeq ($(MAKECMDGOALS), fulllto)
-BUILD_SUFFIX=opt
-Z3LIBLINK=-lz3-lto
-endif
-ifeq ($(MAKECMDGOALS), fullltoprof)
-BUILD_SUFFIX=prof
-Z3LIBLINK=-lz3-lto
-endif
-
-CXX=g++
-CC=$(CXX)
-LD=$(CXX)
 CXXFLAGS+=-Wall -pedantic -D__STDC_LIMIT_MACROS -DDISABLE_STATIC_BP -Wno-unused-local-typedefs
 CXXFLAGS+=-I $(Z3DIR)/src/api/ -I $(PROJECT_ROOT)/src/extern/boost-local/boost_install/include/
 CXXFLAGS+=-pipe -std=c++11

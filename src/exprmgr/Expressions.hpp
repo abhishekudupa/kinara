@@ -457,6 +457,8 @@ namespace ESMC {
 
             inline string TypeToString(i64 TypeID) const;
             inline void GC();
+
+            static inline ExprMgr* Make();
         };
 
         // Visitor classes
@@ -1719,6 +1721,12 @@ namespace ESMC {
                     }
                 }
             } while (ToDelete.size() > 0);
+        }
+
+        template <typename E, template <typename> class S>
+        inline ExprMgr<E, S>* Make()
+        {
+            return new ExprMgr<E, S>();
         }
         
     } /* end namespace */
