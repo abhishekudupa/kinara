@@ -54,8 +54,8 @@ endif
 CXX=g++
 CC=$(CXX)
 LD=$(CXX)
-CXXFLAGS+=-Wall -pedantic -D__STDC_LIMIT_MACROS -DDISABLE_STATIC_BP
-CXXFLAGS+=-I $(Z3DIR)/src/api/
+CXXFLAGS+=-Wall -pedantic -D__STDC_LIMIT_MACROS -DDISABLE_STATIC_BP -Wno-unused-local-typedefs
+CXXFLAGS+=-I $(Z3DIR)/src/api/ -I $(PROJECT_ROOT)/src/extern/boost-local/boost_install/include/
 CXXFLAGS+=-pipe -std=c++11
 LINKFLAGS+=-L $(Z3BUILDDIR) -L $(PROJECT_ROOT)/lib/$(BUILD_SUFFIX)
 LINKFLAGS+=-Wl,-Bstatic -lesolver -Wl,-Bstatic $(Z3LIBLINK) -Wl,-Bdynamic -lrt

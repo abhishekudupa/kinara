@@ -153,7 +153,7 @@ namespace ESMC {
 
             ostream& operator << (ostream& Out, const Z3Expr& Exp)
             {
-                Out << Exp->ToString();
+                Out << Exp.ToString();
                 return Out;
             }
 
@@ -170,9 +170,9 @@ namespace ESMC {
                 // Nothing here
             }
 
-            UFDescriptor(const vector<i64>& DomainTypes,
-                         const i64 RangeType,
-                         const string& Name)
+            UFDescriptor::UFDescriptor(const vector<i64>& DomainTypes,
+                                       const i64 RangeType,
+                                       const string& Name)
                 : DomainTypes(DomainTypes), RangeType(RangeType),
                   Name(Name), MangledName(MangleName(Name, DomainTypes))
             {
