@@ -21,7 +21,7 @@ PROJECT_SOURCES= \
 
 include $(PROJECT_ROOT)/Makefile.util
 
-all:	$(PROJECT_OBJS)
+toplevel:	$(PROJECT_OBJS)
 
 clean:
 	rm -rf obj/debug/*
