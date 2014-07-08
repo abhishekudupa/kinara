@@ -156,6 +156,7 @@ namespace ESMC {
 
             public:
                 Z3CtxWrapper(Z3_context Ctx);
+                Z3CtxWrapper();
                 virtual ~Z3CtxWrapper();
 
                 operator Z3_context () const;
@@ -197,6 +198,7 @@ namespace ESMC {
             class UFDescriptor
             {
             private:
+                i64 Identifier;
                 vector<i64> DomainTypes;
                 i64 RangeType;
                 string Name;
@@ -205,7 +207,8 @@ namespace ESMC {
             public:
                 UFDescriptor();
                 UFDescriptor(const UFDescriptor& Other);
-                UFDescriptor(const vector<i64>& DomainTypes, 
+                UFDescriptor(i64 Identifier,
+                             const vector<i64>& DomainTypes, 
                              i64 RangeType, const string& Name);
                 ~UFDescriptor();
 
@@ -216,6 +219,7 @@ namespace ESMC {
                 i64 GetRangeType() const;
                 const string& GetName() const;
                 const string& GetMangledName() const;
+                i64 GetIdentifier() const;
             };
 
             typedef unordered_map<i64, UFDescriptor> UFID2DMapT;
@@ -377,7 +381,30 @@ namespace ESMC {
                 inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
                                                                Exp) override;
                 
-                static inline LExpT Do(const ExpT& Exp, const UFID2DMapT& UFMap);
+                static inline LExpT Do(const ExpT& Exp, const UFID2DMapT& UFMap, const Z3Ctx& Ctx);
+            };
+
+            template <typename E, template <typename> class S>
+            class Raiser
+            {
+            private:
+                typedef Expr<E, S> ExpT;
+                typedef Z3Expr LExpT;
+                const UFName2DMapT& UFMap;
+                Z3Ctx Ctx;
+
+                inline Raiser(const UFName2DMapT& UFMap);
+
+                inline ExpT RaiseApp(const LExpT& LExp);
+                inline ExpT RaiseNum(const LExpT& LExp);
+                inline ExpT RaiseVar(const LExpT& LExp);
+                inline ExpT RaiseQuant(const LExpT& LExp);
+                inline ExpT Raise(const LExpT& LExp);
+                inline i64 RaiseSort(Z3_sort Sort);
+
+            public:
+                inline ~Raiser();
+                static inline ExpT Do(const LExpT& LExp, const UFName2DMapT& UFMap);
             };
 
             static inline string MangleName(const string& Name, const vector<i64>& DomainTypes)
@@ -1339,11 +1366,304 @@ namespace ESMC {
 
             template <typename E, template <typename> class S>
             inline typename Lowerer<E, S>::LExpT
-            Lowerer<E, S>::Do(const ExpT& Exp, const UFID2DMapT& UFMap)
+            Lowerer<E, S>::Do(const ExpT& Exp, const UFID2DMapT& UFMap, const Z3Ctx& Ctx)
             {
-                Lowerer TheLowerer(UFMap);
+                Lowerer TheLowerer(UFMap, Ctx);
                 Exp->Accept(&TheLowerer);
                 return TheLowerer.ExpStack[0];
+            }
+
+
+            // Raiser implementation
+
+            template <typename E, template <typename> class S>
+            inline Raiser<E, S>::Raiser(const UFName2DMapT& UFMap)
+                : UFMap(UFMap)
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline Raiser<E, S>::~Raiser()
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline i64 Raiser<E, S>::RaiseSort(Z3_sort Sort)
+            {
+                auto Kind = Z3_get_sort_kind(*Ctx, Sort);
+                switch (Kind) {
+                case Z3_BOOL_SORT:
+                    return BoolType;
+                    
+                case Z3_INT_SORT:
+                    return IntType;
+
+                case Z3_BV_SORT:
+                    return BVTypeAll + Z3_get_bv_sort_size(*Ctx, Sort);
+                    
+                default:
+                    throw InternalError((string)"Unknown Sort " + to_string(Kind));
+                }
+            }
+
+            template <typename E, template <typename> class S>
+            inline typename Raiser<E, S>::ExpT
+            Raiser<E, S>::RaiseApp(const LExpT& LExp)
+            {
+                auto App = Z3_to_app(*Ctx, LExp);
+                // Find out if this is uninterpreted
+                auto AppDecl = Z3_get_app_decl(*Ctx, App);
+                auto DeclSym = Z3_get_decl_name(*Ctx, AppDecl);
+                string DeclName(Z3_get_symbol_string(*Ctx, DeclSym));
+                auto NumArgs = Z3_get_domain_size(*Ctx, AppDecl);
+                auto AppKind = Z3_get_decl_kind(*Ctx, AppDecl);
+                vector<ExpT> RaisedChildren(NumArgs);
+                for (u32 i = 0; i < NumArgs; ++i) {
+                    RaisedChildren[i] = Raise(Z3_get_app_arg(*Ctx, App, i));
+                }
+
+                switch (AppKind) {
+                case Z3_OP_UNINTERPRETED:
+                    if (NumArgs == 0) {
+                        // A variable
+                        auto RangeSort = Z3_get_range(*Ctx, AppDecl);
+                        return new VarExpression<E, S>(nullptr, DeclName,
+                                                       RaiseSort(RangeSort));
+                    } else {
+                        // A true uninterpreted function
+                        vector<i64> DomTypes(NumArgs);
+                        for (u32 i = 0; i < NumArgs; ++i) {
+                            DomTypes[i] = RaiseSort(Z3_get_domain(*Ctx, AppDecl, i));
+                        }
+                        string MangledName = MangleName(DeclName, DomTypes);
+                        auto it = UFMap.find(MangledName);
+                        if (it == UFMap.end()) {
+                            throw InternalError((string)"Could not find descriptor for function " + 
+                                                DeclName + ". Z3 expression:\n" + 
+                                                Z3_ast_to_string(*Ctx, LExp));
+                        }
+                        i64 OpCode = it->second.GetIdentifier();
+                        return new OpExpression<E, S>(nullptr, OpCode, RaisedChildren);
+                    }
+
+                case Z3_OP_TRUE:
+                    return new ConstExpression<E, S>(nullptr, "true", BoolType);
+                    
+                case Z3_OP_FALSE:
+                    return new ConstExpression<E, S>(nullptr, "false", BoolType);
+
+                case Z3_OP_EQ:
+                    return new OpExpression<E, S>(nullptr, OpEQ, RaisedChildren);
+                    
+                case Z3_OP_ITE:
+                    return new OpExpression<E, S>(nullptr, OpITE, RaisedChildren);
+                    
+                case Z3_OP_OR:
+                    return new OpExpression<E, S>(nullptr, OpOR, RaisedChildren);
+                    
+                case Z3_OP_AND:
+                    return new OpExpression<E, S>(nullptr, OpAND, RaisedChildren);
+
+                case Z3_OP_IMPLIES:
+                    return new OpExpression<E, S>(nullptr, OpIMPLIES, RaisedChildren);
+                    
+                case Z3_OP_IFF:
+                    return new OpExpression<E, S>(nullptr, OpIFF, RaisedChildren);
+
+                case Z3_OP_XOR:
+                    return new OpExpression<E, S>(nullptr, OpXOR, RaisedChildren);
+
+                case Z3_OP_ADD:
+                    return new OpExpression<E, S>(nullptr, OpADD, RaisedChildren);
+
+                case Z3_OP_SUB:
+                    return new OpExpression<E, S>(nullptr, OpSUB, RaisedChildren);
+
+                case Z3_OP_UMINUS:
+                    return new OpExpression<E, S>(nullptr, OpMINUS, RaisedChildren);
+
+                case Z3_OP_MUL:
+                    return new OpExpression<E, S>(nullptr, OpMUL, RaisedChildren);
+
+                case Z3_OP_DIV:
+                    return new OpExpression<E, S>(nullptr, OpDIV, RaisedChildren);
+
+                case Z3_OP_MOD:
+                    return new OpExpression<E, S>(nullptr, OpMOD, RaisedChildren);
+
+                case Z3_OP_REM:
+                    return new OpExpression<E, S>(nullptr, OpREM, RaisedChildren);
+
+                case Z3_OP_POWER:
+                    return new OpExpression<E, S>(nullptr, OpPOWER, RaisedChildren);
+
+                case Z3_OP_LE:
+                    return new OpExpression<E, S>(nullptr, OpLE, RaisedChildren);
+
+                case Z3_OP_LT:
+                    return new OpExpression<E, S>(nullptr, OpLT, RaisedChildren);
+
+                case Z3_OP_GE:
+                    return new OpExpression<E, S>(nullptr, OpGE, RaisedChildren);
+
+                case Z3_OP_GT:
+                    return new OpExpression<E, S>(nullptr, OpGT, RaisedChildren);
+
+                case Z3_OP_BNOT:
+                    return new OpExpression<E, S>(nullptr, OpBVNOT, RaisedChildren);
+
+                case Z3_OP_BREDOR:
+                    return new OpExpression<E, S>(nullptr, OpBVREDOR, RaisedChildren);
+
+                case Z3_OP_BREDAND:
+                    return new OpExpression<E, S>(nullptr, OpBVREDAND, RaisedChildren);
+
+                case Z3_OP_BOR:
+                    return new OpExpression<E, S>(nullptr, OpBVOR, RaisedChildren);
+
+                case Z3_OP_BAND:
+                    return new OpExpression<E, S>(nullptr, OpBVAND, RaisedChildren);
+
+                case Z3_OP_BXOR:
+                    return new OpExpression<E, S>(nullptr, OpBVXOR, RaisedChildren);
+
+                default:
+                    throw InternalError((string)"Unknown Z3 Op: " + to_string(AppKind) + 
+                                        ". Z3 expression:\n" + Z3_ast_to_string(*Ctx, LExp));
+
+                }
+            }
+
+            template <typename E, template <typename> class S>
+            inline typename Raiser<E, S>::ExpT
+            Raiser<E, S>::RaiseNum(const LExpT& LExp)
+            {
+                auto Sort = Z3_get_sort(*Ctx, LExp);
+                auto Type = RaiseSort(Sort);
+                
+                switch (Type) {
+                case IntType:
+                    return new ConstExpression<E, S>(nullptr, Z3_get_numeral_string(*Ctx, LExp), Type);
+
+                default:
+                    {
+                        auto BVSize = Type - BVTypeAll;
+                        istringstream istr(Z3_get_numeral_string(*Ctx, LExp));
+                        boost::multiprecision::cpp_int HexVal;
+                        istr >> HexVal;
+                        ostringstream sstr;
+                        sstr << hex << HexVal;
+                        auto HexString = sstr.str();
+                        if (BVSize % 4 == 0) {
+                            return new ConstExpression<E, S>(nullptr, HexString, Type);
+                        } else {
+                            string BinString;
+                            for (u32 i = 0; i < HexString.length(); ++i) {
+                                switch(HexString[i]) {
+                                case '0':
+                                    BinString += "0000"; break;
+                                case '1':
+                                    BinString += "0001"; break;
+                                case '2':
+                                    BinString += "0010"; break;
+                                case '3':
+                                    BinString += "0011"; break;
+                                case '4':
+                                    BinString += "0100"; break;
+                                case '5':
+                                    BinString += "0101"; break;
+                                case '6':
+                                    BinString += "0110"; break;
+                                case '7':
+                                    BinString += "0111"; break;
+                                case '8':
+                                    BinString += "1000"; break;
+                                case '9':
+                                    BinString += "1001"; break;
+                                case 'A':
+                                    BinString += "1010"; break;
+                                case 'B':
+                                    BinString += "1011"; break;
+                                case 'C':
+                                    BinString += "1100"; break;
+                                case 'D':
+                                    BinString += "1101"; break;
+                                case 'E':
+                                    BinString += "1110"; break;
+                                case 'F':
+                                    BinString += "1111"; break;
+                                default:
+                                    throw InternalError((string)"Unexpected hex string: " + HexString);
+                                }
+                            }
+                            auto Snip = HexString.length() - BVSize;
+                            auto FinalStr = BinString.substr(Snip, BVSize);
+                            return new ConstExpression<E, S>(nullptr, FinalStr, Type);
+                        }
+                    }
+                }
+            }
+
+            template <typename E, template <typename> class S>
+            inline typename Raiser<E, S>::ExpT
+            Raiser<E, S>::RaiseVar(const LExpT& LExp)
+            {
+                return new BoundVarExpression<E, S>(nullptr,
+                                                    RaiseSort(Z3_get_sort(*Ctx, LExp)),
+                                                    Z3_get_index_value(*Ctx, LExp));
+            }
+
+            template <typename E, template <typename> class S>
+            inline typename Raiser<E, S>::ExpT
+            Raiser<E, S>::RaiseQuant(const LExpT& LExp)
+            {
+                auto NumBound = Z3_get_quantifier_num_bound(*Ctx, LExp);
+                vector<i64> QVarTypes(NumBound);
+                for (u32 i = 0; i < NumBound; ++i) {
+                    QVarTypes[i] = RaiseSort(Z3_get_quantifier_bound_sort(*Ctx, LExp, i));
+                }
+
+                if (Z3_is_quantifier_forall(*Ctx, LExp)) {
+                    return new AQuantifiedExpression<E, S>(nullptr, 
+                                                           QVarTypes,
+                                                           Raise(Z3_get_quantifier_body(*Ctx, LExp)));
+                } else {
+                    return new EQuantifiedExpression<E, S>(nullptr, 
+                                                           QVarTypes,
+                                                           Raise(Z3_get_quantifier_body(*Ctx, LExp)));
+                }
+            }
+
+            template <typename E, template <typename> class S>
+            inline typename Raiser<E, S>::ExpT
+            Raiser<E, S>::Raise(const LExpT& LExp)
+            {
+                auto Kind = Z3_get_ast_kind(*Ctx, LExp);
+                switch (Kind) {
+                case Z3_APP_AST:
+                    return RaiseApp(LExp);
+                case Z3_NUMERAL_AST:
+                    return RaiseNum(LExp);
+                case Z3_VAR_AST:
+                    return RaiseVar(LExp);
+                case Z3_QUANTIFIER_AST:
+                    return RaiseQuant(LExp);
+                default:
+                    throw InternalError((string)"Unknown/Unhandled Z3_ast kind: " + 
+                                        to_string(Kind) + ". The Z3 expression is:\n" + 
+                                        Z3_ast_to_string(*Ctx, LExp));
+                }
+            }
+
+            template <typename E, template <typename> class S>
+            inline typename Raiser<E, S>::ExpT
+            Raiser<E, S>::Do(const LExpT& LExp, const UFName2DMapT& UFMap)
+            {
+                Raiser<E, S> TheRaiser(UFMap);
+                TheRaiser.Ctx = LExp.GetCtx();
+                return TheRaiser.Raise(LExp);
             }
             
         } /* end namespace Detail */
@@ -1412,31 +1732,64 @@ namespace ESMC {
         inline typename Z3Semanticizer<E>::ExpT 
         Z3Semanticizer<E>::RaiseExpr(const LExpT& LExp)
         {
-            // TODO: Implement me
-            return ExpT::NullPtr;
+            return Canonicalize(Raiser<E, ESMC::Z3Sem::Z3Semanticizer>::Do(LExp, UFName2DMap));
         }
 
         template <typename E>
         inline typename Z3Semanticizer<E>::LExpT
         Z3Semanticizer<E>::LowerExpr(const ExpT& Exp)
         {
-            return Lowerer<E, ESMC::Z3Sem::Z3Semanticizer>::Do(Exp, UFID2DMap);
+            Z3Ctx Ctx(new Z3CtxWrapper());
+            return Lowerer<E, ESMC::Z3Sem::Z3Semanticizer>::Do(Exp, UFID2DMap, Ctx);
         }
 
         template <typename E>
         inline typename Z3Semanticizer<E>::ExpT
         Z3Semanticizer<E>::Simplify(const ExpT& Exp)
         {
-            // TODO: Implement me
-            return ExpT::NullPtr;
+            auto LExp = LowerExpr(Exp);
+            LExp = Z3_simplify(LExp.GetCtx(), LExp);
+            return RaiseExpr(LExp);
         }
 
         template <typename E>
         inline typename Z3Semanticizer<E>::ExpT
         Z3Semanticizer<E>::ElimQuantifiers(const ExpT& Exp)
         {
-            // TODO: Implement me
-            return ExpT::NullPtr;
+            Z3Ctx Ctx(new Z3CtxWrapper());
+            auto LExp = LowerExpr(Exp);
+            auto QE = Z3_mk_tactic(*Ctx, "qe");
+            Z3_tactic_inc_ref(*Ctx, QE);
+            auto Goal = Z3_mk_goal(*Ctx, true, false, false);
+            Z3_goal_inc_ref(*Ctx, Goal);
+            Z3_goal_assert(*Ctx, Goal, LExp);
+
+            auto Res = Z3_tactic_apply(*Ctx, QE, Goal);
+            Z3_goal_dec_ref(*Ctx, Goal);
+            Z3_tactic_dec_ref(*Ctx, QE);
+
+            Z3_apply_result_inc_ref(*Ctx, Res);
+
+            vector<ExpT> RaisedExprs;
+            
+            auto NumGoals = Z3_apply_result_get_num_subgoals(*Ctx, Res);
+            for (u32 i = 0; i < NumGoals; ++i) {
+                auto CurGoal = Z3_apply_result_get_subgoal(*Ctx, Res, i);
+                auto NumExprs = Z3_goal_size(*Ctx, CurGoal);
+                for (u32 j = 0; j < NumExprs; j++) {
+                    RaisedExprs.push_back(RaiseExpr(Z3_goal_formula(*Ctx, CurGoal, j)));
+                }
+            }
+
+            Z3_apply_result_dec_ref(*Ctx, Res);
+            if (RaisedExprs.size() == 1) {
+                return Canonicalize(RaisedExprs[0]);
+            } else {
+                return Canonicalize(new OpExpression
+                                    <E, ESMC::Z3Sem::Z3Semanticizer>(nullptr, 
+                                                                     OpAND,
+                                                                     RaisedExprs));
+            }
         }
 
         template <typename E>
@@ -1462,7 +1815,7 @@ namespace ESMC {
             }
 
             auto NewID = UFUIDGen.NextUID();
-            UFDescriptor Desc(DomTypes, RangeType, Name);
+            UFDescriptor Desc(NewID, DomTypes, RangeType, Name);
             if (UFName2DMap.find(Desc.GetMangledName()) != UFName2DMap.end()) {
                 throw ExprTypeError((string)"Uninterpreted function with name " + 
                                     Name + " already registered!");

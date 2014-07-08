@@ -50,6 +50,13 @@ namespace ESMC {
                 // Nothing here
             }
 
+            Z3CtxWrapper::Z3CtxWrapper()
+            {
+                auto Cfg = Z3_mk_config();
+                Ctx = Z3_mk_context_rc(Cfg);
+                Z3_del_config(Cfg);
+            }
+
             Z3CtxWrapper::~Z3CtxWrapper()
             {
                 if (Ctx != nullptr) {
@@ -164,16 +171,19 @@ namespace ESMC {
             }
 
             UFDescriptor::UFDescriptor(const UFDescriptor& Other) 
-                : DomainTypes(Other.DomainTypes), RangeType(Other.RangeType), 
+                : Identifier(Other.Identifier), 
+                  DomainTypes(Other.DomainTypes), RangeType(Other.RangeType), 
                   Name(Other.Name), MangledName(Other.MangledName)
             {
                 // Nothing here
             }
 
-            UFDescriptor::UFDescriptor(const vector<i64>& DomainTypes,
+            UFDescriptor::UFDescriptor(i64 Identifier,
+                                       const vector<i64>& DomainTypes,
                                        const i64 RangeType,
                                        const string& Name)
-                : DomainTypes(DomainTypes), RangeType(RangeType),
+                : Identifier(Identifier),
+                  DomainTypes(DomainTypes), RangeType(RangeType),
                   Name(Name), MangledName(MangleName(Name, DomainTypes))
             {
                 // Nothing here
@@ -189,6 +199,7 @@ namespace ESMC {
                 if (&Other == this) {
                     return *this;
                 }
+                Identifier = Other.Identifier;
                 DomainTypes = Other.DomainTypes;
                 RangeType = Other.RangeType;
                 Name = Other.Name;
@@ -214,6 +225,11 @@ namespace ESMC {
             const string& UFDescriptor::GetMangledName() const
             {
                 return MangledName;
+            }
+
+            i64 UFDescriptor::GetIdentifier() const
+            {
+                return Identifier;
             }
 
         } /* end namespace Detail */
