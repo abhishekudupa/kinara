@@ -2,7 +2,7 @@ BUILD_SUFFIX=debug
 OPTFLAGS=-ggdb3 -O0 -fno-inline
 FEAT_FLAGS=-fPIC
 
-Z3DIR=$(PROJECT_ROOT)/src/z3-4.3.1
+Z3DIR=$(PROJECT_ROOT)/src/extern/z3-4.3.1
 Z3LIBLINK=-lz3
 Z3BUILDDIR=$(Z3DIR)/build
 
