@@ -1,12 +1,14 @@
 PROJECT_NAME=esmc
 PROJECT_ROOT=$(realpath .)
 BASE_OBJ_DIR=$(PROJECT_ROOT)/obj
-BASE_LIB_DIR=$(PROJECT_ROOT)/obj
-BASE_BIN_DIR=$(PROJECT_ROOT)/obj
-BASE_BIN_DIR=$(PROJECT_ROOT)/gen
+BASE_LIB_DIR=$(PROJECT_ROOT)/lib
+BASE_BIN_DIR=$(PROJECT_ROOT)/bin
+BASE_GEN_DIR=$(PROJECT_ROOT)/gen
 BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
-CXXFLAGS=-I $(PROJECT_ROOT)/src/extern/z3-4.3.1/src/api/ -std=c++11 -Wall -pedantic
+CXXFLAGS=-std=c++11 -Wall -pedantic
+CXXFLAGS+=-I $(PROJECT_ROOT)/src/extern/z3-4.3.1/src/api
+CXXFLAGS+=-I $(PROJECT_ROOT)/src/extern/boost-local/boost_install/include
 CXXFLAGS+=-Wno-unused-local-typedefs
 
 PROJECT_MODULES= \
@@ -15,13 +17,23 @@ PROJECT_MODULES= \
 	containers \
 	ast \
 	utils \
+	main \
 
-PROJECT_SOURCES= \
-	Z3Semanticizer.cpp \
+
+PROJECT_EXECUTABLES=esmc
+esmc_SYS_LIBS=z3 rt
+esmc_DEP_LIBS=esmc
+esmc_OBJS=main.o
+esmc_LIB_PATHS= \
+	$(PROJECT_ROOT)/src/extern/z3-4.3.1/install \
+	$(PROJECT_ROOT)/src/extern/boost-local/boost_install/lib \
+
+PROJECT_LIBS=esmc
+libesmc_OBJS= \
+	Z3Semanticizer.o \
+
 
 include $(PROJECT_ROOT)/Makefile.util
-
-toplevel:	$(PROJECT_OBJS)
 
 clean:
 	rm -rf obj/debug/*
