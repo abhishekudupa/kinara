@@ -27,6 +27,8 @@ esmc_OBJS=main.o
 esmc_LIB_PATHS= \
 	$(PROJECT_ROOT)/src/extern/z3-4.3.1/install \
 	$(PROJECT_ROOT)/src/extern/boost-local/boost_install/lib \
+	$(PROJECT_ROOT)/lib/$(BUILD_SUFFIX)
+
 
 PROJECT_LIBS=esmc
 libesmc_OBJS= \

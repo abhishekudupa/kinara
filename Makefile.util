@@ -160,19 +160,3 @@ QUALIFIED_PROJECT_EXES=$(addprefix $(BIN_DIR)/, $(PROJECT_EXECUTABLES))
 
 toplevel: $(QUALIFIED_PROJECT_EXES) $(QUALIFIED_PROJECT_LIBS)
 
-
-
-default:			debug
-debug:				all
-opt:				all
-optlto:				all
-prof:				all
-proflto:			all
-eprof:				all
-eproflto:			all
-eopt:				all
-eoptlto:			all
-fullto:				all
-fullltoprof:		all
-
-
