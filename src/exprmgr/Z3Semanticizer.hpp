@@ -63,47 +63,54 @@ namespace ESMC {
         const i64 UFOffset = 100000;
         const i64 UFEnd = 1000000;
         const i64 SortOffset = 1000000;
-        const i64 OpEQ = 1000;
-        const i64 OpNOT = 1001;
-        const i64 OpITE = 1002;
-        const i64 OpOR = 1003;
-        const i64 OpAND = 1004;
-        const i64 OpIMPLIES = 1005;
-        const i64 OpIFF = 1006;
-        const i64 OpXOR = 1007;
 
-        // Arithmetic operators
-        const i64 OpADD = 1008;
-        const i64 OpSUB = 1009;
-        const i64 OpMINUS = 1010;
-        const i64 OpMUL = 1011;
-        const i64 OpDIV = 1012;
-        const i64 OpMOD = 1013;
-        const i64 OpREM = 1014;
-        const i64 OpPOWER = 1015;
-        const i64 OpGT = 1016;
-        const i64 OpGE = 1017;
-        const i64 OpLT = 1018;
-        const i64 OpLE = 1019;
-
-        // Basic Bitvector operators
-        // used for emulating bounded sets
-        const i64 OpBVNOT = 1020;
-        const i64 OpBVREDAND = 1021;
-        const i64 OpBVREDOR = 1022;
-        const i64 OpBVAND = 1023;
-        const i64 OpBVOR = 1024;
-        const i64 OpBVXOR = 1025;
-
-        // Types
-        const i64 BoolType = 1000000;
-        const i64 IntType = 1000001;
         // BVTypes range from 1000100 to 1001000
         // 1000100 = ANY BV type
         // 100xxxx = BVType of len (1000100 - v)
         const i64 BVTypeOffset = 1000100;
         const i64 BVTypeEnd = 1001000;
-        const i64 BVTypeAll = 1000100;
+
+
+        // We put the ops in a separate namespace
+        // for convenience
+        namespace Z3SemOps {
+            const i64 OpEQ = 1000;
+            const i64 OpNOT = 1001;
+            const i64 OpITE = 1002;
+            const i64 OpOR = 1003;
+            const i64 OpAND = 1004;
+            const i64 OpIMPLIES = 1005;
+            const i64 OpIFF = 1006;
+            const i64 OpXOR = 1007;
+
+            // Arithmetic operators
+            const i64 OpADD = 1008;
+            const i64 OpSUB = 1009;
+            const i64 OpMINUS = 1010;
+            const i64 OpMUL = 1011;
+            const i64 OpDIV = 1012;
+            const i64 OpMOD = 1013;
+            const i64 OpREM = 1014;
+            const i64 OpPOWER = 1015;
+            const i64 OpGT = 1016;
+            const i64 OpGE = 1017;
+            const i64 OpLT = 1018;
+            const i64 OpLE = 1019;
+
+            // Basic Bitvector operators
+            // used for emulating bounded sets
+            const i64 OpBVNOT = 1020;
+            const i64 OpBVREDAND = 1021;
+            const i64 OpBVREDOR = 1022;
+            const i64 OpBVAND = 1023;
+            const i64 OpBVOR = 1024;
+            const i64 OpBVXOR = 1025;
+
+            // Types
+            const i64 BoolType = 1000000;
+            const i64 IntType = 1000001;
+            const i64 BVTypeAll = 1000100;
+        } /* end namespace Z3SemOps */
 
         // Helper functions
         static inline i64 MakeBVTypeOfSize(u32 Size)
@@ -117,8 +124,10 @@ namespace ESMC {
 
         namespace Detail {
 
+            using namespace Z3SemOps;
+
             // map from opcodes to names
-            unordered_map<i64, string> OpCodeToNameMap = 
+            static const unordered_map<i64, string> OpCodeToNameMap = 
                 { { OpEQ, "=" },
                   { OpNOT, "not" },
                   { OpITE, "ite" },
@@ -462,7 +471,7 @@ namespace ESMC {
             {
                 auto PrevType = Exp->GetType();
                 if (PrevType != -1) {
-                    return PrevType;
+                    return;
                 }
                 auto Type = Exp->GetVarType();
                 CheckType(Type);
@@ -475,7 +484,7 @@ namespace ESMC {
             {
                 auto PrevType = Exp->GetType();
                 if (PrevType != -1) {
-                    return PrevType;
+                    return;
                 }
                 auto Type = Exp->GetConstType();
                 CheckType(Type);
@@ -518,7 +527,7 @@ namespace ESMC {
            {
                 auto PrevType = Exp->GetType();
                 if (PrevType != -1) {
-                    return PrevType;
+                    return;
                 }
 
                 auto Type = Exp->GetVarType();
@@ -578,7 +587,7 @@ namespace ESMC {
             {
                 auto PrevType = Exp->GetType();
                 if (PrevType != -1) {
-                    return PrevType;
+                    return;
                 }
 
                 i64 Type = -1;
@@ -1040,7 +1049,7 @@ namespace ESMC {
             Stringifier<E, S>::Do(const ExpT& Exp, const UFID2DMapT& UFMap)
             {
                 Stringifier TheStringifier(UFMap);
-                Exp->Accept(TheStringifier);
+                Exp->Accept(&TheStringifier);
                 return TheStringifier.StringStack[0];
             }
 
@@ -1064,7 +1073,6 @@ namespace ESMC {
                 throw InternalError((string)"Unknown type " + to_string(Type) + " At : " + 
                                     __FILE__ + to_string(__LINE__));
             }
-
             
             // Lowerer implementation
             template <typename E, template <typename> class S>
@@ -1669,6 +1677,7 @@ namespace ESMC {
         } /* end namespace Detail */
 
         using namespace Detail;
+        using namespace Z3SemOps;
 
         template <typename E>
         class Z3Semanticizer 
@@ -1680,7 +1689,7 @@ namespace ESMC {
 
         public:
             typedef Z3Expr LExpT;
-            typedef Expr<E, ESMC::Exprs::Z3Semanticizer> ExpT;
+            typedef Expr<E, ESMC::Z3Sem::Z3Semanticizer> ExpT;
 
             Z3Semanticizer();
             ~Z3Semanticizer();
@@ -1814,7 +1823,7 @@ namespace ESMC {
                 CheckType(DomType);
             }
 
-            auto NewID = UFUIDGen.NextUID();
+            auto NewID = UFUIDGen.GetUID();
             UFDescriptor Desc(NewID, DomTypes, RangeType, Name);
             if (UFName2DMap.find(Desc.GetMangledName()) != UFName2DMap.end()) {
                 throw ExprTypeError((string)"Uninterpreted function with name " + 

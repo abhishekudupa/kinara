@@ -41,11 +41,17 @@
 #include "../../src/exprmgr/Z3Semanticizer.hpp"
 
 using namespace ESMC;
-using namespace ESMC::Exprs;
+using namespace Exprs;
+using namespace Z3Sem::Z3SemOps;
 
 int main()
 {
-    auto Mgr = ExprMgr<EmptyExtType, Z3Semanticizer>::Make();
+    auto Mgr = ExprMgr<EmptyExtType, Z3Sem::Z3Semanticizer>::Make();
+    auto X = Mgr->MakeVar("X", IntType);
+    auto Y = Mgr->MakeVar("Y", IntType);
+
+    cout << X->ToString() << Y->ToString() << endl;
+    delete Mgr;
 }
 
 // 

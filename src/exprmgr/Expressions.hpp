@@ -95,6 +95,49 @@ namespace ESMC {
                                      const ExpressionBase<E, S>* Exp2) const;
         };
 
+        class ExpressionSPtrEquals
+        {
+        public:
+            template<typename E, template <typename> class S>
+            inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
+                                     const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
+            {
+                return Exp1->Equals(Exp2);
+            }
+        };
+
+        class FastExpressionSPtrEquals
+        {
+        public:
+            template<typename E, template <typename> class S>
+            inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
+                                     const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
+            {
+                return Exp1->FastEQ(Exp2);
+            }
+        };
+
+        class ExpressionSPtrCompare
+        {
+        public:
+            template<typename E, template <typename> class S>
+            inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
+                                     const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
+            {
+                return (Exp1->LT(Exp2) < 0);
+            }
+        };
+
+        class ExpressionSPtrHasher
+        {
+        public:
+            template<typename E, template <typename> class S>
+            inline u64 operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp) const
+            {
+                return (Exp->Hash());
+            }
+        };
+
         // An empty extension type
         struct EmptyExtType 
         {
@@ -142,16 +185,16 @@ namespace ESMC {
             virtual bool FastEQ(const ExpressionBase<E, S>* Other) const;
         
             // Downcasts
-            template<template <typename, template <typename> class> class U> 
-
+            template <template <typename, template <typename> class> class U>
             inline U<E, S>* As();
-            template<template <typename, template <typename> class> class U> 
+
+            template <template <typename, template <typename> class> class U> 
             inline const U<E, S>* As() const;
 
-            template<template <typename, template <typename> class> class U> 
+            template <template <typename, template <typename> class> class U> 
             inline U<E, S>* SAs();
 
-            template<template <typename, template <typename> class> class U> 
+            template <template <typename, template <typename> class> class U> 
             inline const U<E, S>* SAs() const;
         };
 
@@ -220,6 +263,7 @@ namespace ESMC {
                                       const E& ExtData = E());
             inline virtual ~BoundVarExpression();
             inline u64 GetVarIdx() const;
+            inline i64 GetVarType() const;
         
         protected:
             inline virtual void ComputeHash() const override;
@@ -380,16 +424,16 @@ namespace ESMC {
         {
         public:
             typedef S<E> SemT;
-            typedef typename SemT::LExpType LExpT;
+            typedef typename SemT::LExpT LExpT;
             typedef Expr<E, S> ExpT;
             typedef ExprI<E, S> IExpT;
 
             typedef unordered_map<ExpT, ExpT, 
-                                  ExpressionPtrHasher,
-                                  ExpressionPtrEquals> SubstMap;
+                                  ExpressionSPtrHasher,
+                                  ExpressionSPtrEquals> SubstMap;
 
         private:
-            typedef unordered_set<ExpT, ExpressionPtrHasher, FastExpressionPtrEquals> ExpSetType;
+            typedef unordered_set<ExpT, ExpressionSPtrHasher, FastExpressionSPtrEquals> ExpSetType;
 
             SemT* Sem;
             ExpSetType ExpSet;
@@ -398,11 +442,12 @@ namespace ESMC {
             
             inline ExpT GetCachedOrInsert(const ExpT& Exp);
             
-            template <typename T, typename... ArgTypes>
+            template <template <typename, template <typename> class> class T, 
+                      typename... ArgTypes>
             inline ExpT GetCachedOrInsert(ArgTypes&&... Args);
             inline void CheckMgr(const vector<ExpT>& Children) const;
             inline void CheckMgr(const ExpT& Exp) const;
-            template <typename T>
+            template <template <typename, template<typename> class> class T>
             inline ExpT MakeQExpression(const vector<i64>& QVars,
                                         const ExpT& QExpr,
                                         const E& ExtVal);
@@ -1091,6 +1136,12 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
+        inline i64 BoundVarExpression<E, S>::GetVarType() const
+        {
+            return VarType;
+        }        
+
+        template <typename E, template <typename> class S>
         inline i32 BoundVarExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
         {
             if ((Other->template As<ConstExpression>() != nullptr) ||
@@ -1473,12 +1524,13 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        template <typename T, typename... ArgTypes>
+        template <template <typename, template <typename> class> class T, 
+                  typename... ArgTypes>
         inline typename ExprMgr<E, S>::ExpT 
         ExprMgr<E, S>::GetCachedOrInsert(ArgTypes&&... Args)
         {
             AutoGC();
-            ExpT NewExp = new T(forward<ArgTypes>(Args)...);
+            ExpT NewExp = new T<E, S>(this, forward<ArgTypes>(Args)...);
             return GetCachedOrInsert(NewExp);
         }
 
@@ -1586,14 +1638,14 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        template <typename T>
+        template <template <typename, template <typename> class> class T>
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::MakeQExpression(const vector<i64>& QVarTypes,
                                        const ExpT& QExpr,
                                        const E& ExtVal)
         {
             CheckMgr(QExpr);
-            ExpT NewExp = new T(QVarTypes, QExpr, ExtVal);
+            ExpT NewExp = new T<E, S>(this, QVarTypes, QExpr, ExtVal);
             Sem->TypeCheck(NewExp);
             auto Retval = Sem->Canonicalize(NewExp);
             return Internalize(Retval);
@@ -1724,7 +1776,7 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline ExprMgr<E, S>* Make()
+        inline ExprMgr<E, S>* ExprMgr<E, S>::Make()
         {
             return new ExprMgr<E, S>();
         }
