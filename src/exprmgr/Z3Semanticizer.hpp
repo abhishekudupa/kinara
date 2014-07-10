@@ -127,35 +127,8 @@ namespace ESMC {
             using namespace Z3SemOps;
 
             // map from opcodes to names
-            static const unordered_map<i64, string> OpCodeToNameMap = 
-                { { OpEQ, "=" },
-                  { OpNOT, "not" },
-                  { OpITE, "ite" },
-                  { OpOR, "or" },
-                  { OpAND, "and" },
-                  { OpIMPLIES, "implies" },
-                  { OpIFF, "iff" },
-                  { OpXOR, "xor" },
-                  { OpADD, "+" },
-                  { OpSUB, "-" },
-                  { OpMINUS, "-" },
-                  { OpMUL, "*" },
-                  { OpDIV, "div" },
-                  { OpMOD, "mod" },
-                  { OpREM, "rem" },
-                  { OpPOWER, "power" },
-                  { OpGT, ">" },
-                  { OpGE, ">=" },
-                  { OpLT, "<" },
-                  { OpLE, "<=" },
-                  { OpBVNOT, "bvnot" },
-                  { OpBVREDAND, "bvredand" },
-                  { OpBVREDOR, "bvredor" },
-                  { OpBVAND, "bvand" },
-                  { OpBVOR, "bvor" },
-                  { OpBVXOR, "bvxor" } };
-
-            const string BoundVarPrefix = "dbvar";
+            extern const unordered_map<i64, string> OpCodeToNameMap;
+            extern const string BoundVarPrefix;
             
             // A wrapper for ref counting Z3 contexts
             class Z3CtxWrapper : public RefCountable

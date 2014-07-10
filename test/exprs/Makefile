@@ -35,7 +35,7 @@ default:	all
 all: $(TESTS)
 
 ExprTests: ExprTests.cpp
-	$(CXX) $(CXXFLAGS) -o ExprTests $(LINKFLAGS) ExprTests.cpp
+	$(CXX) $(CXXFLAGS) ExprTests.cpp -o ExprTests $(LINKFLAGS) 
 
 clean:
 	rm -rf $(TESTS) *.o

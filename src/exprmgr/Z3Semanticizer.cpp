@@ -42,6 +42,39 @@
 namespace ESMC {
     namespace Z3Sem {
         namespace Detail {
+            
+            // Prefix for bound variables
+            const string BoundVarPrefix = "dbvar";
+
+            // Definition of the OpCodeToNameMap
+            const unordered_map<i64, string> OpCodeToNameMap = 
+                { { OpEQ, "=" },
+                  { OpNOT, "not" },
+                  { OpITE, "ite" },
+                  { OpOR, "or" },
+                  { OpAND, "and" },
+                  { OpIMPLIES, "implies" },
+                  { OpIFF, "iff" },
+                  { OpXOR, "xor" },
+                  { OpADD, "+" },
+                  { OpSUB, "-" },
+                  { OpMINUS, "-" },
+                  { OpMUL, "*" },
+                  { OpDIV, "div" },
+                  { OpMOD, "mod" },
+                  { OpREM, "rem" },
+                  { OpPOWER, "power" },
+                  { OpGT, ">" },
+                  { OpGE, ">=" },
+                  { OpLT, "<" },
+                  { OpLE, "<=" },
+                  { OpBVNOT, "bvnot" },
+                  { OpBVREDAND, "bvredand" },
+                  { OpBVREDOR, "bvredor" },
+                  { OpBVAND, "bvand" },
+                  { OpBVOR, "bvor" },
+                  { OpBVXOR, "bvxor" } };
+            
 
             // implementation of Z3 context wrapper
             Z3CtxWrapper::Z3CtxWrapper(Z3_context Ctx)
