@@ -118,7 +118,7 @@ namespace ESMC {
             Z3Expr::Z3Expr(const Z3Expr& Other)
                 : Ctx(Other.Ctx), AST(Other.AST)
             {
-                if (*Ctx != nullptr && AST != nullptr) {
+                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
                     Z3_inc_ref(*Ctx, AST);
                 }
             }
@@ -126,7 +126,7 @@ namespace ESMC {
             Z3Expr::Z3Expr(Z3Ctx Ctx, Z3_ast AST)
                 : Ctx(Ctx), AST(AST)
             {
-                if (*Ctx != nullptr && AST != nullptr) {
+                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
                     Z3_inc_ref(*Ctx, AST);
                 }
             }
@@ -140,7 +140,7 @@ namespace ESMC {
 
             Z3Expr::~Z3Expr()
             {
-                if (*Ctx != nullptr && AST != nullptr) {
+                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
                     Z3_dec_ref(*Ctx, AST);
                 }
             }
@@ -154,13 +154,14 @@ namespace ESMC {
 
             bool Z3Expr::operator == (const Z3Expr& Other) const
             {
-                return ((*Ctx == *(Other.Ctx)) && 
+                return ((Ctx != Z3Ctx::NullPtr) && (Other.Ctx != Z3Ctx::NullPtr) &&
+                        (Ctx == (Other.Ctx)) && 
                         (Z3_is_eq_ast(*Ctx, AST, Other.AST)));
             }
 
             string Z3Expr::ToString() const
             {
-                if (*Ctx != nullptr && AST != nullptr) {
+                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
                     return Z3_ast_to_string(*Ctx, AST);
                 } else {
                     return "nullexpr";
@@ -169,7 +170,7 @@ namespace ESMC {
 
             u64 Z3Expr::Hash() const
             {
-                if (*Ctx != nullptr && AST != nullptr) {
+                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
                     return (Z3_get_ast_hash(*Ctx, AST));
                 } else {
                     return 0;

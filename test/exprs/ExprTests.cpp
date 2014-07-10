@@ -49,8 +49,17 @@ int main()
     auto Mgr = ExprMgr<EmptyExtType, Z3Sem::Z3Semanticizer>::Make();
     auto X = Mgr->MakeVar("X", IntType);
     auto Y = Mgr->MakeVar("Y", IntType);
+    auto EVar = Mgr->MakeBoundVar(IntType, 0);
+    auto XLTE = Mgr->MakeExpr(OpLT, X, EVar);
+    auto ELTY = Mgr->MakeExpr(OpLT, EVar, Y);
+    auto QBody = Mgr->MakeExpr(OpAND, XLTE, ELTY);
+    vector<i64> QVarTypes = { IntType };
+    auto QExpr = Mgr->MakeExists(QVarTypes, QBody);
+    cout << QExpr << endl;
 
-    cout << X->ToString() << Y->ToString() << endl;
+    auto ElimExpr = Mgr->ElimQuantifiers(QExpr);
+    cout << ElimExpr << endl;
+
     delete Mgr;
 }
 

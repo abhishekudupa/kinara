@@ -572,6 +572,20 @@ namespace ESMC {
         return SmartPtr<T>(const_cast<T*>(CPtr->GetPtr_()));
     }
 
+    template <typename T>
+    static inline ostream& operator << (ostream& Out, const SmartPtr<T>& Ptr)
+    {
+        Out << Ptr->GetPtr_();
+        return Out;
+    }
+
+    template <typename T>
+    static inline ostream& operator << (ostream& Out, const CSmartPtr<T>& Ptr)
+    {
+        Out << Ptr->GetPtr_();
+        return Out;
+    }
+
 } /* end namespace */
 
 #endif /* ESMC_REF_COUNTABLE_HPP_ */

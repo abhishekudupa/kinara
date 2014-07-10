@@ -147,11 +147,14 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         class ExpressionBase : public RefCountable
         {
+            friend class ExprMgr<E, S>;
         private:
-            mutable E ExtensionData;
             ExprMgr<E, S>* Mgr;
             mutable bool HashValid;
             mutable i64 ExpType;
+
+        public:
+            mutable E ExtensionData;
             
         protected:
             mutable u64 HashCode;
@@ -203,7 +206,7 @@ namespace ESMC {
         class ConstExpression : public ExpressionBase<E, S>
         {
         private:
-            const string& ConstValue;
+            const string ConstValue;
             i64 ConstType;
 
         public:
@@ -472,6 +475,17 @@ namespace ESMC {
                                      const E& ExtVal = E());
 
             inline ExpT MakeExpr(i64 OpCode, const vector<ExpT>& Children,
+                                 const E& ExtVal = E());
+
+            inline ExpT MakeExpr(i64 OpCode, const ExpT& Child1,
+                                 const E& ExtVal = E());
+
+            inline ExpT MakeExpr(i64 OpCode, const ExpT& Child1,
+                                 const ExpT& Child2,
+                                 const E& ExtVal = E());
+
+            inline ExpT MakeExpr(i64 OpCode, const ExpT& Child1,
+                                 const ExpT& Child2, const ExpT& Child3,
                                  const E& ExtVal = E());
 
             inline ExpT MakeExists(const vector<i64>& QVarTypes, 
@@ -880,8 +894,9 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline ExpressionBase<E, S>::ExpressionBase(ExprMgr<E, S>* Manager,
                                                     const E& ExtVal)
-            : ExtensionData(ExtVal), Mgr(Manager), HashValid(false), 
-              ExpType(-1), HashCode(0)
+            : Mgr(Manager), HashValid(false),
+              ExpType(-1), ExtensionData(ExtVal),
+              HashCode(0)
         {
             // Nothing here
         }
@@ -1245,7 +1260,7 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline bool OpExpression<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
         {
-            if (this->HashCode != Other->HashCode()) {
+            if (this->Hash() != Other->Hash()) {
                 return false;
             }
             auto OtherAsOp = Other->template As<OpExpression>();
@@ -1260,7 +1275,7 @@ namespace ESMC {
 
             const u32 NumChildren = Children.size();
             for (u32 i = 0; i < NumChildren; ++i) {
-                if (Children[i] != Other->Children[i]) {
+                if (Children[i] != OtherAsOp->Children[i]) {
                     return false;
                 }
             }
@@ -1384,13 +1399,13 @@ namespace ESMC {
                 return -1;
             }
 
-            return QuantifiedExpressionBase<E, S>::Compare(OtherAsExists);
+            return QuantifiedExpressionBase<E, S>::CompareInternal(OtherAsExists);
         }
 
         template <typename E, template <typename> class S>
         inline bool EQuantifiedExpression<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
         {
-            if (this->HashCode != Other->HashCode) {
+            if (this->Hash() != Other->Hash()) {
                 return false;
             }
             auto OtherAsExists = Other->template As<EQuantifiedExpression>();
@@ -1450,13 +1465,13 @@ namespace ESMC {
                 return -1;
             }
 
-            return QuantifiedExpressionBase<E, S>::Compare(OtherAsForall);
+            return QuantifiedExpressionBase<E, S>::CompareInternal(OtherAsForall);
         }
 
         template <typename E, template <typename> class S>
         inline bool AQuantifiedExpression<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
         {
-            if (this->HashCode != Other->HashCode) {
+            if (this->Hash() != Other->Hash()) {
                 return false;
             }
             auto OtherAsForAll = Other->template As<EQuantifiedExpression>();
@@ -1554,6 +1569,7 @@ namespace ESMC {
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::Internalize(const ExpT& Exp)
         {
+            const_cast<ExpressionBase<E, S>*>(&*Exp)->Mgr = this;
             if ((Exp->template As<ConstExpression>() != nullptr) ||
                 (Exp->template As<VarExpression>() != nullptr) ||
                 (Exp->template As<BoundVarExpression>() != nullptr)) {
@@ -1567,22 +1583,22 @@ namespace ESMC {
                 for (u32 i = 0; i < NumChildren; ++i) {
                     IntChildren[i] = Internalize(Children[i]);
                 }
-                return GetCachedOrInsert<OpExpression<E, S>>(Exp->GetOpCode(),
-                                                             IntChildren,
-                                                             Exp->ExtData);
+                return GetCachedOrInsert<OpExpression>(ExpAsOp->GetOpCode(),
+                                                       IntChildren,
+                                                       Exp->ExtensionData);
             }
             auto ExpAsQuantified = Exp->template As<QuantifiedExpressionBase>();
             if (ExpAsQuantified != nullptr) {
                 auto const& QVarTypes = ExpAsQuantified->GetQVarTypes();
                 auto IntQExpr = Internalize(ExpAsQuantified->GetQExpression());
                 if (ExpAsQuantified->IsForAll()) {
-                    return GetCachedOrInsert<AQuantifiedExpression<E,S>>(QVarTypes,
-                                                                         IntQExpr,
-                                                                         Exp->ExtData);
+                    return GetCachedOrInsert<AQuantifiedExpression>(QVarTypes,
+                                                                    IntQExpr,
+                                                                    Exp->ExtensionData);
                 } else {
-                    return GetCachedOrInsert<EQuantifiedExpression<E,S>>(QVarTypes,
-                                                                         IntQExpr,
-                                                                         Exp->ExtData);
+                    return GetCachedOrInsert<EQuantifiedExpression>(QVarTypes,
+                                                                    IntQExpr,
+                                                                    Exp->ExtensionData);
                 }
             } else {
                 throw ExprTypeError("Strange type of expression encountered");
@@ -1596,8 +1612,8 @@ namespace ESMC {
         {
             auto TrimmedValString = boost::algorithm::trim_copy(ValString);
             auto Retval =
-                GetCachedOrInsert<ConstExpression<E,S>>(TrimmedValString, 
-                                                        ValType, ExtVal);
+                GetCachedOrInsert<ConstExpression>(TrimmedValString, 
+                                                   ValType, ExtVal);
             Sem->TypeCheck(Retval);
             return Retval;
         }
@@ -1631,10 +1647,45 @@ namespace ESMC {
                                 const E& ExtVal)
         {
             CheckMgr(Children);
-            ExpT NewExp = new OpExpression<E, S>(OpCode, Children, ExtVal);
+            ExpT NewExp = new OpExpression<E, S>(this, OpCode, Children, ExtVal);
             Sem->TypeCheck(NewExp);
             auto Retval = Sem->Canonicalize(NewExp);
             return Internalize(Retval);
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::MakeExpr(const i64 OpCode, const ExpT& Child1,
+                                const E& ExtVal)
+        {
+            vector<ExpT> Children(1);
+            Children[0] = Child1;
+            return MakeExpr(OpCode, Children, ExtVal);
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::MakeExpr(const i64 OpCode, const ExpT& Child1,
+                                const ExpT& Child2,
+                                const E& ExtVal)
+        {
+            vector<ExpT> Children(2);
+            Children[0] = Child1;
+            Children[1] = Child2;
+            return MakeExpr(OpCode, Children, ExtVal);
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::MakeExpr(const i64 OpCode, const ExpT& Child1,
+                                const ExpT& Child2, const ExpT& Child3,
+                                const E& ExtVal)
+        {
+            vector<ExpT> Children(3);
+            Children[0] = Child1;
+            Children[1] = Child2;
+            Children[2] = Child3;
+            return MakeExpr(OpCode, Children, ExtVal);
         }
 
         template <typename E, template <typename> class S>
@@ -1780,6 +1831,26 @@ namespace ESMC {
         {
             return new ExprMgr<E, S>();
         }
+
+        // pretty printer
+        template <typename E, template <typename> class S>
+        static inline 
+        ostream& operator << (ostream& Out, 
+                              const SmartPtr<ExpressionBase<E, S>>& Ptr)
+        {
+            Out << Ptr->ToString();
+            return Out;
+        }
+
+        template <typename E, template <typename> class S>
+        static inline 
+        ostream& operator << (ostream& Out, 
+                              const CSmartPtr<ExpressionBase<E, S>>& Ptr)
+        {
+            Out << Ptr->ToString();
+            return Out;
+        }
+        
         
     } /* end namespace */
 } /* end namespace */

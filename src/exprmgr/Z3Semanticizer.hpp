@@ -403,10 +403,12 @@ namespace ESMC {
             {
                 i64 LeftIdx = VarIdx;
                 for (i64 i = ScopeStack.size(); i > 0; --i) {
-                    if (LeftIdx < (i64)ScopeStack[i].size()) {
-                        return ScopeStack[i][ScopeStack[i].size() - 1 - LeftIdx];
+                    auto const& CurScope = ScopeStack[i - 1];
+                    const u32 CurScopeSize = CurScope.size();
+                    if (LeftIdx < (i64) CurScopeSize) {
+                        return CurScope[CurScopeSize - 1 - LeftIdx];
                     } else {
-                        LeftIdx -= ScopeStack[i].size();
+                        LeftIdx -= CurScopeSize;
                     }
                 }
                 // Unbound variable
@@ -509,7 +511,7 @@ namespace ESMC {
                 auto ExpectedType = GetTypeForBoundVar(ScopeStack, Idx);
                 if (ExpectedType != -1 && ExpectedType != Type) {
                     throw ExprTypeError((string)"Bound variable with index " + to_string(Idx) + 
-                                        "has an ambiguous type");
+                                        " has an ambiguous type");
                 }
 
                 Exp->SetType(Type);
@@ -850,15 +852,16 @@ namespace ESMC {
                 case OpBVAND:
                 case OpBVOR:
                 case OpBVXOR:
-                    sort(NewChildren.begin(), NewChildren.end(), ExpressionPtrCompare());
+                    sort(NewChildren.begin(), NewChildren.end(), ExpressionSPtrCompare());
                     ExpStack.push_back(new OpExpression<E, S>(nullptr, OpCode, 
                                                               NewChildren, Exp->ExtensionData));
                     break;
 
                 case OpNOT:
                     if (NewChildren[0]->template As<OpExpression>() != nullptr &&
-                        NewChildren[0]->template SAs<OpExpression>()->GetOpCode == OpNOT) {
-                        ExpStack.push_back((NewChildren[0]->GetChildren())[0]);
+                        NewChildren[0]->template SAs<OpExpression>()->GetOpCode() == OpNOT) {
+                        ExpStack.push_back((NewChildren[0]->template 
+                                            SAs<OpExpression>()->GetChildren())[0]);
                     } else {
                         ExpStack.push_back(new OpExpression<E, S>(nullptr, OpCode,
                                                                   NewChildren, Exp->ExtensionData));
@@ -879,7 +882,7 @@ namespace ESMC {
                 ExpressionVisitorBase<E, S>::VisitEQuantifiedExpression(Exp);
                 auto NewQExpr = ExpStack.back();
                 ExpStack.pop_back();
-                ExpStack.push_back(new EQuantifiedExpression<E, S>(nullptr, Exp->GetVarTypes(),
+                ExpStack.push_back(new EQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
                                                                    NewQExpr, Exp->ExtensionData));
             }
 
@@ -890,7 +893,7 @@ namespace ESMC {
                 ExpressionVisitorBase<E, S>::VisitAQuantifiedExpression(Exp);
                 auto NewQExpr = ExpStack.back();
                 ExpStack.pop_back();
-                ExpStack.push_back(new AQuantifiedExpression<E, S>(nullptr, Exp->GetVarTypes(),
+                ExpStack.push_back(new AQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
                                                                    NewQExpr, Exp->ExtensionData));
             }
 
@@ -1084,8 +1087,8 @@ namespace ESMC {
             Lowerer<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
             {
                 auto VarSym = Z3_mk_string_symbol(*Ctx, Exp->GetVarName().c_str());
-                Z3Expr LoweredExp(*Ctx, Z3_mk_const(*Ctx, VarSym, 
-                                                    LowerType(Exp->GetVarType())));
+                Z3Expr LoweredExp(Ctx, Z3_mk_const(*Ctx, VarSym, 
+                                                   LowerType(Exp->GetVarType())));
                 ExpStack.push_back(LoweredExp);
             }
 
@@ -1097,15 +1100,15 @@ namespace ESMC {
                 auto Type = Exp->GetConstType();
                 
                 if (Type == IntType) {
-                    Z3Expr LoweredExp(*Ctx, Z3_mk_numeral(*Ctx, ConstVal.c_str(), 
-                                                          LowerType(Type)));
+                    Z3Expr LoweredExp(Ctx, Z3_mk_numeral(*Ctx, ConstVal.c_str(), 
+                                                         LowerType(Type)));
                     ExpStack.push_back(LoweredExp);
                 } else if (Type == BoolType) {
                     if (ConstVal == "true") {
-                        Z3Expr LoweredExp(*Ctx, Z3_mk_true(*Ctx));
+                        Z3Expr LoweredExp(Ctx, Z3_mk_true(*Ctx));
                         ExpStack.push_back(LoweredExp);
                     } else {
-                        Z3Expr LoweredExp(*Ctx, Z3_mk_false(*Ctx));
+                        Z3Expr LoweredExp(Ctx, Z3_mk_false(*Ctx));
                         ExpStack.push_back(LoweredExp);
                     }
                 } else {
@@ -1123,7 +1126,7 @@ namespace ESMC {
                     }
                     ostringstream sstr;
                     sstr << Val;
-                    Z3Expr LoweredExp(*Ctx, Z3_mk_numeral(*Ctx, sstr.str().c_str(),
+                    Z3Expr LoweredExp(Ctx, Z3_mk_numeral(*Ctx, sstr.str().c_str(),
                                                           LowerType(Type)));
                     ExpStack.push_back(LoweredExp);
                 }
@@ -1136,7 +1139,7 @@ namespace ESMC {
                 auto Type = Exp->GetVarType();
                 auto Idx = Exp->GetVarIdx();
                 
-                Z3Expr LoweredExp(*Ctx, Z3_mk_bound(*Ctx, Idx, LowerType(Type)));
+                Z3Expr LoweredExp(Ctx, Z3_mk_bound(*Ctx, Idx, LowerType(Type)));
                 ExpStack.push_back(LoweredExp);
             }
 
@@ -1146,7 +1149,7 @@ namespace ESMC {
                 ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
                 auto OpCode = Exp->GetOpCode();
                 const u32 NumChildren = Exp->GetChildren().size();
-                Z3_ast ChildArray[NumChildren];
+                Z3_ast* ChildArray = new Z3_ast[NumChildren];
                 // We hang on to the reference to the lowered children
                 // to prevent them from being destroyed
                 vector<Z3Expr> LoweredChildren(NumChildren);
@@ -1159,118 +1162,110 @@ namespace ESMC {
 
                 switch (OpCode) {
                 case OpEQ:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_eq(*Ctx, ChildArray[0],
-                                                             ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_eq(*Ctx, ChildArray[0],
+                                                            ChildArray[1])));
                     break;
                     
                 case OpNOT:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_not(*Ctx, ChildArray[0])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_not(*Ctx, ChildArray[0])));
                     break;
 
                 case OpITE:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_ite(*Ctx, ChildArray[0],
-                                                              ChildArray[1],
-                                                              ChildArray[2])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_ite(*Ctx, ChildArray[0],
+                                                             ChildArray[1],
+                                                             ChildArray[2])));
                     break;
 
                 case OpOR:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_or(*Ctx, NumChildren, ChildArray)));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_or(*Ctx, NumChildren, ChildArray)));
                     break;
 
                 case OpAND:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_and(*Ctx, NumChildren, ChildArray)));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_and(*Ctx, NumChildren, ChildArray)));
                     break;
 
                 case OpIMPLIES:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_implies(*Ctx, ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_implies(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
                 case OpIFF:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_iff(*Ctx, ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_iff(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
                     
                 case OpXOR:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_xor(*Ctx, ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_xor(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
                     
                 case OpADD:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_add(*Ctx, NumChildren, ChildArray)));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_add(*Ctx, NumChildren, ChildArray)));
                     break;
                     
                 case OpSUB:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_sub(*Ctx, NumChildren, ChildArray)));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_sub(*Ctx, NumChildren, ChildArray)));
                     break;
 
                 case OpMINUS:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_unary_minus(*Ctx, ChildArray[0])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_unary_minus(*Ctx, ChildArray[0])));
                     break;
 
                 case OpMUL:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_mul(*Ctx, NumChildren, ChildArray)));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_mul(*Ctx, NumChildren, ChildArray)));
                     break;
 
                 case OpDIV:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_div(*Ctx, NumChildren, 
-                                                              ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_div(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
                 case OpMOD:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_mod(*Ctx, NumChildren,
-                                                              ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_mod(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
                 case OpREM:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_rem(*Ctx, NumChildren,
-                                                              ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_rem(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
                 case OpPOWER:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_power(*Ctx, NumChildren,
-                                                                ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_power(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
                 case OpGE:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_ge(*Ctx, NumChildren,
-                                                             ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_ge(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
                 case OpGT:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_gt(*Ctx, NumChildren,
-                                                             ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_gt(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
                 case OpLE:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_le(*Ctx, NumChildren,
-                                                             ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_le(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
                 case OpLT:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_lt(*Ctx, NumChildren,
-                                                             ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_lt(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
                 case OpBVNOT:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_bvnot(*Ctx, ChildArray[0])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_bvnot(*Ctx, ChildArray[0])));
                     break;
 
                 case OpBVREDAND:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_bvredand(*Ctx, ChildArray[0])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_bvredand(*Ctx, ChildArray[0])));
                     break;
 
                 case OpBVREDOR:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_bvredor(*Ctx, ChildArray[0])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_bvredor(*Ctx, ChildArray[0])));
                     break;
 
                 case OpBVAND:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_bvand(*Ctx, ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_bvand(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
                 case OpBVOR:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_bvor(*Ctx, ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_bvor(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
                 case OpBVXOR:
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_bvxor(*Ctx, ChildArray[0], ChildArray[1])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_bvxor(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
                     
                 default: 
@@ -1285,8 +1280,8 @@ namespace ESMC {
                         auto const& DomTypes = Desc.GetDomainTypes();
                         auto RangeType = Desc.GetRangeType();
                         auto const& Name = Desc.GetName();
-                        const u32 NumArgs = Desc.GetRangeType().size();
-                        Z3_sort DomSorts[NumArgs];
+                        const u32 NumArgs = Desc.GetDomainTypes().size();
+                        Z3_sort* DomSorts = new Z3_sort[NumArgs];
                         for (u32 i = 0; i < NumArgs; ++i) {
                             DomSorts[i] = LowerType(DomTypes[i]);
                         }
@@ -1295,12 +1290,15 @@ namespace ESMC {
                         auto FuncDecl = Z3_mk_func_decl(*Ctx, FuncSym, NumArgs, DomSorts, RangeSort);
                         Z3_inc_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl));
 
-                        ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_app(*Ctx, NumArgs, ChildArray)));
+                        ExpStack.push_back(Z3Expr(Ctx, Z3_mk_app(*Ctx, FuncDecl, 
+                                                                 NumArgs, ChildArray)));
 
                         Z3_dec_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl));
+                        delete[] DomSorts;
                         break;
                     }
                 }
+                delete[] ChildArray;
             }
 
             template <typename E, template <typename> class S>
@@ -1310,8 +1308,8 @@ namespace ESMC {
                 auto const& QExpr = Exp->GetQExpression();
                 auto const& QVarTypes = Exp->GetQVarTypes();
                 const u32 NumBound = QVarTypes.size();
-                Z3_sort BoundSorts[NumBound];
-                Z3_symbol BoundSyms[NumBound];
+                Z3_sort* BoundSorts = new Z3_sort[NumBound];
+                Z3_symbol* BoundSyms = new Z3_symbol[NumBound];
 
                 for (u32 i = 0; i < NumBound; ++i) {
                     BoundSyms[i] = Z3_mk_string_symbol(*Ctx, (BoundVarPrefix + 
@@ -1323,12 +1321,14 @@ namespace ESMC {
                 auto const& QBody = ExpStack.back();
                 ExpStack.pop_back();
                 if (Exp->IsForAll()) {
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_forall(*Ctx, 0, 0, nullptr, NumBound,
-                                                                 BoundSorts, BoundSyms, QBody)));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_forall(*Ctx, 0, 0, nullptr, NumBound,
+                                                                BoundSorts, BoundSyms, QBody)));
                 } else {
-                    ExpStack.push_back(Z3Expr(*Ctx, Z3_mk_forall(*Ctx, 0, 0, nullptr, NumBound,
-                                                                 BoundSorts, BoundSyms, QBody)));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_exists(*Ctx, 0, 0, nullptr, NumBound,
+                                                                BoundSorts, BoundSyms, QBody)));
                 }
+                delete[] BoundSorts;
+                delete[] BoundSyms;
             }
 
             template <typename E, template <typename> class S>
@@ -1402,7 +1402,7 @@ namespace ESMC {
                 auto AppKind = Z3_get_decl_kind(*Ctx, AppDecl);
                 vector<ExpT> RaisedChildren(NumArgs);
                 for (u32 i = 0; i < NumArgs; ++i) {
-                    RaisedChildren[i] = Raise(Z3_get_app_arg(*Ctx, App, i));
+                    RaisedChildren[i] = Raise(Z3Expr(Ctx, Z3_get_app_arg(*Ctx, App, i)));
                 }
 
                 switch (AppKind) {
@@ -1606,14 +1606,15 @@ namespace ESMC {
                     QVarTypes[i] = RaiseSort(Z3_get_quantifier_bound_sort(*Ctx, LExp, i));
                 }
 
+                Z3Expr QBody(Ctx, Z3_get_quantifier_body(*Ctx, LExp));
                 if (Z3_is_quantifier_forall(*Ctx, LExp)) {
                     return new AQuantifiedExpression<E, S>(nullptr, 
                                                            QVarTypes,
-                                                           Raise(Z3_get_quantifier_body(*Ctx, LExp)));
+                                                           Raise(QBody));
                 } else {
                     return new EQuantifiedExpression<E, S>(nullptr, 
                                                            QVarTypes,
-                                                           Raise(Z3_get_quantifier_body(*Ctx, LExp)));
+                                                           Raise(QBody));
                 }
             }
 
@@ -1738,8 +1739,9 @@ namespace ESMC {
         inline typename Z3Semanticizer<E>::ExpT
         Z3Semanticizer<E>::ElimQuantifiers(const ExpT& Exp)
         {
-            Z3Ctx Ctx(new Z3CtxWrapper());
             auto LExp = LowerExpr(Exp);
+            cout << LExp.ToString() << endl;
+            auto Ctx = LExp.GetCtx();
             auto QE = Z3_mk_tactic(*Ctx, "qe");
             Z3_tactic_inc_ref(*Ctx, QE);
             auto Goal = Z3_mk_goal(*Ctx, true, false, false);
@@ -1759,7 +1761,9 @@ namespace ESMC {
                 auto CurGoal = Z3_apply_result_get_subgoal(*Ctx, Res, i);
                 auto NumExprs = Z3_goal_size(*Ctx, CurGoal);
                 for (u32 j = 0; j < NumExprs; j++) {
-                    RaisedExprs.push_back(RaiseExpr(Z3_goal_formula(*Ctx, CurGoal, j)));
+                    auto CurFormula = Z3_goal_formula(*Ctx, CurGoal, j);
+                    Z3Expr CurExpr = Z3Expr(Ctx, CurFormula);
+                    RaisedExprs.push_back(RaiseExpr(CurExpr));
                 }
             }
 
