@@ -74,6 +74,43 @@ int main()
     auto ElimExpr = Mgr->ElimQuantifiers(QExpr);
     cout << "After Quantifier Elimination: " << ElimExpr << endl;
 
+    // Uninterpreted functions and quantification
+    vector<i64> UFDomain = { IntType };
+    
+    auto fOp = Mgr->MakeUninterpretedFunction("f", UFDomain, IntType);
+    auto fApp = Mgr->MakeExpr(fOp, EVar);
+    auto fAppGTZ = Mgr->MakeExpr(OpGT, fApp, EVar);
+    auto fExists = Mgr->MakeExists(QVarTypes, fAppGTZ);
+    
+    cout << "Before Elimination: " << fExists << endl;
+    auto fAppElim = Mgr->ElimQuantifiers(fExists);
+    cout << "After Elimination: " << fAppElim << endl;
+
+    // Test the simplification
+    auto One = Mgr->MakeVal("1", IntType);
+    auto AddExp = Z;
+    for (u32 i = 0; i < 10; ++i) {
+        AddExp = Mgr->MakeExpr(OpADD, AddExp, One);
+    }
+
+    cout << "Before Simplification: " << AddExp << endl;
+
+    auto SimpAddExp = Mgr->Simplify(AddExp);
+    
+    cout << "After Simplification: " << SimpAddExp << endl;
+
+    // Test gatherers
+    auto VarExps = Mgr->Gather(AddExp, 
+                               [](const ExpressionBase<EmptyExtType, Z3Sem::Z3Semanticizer>* Exp) -> bool 
+                               { return (Exp->template As<VarExpression>() != nullptr); });
+
+    cout << "Gathered variables from Expression " << AddExp << ":" << endl;
+
+    for (auto const& VarExp : VarExps) {
+        cout << VarExp << endl;
+    }
+
+    Mgr->GC();
     delete Mgr;
 }
 

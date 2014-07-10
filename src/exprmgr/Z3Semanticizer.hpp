@@ -1742,7 +1742,8 @@ namespace ESMC {
         Z3Semanticizer<E>::Simplify(const ExpT& Exp)
         {
             auto LExp = LowerExpr(Exp);
-            LExp = Z3_simplify(LExp.GetCtx(), LExp);
+            auto Ctx = LExp.GetCtx();
+            LExp = Z3Expr(Ctx, Z3_simplify(*Ctx, LExp));
             return RaiseExpr(LExp);
         }
 

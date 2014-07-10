@@ -435,6 +435,9 @@ namespace ESMC {
                                   ExpressionSPtrHasher,
                                   ExpressionSPtrEquals> SubstMapT;
 
+            typedef unordered_set<ExpT, ExpressionSPtrHasher, 
+                                  ExpressionSPtrEquals> ExpSetT;
+
         private:
             typedef unordered_set<ExpT, ExpressionSPtrHasher, FastExpressionSPtrEquals> ExpSetType;
 
@@ -511,7 +514,7 @@ namespace ESMC {
             inline ExpT ElimQuantifiers(const ExpT& Exp);
             inline ExpT Simplify(const ExpT& Exp);
             inline ExpT Substitute(const SubstMapT& Subst, const ExpT& Exp);
-            inline unordered_set<ExpT> 
+            inline ExpSetT
             Gather(const ExpT& Exp, 
                    const function<bool(const ExpressionBase<E, S>*)>& Pred) const;
 
@@ -575,8 +578,9 @@ namespace ESMC {
         {
         private:
             typedef Expr<E, S> ExpT;
+            typedef typename ExprMgr<E, S>::ExpSetT ExpSetT;
             function<bool(const ExpressionBase<E, S>*)> Pred;
-            unordered_set<ExpT> GatheredExps;
+            ExpSetT GatheredExps;
 
         public:
             inline Gatherer(const function<bool(const ExpressionBase<E, S>*)>& Pred);
@@ -589,7 +593,7 @@ namespace ESMC {
             inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) override;
             inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override;
             
-            static inline unordered_set<ExpT> 
+            static inline ExpSetT
             Do(const ExpT& Exp, const function<bool(const ExpressionBase<E, S>*)>& Pred);
         };
 
@@ -824,7 +828,7 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline unordered_set<typename Gatherer<E, S>::ExpT>
+        inline typename Gatherer<E, S>::ExpSetT
         Gatherer<E, S>::Do(const ExpT& Exp, const function<bool (const ExpressionBase<E, S> *)>& Pred)
         {
             Gatherer<E, S> TheGatherer(Pred);
@@ -1785,7 +1789,7 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        unordered_set<typename ExprMgr<E, S>::ExpT> 
+        inline typename ExprMgr<E, S>::ExpSetT
         ExprMgr<E, S>::Gather(const ExpT& Exp, 
                               const function<bool(const ExpressionBase<E, S>*)>& Pred) const
         {
