@@ -46,19 +46,33 @@ using namespace Z3Sem::Z3SemOps;
 
 int main()
 {
-    auto Mgr = ExprMgr<EmptyExtType, Z3Sem::Z3Semanticizer>::Make();
+    typedef ExprMgr<EmptyExtType, Z3Sem::Z3Semanticizer> MgrType;
+    auto Mgr = MgrType::Make();
     auto X = Mgr->MakeVar("X", IntType);
     auto Y = Mgr->MakeVar("Y", IntType);
+    auto Z = Mgr->MakeVar("Z", IntType);
+
     auto EVar = Mgr->MakeBoundVar(IntType, 0);
-    auto XLTE = Mgr->MakeExpr(OpLT, X, EVar);
-    auto ELTY = Mgr->MakeExpr(OpLT, EVar, Y);
-    auto QBody = Mgr->MakeExpr(OpAND, XLTE, ELTY);
+
+    auto XLTZ = Mgr->MakeExpr(OpLT, X, Z);
+    auto ZLTY = Mgr->MakeExpr(OpLT, Z, Y);
+    auto QBody = Mgr->MakeExpr(OpAND, XLTZ, ZLTY);
+
+    cout << "Before Substitution: " << QBody << endl;
+
+    MgrType::SubstMapT SubstMap = { { Z, EVar } };
+    
+    QBody = Mgr->Substitute(SubstMap, QBody);
+    
+    cout << "After Substitution: " << QBody << endl;
+
     vector<i64> QVarTypes = { IntType };
     auto QExpr = Mgr->MakeExists(QVarTypes, QBody);
-    cout << QExpr << endl;
+
+    cout << "After Quantification: " << QExpr << endl;
 
     auto ElimExpr = Mgr->ElimQuantifiers(QExpr);
-    cout << ElimExpr << endl;
+    cout << "After Quantifier Elimination: " << ElimExpr << endl;
 
     delete Mgr;
 }

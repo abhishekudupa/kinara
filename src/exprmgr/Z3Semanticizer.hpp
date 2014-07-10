@@ -549,7 +549,9 @@ namespace ESMC {
                     if (ExpectedType == BVTypeAll) {
                         return (CheckBVType(ActualType) != -1);
                     } else if (ExpectedType >= BVTypeEnd) {
-                        throw InternalError("Strange type that should have been caught earlier");
+                        throw InternalError((string)"Strange type that should have been " + 
+                                            "caught earlier: " + __FILE__ + ":" + 
+                                            to_string(__LINE__));
                     } else {
                         return (ActualType == ExpectedType);
                     }
@@ -1385,7 +1387,8 @@ namespace ESMC {
                     return BVTypeAll + Z3_get_bv_sort_size(*Ctx, Sort);
                     
                 default:
-                    throw InternalError((string)"Unknown Sort " + to_string(Kind));
+                    throw InternalError((string)"Unknown Sort " + to_string(Kind) + ", " + 
+                                        __FILE__ + ":" + to_string(__LINE__));
                 }
             }
 
@@ -1423,7 +1426,8 @@ namespace ESMC {
                         if (it == UFMap.end()) {
                             throw InternalError((string)"Could not find descriptor for function " + 
                                                 DeclName + ". Z3 expression:\n" + 
-                                                Z3_ast_to_string(*Ctx, LExp));
+                                                Z3_ast_to_string(*Ctx, LExp) + ", " + __FILE__ + 
+                                                ":" + to_string(__LINE__));
                         }
                         i64 OpCode = it->second.GetIdentifier();
                         return new OpExpression<E, S>(nullptr, OpCode, RaisedChildren);
@@ -1455,6 +1459,9 @@ namespace ESMC {
 
                 case Z3_OP_XOR:
                     return new OpExpression<E, S>(nullptr, OpXOR, RaisedChildren);
+
+                case Z3_OP_NOT:
+                    return new OpExpression<E, S>(nullptr, OpNOT, RaisedChildren);
 
                 case Z3_OP_ADD:
                     return new OpExpression<E, S>(nullptr, OpADD, RaisedChildren);
@@ -1512,7 +1519,8 @@ namespace ESMC {
 
                 default:
                     throw InternalError((string)"Unknown Z3 Op: " + to_string(AppKind) + 
-                                        ". Z3 expression:\n" + Z3_ast_to_string(*Ctx, LExp));
+                                        ". Z3 expression:\n" + Z3_ast_to_string(*Ctx, LExp) + 
+                                        ", " + __FILE__ + ":" + to_string(__LINE__));
 
                 }
             }
@@ -1576,7 +1584,9 @@ namespace ESMC {
                                 case 'F':
                                     BinString += "1111"; break;
                                 default:
-                                    throw InternalError((string)"Unexpected hex string: " + HexString);
+                                    throw InternalError((string)"Unexpected hex string: " + 
+                                                        HexString + ", " + __FILE__ + ":" + 
+                                                        to_string(__LINE__));
                                 }
                             }
                             auto Snip = HexString.length() - BVSize;
@@ -1635,7 +1645,8 @@ namespace ESMC {
                 default:
                     throw InternalError((string)"Unknown/Unhandled Z3_ast kind: " + 
                                         to_string(Kind) + ". The Z3 expression is:\n" + 
-                                        Z3_ast_to_string(*Ctx, LExp));
+                                        Z3_ast_to_string(*Ctx, LExp) + ", " + __FILE__ + 
+                                        ":" + to_string(__LINE__));
                 }
             }
 
@@ -1693,7 +1704,7 @@ namespace ESMC {
         template <typename E>
         Z3Semanticizer<E>::~Z3Semanticizer()
         {
-            // Nothing here
+            Z3_reset_memory();
         }
 
         template <typename E>

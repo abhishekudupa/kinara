@@ -433,7 +433,7 @@ namespace ESMC {
 
             typedef unordered_map<ExpT, ExpT, 
                                   ExpressionSPtrHasher,
-                                  ExpressionSPtrEquals> SubstMap;
+                                  ExpressionSPtrEquals> SubstMapT;
 
         private:
             typedef unordered_set<ExpT, ExpressionSPtrHasher, FastExpressionSPtrEquals> ExpSetType;
@@ -500,7 +500,8 @@ namespace ESMC {
                                                  const vector<i64>& Range,
                                                  i64 Domain);
 
-            template <template <typename, template <typename> class> class T, typename... ArgTypes>
+            template <template <typename, template <typename> class> class T, 
+                      typename... ArgTypes>
             inline ExpT ApplyTransform(const ExpT& Exp, ArgTypes&&... Args);
 
             inline SemT* GetSemanticizer() const;
@@ -509,7 +510,7 @@ namespace ESMC {
             inline ExpT RaiseExpr(const LExpT& Exp, ArgTypes&&... Args);
             inline ExpT ElimQuantifiers(const ExpT& Exp);
             inline ExpT Simplify(const ExpT& Exp);
-            inline ExpT Substitute(const SubstMap& Subst, const ExpT& Exp);
+            inline ExpT Substitute(const SubstMapT& Subst, const ExpT& Exp);
             inline unordered_set<ExpT> 
             Gather(const ExpT& Exp, 
                    const function<bool(const ExpressionBase<E, S>*)>& Pred) const;
@@ -548,12 +549,12 @@ namespace ESMC {
         {
         private:
             typedef typename ExprMgr<E, S>::ExpT ExpT;
-            typedef typename ExprMgr<E, S>::SubstMap SubstMap;
-            SubstMap Subst;
+            typedef typename ExprMgr<E, S>::SubstMapT SubstMapT;
+            SubstMapT Subst;
             vector<typename ExprMgr<E, S>::ExpT> SubstStack;
 
         public:
-            inline Substitutor(const SubstMap& Subst);
+            inline Substitutor(const SubstMapT& Subst);
             inline virtual ~Substitutor();
 
             inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
@@ -566,7 +567,7 @@ namespace ESMC {
             inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
                 override;
 
-            inline static ExpT Do(const SubstMap& Subst, const ExpT& Exp);
+            inline static ExpT Do(const ExpT& Exp, const SubstMapT& SubstMap);
         };
 
         template <typename E, template <typename> class S>
@@ -671,8 +672,8 @@ namespace ESMC {
 
         // Substitutor implementation
         template <typename E, template <typename> class S>
-        inline Substitutor<E, S>::Substitutor(const SubstMap& Subst)
-            : Subst(Subst)
+        inline Substitutor<E, S>::Substitutor(const SubstMapT& Subst)
+            : ExpressionVisitorBase<E, S>("Substitutor"), Subst(Subst)
         {
             // Nothing here
         }
@@ -728,7 +729,7 @@ namespace ESMC {
         inline void 
         Substitutor<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E,S>* Exp)
         {
-            Exp->GetQExpression().Accept(this);
+            Exp->GetQExpression()->Accept(this);
             auto SubstQExpr = SubstStack.back();
             SubstStack.push_back(new EQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
                                                                  SubstQExpr));
@@ -738,7 +739,7 @@ namespace ESMC {
         inline void 
         Substitutor<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E,S>* Exp)
         {
-            Exp->GetQExpression().Accept(this);
+            Exp->GetQExpression()->Accept(this);
             auto SubstQExpr = SubstStack.back();
             SubstStack.push_back(new AQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
                                                                  SubstQExpr));
@@ -746,7 +747,7 @@ namespace ESMC {
 
         template <typename E, template <typename> class S>
         inline typename Substitutor<E, S>::ExpT
-        Substitutor<E, S>::Do(const SubstMap& Subst, const ExpT& Exp)
+        Substitutor<E, S>::Do(const ExpT& Exp, const SubstMapT& Subst)
         {
             Substitutor TheSubstitutor(Subst);
             Exp->Accept(&TheSubstitutor);
@@ -1735,7 +1736,7 @@ namespace ESMC {
                                       ArgTypes&&... Args)
         {
             CheckMgr(Exp);
-            return Internalize(T<E, S>::Do(this, Exp, forward<ArgTypes>(Args)...));
+            return Internalize(T<E, S>::Do(Exp, forward<ArgTypes>(Args)...));
         }
 
         template <typename E, template <typename> class S>
@@ -1793,9 +1794,9 @@ namespace ESMC {
 
         template <typename E, template <typename> class S>
         inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::Substitute(const SubstMap& Subst, const ExpT& Exp)
+        ExprMgr<E, S>::Substitute(const SubstMapT& Subst, const ExpT& Exp)
         {
-            return ApplyTransform<Substitutor>(Subst, Exp);
+            return ApplyTransform<Substitutor>(Exp, Subst);
         }
         
 
