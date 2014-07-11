@@ -17,7 +17,7 @@ CXXFLAGS+=-Wno-unused-local-typedefs
 endif
 
 PROJECT_MODULES= \
-	exprmgr \
+	expr \
 	common \
 	containers \
 	ast \

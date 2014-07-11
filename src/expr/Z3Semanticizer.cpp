@@ -41,6 +41,44 @@
 
 namespace ESMC {
     namespace Z3Sem {
+
+        const i64 Z3SemOps::OpEQ;
+        const i64 Z3SemOps::OpNOT;
+        const i64 Z3SemOps::OpITE;
+        const i64 Z3SemOps::OpOR;
+        const i64 Z3SemOps::OpAND;
+        const i64 Z3SemOps::OpIMPLIES;
+        const i64 Z3SemOps::OpIFF;
+        const i64 Z3SemOps::OpXOR;
+
+        // Arithmetic operators
+        const i64 Z3SemOps::OpADD;
+        const i64 Z3SemOps::OpSUB;
+        const i64 Z3SemOps::OpMINUS;
+        const i64 Z3SemOps::OpMUL;
+        const i64 Z3SemOps::OpDIV;
+        const i64 Z3SemOps::OpMOD;
+        const i64 Z3SemOps::OpREM;
+        const i64 Z3SemOps::OpPOWER;
+        const i64 Z3SemOps::OpGT;
+        const i64 Z3SemOps::OpGE;
+        const i64 Z3SemOps::OpLT;
+        const i64 Z3SemOps::OpLE;
+
+        // Basic Bitvector operators
+        // used for emulating bounded sets
+        const i64 Z3SemOps::OpBVNOT;
+        const i64 Z3SemOps::OpBVREDAND;
+        const i64 Z3SemOps::OpBVREDOR;
+        const i64 Z3SemOps::OpBVAND;
+        const i64 Z3SemOps::OpBVOR;
+        const i64 Z3SemOps::OpBVXOR;
+
+        // Types
+        const i64 Z3SemOps::BoolType;
+        const i64 Z3SemOps::IntType;
+        const i64 Z3SemOps::BVTypeAll;
+
         namespace Detail {
             
             // Prefix for bound variables
@@ -48,32 +86,32 @@ namespace ESMC {
 
             // Definition of the OpCodeToNameMap
             const unordered_map<i64, string> OpCodeToNameMap = 
-                { { OpEQ, "=" },
-                  { OpNOT, "not" },
-                  { OpITE, "ite" },
-                  { OpOR, "or" },
-                  { OpAND, "and" },
-                  { OpIMPLIES, "implies" },
-                  { OpIFF, "iff" },
-                  { OpXOR, "xor" },
-                  { OpADD, "+" },
-                  { OpSUB, "-" },
-                  { OpMINUS, "-" },
-                  { OpMUL, "*" },
-                  { OpDIV, "div" },
-                  { OpMOD, "mod" },
-                  { OpREM, "rem" },
-                  { OpPOWER, "power" },
-                  { OpGT, ">" },
-                  { OpGE, ">=" },
-                  { OpLT, "<" },
-                  { OpLE, "<=" },
-                  { OpBVNOT, "bvnot" },
-                  { OpBVREDAND, "bvredand" },
-                  { OpBVREDOR, "bvredor" },
-                  { OpBVAND, "bvand" },
-                  { OpBVOR, "bvor" },
-                  { OpBVXOR, "bvxor" } };
+                { { Z3SemOps::OpEQ, "=" },
+                  { Z3SemOps::OpNOT, "not" },
+                  { Z3SemOps::OpITE, "ite" },
+                  { Z3SemOps::OpOR, "or" },
+                  { Z3SemOps::OpAND, "and" },
+                  { Z3SemOps::OpIMPLIES, "implies" },
+                  { Z3SemOps::OpIFF, "iff" },
+                  { Z3SemOps::OpXOR, "xor" },
+                  { Z3SemOps::OpADD, "+" },
+                  { Z3SemOps::OpSUB, "-" },
+                  { Z3SemOps::OpMINUS, "-" },
+                  { Z3SemOps::OpMUL, "*" },
+                  { Z3SemOps::OpDIV, "div" },
+                  { Z3SemOps::OpMOD, "mod" },
+                  { Z3SemOps::OpREM, "rem" },
+                  { Z3SemOps::OpPOWER, "power" },
+                  { Z3SemOps::OpGT, ">" },
+                  { Z3SemOps::OpGE, ">=" },
+                  { Z3SemOps::OpLT, "<" },
+                  { Z3SemOps::OpLE, "<=" },
+                  { Z3SemOps::OpBVNOT, "bvnot" },
+                  { Z3SemOps::OpBVREDAND, "bvredand" },
+                  { Z3SemOps::OpBVREDOR, "bvredor" },
+                  { Z3SemOps::OpBVAND, "bvand" },
+                  { Z3SemOps::OpBVOR, "bvor" },
+                  { Z3SemOps::OpBVXOR, "bvxor" } };
             
 
             // implementation of Z3 context wrapper

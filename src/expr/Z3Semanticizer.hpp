@@ -71,46 +71,46 @@ namespace ESMC {
         const i64 BVTypeEnd = 1001000;
 
 
-        // We put the ops in a separate namespace
+        // We put the ops in a separate struct
         // for convenience
-        namespace Z3SemOps {
-            const i64 OpEQ = 1000;
-            const i64 OpNOT = 1001;
-            const i64 OpITE = 1002;
-            const i64 OpOR = 1003;
-            const i64 OpAND = 1004;
-            const i64 OpIMPLIES = 1005;
-            const i64 OpIFF = 1006;
-            const i64 OpXOR = 1007;
+        struct Z3SemOps {
+            static const i64 OpEQ = 1000;
+            static const i64 OpNOT = 1001;
+            static const i64 OpITE = 1002;
+            static const i64 OpOR = 1003;
+            static const i64 OpAND = 1004;
+            static const i64 OpIMPLIES = 1005;
+            static const i64 OpIFF = 1006;
+            static const i64 OpXOR = 1007;
 
             // Arithmetic operators
-            const i64 OpADD = 1008;
-            const i64 OpSUB = 1009;
-            const i64 OpMINUS = 1010;
-            const i64 OpMUL = 1011;
-            const i64 OpDIV = 1012;
-            const i64 OpMOD = 1013;
-            const i64 OpREM = 1014;
-            const i64 OpPOWER = 1015;
-            const i64 OpGT = 1016;
-            const i64 OpGE = 1017;
-            const i64 OpLT = 1018;
-            const i64 OpLE = 1019;
+            static const i64 OpADD = 1008;
+            static const i64 OpSUB = 1009;
+            static const i64 OpMINUS = 1010;
+            static const i64 OpMUL = 1011;
+            static const i64 OpDIV = 1012;
+            static const i64 OpMOD = 1013;
+            static const i64 OpREM = 1014;
+            static const i64 OpPOWER = 1015;
+            static const i64 OpGT = 1016;
+            static const i64 OpGE = 1017;
+            static const i64 OpLT = 1018;
+            static const i64 OpLE = 1019;
 
             // Basic Bitvector operators
             // used for emulating bounded sets
-            const i64 OpBVNOT = 1020;
-            const i64 OpBVREDAND = 1021;
-            const i64 OpBVREDOR = 1022;
-            const i64 OpBVAND = 1023;
-            const i64 OpBVOR = 1024;
-            const i64 OpBVXOR = 1025;
+            static const i64 OpBVNOT = 1020;
+            static const i64 OpBVREDAND = 1021;
+            static const i64 OpBVREDOR = 1022;
+            static const i64 OpBVAND = 1023;
+            static const i64 OpBVOR = 1024;
+            static const i64 OpBVXOR = 1025;
 
             // Types
-            const i64 BoolType = 1000000;
-            const i64 IntType = 1000001;
-            const i64 BVTypeAll = 1000100;
-        } /* end namespace Z3SemOps */
+            static const i64 BoolType = 1000000;
+            static const i64 IntType = 1000001;
+            static const i64 BVTypeAll = 1000100;
+        };
 
         // Helper functions
         static inline i64 MakeBVTypeOfSize(u32 Size)
@@ -123,8 +123,6 @@ namespace ESMC {
         }
 
         namespace Detail {
-
-            using namespace Z3SemOps;
 
             // map from opcodes to names
             extern const unordered_map<i64, string> OpCodeToNameMap;
@@ -417,8 +415,8 @@ namespace ESMC {
 
             static inline void CheckType(i64 Type)
             {
-                if (Type != BoolType &&
-                    Type != IntType &&
+                if (Type != Z3SemOps::BoolType &&
+                    Type != Z3SemOps::IntType &&
                     (Type < BVTypeOffset ||
                      Type >= BVTypeEnd)) {
                     throw ExprTypeError((string)"Unknown type " + to_string(Type));
@@ -465,17 +463,17 @@ namespace ESMC {
                 CheckType(Type);
                 string ValString = Exp->GetConstValue();
                 boost::algorithm::to_lower(ValString);
-                if (Type == BoolType) {
+                if (Type == Z3SemOps::BoolType) {
                     if (ValString != "true" &&
                         ValString != "false") {
                         throw ExprTypeError((string)"Invalid value " + Exp->GetConstValue());
                     }
-                    Exp->SetType(BoolType);
-                } else if (Type == IntType) {
+                    Exp->SetType(Z3SemOps::BoolType);
+                } else if (Type == Z3SemOps::IntType) {
                     if (!boost::algorithm::all(ValString, boost::algorithm::is_digit())) {
                         throw ExprTypeError((string)"Invalid value " + Exp->GetConstValue());
                     }
-                    Exp->SetType(IntType);
+                    Exp->SetType(Z3SemOps::IntType);
                 } else {
                     string ActValString = ValString.substr(2, ValString.length() - 2);
                     if (boost::algorithm::starts_with(ValString, "#b")) {
@@ -484,14 +482,14 @@ namespace ESMC {
                                                    boost::algorithm::is_any_of("01"))) {
                             throw ExprTypeError((string)"Invalid value " + Exp->GetConstValue());
                         }
-                        Exp->SetType(BVTypeAll + NumBits);
+                        Exp->SetType(Z3SemOps::BVTypeAll + NumBits);
                     } else if (boost::algorithm::starts_with(ValString, "#x")) {
                         u32 NumBits = (ValString.length() - 2) * 4;
                         if (!boost::algorithm::all(ActValString,
                                                    boost::algorithm::is_xdigit())) {
                             throw ExprTypeError((string)"Invalid value " + Exp->GetConstValue());
                         }
-                        Exp->SetType(BVTypeAll + NumBits);
+                        Exp->SetType(Z3SemOps::BVTypeAll + NumBits);
                     }
                 }
             }
@@ -536,17 +534,17 @@ namespace ESMC {
             static inline bool CheckAllInt(const vector<i64>& TypeVec)
             {
                 return (all_of(TypeVec.begin(), TypeVec.end(),
-                               [&] (i64 i) -> bool { return i == IntType; }));
+                               [&] (i64 i) -> bool { return i == Z3SemOps::IntType; }));
             }
 
             static inline bool CheckTypeResolution(i64 ExpectedType, i64 ActualType)
             {
                 switch(ExpectedType) {
-                case BoolType:
-                case IntType:
+                case Z3SemOps::BoolType:
+                case Z3SemOps::IntType:
                     return (ActualType == ExpectedType);
                 default:
-                    if (ExpectedType == BVTypeAll) {
+                    if (ExpectedType == Z3SemOps::BVTypeAll) {
                         return (CheckBVType(ActualType) != -1);
                     } else if (ExpectedType >= BVTypeEnd) {
                         throw InternalError((string)"Strange type that should have been " + 
@@ -580,31 +578,31 @@ namespace ESMC {
                 i64 OpCode = Exp->GetOpCode();
 
                 switch (OpCode) {
-                case OpEQ:
+                case Z3SemOps::OpEQ:
                     if (ChildTypes.size() != 2) {
                         throw ExprTypeError("= op can only be applied to two operands");
                     }
                     if (!CheckEquality(ChildTypes, ChildTypes[0])) {
                         throw ExprTypeError("All types to = op not the same");
                     }
-                    Exp->SetType(BoolType);
+                    Exp->SetType(Z3SemOps::BoolType);
                     break;
 
-                case OpNOT:
+                case Z3SemOps::OpNOT:
                     if (ChildTypes.size() != 1) {
                         throw ExprTypeError("not op can only be applied to one operand");
                     }
-                    if (ChildTypes[0] != BoolType) {
+                    if (ChildTypes[0] != Z3SemOps::BoolType) {
                         throw ExprTypeError("not op can only be applied to boolean expressions");
                     }
-                    Exp->SetType(BoolType);
+                    Exp->SetType(Z3SemOps::BoolType);
                     break;
 
-                case OpITE:
+                case Z3SemOps::OpITE:
                     if (ChildTypes.size() != 3) {
                         throw ExprTypeError("ite op can only be applied to two operands");
                     }
-                    if (ChildTypes[0] != BoolType) {
+                    if (ChildTypes[0] != Z3SemOps::BoolType) {
                         throw ExprTypeError("ite op needs a boolean condition");
                     }
                     if (ChildTypes[1] != ChildTypes[2]) {
@@ -613,43 +611,43 @@ namespace ESMC {
                     Exp->SetType(ChildTypes[1]);
                     break;
 
-                case OpIMPLIES:
-                case OpXOR:
-                case OpIFF:
+                case Z3SemOps::OpIMPLIES:
+                case Z3SemOps::OpXOR:
+                case Z3SemOps::OpIFF:
                     if (ChildTypes.size() != 2) {
                         throw ExprTypeError((string)"implies, xor and iff ops can only be " + 
                                             "applied to two operands");
                     }
-                case OpOR:
-                case OpAND:
+                case Z3SemOps::OpOR:
+                case Z3SemOps::OpAND:
                     if (ChildTypes.size() < 2) {
                         throw ExprTypeError((string)"and/or ops need at least two operands");
                     }
                     if (!all_of(ChildTypes.begin(), ChildTypes.end(), 
-                                [] (i64 i) { return i == BoolType; })) {
+                                [] (i64 i) { return i == Z3SemOps::BoolType; })) {
                         throw ExprTypeError((string)"implies, xor, iff, and, or ops expect " + 
                                             "Boolean expressions are operands");
                     }
-                    Exp->SetType(BoolType);
+                    Exp->SetType(Z3SemOps::BoolType);
                     break;
 
-                case OpADD:
-                case OpSUB:
-                case OpMUL:
+                case Z3SemOps::OpADD:
+                case Z3SemOps::OpSUB:
+                case Z3SemOps::OpMUL:
                     if (ChildTypes.size() < 2) {
                         throw ExprTypeError ((string)"add/sub/mul ops need at least two operands");
                     }
                     if (!all_of(ChildTypes.begin(), ChildTypes.end(),
-                                [] (i64 i) { return i == IntType; })) {
+                                [] (i64 i) { return i == Z3SemOps::IntType; })) {
                         throw ExprTypeError((string)"add/sub/mul ops expect Integer operands");
                     }
-                    Exp->SetType(IntType);
+                    Exp->SetType(Z3SemOps::IntType);
                     break;
 
-                case OpDIV:
-                case OpREM:
-                case OpMOD:
-                case OpPOWER:
+                case Z3SemOps::OpDIV:
+                case Z3SemOps::OpREM:
+                case Z3SemOps::OpMOD:
+                case Z3SemOps::OpPOWER:
                     if (ChildTypes.size() != 2) {
                         throw ExprTypeError ((string)"div/rem/mod/pow ops need " + 
                                              "exactly two operands");
@@ -657,34 +655,34 @@ namespace ESMC {
                     if (!CheckAllInt(ChildTypes)) {
                         throw ExprTypeError((string)"div/rem/mod/pow ops expect Integer operands");
                     }
-                    Exp->SetType(IntType);
+                    Exp->SetType(Z3SemOps::IntType);
                     break;
 
-                case OpMINUS:
+                case Z3SemOps::OpMINUS:
                     if (ChildTypes.size() != 1) {
                         throw ExprTypeError ((string)"unary minus op needs exactly one operand");
                     }
-                    if (ChildTypes[0] != IntType) {
+                    if (ChildTypes[0] != Z3SemOps::IntType) {
                         throw ExprTypeError ((string)"unary minus op expects an Integer operand");
                     }
-                    Exp->SetType(IntType);
+                    Exp->SetType(Z3SemOps::IntType);
                     break;
 
-                case OpGT:
-                case OpLT:
-                case OpGE:
-                case OpLE:
+                case Z3SemOps::OpGT:
+                case Z3SemOps::OpLT:
+                case Z3SemOps::OpGE:
+                case Z3SemOps::OpLE:
                     if (ChildTypes.size() != 2) {
                         throw ExprTypeError ((string)"GT/LT/GE/LE ops need exactly two operands");
                     }
                     if (!CheckAllInt(ChildTypes)) {
                         throw ExprTypeError ((string)"GT/LT/GE/LE ops expect Integer operands");
                     }
-                    Exp->SetType(BoolType);
+                    Exp->SetType(Z3SemOps::BoolType);
                     break;
 
                 // BVOps
-                case OpBVNOT:
+                case Z3SemOps::OpBVNOT:
                     if (ChildTypes.size() != 1) {
                         throw ExprTypeError ("BVNOT op needs exactly one operand");
                     }
@@ -695,8 +693,8 @@ namespace ESMC {
                     Exp->SetType(Type);
                     break;
 
-                case OpBVREDOR:
-                case OpBVREDAND:
+                case Z3SemOps::OpBVREDOR:
+                case Z3SemOps::OpBVREDAND:
                     if (ChildTypes.size() != 1) {
                         throw ExprTypeError ("BVREDOR/BVREDAND ops need exactly one operand");
                     }
@@ -704,12 +702,12 @@ namespace ESMC {
                     if (Type == -1) {
                         throw ExprTypeError ("BVREDOR/BVREDAND ops expect a BV operand");
                     }
-                    Exp->SetType(BVTypeAll + 1);
+                    Exp->SetType(Z3SemOps::BVTypeAll + 1);
                     break;
                     
-                case OpBVAND:
-                case OpBVOR:
-                case OpBVXOR:
+                case Z3SemOps::OpBVAND:
+                case Z3SemOps::OpBVOR:
+                case Z3SemOps::OpBVXOR:
                     if (ChildTypes.size() != 2) {
                         throw ExprTypeError ("BVAND/BVOR/BVXOR ops need exactly two operands");
                     }
@@ -771,7 +769,7 @@ namespace ESMC {
                 QExpr->Accept(&Inv);
                 QExpr->Accept(this);
 
-                if (QExpr->GetType() != BoolType) {
+                if (QExpr->GetType() != Z3SemOps::BoolType) {
                     throw ExprTypeError((string)"The body of a quantified expression must be " + 
                                         "a boolean valued expression");
                 }
@@ -844,24 +842,25 @@ namespace ESMC {
                 
                 switch(OpCode) {
                     // Sort operands for commutative operands
-                case OpEQ:
-                case OpOR:
-                case OpAND:
-                case OpIFF:
-                case OpXOR:
-                case OpADD:
-                case OpMUL:
-                case OpBVAND:
-                case OpBVOR:
-                case OpBVXOR:
+                case Z3SemOps::OpEQ:
+                case Z3SemOps::OpOR:
+                case Z3SemOps::OpAND:
+                case Z3SemOps::OpIFF:
+                case Z3SemOps::OpXOR:
+                case Z3SemOps::OpADD:
+                case Z3SemOps::OpMUL:
+                case Z3SemOps::OpBVAND:
+                case Z3SemOps::OpBVOR:
+                case Z3SemOps::OpBVXOR:
                     sort(NewChildren.begin(), NewChildren.end(), ExpressionSPtrCompare());
                     ExpStack.push_back(new OpExpression<E, S>(nullptr, OpCode, 
                                                               NewChildren, Exp->ExtensionData));
                     break;
 
-                case OpNOT:
+                case Z3SemOps::OpNOT:
                     if (NewChildren[0]->template As<OpExpression>() != nullptr &&
-                        NewChildren[0]->template SAs<OpExpression>()->GetOpCode() == OpNOT) {
+                        NewChildren[0]->template SAs<OpExpression>()->GetOpCode() == 
+                        Z3SemOps::OpNOT) {
                         ExpStack.push_back((NewChildren[0]->template 
                                             SAs<OpExpression>()->GetChildren())[0]);
                     } else {
@@ -1035,18 +1034,18 @@ namespace ESMC {
             inline string
             Stringifier<E, S>::TypeToString(i64 Type)
             {
-                if (Type == IntType) {
+                if (Type == Z3SemOps::IntType) {
                     return "Int";
                 }
-                if (Type == BoolType) {
+                if (Type == Z3SemOps::BoolType) {
                     return "Bool";
                 }
-                if (Type == BVTypeAll) {
+                if (Type == Z3SemOps::BVTypeAll) {
                     return "(BV _)";
                 } 
-                if (Type > BVTypeAll &&
+                if (Type > Z3SemOps::BVTypeAll &&
                     Type < BVTypeEnd) {
-                    return (string)"(BV " + to_string(Type - BVTypeAll) + ")";
+                    return (string)"(BV " + to_string(Type - Z3SemOps::BVTypeAll) + ")";
                 }
                 throw InternalError((string)"Unknown type " + to_string(Type) + " At : " + 
                                     __FILE__ + to_string(__LINE__));
@@ -1070,16 +1069,16 @@ namespace ESMC {
             template <typename E, template <typename> class S>
             inline Z3_sort Lowerer<E, S>::LowerType(i64 Type)
             {
-                if (Type == BoolType) {
+                if (Type == Z3SemOps::BoolType) {
                     return Z3_mk_bool_sort(*Ctx);
-                } else if (Type == IntType) {
+                } else if (Type == Z3SemOps::IntType) {
                     return Z3_mk_int_sort(*Ctx);
                 } else {
-                    if (Type <= BVTypeAll || Type >= BVTypeEnd) {
+                    if (Type <= Z3SemOps::BVTypeAll || Type >= BVTypeEnd) {
                         throw InternalError((string)"Unknown type " + to_string(Type) + 
                                             " At: " + __FILE__ + ":" + to_string(__LINE__));
                     }
-                    auto Size = Type - BVTypeAll;
+                    auto Size = Type - Z3SemOps::BVTypeAll;
                     return Z3_mk_bv_sort(*Ctx, Size);
                 }
             }
@@ -1101,11 +1100,11 @@ namespace ESMC {
                 const string& ConstVal = Exp->GetConstValue();
                 auto Type = Exp->GetConstType();
                 
-                if (Type == IntType) {
+                if (Type == Z3SemOps::IntType) {
                     Z3Expr LoweredExp(Ctx, Z3_mk_numeral(*Ctx, ConstVal.c_str(), 
                                                          LowerType(Type)));
                     ExpStack.push_back(LoweredExp);
-                } else if (Type == BoolType) {
+                } else if (Type == Z3SemOps::BoolType) {
                     if (ConstVal == "true") {
                         Z3Expr LoweredExp(Ctx, Z3_mk_true(*Ctx));
                         ExpStack.push_back(LoweredExp);
@@ -1163,110 +1162,111 @@ namespace ESMC {
                 }
 
                 switch (OpCode) {
-                case OpEQ:
+                case Z3SemOps::OpEQ:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_eq(*Ctx, ChildArray[0],
                                                             ChildArray[1])));
                     break;
                     
-                case OpNOT:
+                case Z3SemOps::OpNOT:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_not(*Ctx, ChildArray[0])));
                     break;
 
-                case OpITE:
+                case Z3SemOps::OpITE:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_ite(*Ctx, ChildArray[0],
                                                              ChildArray[1],
                                                              ChildArray[2])));
                     break;
 
-                case OpOR:
+                case Z3SemOps::OpOR:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_or(*Ctx, NumChildren, ChildArray)));
                     break;
 
-                case OpAND:
+                case Z3SemOps::OpAND:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_and(*Ctx, NumChildren, ChildArray)));
                     break;
 
-                case OpIMPLIES:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_implies(*Ctx, ChildArray[0], ChildArray[1])));
+                case Z3SemOps::OpIMPLIES:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_implies(*Ctx, ChildArray[0], 
+                                                                 ChildArray[1])));
                     break;
 
-                case OpIFF:
+                case Z3SemOps::OpIFF:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_iff(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
                     
-                case OpXOR:
+                case Z3SemOps::OpXOR:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_xor(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
                     
-                case OpADD:
+                case Z3SemOps::OpADD:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_add(*Ctx, NumChildren, ChildArray)));
                     break;
                     
-                case OpSUB:
+                case Z3SemOps::OpSUB:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_sub(*Ctx, NumChildren, ChildArray)));
                     break;
 
-                case OpMINUS:
+                case Z3SemOps::OpMINUS:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_unary_minus(*Ctx, ChildArray[0])));
                     break;
 
-                case OpMUL:
+                case Z3SemOps::OpMUL:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_mul(*Ctx, NumChildren, ChildArray)));
                     break;
 
-                case OpDIV:
+                case Z3SemOps::OpDIV:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_div(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
-                case OpMOD:
+                case Z3SemOps::OpMOD:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_mod(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
-                case OpREM:
+                case Z3SemOps::OpREM:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_rem(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
-                case OpPOWER:
+                case Z3SemOps::OpPOWER:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_power(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
-                case OpGE:
+                case Z3SemOps::OpGE:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_ge(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
-                case OpGT:
+                case Z3SemOps::OpGT:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_gt(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
-                case OpLE:
+                case Z3SemOps::OpLE:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_le(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
-                case OpLT:
+                case Z3SemOps::OpLT:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_lt(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
-                case OpBVNOT:
+                case Z3SemOps::OpBVNOT:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_bvnot(*Ctx, ChildArray[0])));
                     break;
 
-                case OpBVREDAND:
+                case Z3SemOps::OpBVREDAND:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_bvredand(*Ctx, ChildArray[0])));
                     break;
 
-                case OpBVREDOR:
+                case Z3SemOps::OpBVREDOR:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_bvredor(*Ctx, ChildArray[0])));
                     break;
 
-                case OpBVAND:
+                case Z3SemOps::OpBVAND:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_bvand(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
-                case OpBVOR:
+                case Z3SemOps::OpBVOR:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_bvor(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
 
-                case OpBVXOR:
+                case Z3SemOps::OpBVXOR:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_bvxor(*Ctx, ChildArray[0], ChildArray[1])));
                     break;
                     
@@ -1378,13 +1378,13 @@ namespace ESMC {
                 auto Kind = Z3_get_sort_kind(*Ctx, Sort);
                 switch (Kind) {
                 case Z3_BOOL_SORT:
-                    return BoolType;
+                    return Z3SemOps::BoolType;
                     
                 case Z3_INT_SORT:
-                    return IntType;
+                    return Z3SemOps::IntType;
 
                 case Z3_BV_SORT:
-                    return BVTypeAll + Z3_get_bv_sort_size(*Ctx, Sort);
+                    return Z3SemOps::BVTypeAll + Z3_get_bv_sort_size(*Ctx, Sort);
                     
                 default:
                     throw InternalError((string)"Unknown Sort " + to_string(Kind) + ", " + 
@@ -1434,88 +1434,88 @@ namespace ESMC {
                     }
 
                 case Z3_OP_TRUE:
-                    return new ConstExpression<E, S>(nullptr, "true", BoolType);
+                    return new ConstExpression<E, S>(nullptr, "true", Z3SemOps::BoolType);
                     
                 case Z3_OP_FALSE:
-                    return new ConstExpression<E, S>(nullptr, "false", BoolType);
+                    return new ConstExpression<E, S>(nullptr, "false", Z3SemOps::BoolType);
 
                 case Z3_OP_EQ:
-                    return new OpExpression<E, S>(nullptr, OpEQ, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpEQ, RaisedChildren);
                     
                 case Z3_OP_ITE:
-                    return new OpExpression<E, S>(nullptr, OpITE, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpITE, RaisedChildren);
                     
                 case Z3_OP_OR:
-                    return new OpExpression<E, S>(nullptr, OpOR, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpOR, RaisedChildren);
                     
                 case Z3_OP_AND:
-                    return new OpExpression<E, S>(nullptr, OpAND, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpAND, RaisedChildren);
 
                 case Z3_OP_IMPLIES:
-                    return new OpExpression<E, S>(nullptr, OpIMPLIES, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpIMPLIES, RaisedChildren);
                     
                 case Z3_OP_IFF:
-                    return new OpExpression<E, S>(nullptr, OpIFF, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpIFF, RaisedChildren);
 
                 case Z3_OP_XOR:
-                    return new OpExpression<E, S>(nullptr, OpXOR, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpXOR, RaisedChildren);
 
                 case Z3_OP_NOT:
-                    return new OpExpression<E, S>(nullptr, OpNOT, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpNOT, RaisedChildren);
 
                 case Z3_OP_ADD:
-                    return new OpExpression<E, S>(nullptr, OpADD, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpADD, RaisedChildren);
 
                 case Z3_OP_SUB:
-                    return new OpExpression<E, S>(nullptr, OpSUB, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpSUB, RaisedChildren);
 
                 case Z3_OP_UMINUS:
-                    return new OpExpression<E, S>(nullptr, OpMINUS, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpMINUS, RaisedChildren);
 
                 case Z3_OP_MUL:
-                    return new OpExpression<E, S>(nullptr, OpMUL, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpMUL, RaisedChildren);
 
                 case Z3_OP_DIV:
-                    return new OpExpression<E, S>(nullptr, OpDIV, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpDIV, RaisedChildren);
 
                 case Z3_OP_MOD:
-                    return new OpExpression<E, S>(nullptr, OpMOD, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpMOD, RaisedChildren);
 
                 case Z3_OP_REM:
-                    return new OpExpression<E, S>(nullptr, OpREM, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpREM, RaisedChildren);
 
                 case Z3_OP_POWER:
-                    return new OpExpression<E, S>(nullptr, OpPOWER, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpPOWER, RaisedChildren);
 
                 case Z3_OP_LE:
-                    return new OpExpression<E, S>(nullptr, OpLE, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpLE, RaisedChildren);
 
                 case Z3_OP_LT:
-                    return new OpExpression<E, S>(nullptr, OpLT, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpLT, RaisedChildren);
 
                 case Z3_OP_GE:
-                    return new OpExpression<E, S>(nullptr, OpGE, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpGE, RaisedChildren);
 
                 case Z3_OP_GT:
-                    return new OpExpression<E, S>(nullptr, OpGT, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpGT, RaisedChildren);
 
                 case Z3_OP_BNOT:
-                    return new OpExpression<E, S>(nullptr, OpBVNOT, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpBVNOT, RaisedChildren);
 
                 case Z3_OP_BREDOR:
-                    return new OpExpression<E, S>(nullptr, OpBVREDOR, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpBVREDOR, RaisedChildren);
 
                 case Z3_OP_BREDAND:
-                    return new OpExpression<E, S>(nullptr, OpBVREDAND, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpBVREDAND, RaisedChildren);
 
                 case Z3_OP_BOR:
-                    return new OpExpression<E, S>(nullptr, OpBVOR, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpBVOR, RaisedChildren);
 
                 case Z3_OP_BAND:
-                    return new OpExpression<E, S>(nullptr, OpBVAND, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpBVAND, RaisedChildren);
 
                 case Z3_OP_BXOR:
-                    return new OpExpression<E, S>(nullptr, OpBVXOR, RaisedChildren);
+                    return new OpExpression<E, S>(nullptr, Z3SemOps::OpBVXOR, RaisedChildren);
 
                 default:
                     throw InternalError((string)"Unknown Z3 Op: " + to_string(AppKind) + 
@@ -1533,12 +1533,13 @@ namespace ESMC {
                 auto Type = RaiseSort(Sort);
                 
                 switch (Type) {
-                case IntType:
-                    return new ConstExpression<E, S>(nullptr, Z3_get_numeral_string(*Ctx, LExp), Type);
+                case Z3SemOps::IntType:
+                    return new ConstExpression<E, S>(nullptr, 
+                                                     Z3_get_numeral_string(*Ctx, LExp), Type);
 
                 default:
                     {
-                        auto BVSize = Type - BVTypeAll;
+                        auto BVSize = Type - Z3SemOps::BVTypeAll;
                         istringstream istr(Z3_get_numeral_string(*Ctx, LExp));
                         boost::multiprecision::cpp_int HexVal;
                         istr >> HexVal;
@@ -1662,7 +1663,6 @@ namespace ESMC {
         } /* end namespace Detail */
 
         using namespace Detail;
-        using namespace Z3SemOps;
 
         template <typename E>
         class Z3Semanticizer 
@@ -1671,8 +1671,9 @@ namespace ESMC {
             Detail::UFID2DMapT UFID2DMap;
             Detail::UFName2DMapT UFName2DMap;
             UIDGenerator UFUIDGen;
-
+            
         public:
+            typedef Z3SemOps Ops;
             typedef Z3Expr LExpT;
             typedef Expr<E, ESMC::Z3Sem::Z3Semanticizer> ExpT;
 
@@ -1752,7 +1753,6 @@ namespace ESMC {
         Z3Semanticizer<E>::ElimQuantifiers(const ExpT& Exp)
         {
             auto LExp = LowerExpr(Exp);
-            cout << LExp.ToString() << endl;
             auto Ctx = LExp.GetCtx();
             auto QE = Z3_mk_tactic(*Ctx, "qe");
             Z3_tactic_inc_ref(*Ctx, QE);
@@ -1785,7 +1785,7 @@ namespace ESMC {
             } else {
                 return Canonicalize(new OpExpression
                                     <E, ESMC::Z3Sem::Z3Semanticizer>(nullptr, 
-                                                                     OpAND,
+                                                                     Z3SemOps::OpAND,
                                                                      RaisedExprs));
             }
         }

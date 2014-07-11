@@ -1740,7 +1740,7 @@ namespace ESMC {
                                       ArgTypes&&... Args)
         {
             CheckMgr(Exp);
-            return Internalize(T<E, S>::Do(Exp, forward<ArgTypes>(Args)...));
+            return Internalize(Sem->Canonicalize(T<E, S>::Do(Exp, forward<ArgTypes>(Args)...)));
         }
 
         template <typename E, template <typename> class S>
