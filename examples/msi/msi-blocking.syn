@@ -1,0 +1,27 @@
+consts {
+    NumCaches : 2;
+    NumValues : 2;
+    NumAddresses : 1;
+    NumDirs : 1;
+}
+
+types {
+    CacheIDType : symmetric(NumCaches, NumAddresses);
+    DataType : range(0, NumValues);
+    DirIDType : symmetric(NumDirs, NumAddresses);
+
+    ReqMsgTag : enum(GETX, GETS, WB);
+    RspMsgTag : enum(ACK_I, WB_ACK, DATA, UNBLOCK_S, UNBLOCK_E);
+    ExtMsgTag : enum(LD, ST, EV);
+
+    ReqMsgType : { 
+        Tag : ReqMsgTag; 
+        Requester : CacheIDType; 
+        DataBlk : DataType;
+        
+    };
+}
+
+messages {
+    
+}
