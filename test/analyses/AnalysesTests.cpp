@@ -70,13 +70,40 @@ int main()
                                Mgr->MakeExpr(Ops::OpEQ, Y, Mgr->MakeVal("1", Ops::IntType)));
 
     auto PC1 = StrongestPostSeq(Pred1, AsgnVec.begin(), AsgnVec.end(), true, true);
-    cout << "SP of " << Pred1 << endl;
+    cout << "Seq SP of " << Pred1 << endl;
     cout << "After statements: " << endl;
     cout << Assign1 << endl;
     cout << Assign2 << endl;
     cout << "is:" << endl;
     cout << PC1 << endl;
 
+    auto PC2 = StrongestPostPar(Pred1, AsgnVec.begin(), AsgnVec.end(), true);
+    cout << "Par SP of " << Pred1 << endl;
+    cout << "After statements: " << endl;
+    cout << Assign1 << endl;
+    cout << Assign2 << endl;
+    cout << "is:" << endl;
+    cout << PC2 << endl;
+    
+    // Weakest preconditions
+    auto PreCond = Mgr->MakeExpr(Ops::OpGT, X, Mgr->MakeExpr(Ops::OpADD, Mgr->MakeVal("10", Ops::IntType), Y));
+    auto WP1 = WeakestPreSeq(PreCond, AsgnVec.rbegin(), AsgnVec.rend());
+
+    cout << "Seq WP of " << PreCond << endl;
+    cout << "wrt statements: " << endl;
+    cout << Assign1 << endl;
+    cout << Assign2 << endl;
+    cout << "is:" << endl;
+    cout << WP1 << endl;
+
+    auto WP2 = WeakestPrePar(PreCond, AsgnVec.rbegin(), AsgnVec.rend());
+
+    cout << "Par WP of " << PreCond << endl;
+    cout << "wrt statements: " << endl;
+    cout << Assign1 << endl;
+    cout << Assign2 << endl;
+    cout << "is:" << endl;
+    cout << WP2 << endl;
 }
 
 // 

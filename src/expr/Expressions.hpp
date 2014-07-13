@@ -735,6 +735,7 @@ namespace ESMC {
         {
             Exp->GetQExpression()->Accept(this);
             auto SubstQExpr = SubstStack.back();
+            SubstStack.pop_back();
             SubstStack.push_back(new EQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
                                                                  SubstQExpr));
         }
@@ -745,6 +746,7 @@ namespace ESMC {
         {
             Exp->GetQExpression()->Accept(this);
             auto SubstQExpr = SubstStack.back();
+            SubstStack.pop_back();
             SubstStack.push_back(new AQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
                                                                  SubstQExpr));
         }

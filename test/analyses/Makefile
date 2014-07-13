@@ -1,5 +1,5 @@
 OPTFLAGS=-ggdb3 -O0 -fno-inline
-OPTFLAGS=-O3 -flto
+# OPTFLAGS=-O3 -flto
 
 CXX=g++
 

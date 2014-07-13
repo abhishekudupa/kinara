@@ -233,7 +233,7 @@ namespace ESMC {
                                                const ForwardIterator& Last)
         {
             auto Mgr = Predicate->GetMgr();
-            typedef decltype(Mgr) MgrType;
+            typedef typename remove_pointer<decltype(Mgr)>::type MgrType;
 
             auto Retval = Predicate;
             for (auto it = First; it != Last; ++it) {
@@ -241,7 +241,7 @@ namespace ESMC {
                 auto const& LHS = CurAsgn.GetLHS();
                 auto const& RHS = CurAsgn.GetRHS();
                 typename MgrType::SubstMapT SubstMap = { { LHS, RHS } };
-                Retval = Mgr->Substitute(SubstMap, Predicate);
+                Retval = Mgr->Substitute(SubstMap, Retval);
             }
             return Retval;
         }
@@ -256,7 +256,7 @@ namespace ESMC {
                                                   bool Simplify = false)
         {
             auto Mgr = Predicate->GetMgr();
-            typedef decltype(Mgr) MgrType;
+            typedef typename remove_pointer<decltype(Mgr)>::type MgrType;
             typedef Expr<E, S> ExpT;
 
             typedef typename MgrType::SemT SemT;
@@ -271,7 +271,6 @@ namespace ESMC {
             for (auto it = First; it != Last; ++it) {
                 auto const& CurAsgn = *it;
                 auto const& LHS = CurAsgn.GetLHS();
-                auto const& RHS = CurAsgn.GetRHS();
                 auto const LHSAsVar = LHS->template SAs<VarExpression>();
                 auto const EVar = Mgr->MakeBoundVar(LHSAsVar->GetVarType(), CurIndex++);
                 QVarTypesRev.push_back(LHSAsVar->GetVarType());
@@ -307,7 +306,7 @@ namespace ESMC {
                                                const ForwardIterator& Last)
         {
             auto Mgr = Predicate->GetMgr();
-            typedef decltype(Mgr) MgrType;
+            typedef typename remove_pointer<decltype(Mgr)>::type MgrType;
             
             auto Retval = Predicate;
             typename MgrType::SubstMapT SubstMap;
