@@ -13,46 +13,69 @@ types {
     
     // range is a (fully) closed range
     AckType : range(-NumCaches, NumCaches);
-
-    ReqMsgTag : enum(GETX, GETS, WB);
-    RspMsgTag : enum(ACK_I, WB_ACK, DATA, UNBLOCK_S, UNBLOCK_E);
-    ExtMsgTag : enum(LD, ST, EV);
-    ExtRspMsgTag : enum(GETACK, EVICTACK);
 }
 
 messages {
     foreach c in CacheIDType
     foreach d in DirIDType
     foreach a in AddressType
-    ReqMsgType : record { 
-        Tag : ReqMsgTag; 
-        DataBlk : ValueType;
-        Acks : AckType;
-    };
+        GetXMsg[c][d][a] of unit,
+        GetSMsg[c][d][a] of unit,
+        FwdGetXMsg[c][d][a] of CacheIDType,
+        FwdGetSMsg[c][d][a] of CacheIDType,
+        WBMsg[c][d][a] of ValueType,
+        InvAckMsg[c][d][a] of ValueType,
+        WBAckMsg[c][d][a] of unit,
+        DataMsg[c][d][a] of (ValueType * AckType),
+        UnblockSMsg[c][d][a] of unit,
+        UnblockEMsg[c][d][a] of unit,
 
-    foreach c in CacheIDType
-    foreach d in DirIDType
-    foreach a in AddressType
-    RspMsgType[c][a][d] : record {
-        Tag : RspMsgTag;
-        DataBlk : ValueType;
-        Acks : AckType;
-    };
+        GetXMsg'[c][d][a] of unit,
+        GetSMsg'[c][d][a] of unit,
+        FwdGetXMsg'[c][d][a] of CacheIDType,
+        WBMsg'[c][d][a] of ValueType,
+        InvAckMsg'[c][d][a] of ValueType,
+        WBAckMsg'[c][d][a] of unit,
+        DataMsg'[c][d][a] of (ValueType * AckType),
+        UnblockSMsg'[c][d][a] of unit,
+        UnblockEMsg'[c][d][a] of unit,
 
-    foreach c in CacheIDType
-    foreach d in DirIDType
-    foreach a in AddressType
-    ExtMsgType[c][a][d] : record {
-        Tag : ExtMsgType;
-    };
+        LDMsg[c][d][a] of unit,
+        STMsg[c][d][a] of ValueType,
+        EVMsg[c][d][a] of unit,
+        LDAckMsg[c][d][a] of ValueType,
+        STAckMsg[c][d][a] of ValueType,
+        EVAckMsg[c][d][a] of unit;
+}
 
-    foreach c in CacheIDType
-    foreach d in DirIDType
-    foreach a in AddressType
-    ExtRspMsgType[c][a][d] : record {
-        Tag : ExtRspMsgType;
-        DataBlk : ValueType;
-    };
+foreach d in DirIDType
+foreach a in AddressType
+automaton CoherenceMonitor[a][d] with compassion
+{
+    states {
+        Initial : initial;
+        Error : error;
+    }
+
+    vars {
+        LastValue : ValueType;
+    }
+
+    inports {
+        foreach c in CacheIDType
+        STAckMsg[c][d][a],
+        LDAckMsg[c][d][a];
+    }
+    
+    transitions {
+        Initial on STAckMsg[c][d][a] (v) ->
+        { LastValue := v } Initial
+        Initial on LDAckMsg[c][d][a] (v)
+        if (v != LastValue) ->
+        {} Error;
+        if (v = LastValue) ->
+        {} Initial;
+    }
 }
 
 foreach c in CacheIDType
@@ -61,11 +84,15 @@ foreach a in AddressType
 automaton Environment[c][a][d] with compassion
 {
     states {
-        Initial;
+        Initial : initial;
         PendingLD;
-        foreach v in ValueType
-        PendingST[v];
+        PendingST;
         PendingEV;
+        Error : error
+    }
+
+    vars {
+        PendingStore : ValueType;
     }
 
     inports {
@@ -77,20 +104,32 @@ automaton Environment[c][a][d] with compassion
     }
 
     transitions {
-        Initial if true spontaneous send ExtMsgType[c][a][d] (LD) -> {} PendingLD;
-        foreach v in ValueType
-        PendingLD if true on ExtRspMsgType[c][a][d] (GETACK, v) -> {} Initial;
+        // Load flow
+        Initial spontaneous send LDMsg[c][d][a] -> {} PendingLD;
+        PendingLD on LDAckMsg[c][d][a] (v) -> Initial;
 
+        // Store flow
         foreach v in ValueType
-        Initial if true spontaneous send ExtMsgType[c][a][d] (ST, v) -> {} PendingST[v];
-        foreach v in ValueType
-        PendingST[v] if true on ExtRspMsgType[c][a][d] (GETACK, v) -> Initial;
+        Initial spontaneous 
+        send STMsg[c][d][a] (v) ->
+        { PendingStore := v; }
+        PendingST
+
+        PendingST on STAckMsg[c][d][a]
+        if (v = PendingStore) ->
+        {} Initial;
+        if (v != PendingStore) ->
+        {} Error;
         
-        Initial if true spontaneous send ExtRspMsgType[c][a][d] (EV) -> {} PendingEV;
-        PendingEV if true on ExtRspMsgType[c][a][d] (EVICTACK) -> {} Initial;
+        // Evict flow
+        Initial spontaneous send EVMsg[c][d][a] ->
+        {} PendingEV;
+        PendingEV on ExtRspMsgType[c][a][d] (EVICTACK) -> {} Initial;
     }
 }
 
+
+// Channel from c to d for a given a
 foreach c in CacheIDType
 foreach d in DirIDType
 foreach a in AddressType
@@ -99,8 +138,13 @@ channelautomaton ReqChannel[c][a][d] with compassion
     unordered, lossless, nonduplicating;
     capacity = 1;
 
-    ports {
-        ReqMsgType[c][a][d];
+    messages {
+        GetXMsg[c][d][a];
+        GetSMsg[c][d][a];
+        WBMsg[c][d][a];
+        UnblockEMsg[c][d][a];
+        UnblockSMsg[c][d][a];
+        InvAckMsg[c][d][a];
     }
 }
 
@@ -113,7 +157,7 @@ channelautomaton RspChannel[c][a][d] with compassion
     capacity = 1;
     
     ports {
-        RspMsgType[c][a][d];
+        
     }
 }
 
@@ -135,6 +179,7 @@ automaton Cache[c][a][d] with compassion
     vars {
         DataBlk : ValueType;
         PendingAcks : AckType;
+        PendingWrite : ValueType;
     }
 
     inports {
@@ -152,6 +197,15 @@ automaton Cache[c][a][d] with compassion
     }
 
     transitions {
-        C_I
+        C_I on ExtMsgType[c][a][d] (LD) 
+        send ReqMsgType[c][a][d] (GETS, undef, undef) -> 
+        {} C_IS;
+
+        foreach v in ValueType
+        C_I on ExtMsgType[c][a][d] (ST, v)
+        send ReqMsgType[c][a][d] (GETX, undef, undef) ->
+        { PendingWrite := v } C_IM;
+        
+        C_I on ExtMsgType[c][a][d] (
     }
 }

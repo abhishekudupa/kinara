@@ -1,0 +1,14 @@
+consts {
+    NumCaches    : 2;
+    NumDirs      : 1;
+    NumAddresses : 1;
+    NumValues    : 2;
+}
+
+types {
+    CacheIDType : symmetric(NumCaches);
+    DirIDType   : symmetric(NumDirs);
+    ValueType   : symmetric(NumValues);
+    AddressType : symmetric(NumAddresses);
+}
+
