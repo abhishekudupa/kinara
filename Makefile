@@ -8,7 +8,7 @@ BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
 CXX=g++
 
-CXXFLAGS=-std=c++11 -Wall -pedantic
+CXXFLAGS=-std=c++11 -Wall -pedantic -fopenmp
 CXXFLAGS+=-I $(PROJECT_ROOT)/src/extern/z3-4.3.1/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/src/extern/boost-local/boost_install/include
 
