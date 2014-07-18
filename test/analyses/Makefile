@@ -1,5 +1,5 @@
 OPTFLAGS=-ggdb3 -O0 -fno-inline
-OPTFLAGS=-O3 -flto
+# OPTFLAGS=-O3 -flto
 
 CXX=g++
 
@@ -15,9 +15,9 @@ CXXFLAGS+=-I ../../src/extern/z3-4.3.1/src/api -fopenmp -Wall -pedantic -fopenmp
 
 LDFLAGS=-L ../../src/extern/z3-4.3.1/install/
 LDFLAGS+=-L ../../src/extern/boost-local/boost_install/lib/ 
-LDFLAGS+=-L ../../lib/debug/ 
+LDFLAGS+=-L ../../lib/opt/ 
 
-LDFLAGS+=-Wl,-rpath $(realpath ../../lib/debug)
+LDFLAGS+=-Wl,-rpath $(realpath ../../lib/opt)
 LDFLAGS+=-Wl,-rpath $(realpath ../../src/extern/boost-local/boost_install/lib)
 LDFLAGS+=-Wl,-rpath $(realpath ../../src/extern/z3-4.3.1/install/)
 
