@@ -17,28 +17,38 @@ types {
 
 messages {
     foreach c in CacheIDType
-    foreach d in DirIDType
+    foreach d in CacheIDType
     foreach a in AddressType
         GetXMsg[c][d][a] of unit,
         GetSMsg[c][d][a] of unit,
+        WBMsg[c][d][a] of ValueType,
+
         FwdGetXMsg[c][d][a] of CacheIDType,
         FwdGetSMsg[c][d][a] of CacheIDType,
-        WBMsg[c][d][a] of ValueType,
         InvAckMsg[c][d][a] of ValueType,
-        WBAckMsg[c][d][a] of unit,
-        DataMsg[c][d][a] of (ValueType * AckType),
+
         UnblockSMsg[c][d][a] of unit,
         UnblockEMsg[c][d][a] of unit,
 
+        WBAckMsg[c][d][a] of unit,
+        DataMsgD[c][d][a] of (ValueType * AckType),
+        DataMsgC[c][d][a] of ValueType,
+
         GetXMsg'[c][d][a] of unit,
         GetSMsg'[c][d][a] of unit,
-        FwdGetXMsg'[c][d][a] of CacheIDType,
         WBMsg'[c][d][a] of ValueType,
-        InvAckMsg'[c][d][a] of ValueType,
-        WBAckMsg'[c][d][a] of unit,
-        DataMsg'[c][d][a] of (ValueType * AckType),
+
         UnblockSMsg'[c][d][a] of unit,
         UnblockEMsg'[c][d][a] of unit,
+
+        FwdGetSMsg'[c][d][a] of CacheIDType,
+        FwdGetXMsg'[c][d][a] of CacheIDType,
+        InvAckMsg'[c][d][a] of ValueType,
+
+        WBAckMsg'[c][d][a] of unit,
+        DataMsgD'[c][d][a] of (ValueType * AckType),
+        DataMsgC'[c][d][a] of ValueType,
+
 
         LDMsg[c][d][a] of unit,
         STMsg[c][d][a] of ValueType,
@@ -50,7 +60,7 @@ messages {
 
 foreach d in DirIDType
 foreach a in AddressType
-automaton CoherenceMonitor[a][d] with compassion
+automaton CoherenceMonitor[d][a] with compassion
 {
     states {
         Initial : initial;
@@ -96,11 +106,15 @@ automaton Environment[c][a][d] with compassion
     }
 
     inports {
-        ExtRspMsgType[c][a][d];
+        LDAckMsg[c][d][a];
+        STAckMsg[c][d][a];
+        EVAckMsg[c][d][a];                
     }
 
     outports {
-        ExtMsgType[c][a][d];
+        LDMsg[c][d][a];
+        STMsg[c][d][a];
+        EVMsg[c][d][a];
     }
 
     transitions {
@@ -110,8 +124,7 @@ automaton Environment[c][a][d] with compassion
 
         // Store flow
         foreach v in ValueType
-        Initial spontaneous 
-        send STMsg[c][d][a] (v) ->
+        Initial spontaneous send STMsg[c][d][a] (v) ->
         { PendingStore := v; }
         PendingST
 
@@ -124,16 +137,17 @@ automaton Environment[c][a][d] with compassion
         // Evict flow
         Initial spontaneous send EVMsg[c][d][a] ->
         {} PendingEV;
-        PendingEV on ExtRspMsgType[c][a][d] (EVICTACK) -> {} Initial;
+        PendingEV on EVAckMsg[c][d][a] -> 
+        {} Initial;
     }
 }
 
 
-// Channel from c to d for a given a
+// Channel from Cache to Directory for a given Address
 foreach c in CacheIDType
 foreach d in DirIDType
 foreach a in AddressType
-channelautomaton ReqChannel[c][a][d] with compassion
+channelautomaton ReqChannel[c][d][a] with compassion
 {
     unordered, lossless, nonduplicating;
     capacity = 1;
@@ -142,29 +156,58 @@ channelautomaton ReqChannel[c][a][d] with compassion
         GetXMsg[c][d][a];
         GetSMsg[c][d][a];
         WBMsg[c][d][a];
-        UnblockEMsg[c][d][a];
-        UnblockSMsg[c][d][a];
-        InvAckMsg[c][d][a];
     }
 }
 
+// Channel INTO each cache for a given address
 foreach c in CacheIDType
 foreach d in DirIDType
 foreach a in AddressType
-channelautomaton RspChannel[c][a][d] with compassion
+channelautomaton RspChannel[c][d][a] with compassion
+{
+    unordered, lossless, nonduplicating;
+    capacity = NumCaches;
+
+    messages {
+        InvAckMsg[c][d][a],
+        WBAckMsg[c][d][a],
+        DataMsgD[c][d][a],
+        DataMsgC[c][d][a];
+    }
+}
+
+// Unblocks INTO each directory for a given address
+foreach d in DirIDType
+foreach a in AddressType
 {
     unordered, lossless, nonduplicating;
     capacity = 1;
-    
-    ports {
-        
+
+    messages {
+        foreach c in CacheIDType
+            UnblockEMsg[c][d][a],
+            UnblockSMsg[c][d][a];
+    }
+}
+
+// Forward messages INTO each cache for a given address
+foreach c in CacheIDType
+foreach d in DirIDType
+foreach a in AddressType
+channelautomaton FwdChannel[c][d][a]
+{
+    unordered, lossless, nonduplicating;
+    capacity = 1;
+    messages {
+        FwdGetSMsg[c][d][a];
+        FwdGetXMsg[c][d][a];
     }
 }
 
 foreach c in CacheIDType
 foreach d in DirIDType
 foreach a in AddressType
-automaton Cache[c][a][d] with compassion
+automaton Cache[c][d][a] with compassion
 {
     states {
         C_I;
@@ -183,29 +226,60 @@ automaton Cache[c][a][d] with compassion
     }
 
     inports {
-        ExtMsgType[c][a][d];
+        LDMsg[c][d][a];
+        STMsg[c][d][a];
+        EVMsg[c][d][a];
 
-        foreach c1 in CacheIDType
-        ReqMsgType[c1][a][d]
+        FwdGetXMsg'[c][d][a];
+        FwdGetSMsg'[c][d][a];
+        InvAckMsg'[c][d][a];
 
-        foreach c1 in CacheIDType
-        RspMsgType[c1][a][d];
+        DataMsgD'[c][d][a];
+        DataMsgC'[c][d][a]
+        WBAckMsg'[c][d][a];
     }
     
     outports {
-        ExtRspMsgType[c][a][d];
+        LDAckMsg[c][d][a];
+        STAckMsg[c][d][a];
+        EVAckMsg[c][d][a];
+
+        UnblockSMsg[c][d][a];
+        UnblockEMsg[c][d][a];
+
+        GetXMsg[c][d][a];
+        GetSMsg[c][d][a];
+        WBMsg[c][d][a];
+
+        DataMsgC[c][d][a];
     }
 
     transitions {
-        C_I on ExtMsgType[c][a][d] (LD) 
-        send ReqMsgType[c][a][d] (GETS, undef, undef) -> 
-        {} C_IS;
 
-        foreach v in ValueType
-        C_I on ExtMsgType[c][a][d] (ST, v)
-        send ReqMsgType[c][a][d] (GETX, undef, undef) ->
-        { PendingWrite := v } C_IM;
-        
-        C_I on ExtMsgType[c][a][d] (
+    }
+}
+
+foreach d in DirIDType
+foreach a in AddressType
+automaton Directory[d][a] with compassion
+{
+    states {
+
+    }
+
+    vars {
+
+    }
+
+    inports {
+        foreach c in CacheIDType
+            GetXMsg'[c][d][a],
+            GetSMsg'[c][d][a],
+            WBMsg'[c][d][a],
+
+            UnblockSMsg'[c][d][a],
+            UnblockEMsg'[c][d][a],
+            
+            
     }
 }
