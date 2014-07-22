@@ -26,17 +26,20 @@ messages {
 
                 FwdGetXMsg[c][d][a] of CacheIDType;
                 FwdGetSMsg[c][d][a] of CacheIDType;
-                InvAckMsg[c][d][a] of ValueType;
+
+                foreach c2 in CacheIDType (!= c2 c) {
+                    InvAckMsg[c][d][a] of ValueType;
+                }
 
                 UnblockSMsg[c][d][a] of unit;
                 UnblockEMsg[c][d][a] of unit;
 
                 WBAckMsg[c][d][a] of unit;
                 DataMsgD2C[c][d][a] of (ValueType * AckType);
-                DataMsgC2D[c][d][a] of (ValueType * AckType);
+                DataMsgC2D[c][d][a] of ValueType;
 
                 foreach c2 in CacheIDType (!= c c2) {
-                    DataMsgC2C[c][c2][d][a];
+                    DataMsgC2C[c][c2][d][a] of ValueType;
                 }
 
                 GetXMsg'[c][d][a] of unit;
@@ -48,11 +51,14 @@ messages {
 
                 FwdGetSMsg'[c][d][a] of CacheIDType;
                 FwdGetXMsg'[c][d][a] of CacheIDType;
-                InvAckMsg'[c][d][a] of ValueType;
+
+                foreach c2 in CacheIDType (!= c c2) {
+                    InvAckMsg'[c][c2][d][a] of ValueType;
+                }
 
                 WBAckMsg'[c][d][a] of unit;
                 DataMsgD2C'[c][d][a] of (ValueType * AckType);
-                DataMsgC2D'[c][d][a] of (ValueType * AckType);
+                DataMsgC2D'[c][d][a] of ValueType;
 
                 foreach c2 in CacheIDType (!= c c2) {
                     DataMsgC2C'[c][c2][d][a] of ValueType;
@@ -74,8 +80,8 @@ foreach a in AddressType
 automaton CoherenceMonitor[d][a] with compassion
 {
     states {
-        Initial : initial;
-        Error : error;
+        Monitor_Initial : initial;
+        Monitor_Error : error;
     }
 
     vars {
@@ -90,13 +96,10 @@ automaton CoherenceMonitor[d][a] with compassion
     }
     
     transitions {
-        Initial on STAckMsg[c][d][a] (v) ->
-        { LastValue := v } Initial
-        Initial on LDAckMsg[c][d][a] (v)
-        if (v != LastValue) ->
-        {} Error;
-        if (v = LastValue) ->
-        {} Initial;
+        Monitor_Initial on STAckMsg[c][d][a] (v) { LastValue := v; } -> Monitor_Initial;
+        Monitor_Initial on LDAckMsg[c][d][a] (v)
+        if (v != LastValue) {} -> Monitor_Error;
+        if (v = LastValue) {} -> Monitor_Initial;
     }
 }
 
@@ -106,11 +109,11 @@ foreach a in AddressType
 automaton Environment[c][a][d] with compassion
 {
     states {
-        Initial : initial;
-        PendingLD;
-        PendingST;
-        PendingEV;
-        Error : error
+        Env_Initial : initial;
+        Env_PendingLD;
+        Env_PendingST;
+        Env_PendingEV;
+        Env_Error : error
     }
 
     vars {
@@ -131,26 +134,19 @@ automaton Environment[c][a][d] with compassion
 
     transitions {
         // Load flow
-        Initial spontaneous send LDMsg[c][d][a] -> {} PendingLD;
-        PendingLD on LDAckMsg[c][d][a] (v) -> Initial;
+        Env_Initial send LDMsg[c][d][a] {} -> Env_PendingLD;
+        Env_PendingLD on LDAckMsg[c][d][a] (v) {} -> Env_Initial;
 
         // Store flow
         foreach v in ValueType
-        Initial spontaneous send STMsg[c][d][a] (v) ->
-        { PendingStore := v; }
-        PendingST
-
-        PendingST on STAckMsg[c][d][a]
-        if (v = PendingStore) ->
-        {} Initial;
-        if (v != PendingStore) ->
-        {} Error;
+        Env_Initial send STMsg[c][d][a] (v) { PendingStore := v; } -> Env_PendingST;
+        Env_PendingST on STAckMsg[c][d][a]
+        if (v = PendingStore) {} -> Env_Initial;
+        if (v != PendingStore) {} -> Env_Error;
         
         // Evict flow
-        Initial spontaneous send EVMsg[c][d][a] ->
-        {} PendingEV;
-        PendingEV on EVAckMsg[c][d][a] -> 
-        {} Initial;
+        Env_Initial send EVMsg[c][d][a] {} -> Env_PendingEV;
+        Env_PendingEV on EVAckMsg[c][d][a] {} -> Env_Initial;
     }
 }
 
@@ -235,8 +231,9 @@ automaton Cache[c][d][a] with compassion
 
     vars {
         DataBlk : ValueType;
-        PendingAcks : AckType;
+        AckCounter : AckType;
         PendingWrite : ValueType;
+        FwdToCache : CacheIDType;
     }
 
     inports {
@@ -246,7 +243,9 @@ automaton Cache[c][d][a] with compassion
 
         FwdGetXMsg'[c][d][a];
         FwdGetSMsg'[c][d][a];
-        InvAckMsg'[c][d][a];
+        foreach c2 in CacheIDType (!= c2 c1) {
+            InvAckMsg'[c2][c][d][a];
+        }
 
         DataMsgD2C'[c][d][a];
         
@@ -265,6 +264,10 @@ automaton Cache[c][d][a] with compassion
         UnblockSMsg[c][d][a];
         UnblockEMsg[c][d][a];
 
+        foreach c2 in CacheIDType (!= c2 c1) {
+            InvAckMsg[c][c2][d][a];
+        }
+
         GetXMsg[c][d][a];
         GetSMsg[c][d][a];
         WBMsg[c][d][a];
@@ -275,7 +278,111 @@ automaton Cache[c][d][a] with compassion
     }
 
     transitions {
+        // Transitions from I for Ext events
+        C_I on LDMsg[c][d][a] {} -> send GetSMsg[c][d][a] {} -> C_IS;
+        C_I on STMsg[c][d][a] (v) { PendingWrite := v; } -> 
+        send GetXMsg[c][d][a] {} -> C_IM;
+        C_I on EVMsg[c][d][a] {} -> send EVAckMsg[c][d][a] -> C_I;
+
+        // Transitions for I on Fwd events
+        C_I on FwdGetSMsg'[c][d][a] (c2) { FwdToCache := c2; } -> 
+        send InvAckMsg[c][FwdToCache][d][a] { FwdToCache := undef; } -> C_I;
         
+        // Transitions from S on Ext Events
+        C_S on LDMsg[c][d][a] {} -> send LDAckMsg[c][d][a] (DataBlk) -> C_S;
+        C_S on STMsg[c][d][a] (v) { PendingWrite := v; } -> 
+        send GetXMsg[c][d][a] {} -> C_SM;
+        C_S on EVMsg[c][d][a] {} -> 
+        send EVAckMsg[c][d][a] { DataBlk := undef; } -> C_I;
+
+        // Transitions from S on Fwd events
+        C_S on FwdGetXMsg[c][d][a] (c2) { FwdToCache := c2; } -> 
+        send InvAckMsg[c][FwdToCache][d][a] { DataBlk := undef } -> C_I;
+
+        // Transitions from M on Ext events
+        C_M on LDMsg[c][d][a] {} -> send LDAckMsg[c][d][a] (DataBlk) {} -> C_M;
+        C_M on STMsg[c][d][a] (v) { DataBlk := v; } ->
+        send STAckMsg[c][d][a] (DataBlk) {} -> C_M;
+        C_M on EVMsg[c][d][a] {} -> send WBMsg[c][d][a] (DataBlk) {} -> C_II;
+
+        // Transitions from M on Fwd events
+        C_M on FwdGetSMsg'[c][d][a] (c2) { FwdToCache := c2; } ->
+        send DataMsgC2D[c][d][a] (DataBlk) {} ->
+        send DataMsgC2C[c][FwdToCache][d][a] (DataBlk) { FwdToCache := undef; } -> C_S;
+        
+        C_M on FwdGetXMsg'[c][d][a] (c2) { FwdToCache := c2; } ->
+        send DataMsgC2C[c][FwdToCache][d][a] (DataBlk) 
+        { FwdToCache := undef; DataBlk := undef; } -> C_I;
+
+        // Transitions from C_IM on Rsp Events
+        C_IM on FwdGetXMsg'[c][d][a] (c2) { FwdToCache := c2; } ->
+        send InvAckMsg[c][FwdToCache][d][a] {FwdToCache := undef; } -> C_IM;
+        
+        // Case when another cache gives me data
+        foreach c2 in CacheIDType (!= c2 c) {
+            C_IM on DataMsgC2C'[c2][c][d][a] (v) { DataBlk := v; } -> C_M;
+        }
+        
+        // Case when data comes from dir ==> Must wait for acks
+        C_IM on DataMsgD2C'[c][d][a] (v, NumAcks) 
+        if (!= AckCounter NumAcks)
+        { AckCounter := (- AckCounter NumAcks); DataBlk := v; } -> C_SM;
+        if (= AckCounter NumAcks)
+        { AckCounter := 0; DataBlk := v; } -> 
+        send UnblockEMsg[c][d][a] { DataBlk := PendingStore; PendingStore := undef; } -> C_M;
+
+        foreach c2 in CacheIDType (!= c2 c) {
+            C_IM on InvAckMsg[c2][c][d][a] { AckCounter := (+ AckCounter 1); } -> C_IM;
+        }
+
+        // Transitions from C_SM on Ext Events
+        C_SM on LDMsg[c][d][a] {} -> send LDAckMsg[c][d][a] (DataBlk) {} -> C_SM;
+        
+        // Transitions from C_SM on Rsp Events
+        C_SM on FwdGetXMsg'[c][d][a] (c2) { FwdToCache := c2; } -> 
+        send InvAckMsg[c][FwdToCache][d][a] {} -> C_SM;
+
+        // Case where data comes from dir ==> Must wait for acks
+        C_SM on DataMsgD2C'[c][d][a] (v, NumAcks)
+
+        if (= NumAcks AckCounter) { AckCounter := 0; } -> 
+        send UnblockEMsg[c][d][a] { DataBlk := PendingStore; PendingStore := undef; } -> 
+        send STAckMsg[c][d][a] (DataBlk) {} -> C_M;
+
+        if (!= NumAcks AckCounter) { AckCounter := (- AckCounter NumAcks) } -> C_SM;
+
+        foreach c2 in CacheIDType (!= c2 c) {
+            C_SM on InvAckMsg'[c2][c][d][a] 
+
+            if (= AckCounter (- 1)) { AckCounter := 0; } ->
+            send UnblockEMsg[c][d][a] { DataBlk := PendingStore; PendingStore := undef; } -> 
+            send STAckMsg[c][d][a] (DataBlk) {} -> C_M;
+
+            if (!= AckCounter (- 1)) { AckCounter := (+ AckCounter 1); } -> 
+            send UnblockEMsg[c][d][a] { DataBlk := PendingStore; PendingStore := undef; } ->
+            send STAckMsg[c][d][a] (DataBlk) {} -> C_M;
+        }
+
+        // Transitions from IS on Ext Events
+        C_IS on FwdGetXMsg'[c][d][a] (c2) { FwdToCache := c2; } -> 
+        send InvAckMsg[c][FwdToCache][d][a] {} -> C_IS;
+
+        // Transitions on IS on Rsp Events
+        C_IS on DataMsgD2C'[c][d][a] (v, _) { DataBlk := v; } -> 
+        send UnblockSMsg[c][d][a] -> send LDAckMsg[c][d][a] (DataBlk) -> C_S;
+
+        foreach c2 in CacheIDType (!= c2 c) {
+            C_IS on DataMsgC2C'[c2][c][d][a] (v) -> { DataBlk := v; } ->
+            send UnblockSMsg[c][d][a] -> send LDAckMsg[c][d][a] (DataBlk) -> C_S;
+        }
+
+        // Transitions on II on Rsp Events
+        C_II on WBAckMsg'[c][d][a] -> C_I;
+
+        C_II on FwdGetXMsg'[c][d][a] (c2) { FwdToCache := c2; } -> 
+        send InvAckMsg[c][FwdToCache][d][a] -> C_I;
+
+        C_II on FwdGetSMsg'[c][d][a] (_) -> I;
     }
 }
 
@@ -295,6 +402,7 @@ automaton Directory[d][a] with compassion
         DataBlk : ValueType;
         ActiveId : CacheIDType;
         Sharers : array[CacheIDType] of boolean;
+        NumSharers : 0..NumCaches;
     }
 
     inports {
@@ -316,6 +424,25 @@ automaton Directory[d][a] with compassion
             FwdGetSMsg[c][d][a];
             DataMsgD2C[c][d][a];
         }
+    }
+
+    transitions {
+        foreach c in CacheIDType {
+
+            // Transitions from I
+            D_I on GetXMsg'[c][d][a] {} -> 
+            send DataMsgD2C[c][d][a] (DataBlk, 0) -> D_BUSY;
+            
+            D_I on GetSMsg'[c][d][a] {} ->
+            send DataMsgD2C[c][d][a] (DataBlk, 0) -> D_BUSY;
+
+            // Transitions from S
+            D_S on GetXMsg'[c][d][a] { ActiveId := c; } ->
+            send DataMsgD2C[c][d][a] (DataBlk, NumSharers) {} ->
+            foreach c2 in CacheIDType {
+                if (Sharers[c2]) -> send FwdGetXMsg[c2][d][a] (c)
+            } -> 
+                       
     }
 }
 
