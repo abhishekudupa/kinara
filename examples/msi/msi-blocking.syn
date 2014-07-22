@@ -16,46 +16,57 @@ types {
 }
 
 messages {
-    foreach c in CacheIDType
-    foreach d in CacheIDType
-    foreach a in AddressType
-        GetXMsg[c][d][a] of unit,
-        GetSMsg[c][d][a] of unit,
-        WBMsg[c][d][a] of ValueType,
+    foreach c in CacheIDType {
+        foreach d in CacheIDType {
+            foreach a in AddressType {
 
-        FwdGetXMsg[c][d][a] of CacheIDType,
-        FwdGetSMsg[c][d][a] of CacheIDType,
-        InvAckMsg[c][d][a] of ValueType,
+                GetXMsg[c][d][a] of unit;
+                GetSMsg[c][d][a] of unit;
+                WBMsg[c][d][a] of ValueType;
 
-        UnblockSMsg[c][d][a] of unit,
-        UnblockEMsg[c][d][a] of unit,
+                FwdGetXMsg[c][d][a] of CacheIDType;
+                FwdGetSMsg[c][d][a] of CacheIDType;
+                InvAckMsg[c][d][a] of ValueType;
 
-        WBAckMsg[c][d][a] of unit,
-        DataMsgD[c][d][a] of (ValueType * AckType),
-        DataMsgC[c][d][a] of ValueType,
+                UnblockSMsg[c][d][a] of unit;
+                UnblockEMsg[c][d][a] of unit;
 
-        GetXMsg'[c][d][a] of unit,
-        GetSMsg'[c][d][a] of unit,
-        WBMsg'[c][d][a] of ValueType,
+                WBAckMsg[c][d][a] of unit;
+                DataMsgD2C[c][d][a] of (ValueType * AckType);
+                DataMsgC2D[c][d][a] of (ValueType * AckType);
 
-        UnblockSMsg'[c][d][a] of unit,
-        UnblockEMsg'[c][d][a] of unit,
+                foreach c2 in CacheIDType (!= c c2) {
+                    DataMsgC2C[c][c2][d][a];
+                }
 
-        FwdGetSMsg'[c][d][a] of CacheIDType,
-        FwdGetXMsg'[c][d][a] of CacheIDType,
-        InvAckMsg'[c][d][a] of ValueType,
+                GetXMsg'[c][d][a] of unit;
+                GetSMsg'[c][d][a] of unit;
+                WBMsg'[c][d][a] of ValueType;
 
-        WBAckMsg'[c][d][a] of unit,
-        DataMsgD'[c][d][a] of (ValueType * AckType),
-        DataMsgC'[c][d][a] of ValueType,
+                UnblockSMsg'[c][d][a] of unit;
+                UnblockEMsg'[c][d][a] of unit;
 
+                FwdGetSMsg'[c][d][a] of CacheIDType;
+                FwdGetXMsg'[c][d][a] of CacheIDType;
+                InvAckMsg'[c][d][a] of ValueType;
 
-        LDMsg[c][d][a] of unit,
-        STMsg[c][d][a] of ValueType,
-        EVMsg[c][d][a] of unit,
-        LDAckMsg[c][d][a] of ValueType,
-        STAckMsg[c][d][a] of ValueType,
-        EVAckMsg[c][d][a] of unit;
+                WBAckMsg'[c][d][a] of unit;
+                DataMsgD2C'[c][d][a] of (ValueType * AckType);
+                DataMsgC2D'[c][d][a] of (ValueType * AckType);
+
+                foreach c2 in CacheIDType (!= c c2) {
+                    DataMsgC2C'[c][c2][d][a] of ValueType;
+                }
+
+                LDMsg[c][d][a] of unit;
+                STMsg[c][d][a] of ValueType;
+                EVMsg[c][d][a] of unit;
+                LDAckMsg[c][d][a] of ValueType;
+                STAckMsg[c][d][a] of ValueType;
+                EVAckMsg[c][d][a] of unit;
+            }
+        }
+    }
 }
 
 foreach d in DirIDType
@@ -72,9 +83,10 @@ automaton CoherenceMonitor[d][a] with compassion
     }
 
     inports {
-        foreach c in CacheIDType
-        STAckMsg[c][d][a],
-        LDAckMsg[c][d][a];
+        foreach c in CacheIDType {
+            STAckMsg[c][d][a];
+            LDAckMsg[c][d][a];
+        }
     }
     
     transitions {
@@ -179,14 +191,16 @@ channelautomaton RspChannel[c][d][a] with compassion
 // Unblocks INTO each directory for a given address
 foreach d in DirIDType
 foreach a in AddressType
+channelautomaton UnblockChannel[d][a]
 {
     unordered, lossless, nonduplicating;
     capacity = 1;
 
     messages {
-        foreach c in CacheIDType
-            UnblockEMsg[c][d][a],
+        foreach c in CacheIDType {
+            UnblockEMsg[c][d][a];
             UnblockSMsg[c][d][a];
+        }
     }
 }
 
@@ -234,9 +248,13 @@ automaton Cache[c][d][a] with compassion
         FwdGetSMsg'[c][d][a];
         InvAckMsg'[c][d][a];
 
-        DataMsgD'[c][d][a];
-        DataMsgC'[c][d][a]
+        DataMsgD2C'[c][d][a];
+        
         WBAckMsg'[c][d][a];
+
+        foreach c1 in CacheIDType (!= c c1) {
+            DataMsgC2C'[c1][c][d][a];
+        }
     }
     
     outports {
@@ -251,11 +269,13 @@ automaton Cache[c][d][a] with compassion
         GetSMsg[c][d][a];
         WBMsg[c][d][a];
 
-        DataMsgC[c][d][a];
+        foreach c1 in CacheIDType (!= c c1) {
+            DataMsgC2C[c][c1][d][a];
+        }
     }
 
     transitions {
-
+        
     }
 }
 
@@ -264,22 +284,122 @@ foreach a in AddressType
 automaton Directory[d][a] with compassion
 {
     states {
-
+        D_I,
+        D_S,
+        D_M,
+        D_BUSY,
+        D_DATA
     }
 
     vars {
+        DataBlk : ValueType;
+        ActiveId : CacheIDType;
+        Sharers : array[CacheIDType] of boolean;
+    }
+
+    inports {
+        foreach c in CacheIDType {
+            GetXMsg'[c][d][a];
+            GetSMsg'[c][d][a];
+            WBMsg'[c][d][a];
+
+            UnblockSMsg'[c][d][a];
+            UnblockEMsg'[c][d][a];
+
+            DataMsgC2D'[c][d][a];
+        }
+    }
+
+    outports {
+        foreach c in CacheIDType {
+            FwdGetXMsg[c][d][a];
+            FwdGetSMsg[c][d][a];
+            DataMsgD2C[c][d][a];
+        }
+    }
+}
+
+initialstate {
+    foreach d in DirIDType
+    foreach a in AddressType {
+        CoherenceMonitor.state = Initial;
+        foreach v in ValueType {
+            CoherenceMonitor.LastValue = v;
+            Directory[d][a].DataBlk = v;
+        }
+        Directory[d][a].ActiveId = undef;
+        Directory[d][a].state = D_I;
+        
+        foreach c in CacheIDType {
+            Directory[d][a].Sharers[c] = false;
+            Cache[c][d][a].DataBlk = undef;
+            Cache[c][d][a].PendingAcks = 0;
+            Cache[c][d][a].PendingWrite = undef;
+            Environment[c][d][a].state = Initial;
+            Environment[c][d][a].PendingStore = undef;
+            Cache[c][d][a].state = C_I;
+        }
+    }
+}
+
+foreach c in CacheIDType
+foreach d in DirIDType
+foreach a in AddressType
+invariant CoherenceInvariant
+{
+    (-> (= Cache[c][d][a].state S) 
+        (= Cache[c][d][a].DataBlk 
+           CoherenceMonitor[d][a].LastValue))
+}
+
+foreach c in CacheIDType
+foreach d in DirIDType
+foreach a in AddressType
+messageproperty LoadLivenessMonitor
+{
+    states {
 
     }
 
     inports {
-        foreach c in CacheIDType
-            GetXMsg'[c][d][a],
-            GetSMsg'[c][d][a],
-            WBMsg'[c][d][a],
+        LDMsg[c][d][a];
+        LDAckMsg[c][d][a];
+    }
 
-            UnblockSMsg'[c][d][a],
-            UnblockEMsg'[c][d][a],
-            
-            
+    property {
+        (G (-> LDMsg[c][d][a] (F LDAckMsg[c][d][a])))
     }
 }
+
+foreach c in CacheIDType
+foreach d in DirIDType
+foreach a in AddressType
+stateproperty StoreLivenessMonitor
+{
+    property {
+        (G (-> (= Environment[c][d][a].state PendingSt) 
+               (F (Environment[c][d][a].state Initial))))
+    }
+}
+
+foreach c in CacheIDType
+foreach d in DirIDType
+foreach a in AddressType
+messagemonitor WBLivenessMonitor
+{
+    states {
+        MWB_Initial : initial;
+        MWB_Accept : accepting;
+    }
+
+    inports {
+        EVMsg[c][d][a]
+    }
+
+    transitions {
+        MWB_Initial on all -> {} MWB_Initial;
+        MWB_Initial on EVMsg[c][d][a] -> {} MWB_Accept;
+        MWB_Accept on all but { EVAckMsg[c][d][a] } -> MWB_Accept;
+    }
+}
+
