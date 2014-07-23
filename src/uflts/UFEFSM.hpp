@@ -1,8 +1,8 @@
-// UFLTS.hpp --- 
+// UFEFSM.hpp --- 
 // 
-// Filename: UFLTS.hpp
+// Filename: UFEFSM.hpp
 // Author: Abhishek Udupa
-// Created: Wed Jul 23 15:13:43 2014 (-0400)
+// Created: Wed Jul 23 19:33:33 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,29 +37,27 @@
 
 // Code:
 
-
-// This file contains the class definition of the UFLTS class.
-// The UFLTS class is used to represent a labelled transition
-// system with Uninterpreted Functions
-
-#if !defined ESMC_UFLTS_HPP_
-#define ESMC_UFLTS_HPP_
+#if !defined ESMC_UF_EFSM_HPP_
+#define ESMC_UF_EFSM_HPP_
 
 #include "../common/FwdDecls.hpp"
 
 namespace ESMC {
     namespace LTS {
 
-        class UFLTS 
+        // The class for an I/O EFSM which can contain uninterpreted functions
+        class UFEFSM
         {
+        private:
+            bool IsFinalized;
+
             
-        }o
+        };
 
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-#endif /* ESMC_UFLTS_HPP_ */
-
+#endif /* ESMC_UF_EFSM_HPP_ */
 
 // 
-// UFLTS.hpp ends here
+// UFEFSM.hpp ends here

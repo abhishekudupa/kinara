@@ -179,11 +179,6 @@ namespace ESMC {
             }
         };
 
-        typedef SmartPtr<ExtListExtBase> ExtListExtRef;
-        typedef CSmartPtr<ExtListExtBase> ExtListExtCRef;
-
-        typedef list<ExtListExtRef> ExtListT;
-
         template <typename E, template <typename> class S>
         class ExpressionBase : public RefCountable
         {

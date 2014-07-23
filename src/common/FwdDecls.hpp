@@ -54,6 +54,7 @@ namespace ESMC {
     // Expression managers
     // and semanticizers
     namespace Exprs {
+
         template <typename ExtType> class SemanticizerBase;
         template <typename ExtType, template <typename> class SemType> class ExprMgr;
         template <typename ExtType, template <typename> class SemType> class ExpressionBase;
@@ -61,9 +62,15 @@ namespace ESMC {
         template <typename ExtType, template <typename> class SemType> class VarExpression;
         template <typename ExtType, template <typename> class SemType> class BoundVarExpression;
         template <typename ExtType, template <typename> class SemType> class OpExpression;
-        template <typename ExtType, template <typename> class SemType> class QuantifiedExpressionBase;
+        template <typename ExtType, 
+                  template <typename> class SemType> class QuantifiedExpressionBase;
         template <typename ExtType, template <typename> class SemType> class AQuantifiedExpression;
         template <typename ExtType, template <typename> class SemType> class EQuantifiedExpression;
+
+        class ExtListExtBase;
+        typedef SmartPtr<ExtListExtBase> ExtListExtRef;
+        typedef CSmartPtr<ExtListExtBase> ExtListExtCRef;
+        typedef list<ExtListExtRef> ExtListT;        
 
         // Smart ptr types for expressions
         template <typename E, template <typename> class S>
@@ -75,12 +82,21 @@ namespace ESMC {
         class FastExpressionPtrEquals;
         class ExpressionPtrEquals;
         class ExpressionPtrCompare;
-    
+
+        template <template <typename> class S>
+        using ExtListExprMgr = ExprMgr<ExtListT, S>;
+
         // Expression Visitors
         template <typename E, template <typename> class S> class ExpressionVisitorBase;
 
     } /* end namespace Exprs */
     
+    namespace LTS {
+
+        class UFLTS;
+        class UFEFSM;
+
+    } /* end namespace LTS */
 
     // UID Generators
     class UIDGenerator;
