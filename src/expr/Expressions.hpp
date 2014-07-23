@@ -144,6 +144,46 @@ namespace ESMC {
             // Nothing here
         };
 
+        // Base class for extension lists
+        class ExtListExtBase : public RefCountable
+        {
+        public:
+            ExtListExtBase();
+            virtual ~ExtListExtBase();
+            
+            virtual string ToString() const = 0;
+
+            // Downcasts
+            template <typename T>
+            inline T* As() 
+            { 
+                return dynamic_cast<T*>(this);
+            }
+
+            template <typename T>
+            inline T* As() const
+            { 
+                return dynamic_cast<const T*>(this);
+            }
+
+            template <typename T>
+            inline T* SAs() 
+            { 
+                return static_cast<T*>(this);
+            }
+
+            template <typename T>
+            inline T* SAs() const
+            { 
+                return static_cast<const T*>(this);
+            }
+        };
+
+        typedef SmartPtr<ExtListExtBase> ExtListExtRef;
+        typedef CSmartPtr<ExtListExtBase> ExtListExtCRef;
+
+        typedef list<ExtListExtRef> ExtListT;
+
         template <typename E, template <typename> class S>
         class ExpressionBase : public RefCountable
         {
@@ -199,6 +239,78 @@ namespace ESMC {
 
             template <template <typename, template <typename> class> class U> 
             inline const U<E, S>* SAs() const;
+        };
+
+        // Specialization for extension lists
+        template <template <typename> class S>
+        class ExpressionBase<ExtListT, S> : public RefCountable
+        {
+            friend class ExprMgr<ExtListT, S>;
+        private:
+            ExprMgr<ExtListT, S>* Mgr;
+            mutable bool HashValid;
+            mutable i64 ExpType;
+
+        public:
+            mutable ExtListT ExtensionData;
+            
+        protected:
+            mutable u64 HashCode;
+
+        public:
+            inline ExpressionBase(ExprMgr<ExtListT, S>* Manager, 
+                                  const ExtListT& ExtData = ExtListT());
+            virtual inline ~ExpressionBase();
+
+            inline ExprMgr<ExtListT, S>* GetMgr() const;
+            inline u64 Hash() const;
+            inline i64 GetType() const;
+            inline void SetType(i64 Type) const;
+            inline bool Equals(const ExpressionBase<ExtListT, S>* Other) const;
+            inline bool NEquals(const ExpressionBase<ExtListT, S>* Other) const;
+            inline bool LT(const ExpressionBase<ExtListT, S>* Other) const;
+            inline bool LE(const ExpressionBase<ExtListT, S>* Other) const;
+            inline bool GE(const ExpressionBase<ExtListT, S>* Other) const;
+            inline bool GT(const ExpressionBase<ExtListT, S>* Other) const;
+            inline string ToString() const;
+
+            // Abstract methods
+        protected:
+            virtual void ComputeHash() const = 0;
+
+        public:
+            virtual i32 Compare(const ExpressionBase<ExtListT, S>* Other) const = 0;
+            virtual void Accept(ExpressionVisitorBase<ExtListT, S>* Visitor) const = 0;
+            // Fast eq which assumes that children can be compared for
+            // equality by simple pointer equality
+            virtual bool FastEQ(const ExpressionBase<ExtListT, S>* Other) const;
+        
+            // Downcasts
+            template <template <typename, template <typename> class> class U>
+            inline U<ExtListT, S>* As();
+
+            template <template <typename, template <typename> class> class U> 
+            inline const U<ExtListT, S>* As() const;
+
+            template <template <typename, template <typename> class> class U> 
+            inline U<ExtListT, S>* SAs();
+
+            template <template <typename, template <typename> class> class U> 
+            inline const U<ExtListT, S>* SAs() const;
+
+            // Extension list accessors and manipulators
+            template <typename U>
+            inline const ExtListExtRef& GetExtension() const;
+
+            template <typename U>
+            inline vector<ExtListExtRef> GetExtensions() const;
+            
+            inline void PurgeExtension(const ExtListExtRef& Ext) const;
+            
+            template <typename U>
+            inline void PurgeExtensionsOfType() const;
+
+            inline void PurgeAllExtensions() const;
         };
 
 
@@ -840,7 +952,6 @@ namespace ESMC {
 
 
         // Implementation of down casts
-
         template <typename E, template <typename> class S>
         template <template <typename, template <typename> class> class U>
         inline U<E, S>* ExpressionBase<E, S>::As()
@@ -867,6 +978,34 @@ namespace ESMC {
         inline const U<E, S>* ExpressionBase<E, S>::SAs() const
         {
             return static_cast<const U<E, S>*>(this);
+        }
+
+        template <template <typename> class S>
+        template <template <typename, template <typename> class> class U>
+        inline U<ExtListT, S>* ExpressionBase<ExtListT, S>::As()
+        {
+            return dynamic_cast<U<ExtListT, S>*>(this);
+        }
+
+        template <template <typename> class S> 
+        template <template <typename, template <typename> class> class U>
+        inline const U<ExtListT, S>* ExpressionBase<ExtListT, S>::As() const
+        {
+            return dynamic_cast<const U<ExtListT, S>*>(this);
+        }
+
+        template <template <typename> class S> 
+        template <template <typename, template <typename> class> class U>
+        inline U<ExtListT, S>* ExpressionBase<ExtListT, S>::SAs()
+        {
+            return static_cast<U<ExtListT, S>*>(this);
+        }
+
+        template <template <typename> class S> 
+        template <template <typename, template <typename> class> class U>
+        inline const U<ExtListT, S>* ExpressionBase<ExtListT, S>::SAs() const
+        {
+            return static_cast<const U<ExtListT, S>*>(this);
         }
 
         // hashers, equality testers and comparisons
@@ -996,6 +1135,170 @@ namespace ESMC {
         {
             auto Sem = Mgr->GetSemanticizer();
             return (Sem->ExprToString(this));
+        }
+
+        
+        // ExpressionBase with ExtList specialization
+        template <template <typename> class S>
+        inline ExpressionBase<ExtListT, S>::ExpressionBase(ExprMgr<ExtListT, S>* Manager,
+                                                          const ExtListT& ExtVal)
+            : Mgr(Manager), HashValid(false),
+              ExpType(-1), ExtensionData(ExtVal),
+              HashCode(0)
+        {
+            // Nothing here
+        }
+
+        template <template <typename> class S>
+        inline ExpressionBase<ExtListT, S>::~ExpressionBase()
+        {
+            // Nothing here
+        }
+
+        template <template <typename> class S>
+        inline ExprMgr<ExtListT, S>*
+        ExpressionBase<ExtListT, S>::GetMgr() const 
+        {
+            return Mgr;
+        }
+
+        template <template <typename> class S>
+        inline u64 ExpressionBase<ExtListT, S>::Hash() const
+        {
+            if (!HashValid) {
+                ComputeHash();
+                HashValid = true;
+            }
+            return HashCode;
+        }
+
+        template <template <typename> class S>
+        inline i64 ExpressionBase<ExtListT, S>::GetType() const
+        {
+            return ExpType;
+        }
+
+        template <template <typename> class S>
+        inline void ExpressionBase<ExtListT, S>::SetType(i64 Type) const
+        {
+            ExpType = Type;
+        }
+
+        template <template <typename> class S>
+        inline bool ExpressionBase<ExtListT, S>::Equals(const ExpressionBase<ExtListT, S>* Other) 
+            const
+        {
+            if (Hash() != Other->Hash()) {
+                return false;
+            }
+            return (Compare(Other) == 0);
+        }
+
+        template <template <typename> class S>
+        inline bool ExpressionBase<ExtListT, S>::NEquals(const ExpressionBase<ExtListT, S>* Other) 
+            const
+        {
+            if (Hash() != Other->Hash()) {
+                return true;
+            }
+            return (Compare(Other) != 0);
+        }
+
+        template <template <typename> class S>
+        inline bool ExpressionBase<ExtListT, S>::LT(const ExpressionBase<ExtListT, S>* Other) const
+        {
+            return (Compare(Other) < 0);
+        }
+
+        template <template <typename> class S>
+        inline bool ExpressionBase<ExtListT, S>::LE(const ExpressionBase<ExtListT, S>* Other) const
+        {
+            return (Compare(Other) <= 0);
+        }
+
+        template <template <typename> class S>
+        inline bool ExpressionBase<ExtListT, S>::GT(const ExpressionBase<ExtListT, S>* Other) const
+        {
+            return (Compare(Other) > 0);
+        }
+
+        template <template <typename> class S>
+        inline bool ExpressionBase<ExtListT, S>::GE(const ExpressionBase<ExtListT, S>* Other) const
+        {
+            return (Compare(Other) >= 0);
+        }
+
+        template <template <typename> class S>
+        inline bool ExpressionBase<ExtListT, S>::FastEQ(const ExpressionBase<ExtListT, S>* Other) 
+            const
+        {
+            return (Equals(Other));
+        }
+
+        template <template <typename> class S>
+        inline string ExpressionBase<ExtListT, S>::ToString() const
+        {
+            auto Sem = Mgr->GetSemanticizer();
+            return (Sem->ExprToString(this));
+        }
+
+        // Additional methods specific to ExtList Expressions
+        template <template <typename> class S>
+        template <typename U>
+        inline const ExtListExtRef& 
+        ExpressionBase<ExtListT, S>::GetExtension() const
+        {
+            for (auto const& Ext : ExtensionData) {
+                if (Ext->As<U>() != nullptr) {
+                    return Ext;
+                }
+            }
+        }
+
+        template <template <typename> class S>
+        template <typename U>
+        inline vector<ExtListExtRef>
+        ExpressionBase<ExtListT, S>::GetExtensions() const
+        {
+            vector<ExtListExtRef> Retval;
+
+            for(auto const& Ext : ExtensionData) {
+                if (Ext->As<U>() != nullptr) {
+                    Retval.push_back(Ext);
+                }
+            }
+            return Retval;
+        }
+
+        template <template <typename> class S>
+        inline void ExpressionBase<ExtListT, S>::PurgeExtension(const ExtListExtRef& Ext) const
+        {
+            ExtensionData.remove(Ext);
+        }
+
+        template <template <typename> class S>
+        template <typename U>
+        inline void
+        ExpressionBase<ExtListT, S>::PurgeExtensionsOfType() const
+        {
+            vector<ExtListT::iterator> ToRemove;
+
+            for (auto it = ExtensionData.begin(); it != ExtensionData.end(); ++it) {
+                if ((*it)->As<U>() != nullptr) {
+                    ToRemove.push_back(it);
+                }
+            }
+            
+            for (auto const& Elem : ToRemove) {
+                ExtensionData.erase(Elem);
+            }
+        }
+
+        template <template <typename> class S>
+        inline void 
+        ExpressionBase<ExtListT, S>::PurgeAllExtensions() const
+        {
+            ExtensionData.clear();
         }
 
         // ConstExpression implementation

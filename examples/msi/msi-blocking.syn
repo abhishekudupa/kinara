@@ -36,7 +36,6 @@ messages {
 
                 WBAckMsg[c][d][a] of unit;
                 DataMsgD2C[c][d][a] of (ValueType * AckType);
-                DataMsgC2D[c][d][a] of ValueType;
 
                 foreach c2 in CacheIDType (!= c c2) {
                     DataMsgC2C[c][c2][d][a] of ValueType;
@@ -58,7 +57,6 @@ messages {
 
                 WBAckMsg'[c][d][a] of unit;
                 DataMsgD2C'[c][d][a] of (ValueType * AckType);
-                DataMsgC2D'[c][d][a] of ValueType;
 
                 foreach c2 in CacheIDType (!= c c2) {
                     DataMsgC2C'[c][c2][d][a] of ValueType;
@@ -74,6 +72,72 @@ messages {
         }
     }
 }
+
+// Channel from Cache to Directory for a given Address
+foreach c in CacheIDType
+foreach d in DirIDType
+foreach a in AddressType
+channelautomaton ReqChannel[c][d][a] with compassion
+{
+    unordered, lossless, nonduplicating;
+    capacity = 1;
+
+    messages {
+        GetXMsg[c][d][a];
+        GetSMsg[c][d][a];
+        WBMsg[c][d][a];
+    }
+}
+
+// Channel INTO each cache for a given address
+foreach c in CacheIDType
+foreach d in DirIDType
+foreach a in AddressType
+channelautomaton RspChannel[c][d][a] with compassion
+{
+    unordered, lossless, nonduplicating;
+    capacity = NumCaches;
+
+    messages {
+        InvAckMsg[c][d][a];
+        WBAckMsg[c][d][a];
+        DataMsgD2C[c][d][a];
+        foreach c2 in CacheIDType {
+            DataMsgC2C[c2][c][d][a];
+        }
+    }
+}
+
+// Unblocks INTO each directory for a given address
+foreach d in DirIDType
+foreach a in AddressType
+channelautomaton UnblockChannel[d][a]
+{
+    unordered, lossless, nonduplicating;
+    capacity = 1;
+
+    messages {
+        foreach c in CacheIDType {
+            UnblockEMsg[c][d][a];
+            UnblockSMsg[c][d][a];
+        }
+    }
+}
+
+// Forward messages INTO each cache for a given address
+foreach c in CacheIDType
+foreach d in DirIDType
+foreach a in AddressType
+channelautomaton FwdChannel[c][d][a]
+{
+    unordered, lossless, nonduplicating;
+    capacity = 1;
+    messages {
+        FwdGetSMsg[c][d][a];
+        FwdGetXMsg[c][d][a];
+    }
+}
+
 
 foreach d in DirIDType
 foreach a in AddressType
@@ -151,68 +215,6 @@ automaton Environment[c][a][d] with compassion
 }
 
 
-// Channel from Cache to Directory for a given Address
-foreach c in CacheIDType
-foreach d in DirIDType
-foreach a in AddressType
-channelautomaton ReqChannel[c][d][a] with compassion
-{
-    unordered, lossless, nonduplicating;
-    capacity = 1;
-
-    messages {
-        GetXMsg[c][d][a];
-        GetSMsg[c][d][a];
-        WBMsg[c][d][a];
-    }
-}
-
-// Channel INTO each cache for a given address
-foreach c in CacheIDType
-foreach d in DirIDType
-foreach a in AddressType
-channelautomaton RspChannel[c][d][a] with compassion
-{
-    unordered, lossless, nonduplicating;
-    capacity = NumCaches;
-
-    messages {
-        InvAckMsg[c][d][a],
-        WBAckMsg[c][d][a],
-        DataMsgD[c][d][a],
-        DataMsgC[c][d][a];
-    }
-}
-
-// Unblocks INTO each directory for a given address
-foreach d in DirIDType
-foreach a in AddressType
-channelautomaton UnblockChannel[d][a]
-{
-    unordered, lossless, nonduplicating;
-    capacity = 1;
-
-    messages {
-        foreach c in CacheIDType {
-            UnblockEMsg[c][d][a];
-            UnblockSMsg[c][d][a];
-        }
-    }
-}
-
-// Forward messages INTO each cache for a given address
-foreach c in CacheIDType
-foreach d in DirIDType
-foreach a in AddressType
-channelautomaton FwdChannel[c][d][a]
-{
-    unordered, lossless, nonduplicating;
-    capacity = 1;
-    messages {
-        FwdGetSMsg[c][d][a];
-        FwdGetXMsg[c][d][a];
-    }
-}
 
 foreach c in CacheIDType
 foreach d in DirIDType
@@ -307,7 +309,6 @@ automaton Cache[c][d][a] with compassion
 
         // Transitions from M on Fwd events
         C_M on FwdGetSMsg'[c][d][a] (c2) { FwdToCache := c2; } ->
-        send DataMsgC2D[c][d][a] (DataBlk) {} ->
         send DataMsgC2C[c][FwdToCache][d][a] (DataBlk) { FwdToCache := undef; } -> C_S;
         
         C_M on FwdGetXMsg'[c][d][a] (c2) { FwdToCache := c2; } ->
@@ -369,7 +370,7 @@ automaton Cache[c][d][a] with compassion
 
         // Transitions on IS on Rsp Events
         C_IS on DataMsgD2C'[c][d][a] (v, _) { DataBlk := v; } -> 
-        send UnblockSMsg[c][d][a] -> send LDAckMsg[c][d][a] (DataBlk) -> C_S;
+        send UnblockSMsg[c][d][a] {} -> send LDAckMsg[c][d][a] (DataBlk) {} -> C_S;
 
         foreach c2 in CacheIDType (!= c2 c) {
             C_IS on DataMsgC2C'[c2][c][d][a] (v) -> { DataBlk := v; } ->
@@ -395,7 +396,8 @@ automaton Directory[d][a] with compassion
         D_S,
         D_M,
         D_BUSY,
-        D_DATA
+        D_DATA,
+        D_PENDING_UNBLOCK_E
     }
 
     vars {
@@ -403,6 +405,7 @@ automaton Directory[d][a] with compassion
         ActiveId : CacheIDType;
         Sharers : array[CacheIDType] of boolean;
         NumSharers : 0..NumCaches;
+        Owner : CacheIDType;
     }
 
     inports {
@@ -414,7 +417,9 @@ automaton Directory[d][a] with compassion
             UnblockSMsg'[c][d][a];
             UnblockEMsg'[c][d][a];
 
-            DataMsgC2D'[c][d][a];
+            foreach c2 in CacheIDType (!= c2 c) {
+                DataMsgC2C'[c2][c][d][a];
+            }
         }
     }
 
@@ -430,19 +435,61 @@ automaton Directory[d][a] with compassion
         foreach c in CacheIDType {
 
             // Transitions from I
-            D_I on GetXMsg'[c][d][a] {} -> 
+            D_I on GetXMsg'[c][d][a] { ActiveId := c; } -> 
             send DataMsgD2C[c][d][a] (DataBlk, 0) -> D_BUSY;
             
-            D_I on GetSMsg'[c][d][a] {} ->
+            D_I on GetSMsg'[c][d][a] { ActiveId := c; } ->
             send DataMsgD2C[c][d][a] (DataBlk, 0) -> D_BUSY;
 
             // Transitions from S
             D_S on GetXMsg'[c][d][a] { ActiveId := c; } ->
             send DataMsgD2C[c][d][a] (DataBlk, NumSharers) {} ->
             foreach c2 in CacheIDType {
-                if (Sharers[c2]) -> send FwdGetXMsg[c2][d][a] (c)
-            } -> 
-                       
+                if (Sharers[c2]) send FwdGetXMsg[c2][d][a] (c) {};
+                if (not Sharers[c2]) pass {};
+            } -> D_BUSY;
+
+            D_S on GetSMsg'[c][d][a] { ActiveId := c; } ->
+            send DataMsgD2C[c][d][a] (DataBlk, 0) {} -> D_BUSY;
+
+            // Transitions from M
+            D_M on GetXMsg'[c][d][a] { ActiveId := c; } ->
+            send FwdGetXMsg[Owner][d][a] (ActiveId) {} -> D_BUSY;
+            
+            D_M on GetSMsg'[c][d][a] { ActiveId := c; } ->
+            send FwdGetSMsg[Owner][d][a] (ActiveId) {} -> D_BUSY_DATA;
+
+            D_M on WBMsg'[c][d][a] (v) { DataBlk := v; Sharers[c] := false; } ->
+            send WBAckMsg[c][d][a] {} -> D_I;
+            
+            // Transitions from BUSY
+            D_BUSY on WBMsg'[c][d][a] (v)
+            if (= c ActiveId) { DataBlk := v; } -> D_PENDING_UNBLOCK_E;
+            if (!= c ActiveId) { Sharers[c] := false; DataBlk := v; } -> 
+            send DataMsgD2C[ActiveId][d][a] (DataBlk, 0) -> D_BUSY;
+            
+            D_BUSY on UnblockEMsg'[c][d][a] { Sharers[c] := true; Owner := c; } -> D_M;
+
+            D_BUSY on UnblockSMsg'[c][d][a] { Sharers[c] := true; Owner := undef; } -> D_S;
+            
+            foreach c2 in CacheIDType (!= c2 c) {
+                D_BUSY on DataMsgC2C'[c2][c][d][a] (v) { DataBlk := v; } -> S;
+            }
+
+            // Transitions from BUSY_DATA
+            D_BUSY_DATA on UnblockSMsg'[c][d][a] { Sharers[c] := true; } -> D_BUSY;
+            foreach c2 in CacheIDType (!= c2 c) {
+                D_BUSY_DATA on DataMsgC2C'[c2][c][d][a] (v) { DataBlk := v; } -> D_BUSY;
+            }
+
+            D_BUSY_DATA on WBMsg'[c][d][a] (v)
+            if (= c ActiveId) { DataBlk := v; } -> D_PENDING_UNBLOCK_E;
+            if (!= c ActiveId) { Sharers[c] := false; DataBlk := v; } -> 
+            send DataMsgD2C[ActiveId][d][a] (DataBlk, 0) -> D_BUSY;
+
+            // Transitions from PENDING_UNBLOCK_E
+            D_PENDING_UNBLOCK_E on UnblockEMsg'[c][d][a] { Sharers[c] := false; Owner := undef; } -> D_I;
+        }
     }
 }
 
