@@ -251,6 +251,30 @@ namespace ESMC {
             virtual i32 Compare(const LTSTypeBase& Other) const override;
         };
 
+        // A VALUE of a parametric type RESOLVES to a VALUE
+        // of the BASE TYPE, when instantiated with 
+        // VALUES of the appropriate types.
+        class LTSParametricType : public LTSTypeBase
+        {
+        private:
+            LTSTypeRef BaseType;
+            vector<LTSTypeRef> ParameterTypes;
+
+        protected:
+            virtual void ComputeHashValue() const override;
+            
+        public:
+            LTSParametricType(const LTSTypeRef& BaseType,
+                              const vector<LTSTypeRef>& ParameterTypes);
+            virtual ~LTSParametricType();
+
+            const LTSTypeRef& GetBaseType() const;
+            const vector<LTSTypeRef>& GetParameterTypes() const;
+
+            virtual string ToString() const override;
+            virtual i32 Compare(const LTSTypeBase& Other) const override;
+        };
+
 
         class LTSTypePtrHasher
         {

@@ -1680,6 +1680,9 @@ namespace ESMC {
             Z3Semanticizer();
             ~Z3Semanticizer();
 
+            template <typename... ArgTypes>
+            inline i64 MakeType(ArgTypes&&... Args);
+
             inline void TypeCheck(const ExpT& Exp) const;
             inline ExpT Canonicalize(const ExpT& Exp);
             inline ExpT RaiseExpr(const LExpT& LExp);
@@ -1706,6 +1709,13 @@ namespace ESMC {
         Z3Semanticizer<E>::~Z3Semanticizer()
         {
             Z3_reset_memory();
+        }
+
+        template <typename E>
+        template <typename... ArgTypes>
+        inline i64 Z3Semanticizer<E>::MakeType(ArgTypes&&... Args)
+        {
+            throw InternalError("Z3Sematicizer does not support creation of types");
         }
 
         template <typename E>

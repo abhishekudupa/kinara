@@ -594,6 +594,95 @@ namespace ESMC {
             boost::hash_combine(HashCode, Members.size());
         }
 
+        LTSParametricType::LTSParametricType(const LTSTypeRef& BaseType,
+                                             const vector<LTSTypeRef>& ParameterTypes)
+            : LTSTypeBase(), BaseType(BaseType), ParameterTypes(ParameterTypes)
+        {
+            // Args must be subrange, symmetric or enum types
+            for (auto const& Arg : ParameterTypes) {
+                if (Arg->As<LTSEnumType>() == nullptr &&
+                    Arg->As<LTSRangeType>() == nullptr &&
+                    Arg->As<LTSSymmetricType>() == nullptr) {
+                    throw ESMCError((string)"Parameteric types must have enum, range " + 
+                                    "or symmetric types as type parameters");
+                }
+            }
+        }
+
+        LTSParametricType::~LTSParametricType()
+        {
+            // Nothing here
+        }
+
+        const LTSTypeRef& LTSParametricType::GetBaseType() const
+        {
+            return BaseType;
+        }
+
+        const vector<LTSTypeRef>& LTSParametricType::GetParameterTypes() const
+        {
+            return ParameterTypes;
+        }
+
+        void LTSParametricType::ComputeHashValue() const
+        {
+            HashCode = 0;
+            boost::hash_combine(HashCode, BaseType->Hash());
+            for (auto const& Type : ParameterTypes) {
+                boost::hash_combine(HashCode, Type->Hash());
+            }
+        }
+
+        string LTSParametricType::ToString() const
+        {
+            string Retval = "(ParamType : ";
+            for (auto const& Type : ParameterTypes) {
+                Retval += (Type->ToString() + " -> ");
+            }
+            Retval += (BaseType->ToString() + ")");
+            return Retval;
+        }
+
+        i32 LTSParametricType::Compare(const LTSTypeBase& Other) const
+        {
+            auto OtherAsPtr = &Other;
+
+            if (OtherAsPtr->As<LTSBoolType>() != nullptr ||
+                OtherAsPtr->As<LTSEnumType>() != nullptr ||
+                OtherAsPtr->As<LTSSymmetricType>() != nullptr ||
+                OtherAsPtr->As<LTSRangeType>() != nullptr ||
+                OtherAsPtr->As<LTSFuncType>() != nullptr ||
+                OtherAsPtr->As<LTSArrayType>() != nullptr ||
+                OtherAsPtr->As<LTSRecordType>() != nullptr) {
+                return 1;
+            }
+
+            auto OtherAsPar = OtherAsPtr->As<LTSParametricType>();
+
+            if (OtherAsPar == nullptr) {
+                return -1;
+            }
+
+            auto Cmp = BaseType->Compare(*OtherAsPar->BaseType);
+            if (Cmp != 0) {
+                return Cmp;
+            }
+            
+            if (ParameterTypes.size() < OtherAsPar->ParameterTypes.size()) {
+                return -1;
+            } else if (ParameterTypes.size() > OtherAsPar->ParameterTypes.size()) {
+                return 1;
+            } else {
+                for (u32 i = 0; i < ParameterTypes.size(); ++i) {
+                    Cmp = ParameterTypes[i]->Compare(*(OtherAsPar->ParameterTypes[i]));
+                    if (Cmp != 0) {
+                        return Cmp;
+                    }
+                }
+                return 0;
+            }
+        }
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

@@ -306,11 +306,15 @@ namespace ESMC {
         };
 
 
+        // Type V must have the equality and < operator defined,
+        // and must have a hash defined.
+        // Type V must also be assignable, default constructible 
+        // and copy constructible
         template <typename E, template <typename> class S>
         class ConstExpression : public ExpressionBase<E, S>
         {
         private:
-            const string ConstValue;
+            string ConstValue;
             i64 ConstType;
 
         public:
@@ -355,7 +359,6 @@ namespace ESMC {
             inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
             inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
         };
-
 
         template<typename E, template <typename> class S>
         class BoundVarExpression : public ExpressionBase<E, S>
@@ -561,6 +564,9 @@ namespace ESMC {
             template <typename... ArgTypes>
             inline ExprMgr(ArgTypes&&... Args);
             inline ~ExprMgr();
+            
+            template<typename... ArgTypes>
+            inline i64 MakeType(ArgTypes&&... Args);
 
             inline ExpT MakeVal(const string& ValString, i64 ValType, 
                                 const E& ExtVal = E());
@@ -1784,6 +1790,13 @@ namespace ESMC {
         inline ExprMgr<E, S>::~ExprMgr()
         {
             delete Sem;
+        }
+
+        template <typename E, template <typename> class S>
+        template <typename... ArgTypes>
+        i64 ExprMgr<E, S>::MakeType(ArgTypes&&... Args)
+        {
+            return Sem->MakeType(forward<ArgTypes>(Args)...);
         }
 
         template <typename E, template <typename> class S>
