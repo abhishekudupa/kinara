@@ -43,6 +43,7 @@
 #define ESMC_FWD_DECLS_HPP_
 
 #include "Types.hpp"
+#include <list>
 
 namespace ESMC {
 

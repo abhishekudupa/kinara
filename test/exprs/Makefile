@@ -15,7 +15,7 @@ CXXFLAGS+=-I ../../src/extern/z3-4.3.1/src/api -fopenmp -Wall -pedantic -fopenmp
 
 LDFLAGS=-L ../../src/extern/z3-4.3.1/install/
 LDFLAGS+=-L ../../src/extern/boost-local/boost_install/lib/ 
-LDFLAGS+=-L ../../lib/debug/ 
+LDFLAGS+=-L ../../lib/debug
 
 LDFLAGS+=-Wl,-rpath $(realpath ../../lib/debug)
 LDFLAGS+=-Wl,-rpath $(realpath ../../src/extern/boost-local/boost_install/lib)
