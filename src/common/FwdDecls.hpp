@@ -56,7 +56,6 @@ namespace ESMC {
     // and semanticizers
     namespace Exprs {
 
-        template <typename ExtType> class SemanticizerBase;
         template <typename ExtType, template <typename> class SemType> class ExprMgr;
         template <typename ExtType, template <typename> class SemType> class ExpressionBase;
         template <typename ExtType, template <typename> class SemType> class ConstExpression;
@@ -96,6 +95,10 @@ namespace ESMC {
 
         class UFLTS;
         class UFEFSM;
+        template <typename E> class LTSTermSemantizer;
+        class LTSTypeBase;
+        
+        typedef CSmartPtr<LTSTypeBase> LTSTypeRef;
 
     } /* end namespace LTS */
 

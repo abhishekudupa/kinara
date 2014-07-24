@@ -53,7 +53,7 @@ namespace ESMC {
         class UFLTS 
         {
             
-        }o
+        };
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

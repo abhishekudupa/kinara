@@ -20,6 +20,7 @@ PROJECT_MODULES= \
 	expr \
 	common \
 	containers \
+	uflts \
 	ast \
 	utils \
 	main \
@@ -44,6 +45,7 @@ PROJECT_LIBS=esmc
 libesmc_OBJS= \
 	Z3Semanticizer.o \
 	UIDGenerator.o \
+	LTSTypes.o \
 
 
 PROJECT_EXT_LIBS=boost z3

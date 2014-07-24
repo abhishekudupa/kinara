@@ -1,8 +1,8 @@
-// Types.hpp --- 
+// SymbolTable.hpp --- 
 // 
-// Filename: Types.hpp
+// Filename: SymbolTable.hpp
 // Author: Abhishek Udupa
-// Created: Sun Jun 29 13:43:04 2014 (-0400)
+// Created: Thu Jul 24 10:42:42 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,70 +37,20 @@
 
 // Code:
 
-// Common types used throughout the solver
+#if !defined ESMC_SYMBOL_TABLE_HPP_
+#define ESMC_SYMBOL_TABLE_HPP_
 
-#if !defined ESMC_TYPES_HPP_
-#define ESMC_TYPES_HPP_
-
-#include <cstdio>
-#include <cstdlib>
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-#include <sstream>
-#include <string>
-#include <inttypes.h>
-#include <exception>
-
-using namespace std;
+#include "../common/FwdDecls.hpp"
 
 namespace ESMC {
-    typedef int8_t i08;
-    
-    typedef uint8_t u08;
-    typedef int16_t i16;
-    typedef uint16_t u16;
-    typedef int32_t i32;
-    typedef uint32_t u32;
-    typedef int64_t i64;
-    typedef uint64_t u64;
+    namespace LTS {
 
-    class InternalError : public exception
-    {
-    private:
-        string ErrorMsg;
-
-    public:
         
-        inline InternalError(const string& ErrorMsg) 
-            : ErrorMsg((string)"InternalError: " + ErrorMsg) {}
-        inline virtual ~InternalError() throw() {}
-        inline virtual const char* what() const throw() override { return ErrorMsg.c_str(); }
-    };
-
-    class ESMCError : public exception
-    {
-    private:
-        string ErrorMsg;
         
-    public:
-        inline ESMCError(const string& ErrorMsg)
-            : ErrorMsg(ErrorMsg)
-        {
-            // Nothing here
-        }
-
-        inline virtual ~ESMCError() throw ()
-        {
-            // Nothing here
-        }
-
-        inline virtual const char* what() const throw() override { return ErrorMsg.c_str(); }
-    };
-
+    } /* end namespace LTS */
 } /* end namespace ESMC */
-    
-#endif /* ESMC_TYPES_HPP_ */
+
+#endif /* ESMC_SYMBOL_TABLE_HPP_ */
 
 // 
-// Types.hpp ends here
+// SymbolTable.hpp ends here

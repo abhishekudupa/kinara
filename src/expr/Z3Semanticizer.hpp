@@ -852,7 +852,7 @@ namespace ESMC {
                 case Z3SemOps::OpBVAND:
                 case Z3SemOps::OpBVOR:
                 case Z3SemOps::OpBVXOR:
-                    sort(NewChildren.begin(), NewChildren.end(), ExpressionSPtrCompare());
+                    sort(NewChildren.begin(), NewChildren.end(), ExpressionPtrCompare());
                     ExpStack.push_back(new OpExpression<E, S>(nullptr, OpCode, 
                                                               NewChildren, Exp->ExtensionData));
                     break;

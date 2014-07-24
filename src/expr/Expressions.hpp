@@ -53,6 +53,7 @@
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
 #include "../utils/UIDGenerator.hpp"
+#include "../utils/RefCache.hpp"
 
 
 // This classes in this file are heavily templatized
@@ -67,37 +68,11 @@ namespace ESMC {
         public:
             template <typename E, template <typename> class S>
             inline bool operator () (const ExpressionBase<E, S>* Exp1,
-                                     const ExpressionBase<E, S>* Exp2) const;
-        };
+                                     const ExpressionBase<E, S>* Exp2) const
+            {
+                return Exp1->Equals(Exp2);
+            }
 
-        class FastExpressionPtrEquals
-        {
-        public:
-            template <typename E, template <typename> class S>
-            inline bool operator () (const ExpressionBase<E, S>* Exp1,
-                                     const ExpressionBase<E, S>* Exp2) const;
-        };
-
-
-        class ExpressionPtrHasher
-        {
-        public:
-            template <typename E, template <typename> class S>
-            inline u64 operator () (const ExpressionBase<E, S>* Exp) const;
-        };
-
-
-        class ExpressionPtrCompare
-        {
-        public:
-            template <typename E, template <typename> class S>
-            inline bool operator () (const ExpressionBase<E, S>* Exp1, 
-                                     const ExpressionBase<E, S>* Exp2) const;
-        };
-
-        class ExpressionSPtrEquals
-        {
-        public:
             template<typename E, template <typename> class S>
             inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
                                      const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
@@ -106,9 +81,16 @@ namespace ESMC {
             }
         };
 
-        class FastExpressionSPtrEquals
+        class FastExpressionPtrEquals
         {
         public:
+            template <typename E, template <typename> class S>
+            inline bool operator () (const ExpressionBase<E, S>* Exp1,
+                                     const ExpressionBase<E, S>* Exp2) const
+            {
+                return Exp1->FastEQ(Exp2);
+            }
+
             template<typename E, template <typename> class S>
             inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
                                      const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
@@ -117,24 +99,39 @@ namespace ESMC {
             }
         };
 
-        class ExpressionSPtrCompare
-        {
-        public:
-            template<typename E, template <typename> class S>
-            inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
-                                     const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
-            {
-                return (Exp1->LT(Exp2) < 0);
-            }
-        };
 
-        class ExpressionSPtrHasher
+        class ExpressionPtrHasher
         {
         public:
+            template <typename E, template <typename> class S>
+            inline u64 operator () (const ExpressionBase<E, S>* Exp) const
+            {
+                return Exp->Hash();
+            }
+
             template<typename E, template <typename> class S>
             inline u64 operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp) const
             {
                 return (Exp->Hash());
+            }
+        };
+
+
+        class ExpressionPtrCompare
+        {
+        public:
+            template <typename E, template <typename> class S>
+            inline bool operator () (const ExpressionBase<E, S>* Exp1, 
+                                     const ExpressionBase<E, S>* Exp2) const
+            {
+                return Exp1->LT(Exp2);
+            }
+
+            template<typename E, template <typename> class S>
+            inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
+                                     const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
+            {
+                return Exp1->LT(Exp2);
             }
         };
 
@@ -539,25 +536,16 @@ namespace ESMC {
             typedef ExprI<E, S> IExpT;
 
             typedef unordered_map<ExpT, ExpT, 
-                                  ExpressionSPtrHasher,
-                                  ExpressionSPtrEquals> SubstMapT;
+                                  ExpressionPtrHasher,
+                                  ExpressionPtrEquals> SubstMapT;
 
-            typedef unordered_set<ExpT, ExpressionSPtrHasher, 
-                                  ExpressionSPtrEquals> ExpSetT;
+            typedef RefCache<ExpressionBase<E, S>, ExpressionPtrHasher,
+                             ExpressionPtrEquals, CSmartPtr> ExpCacheT;
 
+            typedef unordered_set<ExpT, ExpressionPtrHasher, FastExpressionPtrEquals> ExpSetT;
         private:
-            typedef unordered_set<ExpT, ExpressionSPtrHasher, FastExpressionSPtrEquals> ExpSetType;
-
             SemT* Sem;
-            ExpSetType ExpSet;
-            u32 NextGC;
-            const float GCGrowthFactor = 1.5f;
-            
-            inline ExpT GetCachedOrInsert(const ExpT& Exp);
-            
-            template <template <typename, template <typename> class> class T, 
-                      typename... ArgTypes>
-            inline ExpT GetCachedOrInsert(ArgTypes&&... Args);
+            ExpCacheT ExpCache;
             inline void CheckMgr(const vector<ExpT>& Children) const;
             inline void CheckMgr(const ExpT& Exp) const;
             template <template <typename, template<typename> class> class T>
@@ -568,7 +556,6 @@ namespace ESMC {
             // Insert the expression and all subexpressions
             // into the set of expressions owned by this manager
             inline ExpT Internalize(const ExpT& Exp);
-            inline void AutoGC();
             
         public:
             template <typename... ArgTypes>
@@ -1001,34 +988,6 @@ namespace ESMC {
         inline const U<ExtListT, S>* ExpressionBase<ExtListT, S>::SAs() const
         {
             return static_cast<const U<ExtListT, S>*>(this);
-        }
-
-        // hashers, equality testers and comparisons
-        template <typename E, template <typename> class S>
-        inline bool ExpressionPtrEquals::operator () (const ExpressionBase<E, S>* Exp1,
-                                                      const ExpressionBase<E, S>* Exp2) const
-        {
-            return (Exp1->Equals(Exp2));
-        }
-
-        template <typename E, template <typename> class S>
-        inline bool FastExpressionPtrEquals::operator () (const ExpressionBase<E, S>* Exp1,
-                                                          const ExpressionBase<E, S>* Exp2) const
-        {
-            return (Exp1->FastEQ(Exp2));
-        }
-        
-        template <typename E, template <typename> class S>
-        inline u64 ExpressionPtrHasher::operator () (const ExpressionBase<E, S>* Exp) const
-        {
-            return Exp->Hash();
-        }
-
-        template <typename E, template <typename> class S>
-        inline bool ExpressionPtrCompare::operator () (const ExpressionBase<E, S>* Exp1, 
-                                                       const ExpressionBase<E, S>* Exp2) const
-        {
-            return (Exp1->LT(Exp2));
         }
 
         // ExpressionBase implementation
@@ -1813,11 +1772,10 @@ namespace ESMC {
         }
 
         // ExprMgr implementation
-        // Initial GC param is 1024
         template <typename E, template <typename> class S>
         template <typename... ArgTypes>
         inline ExprMgr<E, S>::ExprMgr(ArgTypes&&... Args)
-            : Sem(new SemT(forward<ArgTypes>(Args)...)), NextGC(1024)
+            : Sem(new SemT(forward<ArgTypes>(Args)...))
         {
             // Nothing here
         }
@@ -1826,32 +1784,6 @@ namespace ESMC {
         inline ExprMgr<E, S>::~ExprMgr()
         {
             delete Sem;
-            ExpSet.clear();
-        }
-
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::GetCachedOrInsert(const ExpT& Exp)
-        {
-            AutoGC();
-            auto it = ExpSet.find(Exp);
-            if (it == ExpSet.end()) {
-                ExpSet.insert(Exp);
-                return Exp;
-            } else {
-                return (*it);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        template <template <typename, template <typename> class> class T, 
-                  typename... ArgTypes>
-        inline typename ExprMgr<E, S>::ExpT 
-        ExprMgr<E, S>::GetCachedOrInsert(ArgTypes&&... Args)
-        {
-            AutoGC();
-            ExpT NewExp = new T<E, S>(this, forward<ArgTypes>(Args)...);
-            return GetCachedOrInsert(NewExp);
         }
 
         template <typename E, template <typename> class S>
@@ -1878,7 +1810,7 @@ namespace ESMC {
             if ((Exp->template As<ConstExpression>() != nullptr) ||
                 (Exp->template As<VarExpression>() != nullptr) ||
                 (Exp->template As<BoundVarExpression>() != nullptr)) {
-                return GetCachedOrInsert(Exp);
+                return ExpCache.Get(Exp);
             }
             auto ExpAsOp = Exp->template As<OpExpression>();
             if (ExpAsOp != nullptr) {
@@ -1888,22 +1820,25 @@ namespace ESMC {
                 for (u32 i = 0; i < NumChildren; ++i) {
                     IntChildren[i] = Internalize(Children[i]);
                 }
-                return GetCachedOrInsert<OpExpression>(ExpAsOp->GetOpCode(),
-                                                       IntChildren,
-                                                       Exp->ExtensionData);
+                return ExpCache.template Get<OpExpression<E, S>>(this,
+                                                                 ExpAsOp->GetOpCode(),
+                                                                 IntChildren,
+                                                                 Exp->ExtensionData);
             }
             auto ExpAsQuantified = Exp->template As<QuantifiedExpressionBase>();
             if (ExpAsQuantified != nullptr) {
                 auto const& QVarTypes = ExpAsQuantified->GetQVarTypes();
                 auto IntQExpr = Internalize(ExpAsQuantified->GetQExpression());
                 if (ExpAsQuantified->IsForAll()) {
-                    return GetCachedOrInsert<AQuantifiedExpression>(QVarTypes,
-                                                                    IntQExpr,
-                                                                    Exp->ExtensionData);
+                    return ExpCache.template Get<AQuantifiedExpression<E, S>>(this,
+                                                                              QVarTypes,
+                                                                              IntQExpr,
+                                                                              Exp->ExtensionData);
                 } else {
-                    return GetCachedOrInsert<EQuantifiedExpression>(QVarTypes,
-                                                                    IntQExpr,
-                                                                    Exp->ExtensionData);
+                    return ExpCache.template Get<EQuantifiedExpression<E, S>>(this,
+                                                                              QVarTypes,
+                                                                              IntQExpr,
+                                                                              Exp->ExtensionData);
                 }
             } else {
                 throw ExprTypeError("Strange type of expression encountered");
@@ -1917,8 +1852,9 @@ namespace ESMC {
         {
             auto TrimmedValString = boost::algorithm::trim_copy(ValString);
             auto Retval =
-                GetCachedOrInsert<ConstExpression>(TrimmedValString, 
-                                                   ValType, ExtVal);
+                ExpCache.template Get<ConstExpression<E, S>>(this, 
+                                                             TrimmedValString, 
+                                                             ValType, ExtVal);
             Sem->TypeCheck(Retval);
             return Retval;
         }
@@ -1929,7 +1865,7 @@ namespace ESMC {
                                const E& ExtVal)
         {
             auto Retval = 
-                GetCachedOrInsert<VarExpression>(VarName, VarType, ExtVal);
+                ExpCache.template Get<VarExpression<E, S>>(this, VarName, VarType, ExtVal);
             Sem->TypeCheck(Retval);
             return Retval;
         }
@@ -1940,7 +1876,7 @@ namespace ESMC {
                                     i64 VarUID, const E& ExtVal)
         {
             auto Retval =
-                GetCachedOrInsert<BoundVarExpression>(VarType, VarUID, ExtVal);
+                ExpCache.template Get<BoundVarExpression<E, S>>(this, VarType, VarUID, ExtVal);
             Sem->TypeCheck(Retval);
             return Retval;
         }
@@ -2105,30 +2041,9 @@ namespace ESMC {
         
 
         template <typename E, template <typename> class S>
-        inline void ExprMgr<E, S>::AutoGC()
-        {
-            if (ExpSet.size() >= NextGC) {
-                GC();
-                NextGC = (u32)(GCGrowthFactor * (float)ExpSet.size());
-            }
-        }
-        
-        template <typename E, template <typename> class S>
         inline void ExprMgr<E, S>::GC()
         {
-            // We remove all expressions with a refcount of 1
-            vector<ExpT> ToDelete;
-            do {
-                for(auto const& Exp : ToDelete) {
-                    ExpSet.erase(Exp);
-                }
-                ToDelete.clear();
-                for(auto const& Exp : ExpSet) {
-                    if (Exp->GetRefCnt_() == 1) {
-                        ToDelete.push_back(Exp);
-                    }
-                }
-            } while (ToDelete.size() > 0);
+            ExpCache.GC();
         }
 
         template <typename E, template <typename> class S>
