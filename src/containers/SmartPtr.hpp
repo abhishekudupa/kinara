@@ -38,7 +38,7 @@
 // Code:
 
 #if !defined ESMC_SMART_PTR_HPP_
-#define ESMC_REF_COUNTABLE_HPP_
+#define ESMC_SMART_PTR_HPP_
 
 #include "../common/FwdDecls.hpp"
 
@@ -48,6 +48,17 @@ namespace ESMC {
     template <typename T> class SmartPtr;
     // const smart ptr
     template <typename T> class CSmartPtr;
+
+    // Typedef for a normal ptr
+    template <typename T> 
+    using RawPtr = T*;
+    
+    template <typename T>
+    using RawCPtr = const T*;
+
+    // Typedef for no reference at all
+    template <typename T>
+    using NoPtr = T;
 
     template <typename T>
     class SmartPtr
@@ -588,7 +599,7 @@ namespace ESMC {
 
 } /* end namespace */
 
-#endif /* ESMC_REF_COUNTABLE_HPP_ */
+#endif /* ESMC_SMART_PTR_HPP_ */
 
 // 
 // SmartPtr.hpp ends here

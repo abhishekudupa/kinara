@@ -41,11 +41,15 @@
 #define ESMC_REF_CACHE_HPP_
 
 #include "../common/FwdDecls.hpp"
+#include <unordered_set>
+#include <vector>
 
 namespace ESMC {
 
+    // Set NUMWEAKREFS to a negative value for a permanent store,
+    // i.e., GC will never kick in
     template <typename OBJTYPE, typename HASHERTYPE, typename EQTYPE,
-              template <typename> class REFTYPE = SmartPtr, u32 NUMWEAKREFS=0>
+              template <typename> class REFTYPE = SmartPtr, i64 NUMWEAKREFS=0>
     class RefCache
     {
     private:
@@ -58,6 +62,9 @@ namespace ESMC {
 
         inline void AutoGC()
         {
+            if (NUMWEAKREFS < 0) {
+                return;
+            }
             if (Cache.size() >= NextGC) {
                 GC();
                 NextGC = (u32)((float)Cache.size() * GCGrowthFactor);
@@ -97,6 +104,9 @@ namespace ESMC {
 
         inline void GC()
         {
+            if (NUMWEAKREFS < 0) {
+                return;
+            }
             vector<typename SetType::iterator> ToDelete;
             do {
                 for(auto& Obj : ToDelete) {
@@ -104,11 +114,16 @@ namespace ESMC {
                 }
                 ToDelete.clear();
                 for (auto it = Cache.begin(); it != Cache.end(); ++it) {
-                    if ((*it)->GetRefCnt_() == (1 + NUMWEAKREFS)) {
+                    if (((*it)->GetRefCnt_() - NUMWEAKREFS) <= (i64)1) {
                         ToDelete.push_back(it);
                     }
                 }
             } while (ToDelete.size() > 0);
+        }
+
+        inline void Clear()
+        {
+            Cache.clear();
         }
     };
 

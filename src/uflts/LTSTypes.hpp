@@ -76,6 +76,7 @@ namespace ESMC {
 
             i64 GetTypeID() const;
             i64 SetTypeID() const;
+            i64 GetOrSetTypeID() const;
 
             template <typename T> 
             inline T* As()
@@ -115,6 +116,44 @@ namespace ESMC {
             virtual i32 Compare(const LTSTypeBase& Other) const override;
         };
 
+
+        // A generic int type, can be converted to 
+        // any kind of subrange type. 
+        class LTSIntType : public LTSTypeBase
+        {
+        protected:
+            virtual void ComputeHashValue() const override;
+            
+        public:
+            LTSIntType();
+            virtual ~LTSIntType();
+            
+            virtual string ToString() const override;
+            virtual i32 Compare(const LTSTypeBase& Other) const override;
+        };
+
+        class LTSRangeType : public LTSIntType
+        {
+        private:
+            i64 RangeLow;
+            i64 RangeHigh;
+            u64 Size;
+
+        protected:
+            virtual void ComputeHashValue() const;
+
+        public:
+            LTSRangeType(i64 RangeLow, i64 RangeHigh);
+            virtual ~LTSRangeType();
+            
+            i64 GetLow() const;
+            i64 GetHigh() const;
+            u64 GetSize() const;
+
+            virtual string ToString() const override;
+            virtual i32 Compare(const LTSTypeBase& Other) const override;
+        };
+
         // Mainly for states and such
         class LTSEnumType : public LTSTypeBase
         {
@@ -143,6 +182,7 @@ namespace ESMC {
             string Name;
             u32 Size;
             vector<string> Members;
+            set<string> MemberSet;
 
         protected:
             virtual void ComputeHashValue() const;
@@ -156,28 +196,7 @@ namespace ESMC {
             
             const vector<string>& GetMembers() const;
             const string& GetMember(u32 Index) const;
-
-            virtual string ToString() const override;
-            virtual i32 Compare(const LTSTypeBase& Other) const override;
-        };
-
-        class LTSRangeType : public LTSTypeBase
-        {
-        private:
-            i64 RangeLow;
-            i64 RangeHigh;
-            u64 Size;
-
-        protected:
-            virtual void ComputeHashValue() const;
-
-        public:
-            LTSRangeType(i64 RangeLow, i64 RangeHigh);
-            virtual ~LTSRangeType();
-            
-            i64 GetLow() const;
-            i64 GetHigh() const;
-            u64 GetSize() const;
+            const bool IsMember(const string& Value) const;
 
             virtual string ToString() const override;
             virtual i32 Compare(const LTSTypeBase& Other) const override;

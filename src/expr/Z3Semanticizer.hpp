@@ -50,6 +50,7 @@
 #include <algorithm>
 
 #include "Expressions.hpp"
+#include "SemanticizerUtils.hpp"
 
 namespace ESMC {
     namespace Z3Sem {
@@ -175,32 +176,7 @@ namespace ESMC {
 
             extern ostream& operator << (ostream& Out, const Z3Expr& Exp);
 
-            class UFDescriptor
-            {
-            private:
-                i64 Identifier;
-                vector<i64> DomainTypes;
-                i64 RangeType;
-                string Name;
-                string MangledName;
-
-            public:
-                UFDescriptor();
-                UFDescriptor(const UFDescriptor& Other);
-                UFDescriptor(i64 Identifier,
-                             const vector<i64>& DomainTypes, 
-                             i64 RangeType, const string& Name);
-                ~UFDescriptor();
-
-                UFDescriptor& operator = (const UFDescriptor& Other);
-                bool operator == (const UFDescriptor& Other);
-
-                const vector<i64>& GetDomainTypes() const;
-                i64 GetRangeType() const;
-                const string& GetName() const;
-                const string& GetMangledName() const;
-                i64 GetIdentifier() const;
-            };
+            typedef SemUtils::UFDescriptor UFDescriptor;
 
             typedef unordered_map<i64, UFDescriptor> UFID2DMapT;
             typedef unordered_map<string, UFDescriptor> UFName2DMapT;
@@ -230,55 +206,6 @@ namespace ESMC {
                                                                Exp) override;
             };
 
-            // Type invalidator: Invalidates any previously 
-            // computed type tags on an expression
-            template <typename E, template <typename> class S>
-            class TypeInvalidator : public ExpressionVisitorBase<E, S>
-            {
-            public:
-                TypeInvalidator() 
-                    : ExpressionVisitorBase<E, S>("TypeInvalidator") {}
-                virtual ~TypeInvalidator() {}
-                inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override
-                {
-                    Exp->SetType(-1);
-                }
-
-                inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override
-                {
-                    Exp->SetType(-1);
-                }
-                
-                
-                inline virtual void 
-                VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) override
-                {
-                    Exp->SetType(-1);
-                }
-                
-                inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override
-                {
-                    ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
-                    Exp->SetType(-1);
-                }
-
-                inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
-                {
-                    Exp->GetQExpression()->Accept(this);
-                }
-
-                inline virtual void 
-                VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) override
-                {
-                    VisitQuantifiedExpression(Exp);
-                }
-
-                inline virtual void 
-                VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override
-                {
-                    VisitQuantifiedExpression(Exp);
-                }
-            };
 
             template <typename E, template <typename> class S>
             class Canonicalizer : public ExpressionVisitorBase<E, S>
@@ -387,32 +314,6 @@ namespace ESMC {
                 static inline ExpT Do(const LExpT& LExp, const UFName2DMapT& UFMap);
             };
 
-            static inline string MangleName(const string& Name, const vector<i64>& DomainTypes)
-            {
-                string Retval = Name;
-                for (auto const& DomType : DomainTypes) {
-                    Retval += "@" + to_string(DomType);
-                }
-                return Retval;
-            }
-
-            static inline i64 GetTypeForBoundVar(const vector<vector<i64>>& ScopeStack,
-                                                 i64 VarIdx)
-            {
-                i64 LeftIdx = VarIdx;
-                for (i64 i = ScopeStack.size(); i > 0; --i) {
-                    auto const& CurScope = ScopeStack[i - 1];
-                    const u32 CurScopeSize = CurScope.size();
-                    if (LeftIdx < (i64) CurScopeSize) {
-                        return CurScope[CurScopeSize - 1 - LeftIdx];
-                    } else {
-                        LeftIdx -= CurScopeSize;
-                    }
-                }
-                // Unbound variable
-                return -1;
-            }
-
             static inline void CheckType(i64 Type)
             {
                 if (Type != Z3SemOps::BoolType &&
@@ -506,7 +407,7 @@ namespace ESMC {
                 auto Type = Exp->GetVarType();
                 CheckType(Type);
                 auto Idx = Exp->GetVarIdx();
-                auto ExpectedType = GetTypeForBoundVar(ScopeStack, Idx);
+                auto ExpectedType = SemUtils::GetTypeForBoundVar(ScopeStack, Idx);
                 if (ExpectedType != -1 && ExpectedType != Type) {
                     throw ExprTypeError((string)"Bound variable with index " + to_string(Idx) + 
                                         " has an ambiguous type");
@@ -765,7 +666,7 @@ namespace ESMC {
                 ScopeStack.push_back(QVarTypes);
                 auto const& QExpr = Exp->GetQExpression();
                 // Invalidate the types in the quantified expression first
-                TypeInvalidator<E, S> Inv;
+                SemUtils::TypeInvalidator<E, S> Inv;
                 QExpr->Accept(&Inv);
                 QExpr->Accept(this);
 
@@ -830,8 +731,8 @@ namespace ESMC {
             template <typename E, template <typename> class S>
             inline void Canonicalizer<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
             {
-                auto const& OpCode = Exp->GetOpCode();
-                auto const& NumChildren = Exp->GetChildren().size();
+                auto const OpCode = Exp->GetOpCode();
+                const u32 NumChildren = Exp->GetChildren().size();
                 ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
                 
                 vector<ExpT> NewChildren(NumChildren);
@@ -1421,7 +1322,7 @@ namespace ESMC {
                         for (u32 i = 0; i < NumArgs; ++i) {
                             DomTypes[i] = RaiseSort(Z3_get_domain(*Ctx, AppDecl, i));
                         }
-                        string MangledName = MangleName(DeclName, DomTypes);
+                        string MangledName = SemUtils::MangleName(DeclName, DomTypes);
                         auto it = UFMap.find(MangledName);
                         if (it == UFMap.end()) {
                             throw InternalError((string)"Could not find descriptor for function " + 
@@ -1662,8 +1563,6 @@ namespace ESMC {
             
         } /* end namespace Detail */
 
-        using namespace Detail;
-
         template <typename E>
         class Z3Semanticizer 
         {
@@ -1674,7 +1573,7 @@ namespace ESMC {
             
         public:
             typedef Z3SemOps Ops;
-            typedef Z3Expr LExpT;
+            typedef Detail::Z3Expr LExpT;
             typedef Expr<E, ESMC::Z3Sem::Z3Semanticizer> ExpT;
 
             Z3Semanticizer();
@@ -1721,7 +1620,7 @@ namespace ESMC {
         template <typename E>
         inline void Z3Semanticizer<E>::TypeCheck(const ExpT& Exp) const
         {
-            TypeCheckVisitor<E, ESMC::Z3Sem::Z3Semanticizer> Checker(UFID2DMap);
+            Detail::TypeCheckVisitor<E, ESMC::Z3Sem::Z3Semanticizer> Checker(UFID2DMap);
             Exp->Accept(&Checker);
             return;
         }
@@ -1730,22 +1629,23 @@ namespace ESMC {
         inline typename Z3Semanticizer<E>::ExpT
         Z3Semanticizer<E>::Canonicalize(const ExpT& Exp)
         {
-            return Canonicalizer<E, ESMC::Z3Sem::Z3Semanticizer>::Do(Exp);
+            return Detail::Canonicalizer<E, ESMC::Z3Sem::Z3Semanticizer>::Do(Exp);
         }
 
         template <typename E>
         inline typename Z3Semanticizer<E>::ExpT 
         Z3Semanticizer<E>::RaiseExpr(const LExpT& LExp)
         {
-            return Canonicalize(Raiser<E, ESMC::Z3Sem::Z3Semanticizer>::Do(LExp, UFName2DMap));
+            return Canonicalize(Detail::Raiser<E, ESMC::Z3Sem::Z3Semanticizer>::Do(LExp, 
+                                                                                   UFName2DMap));
         }
 
         template <typename E>
         inline typename Z3Semanticizer<E>::LExpT
         Z3Semanticizer<E>::LowerExpr(const ExpT& Exp)
         {
-            Z3Ctx Ctx(new Z3CtxWrapper());
-            return Lowerer<E, ESMC::Z3Sem::Z3Semanticizer>::Do(Exp, UFID2DMap, Ctx);
+            Detail::Z3Ctx Ctx(new Detail::Z3CtxWrapper());
+            return Detail::Lowerer<E, ESMC::Z3Sem::Z3Semanticizer>::Do(Exp, UFID2DMap, Ctx);
         }
 
         template <typename E>
@@ -1754,7 +1654,7 @@ namespace ESMC {
         {
             auto LExp = LowerExpr(Exp);
             auto Ctx = LExp.GetCtx();
-            LExp = Z3Expr(Ctx, Z3_simplify(*Ctx, LExp));
+            LExp = Detail::Z3Expr(Ctx, Z3_simplify(*Ctx, LExp));
             return RaiseExpr(LExp);
         }
 
@@ -1784,7 +1684,7 @@ namespace ESMC {
                 auto NumExprs = Z3_goal_size(*Ctx, CurGoal);
                 for (u32 j = 0; j < NumExprs; j++) {
                     auto CurFormula = Z3_goal_formula(*Ctx, CurGoal, j);
-                    Z3Expr CurExpr = Z3Expr(Ctx, CurFormula);
+                    Detail::Z3Expr CurExpr = Detail::Z3Expr(Ctx, CurFormula);
                     RaisedExprs.push_back(RaiseExpr(CurExpr));
                 }
             }
@@ -1803,13 +1703,13 @@ namespace ESMC {
         template <typename E>
         inline string Z3Semanticizer<E>::ExprToString(const ExpT& Exp) const
         {
-            return Stringifier<E, ESMC::Z3Sem::Z3Semanticizer>::Do(Exp, UFID2DMap);
+            return Detail::Stringifier<E, ESMC::Z3Sem::Z3Semanticizer>::Do(Exp, UFID2DMap);
         }
 
         template <typename E>
         inline string Z3Semanticizer<E>::TypeToString(i64 Type) const
         {
-            return Stringifier<E, ESMC::Z3Sem::Z3Semanticizer>::TypeToString(Type);
+            return Detail::Stringifier<E, ESMC::Z3Sem::Z3Semanticizer>::TypeToString(Type);
         }
 
         template <typename E>
@@ -1817,13 +1717,13 @@ namespace ESMC {
                                                                     const vector<i64> &DomTypes, 
                                                                     i64 RangeType)
         {
-            CheckType(RangeType);
+            Detail::CheckType(RangeType);
             for (auto const& DomType : DomTypes) {
-                CheckType(DomType);
+                Detail::CheckType(DomType);
             }
 
             auto NewID = UFUIDGen.GetUID();
-            UFDescriptor Desc(NewID, DomTypes, RangeType, Name);
+            Detail::UFDescriptor Desc(NewID, DomTypes, RangeType, Name);
             if (UFName2DMap.find(Desc.GetMangledName()) != UFName2DMap.end()) {
                 throw ExprTypeError((string)"Uninterpreted function with name " + 
                                     Name + " already registered!");

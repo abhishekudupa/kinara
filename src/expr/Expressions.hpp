@@ -52,8 +52,9 @@
 #include "../common/FwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
+#include "../containers/RefCache.hpp"
 #include "../utils/UIDGenerator.hpp"
-#include "../utils/RefCache.hpp"
+
 
 
 // This classes in this file are heavily templatized
@@ -627,7 +628,7 @@ namespace ESMC {
         // Visitor classes
         // ExpressionVisitorBase
         template <typename E, template <typename> class S>
-        class ExpressionVisitorBase 
+        class ExpressionVisitorBase
         {
         private:
             string Name;
@@ -688,10 +689,13 @@ namespace ESMC {
 
             inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
             inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
-            inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) override;
+            inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
+                override;
             inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
-            inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) override;
-            inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override;
+            inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) 
+                override;
+            inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) 
+                override;
             
             static inline ExpSetT
             Do(const ExpT& Exp, const function<bool(const ExpressionBase<E, S>*)>& Pred);
@@ -859,7 +863,6 @@ namespace ESMC {
             Exp->Accept(&TheSubstitutor);
             return TheSubstitutor.SubstStack[0];
         }
-
 
         // Gatherer implementation
         template <typename E, template <typename> class S>

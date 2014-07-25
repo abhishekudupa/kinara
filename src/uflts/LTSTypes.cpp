@@ -92,6 +92,15 @@ namespace ESMC {
             return TypeID;
         }
 
+        i64 LTSTypeBase::GetOrSetTypeID() const
+        {
+            if (TypeID == -1) {
+                return SetTypeID();
+            } else {
+                return GetTypeID();
+            }
+        }
+
         LTSBoolType::LTSBoolType()
             : LTSTypeBase()
         {
@@ -121,6 +130,124 @@ namespace ESMC {
         {
             HashCode = 0;
             boost::hash_combine(HashCode, "BoolType");
+        }
+
+        LTSIntType::LTSIntType()
+            : LTSTypeBase()
+        {
+            // Nothing here
+        }
+
+        LTSIntType::~LTSIntType()
+        {
+            // Nothing here
+        }
+        
+        void LTSIntType::ComputeHashValue() const
+        {
+            HashCode = 0;
+            boost::hash_combine(HashCode, "IntType");
+        }
+
+        string LTSIntType::ToString() const
+        {
+            return "(IntType)";
+        }
+
+        i32 LTSIntType::Compare(const LTSTypeBase& Other) const
+        {
+            auto OtherAsPtr = &Other;
+            
+            if (OtherAsPtr->As<LTSBoolType>() != nullptr) {
+                return 1;
+            }
+            
+            auto OtherAsInt = OtherAsPtr->As<LTSIntType>();
+            if (OtherAsInt == nullptr) {
+                return -1;
+            } else {
+                auto OtherAsRange = OtherAsPtr->As<LTSRangeType>();
+                if (OtherAsRange != nullptr) {
+                    return -1;
+                } else {
+                    return 0;
+                }
+            }
+        }
+
+        // Inclusive range
+        LTSRangeType::LTSRangeType(i64 RangeLow, i64 RangeHigh)
+            : LTSIntType(), 
+              RangeLow(RangeLow), RangeHigh(RangeHigh), 
+              Size(RangeHigh - RangeLow + 1)
+        {
+            // Nothing here
+        }
+
+        LTSRangeType::~LTSRangeType()
+        {
+            // Nothing here
+        }
+
+        i64 LTSRangeType::GetLow() const
+        {
+            return RangeLow;
+        }
+
+        i64 LTSRangeType::GetHigh() const
+        {
+            return RangeHigh;
+        }
+
+        u64 LTSRangeType::GetSize() const
+        {
+            return Size;
+        }
+
+        void LTSRangeType::ComputeHashValue() const
+        {
+            HashCode = 0;
+            boost::hash_combine(HashCode, RangeLow);
+            boost::hash_combine(HashCode, RangeHigh);
+        }
+
+        string LTSRangeType::ToString() const
+        {
+            return ((string)"(Range " + to_string(RangeLow) + 
+                    ":" + to_string(RangeLow) + ")");
+        }
+
+        i32 LTSRangeType::Compare(const LTSTypeBase& Other) const
+        {
+            auto OtherAsPtr = &Other;
+
+            if (OtherAsPtr->As<LTSBoolType>() != nullptr) {
+                return 1;
+            }
+
+            auto OtherAsRange = OtherAsPtr->As<LTSRangeType>();
+            
+            if (OtherAsRange == nullptr) {
+                if (OtherAsPtr->As<LTSIntType>() != nullptr) {
+                    return 1;
+                } else {
+                    return -1;
+                }
+            }
+            
+            if (OtherAsRange->Size > Size) {
+                return -1;
+            } else if (OtherAsRange->Size < Size) {
+                return 1;
+            } else {
+                if (OtherAsRange->RangeLow < RangeLow) {
+                    return 1;
+                } else if (OtherAsRange->RangeLow > RangeLow) {
+                    return -1;
+                } else {
+                    return 0;
+                }
+            }
         }
 
         LTSEnumType::LTSEnumType(const string& Name, 
@@ -194,7 +321,9 @@ namespace ESMC {
         i32 LTSEnumType::Compare(const LTSTypeBase& Other) const
         {
             auto OtherPtr = &Other;
-            if (OtherPtr->As<LTSBoolType>() != nullptr) {
+            if (OtherPtr->As<LTSBoolType>() != nullptr || 
+                OtherPtr->As<LTSIntType>() != nullptr || 
+                OtherPtr->As<LTSRangeType>() != nullptr) {
                 return 1;
             }
             if (OtherPtr->As<LTSEnumType>() == nullptr) {
@@ -216,6 +345,7 @@ namespace ESMC {
         {
             for(u32 i = 0; i < Size; ++i) {
                 Members[i] = Name + to_string(i);
+                MemberSet.insert(Name + to_string(i));
             }
         }
 
@@ -245,6 +375,11 @@ namespace ESMC {
             return Members[Index];
         }
 
+        const bool LTSSymmetricType::IsMember(const string& Value) const
+        {
+            return (MemberSet.find(Value) != MemberSet.end());
+        }
+
         string LTSSymmetricType::ToString() const
         {
             return (string)"(SymType " + Name + ")";
@@ -261,6 +396,8 @@ namespace ESMC {
         {
             auto OtherAsPtr = &Other;
             if (OtherAsPtr->As<LTSBoolType>() != nullptr ||
+                OtherAsPtr->As<LTSIntType>() != nullptr ||
+                OtherAsPtr->As<LTSRangeType>() != nullptr ||
                 OtherAsPtr->As<LTSEnumType>() != nullptr) {
                 return 1;
             }
@@ -276,77 +413,6 @@ namespace ESMC {
             return 0;
         }
 
-        // Inclusive range
-        LTSRangeType::LTSRangeType(i64 RangeLow, i64 RangeHigh)
-            : LTSTypeBase(), 
-              RangeLow(RangeLow), RangeHigh(RangeHigh), 
-              Size(RangeHigh - RangeLow + 1)
-        {
-            // Nothing here
-        }
-
-        LTSRangeType::~LTSRangeType()
-        {
-            // Nothing here
-        }
-
-        i64 LTSRangeType::GetLow() const
-        {
-            return RangeLow;
-        }
-
-        i64 LTSRangeType::GetHigh() const
-        {
-            return RangeHigh;
-        }
-
-        u64 LTSRangeType::GetSize() const
-        {
-            return Size;
-        }
-
-        void LTSRangeType::ComputeHashValue() const
-        {
-            HashCode = 0;
-            boost::hash_combine(HashCode, RangeLow);
-            boost::hash_combine(HashCode, RangeHigh);
-        }
-
-        string LTSRangeType::ToString() const
-        {
-            return (string)"(Range " + to_string(RangeLow) + 
-                ":" + to_string(RangeLow) + ")";
-        }
-
-        i32 LTSRangeType::Compare(const LTSTypeBase& Other) const
-        {
-            auto OtherAsPtr = &Other;
-
-            if (OtherAsPtr->As<LTSBoolType>() != nullptr ||
-                OtherAsPtr->As<LTSEnumType>() != nullptr ||
-                OtherAsPtr->As<LTSSymmetricType>() != nullptr) {
-                return 1;
-            }
-            auto OtherAsRange = OtherAsPtr->As<LTSRangeType>();
-            
-            if (OtherAsRange == nullptr) {
-                return -1;
-            }
-            
-            if (OtherAsRange->Size > Size) {
-                return -1;
-            } else if (OtherAsRange->Size < Size) {
-                return 1;
-            } else {
-                if (OtherAsRange->RangeLow < RangeLow) {
-                    return 1;
-                } else if (OtherAsRange->RangeLow > RangeLow) {
-                    return -1;
-                } else {
-                    return 0;
-                }
-            }
-        }
 
         static inline string MangleName(const string& Name, 
                                         const vector<LTSTypeRef>& Args)
@@ -420,9 +486,10 @@ namespace ESMC {
         {
             auto OtherAsPtr = &Other;
             if (OtherAsPtr->As<LTSBoolType>() != nullptr ||
+                OtherAsPtr->As<LTSIntType>() != nullptr ||
+                OtherAsPtr->As<LTSRangeType> () != nullptr ||
                 OtherAsPtr->As<LTSEnumType>() != nullptr ||
-                OtherAsPtr->As<LTSSymmetricType>() != nullptr ||
-                OtherAsPtr->As<LTSRangeType>() != nullptr) {
+                OtherAsPtr->As<LTSSymmetricType>() != nullptr) {
                 return 1;
             }
             
@@ -488,9 +555,10 @@ namespace ESMC {
         {
             auto OtherAsPtr = &Other;
             if (OtherAsPtr->As<LTSBoolType>() != nullptr ||
+                OtherAsPtr->As<LTSIntType>() != nullptr ||
+                OtherAsPtr->As<LTSRangeType>() != nullptr ||
                 OtherAsPtr->As<LTSEnumType>() != nullptr ||
                 OtherAsPtr->As<LTSSymmetricType>() != nullptr ||
-                OtherAsPtr->As<LTSRangeType>() != nullptr ||
                 OtherAsPtr->As<LTSFuncType>() != nullptr) {
                 return 1;
             }
@@ -565,9 +633,10 @@ namespace ESMC {
         {
             auto OtherAsPtr = &Other;
             if (OtherAsPtr->As<LTSBoolType>() != nullptr ||
+                OtherAsPtr->As<LTSIntType>() != nullptr ||
+                OtherAsPtr->As<LTSRangeType>() != nullptr ||
                 OtherAsPtr->As<LTSEnumType>() != nullptr ||
                 OtherAsPtr->As<LTSSymmetricType>() != nullptr ||
-                OtherAsPtr->As<LTSRangeType>() != nullptr ||
                 OtherAsPtr->As<LTSFuncType> () != nullptr ||
                 OtherAsPtr->As<LTSArrayType> () != nullptr) {
                 return 1;
@@ -648,9 +717,10 @@ namespace ESMC {
             auto OtherAsPtr = &Other;
 
             if (OtherAsPtr->As<LTSBoolType>() != nullptr ||
+                OtherAsPtr->As<LTSIntType>() != nullptr ||
+                OtherAsPtr->As<LTSRangeType>() != nullptr ||
                 OtherAsPtr->As<LTSEnumType>() != nullptr ||
                 OtherAsPtr->As<LTSSymmetricType>() != nullptr ||
-                OtherAsPtr->As<LTSRangeType>() != nullptr ||
                 OtherAsPtr->As<LTSFuncType>() != nullptr ||
                 OtherAsPtr->As<LTSArrayType>() != nullptr ||
                 OtherAsPtr->As<LTSRecordType>() != nullptr) {
