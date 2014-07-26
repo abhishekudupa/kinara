@@ -297,10 +297,10 @@ namespace ESMC {
 
         class LTSTypePtrHasher
         {
-            inline u64 operator () (const LTSTypeBase* Type) const
-            {
-                return Type->Hash();
-            }
+            // inline u64 operator () (const LTSTypeBase* Type) const
+            // {
+            //     return Type->Hash();
+            // }
             
             inline u64 operator () (const LTSTypeRef& Type) const
             {
@@ -310,11 +310,11 @@ namespace ESMC {
 
         class LTSTypePtrEquals
         {
-            inline bool operator () (const LTSTypeBase* Type1,
-                                     const LTSTypeBase* Type2) const
-            {
-                return Type1->Equals(*Type2);
-            }
+            // inline bool operator () (const LTSTypeBase* Type1,
+            //                          const LTSTypeBase* Type2) const
+            // {
+            //     return Type1->Equals(*Type2);
+            // }
 
             inline bool operator () (const LTSTypeRef& Type1,
                                      const LTSTypeRef& Type2) const
@@ -325,11 +325,11 @@ namespace ESMC {
 
         class LTSTypePtrCompare
         {
-            inline bool operator () (const LTSTypeBase* Type1,
-                                     const LTSTypeBase* Type2) const
-            {
-                return Type1->LT(*Type2);
-            }
+            // inline bool operator () (const LTSTypeBase* Type1,
+            //                          const LTSTypeBase* Type2) const
+            // {
+            //     return Type1->LT(*Type2);
+            // }
 
             inline bool operator () (const LTSTypeRef& Type1,
                                      const LTSTypeRef& Type2) const

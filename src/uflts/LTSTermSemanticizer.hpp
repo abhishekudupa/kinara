@@ -928,7 +928,7 @@ namespace ESMC {
             }
 
             template<typename E, template <typename> class S>
-            static inline CheckAllConstant(const vector<Expr<E, S>>& ExpVec)
+            static inline bool CheckAllConstant(const vector<Expr<E, S>>& ExpVec)
             {
                 return (all_of(ExpVec.begin(), ExpVec.end(),
                                [] (const Expr<E, S>& Exp) -> bool
@@ -954,6 +954,40 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
+            static inline vector<Expr<E, S>> PurgeInt(const vector<Expr<E, S>>& ExpVec, i64 Value)
+            {
+                vector<Expr<E, S>> Retval;
+                for (auto const& Exp : ExpVec) {
+                    if (Exp->template As<ConstExpression>() != nullptr) {
+                        auto const& Val = Exp->template SAs<ConstExpression>()->GetConstValue();
+                        auto ActVal = boost::lexical_cast<boost::multiprecision::cpp_int>(Val);
+                        if (ActVal == Value) {
+                            continue;
+                        }
+                    }
+                    Retval.push_back(Exp);
+                }
+                return Retval;
+            }
+
+
+            template <typename E, template <typename> class S>
+            static inline bool HasInt(const vector<Expr<E, S>>& ExpVec, i64 Value)
+            {
+                vector<Expr<E, S>> Retval;
+                for (auto const& Exp : ExpVec) {
+                    if (Exp->template As<ConstExpression>() != nullptr) {
+                        auto const& Val = Exp->template SAs<ConstExpression>()->GetConstValue();
+                        auto ActVal = boost::lexical_cast<boost::multiprecision::cpp_int>(Val);
+                        if (ActVal == Value) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+
+            template <typename E, template <typename> class S>
             static inline bool HasBool(const vector<Expr<E, S>>& ExpVec, 
                                        const bool Value)
             {
@@ -961,7 +995,7 @@ namespace ESMC {
                 for (auto const& Exp : ExpVec) {
                     if (Exp->template As<ConstExpression>() != nullptr &&
                         Exp->template SAs<ConstExpression>()->GetConstType() == 1 &&
-                        Exp->template SAs<ConstExpression>()->GetConstValue() == PurgeString) {
+                        Exp->template SAs<ConstExpression>()->GetConstValue() == MatchString) {
                         return true;
                     }
                 }
@@ -999,8 +1033,13 @@ namespace ESMC {
 
                 switch(OpCode) {
                 case LTSOps::OpEQ:
+                case LTSOps::OpIFF:
                     if (!CheckAllConstant(SimpChildren)) {
-                        ExpStack.push_back(MakeOpExp(OpCode, SimpChildren, ExtData));
+                        if (SimpChildren[0]->Equals(SimpChildren[1])) {
+                            ExpStack.push_back(new ConstExpression<E, S>(nullptr, "true", 1));
+                        } else {
+                            ExpStack.push_back(MakeOpExp(OpCode, SimpChildren, ExtData));
+                        }
                     } else {
                         auto const& Val1 = 
                             SimpChildren[0]->template SAs<ConstExpression>()->GetConstValue();
@@ -1065,39 +1104,250 @@ namespace ESMC {
                         }
                     }
                     break;
+
+                case LTSOps::OpIMPLIES:
+                    if (SimpChildren[0]->template As<ConstExpression>() != nullptr) {
+                        auto Ant = SimpChildren[0]->template SAs<ConstExpression>();
+                        auto const& AntVal = Ant->GetConstValue();
+                        if (AntVal == "false") {
+                            ExpStack.push_back(new ConstExpression<E, S>(nullptr, "true", 1));
+                        } else {
+                            ExpStack.push_back(SimpChildren[1]);
+                        }
+                    } else if (SimpChildren[1]->template As<ConstExpression>() != nullptr) {
+                        auto Con = SimpChildren[1]->template SAs<ConstExpression>();
+                        auto const& ConVal = Con->GetConstValue();
+                        if (ConVal == "false") {
+                            vector<ExpT> NewChildren;
+                            NewChildren.push_back(SimpChildren[0]);
+                            ExpStack.push_back(new OpExpression<E, S>(nullptr, LTSOps::OpNOT, 
+                                                                      NewChildren));
+                        } else {
+                            ExpStack.push_back(SimpChildren[1]);
+                        }
+                    } else {
+                        ExpStack.push_back(MakeOpExp(OpCode, SimpChildren, ExtData));
+                    }
+                    break;
+
+                case LTSOps::OpXOR:
+                    if (CheckAllConstant(SimpChildren)) {
+                        auto AExp = SimpChildren[0]->template SAs<ConstExpression>();
+                        auto BExp = SimpChildren[0]->template SAs<ConstExpression>();
+                        
+                        auto AVal = AExp->GetConstValue();
+                        auto BVal = BExp->GetConstValue();
+
+                        if (AVal == BVal) {
+                            ExpStack.push_back(new ConstExpression<E, S>(nullptr, "false", 1));
+                        } else {
+                            ExpStack.push_back(new ConstExpression<E, S>(nullptr, "true", 1));
+                        }
+                    }
                     
+                    if (SimpChildren[0]->template As<ConstExpression>() != nullptr) {
+                        auto AExp = SimpChildren[0]->template SAs<ConstExpression>();
+                        auto const& AVal = AExp->GetConstValue();
+                        if (AVal == "true") {
+                            vector<ExpT> NewChildren;
+                            NewChildren.push_back(SimpChildren[1]);
+                            ExpStack.push_back(new OpExpression<E, S>(nullptr, LTSOps::OpNOT, NewChildren));
+                        } else {
+                            ExpStack.push_back(SimpChildren[1]);
+                        }
+                    } else if (SimpChildren[1]->template As<ConstExpression>() != nullptr) {
+                        auto BExp = SimpChildren[1]->template SAs<ConstExpression>();
+                        auto const& BVal = BExp->GetConstValue();
+                        if (BVal == "true") {
+                            vector<ExpT> NewChildren;
+                            NewChildren.push_back(SimpChildren[0]);
+                            ExpStack.push_back(new OpExpression<E, S>(nullptr, LTSOps::OpNOT, NewChildren));
+                        } else {
+                            ExpStack.push_back(SimpChildren[0]);
+                        }
+                    } else {
+                        ExpStack.push_back(MakeOpExp(OpCode, SimpChildren, ExtData));
+                    }
+                    break;
+
+                case LTSOps::OpADD:
+                    if (CheckAllConstant(SimpChildren)) {
+                        i64 SumVal = 0;
+                        for (auto const& Exp : SimpChildren) {
+                            auto Val = boost::lexical_cast<i64>(Exp->template 
+                                                                SAs<ConstExpression>()->GetConstValue());
+                            SumVal += Val;
+                        }
+                        ExpStack.push_back(new ConstExpression<E, S>(nullptr, to_string(SumVal), 2));
+                    } else {
+                        auto&& RedChildren = PurgeInt(SimpChildren, 0);
+                        if (RedChildren.size() == 1) {
+                            ExpStack.push_back(RedChildren[0]);
+                        } else {
+                            ExpStack.push_back(MakeOpExp(OpCode, RedChildren, ExtData));
+                        }
+                    }
+                    break;
+
+                case LTSOps::OpSUB:
+                    if (CheckAllConstant(SimpChildren)) {
+                        i64 DiffVal = (boost::lexical_cast<i64>(SimpChildren[0]->template
+                                                                SAs<ConstExpression>()->GetConstValue()) -
+                                       boost::lexical_cast<i64>(SimpChildren[1]->template 
+                                                                SAs<ConstExpression>()->GetConstValue()));
+                        ExpStack.push_back(new ConstExpression<E, S>(nullptr, to_string(DiffVal), 2));
+                    } else {
+                        if (SimpChildren[1]->template As<ConstExpression>() != nullptr &&
+                            boost::lexical_cast<i64>(SimpChildren[1]->template 
+                                                     SAs<ConstExpression>()->GetConstValue()) == 0) {
+                            ExpStack.push_back(SimpChildren[0]);
+                        } else {
+                            ExpStack.push_back(MakeOpExp(OpCode, SimpChildren, ExtData));
+                        }
+                    }
+                    break;
+
+                case LTSOps::OpMINUS:
+                    if (CheckAllConstant(SimpChildren)) {
+                        i64 Val = boost::lexical_cast<i64>(SimpChildren[0]->template
+                                                           SAs<ConstExpression>()->GetConstValue());
+                        Val = -Val;
+                        ExpStack.push_back(new ConstExpression<E, S>(nullptr, to_string(Val), 2));
+                    } else {
+                        ExpStack.push_back(MakeOpExp(OpCode, SimpChildren, ExpStack));
+                    }
+                    break;
+
+                case LTSOps::OpMUL:
+                    if (CheckAllConstant(SimpChildren)) {
+                        i64 ProdVal = 1;
+                        for (auto const& Exp : SimpChildren) {
+                            auto Val = boost::lexical_cast<i64>(Exp->template 
+                                                                SAs<ConstExpression>()->GetConstValue());
+                            ProdVal *= Val;
+                        }
+                        ExpStack.push_back(new ConstExpression<E, S>(nullptr, to_string(ProdVal), 2));
+                    } else {
+                        if (HasInt(SimpChildren, 0)) {
+                            ExpStack.push_back(new ConstExpression<E, S>(nullptr, "0", 2));
+                        } else {
+                            auto&& RedChildren = PurgeInt(SimpChildren, 1);
+                            if (RedChildren.size() == 1) {
+                                ExpStack.push_back(RedChildren[0]);
+                            } else {
+                                ExpStack.push_back(MakeOpExp(OpCode, RedChildren, ExtData));
+                            }
+                        }
+                    }
+                    break;
+
+                case LTSOps::OpDIV:
+                case LTSOps::OpMOD:
+                    if (CheckAllConstant(SimpChildren)) {
+                        i64 DivVal;
+                        if (OpCode == LTSOps::OpDIV) {
+                            DivVal = (boost::lexical_cast<i64>(SimpChildren[0]->template 
+                                                               SAs<ConstExpression>()->GetConstValue()) /
+                                      boost::lexical_cast<i64>(SimpChildren[1]->template
+                                                               SAs<ConstExpression>()->GetConstValue()));
+                        } else {
+                            DivVal = (boost::lexical_cast<i64>(SimpChildren[0]->template 
+                                                               SAs<ConstExpression>()->GetConstValue()) %
+                                      boost::lexical_cast<i64>(SimpChildren[1]->template
+                                                               SAs<ConstExpression>()->GetConstValue()));
+                            
+                        }
+                        ExpStack.push_back(new ConstExpression<E, S>(nullptr, to_string(DivVal), 2));
+                    } else {
+                        if (SimpChildren[1]->template As<ConstExpression>() != nullptr) {
+                            auto Val = boost::lexical_cast<i64>(SimpChildren[1]->template 
+                                                                SAs<ConstExpression>()->GetConstValue());
+                            if (Val == 0) {
+                                throw ExprTypeError("Division by zero during simplification");
+                            } else if (Val == 1) {
+                                if (OpCode == LTSOps::OpMOD) {
+                                    ExpStack.push_back(new ConstExpression<E, S>(nullptr, "0", 2));
+                                } else {
+                                    ExpStack.push_back(SimpChildren[0]);
+                                }
+                            }
+                        } else {
+                            ExpStack.push_back(MakeOpExp(OpCode, SimpChildren, ExtData));
+                        }
+                    }
+                    break;
+                    
+                case LTSOps::OpGT:
+                case LTSOps::OpGE:
+                case LTSOps::OpLT:
+                case LTSOps::OpLE:
+                    if (CheckAllConstant(SimpChildren)) {
+                        auto Val1 = boost::lexical_cast<i64>(SimpChildren[0]->template
+                                                             SAs<ConstExpression>()->GetConstValue());
+                        auto Val2 = boost::lexical_cast<i64>(SimpChildren[1]->template
+                                                             SAs<ConstExpression>()->GetConstValue());
+                        string ResString;
+                        if (OpCode == LTSOps::OpGT) {
+                            ResString = Val1 > Val2 ? "true" : "false"; 
+                        } else if (OpCode == LTSOps::OpGE) {
+                            ResString = Val1 >= Val2 ? "true" : "false"; 
+                        } else if (OpCode == LTSOps::OpLT) {
+                            ResString = Val1 < Val2 ? "true" : "false"; 
+                        } else /* if (OpCode == LTSOps::OpLE) */ {
+                            ResString = Val1 <= Val2 ? "true" : "false"; 
+                        }
+                        
+                        ExpStack.push_back(new ConstExpression<E, S>(nullptr, ResString, 1));
+                    } else {
+                        ExpStack.push_back(MakeOpExp(OpCode, SimpChildren, ExtData));
+                    }
+                    break;
+
+                default:
+                    ExpStack.push_back(MakeOpExp(OpCode, SimpChildren, ExtData));
+
                 }
-                
             }
 
             template <typename E, template <typename> class S>
             inline void
             Simplifier<E, S>::VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
             {
-
+                Exp->GetQExpression()->Accept(this);
+                auto NewQExpr = ExpStack.back();
+                ExpStack.pop_back();
+                if (Exp->IsForAll()) {
+                    ExpStack.push_back(new AQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
+                                                                       NewQExpr, Exp->ExtensionData));
+                } else {
+                    ExpStack.push_back(new EQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
+                                                                       NewQExpr, Exp->ExtensionData));
+                }
             }
 
             template <typename E, template <typename> class S>
             inline void
             Simplifier<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
             {
-
+                VisitQuantifiedExpression(Exp);
             }
 
             template <typename E, template <typename> class S>
             inline void
             Simplifier<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
             {
-
+                VisitQuantifiedExpression(Exp);
             }
 
             template <typename E, template <typename> class S>
             inline typename Simplifier<E, S>::ExpT 
             Simplifier<E, S>::Do(const ExpT& Exp)
             {
-
+                Simplifier<E, S> TheSimplifier;
+                Exp->Accept(&TheSimplifier);
+                return TheSimplifier.ExpStack[0];
             }
-                        
+
         } /* end namespace Detail */
  
         template <typename E>
@@ -1105,7 +1355,16 @@ namespace ESMC {
         {
         private:
             typedef RefCache<LTSTypeBase, LTSTypePtrHasher, LTSTypePtrEquals> TypeCacheT;
+
+            template <typename S>
+            using MyType = ESMC::LTS::LTSTermSemanticizer<S>;
+
+            TypeCacheT TypeCache;
+            Detail::IDToTypeMapT TypeMap;
+            Detail::UFID2TypeMapT UFMap;
+            unordered_map<string, i64> UFNameToIDMap;
             UIDGenerator UFUIDGen;
+            UIDGenerator TypeUIDGen;
             
         public:
             typedef Detail::LTSOps Ops;
@@ -1115,7 +1374,7 @@ namespace ESMC {
             LTSTermSemanticizer();
             ~LTSTermSemanticizer();
 
-            template <typename... ArgTypes>
+            template <typename T, typename... ArgTypes>
             inline i64 MakeType(ArgTypes&&... Args);
 
             inline void TypeCheck(const ExpT& Exp) const;
@@ -1134,6 +1393,136 @@ namespace ESMC {
             inline ExpT ElimQuantifiers(const ExpT& Exp);
         };
 
+        
+        // Implementation of LTSTermSemanticizer
+
+        template <typename E>
+        LTSTermSemanticizer<E>::LTSTermSemanticizer()
+            : UFUIDGen(Detail::LTSOps::UFOffset), TypeUIDGen(1)
+        {
+            // Create the int and the bool types
+            auto BoolType = new LTSBoolType();
+            auto BoolRef = TypeCache.Get(BoolType);
+            auto BoolID = BoolRef->GetOrSetTypeID();
+            TypeMap[BoolID] = BoolRef;
+
+            auto IntType = new LTSIntType();
+            auto IntRef = TypeCache.Get(IntType);
+            auto IntID = IntRef->GetOrSetTypeID();
+            TypeMap[IntID] = IntRef;
+        }
+
+        template <typename E>
+        LTSTermSemanticizer<E>::~LTSTermSemanticizer()
+        {
+            // Nothing here
+        }
+
+        template <typename E>
+        template <typename T, typename... ArgTypes>
+        inline i64 LTSTermSemanticizer<E>::MakeType(ArgTypes&&... Args)
+        {
+            auto Type = new T(forward<ArgTypes>(Args)...);
+            auto TRef = TypeCache.Get(Type);
+            auto TypeID = TRef.GetOrSetTypeID();
+            if (TypeMap.find(TypeID) == TypeMap.end()) {
+                TypeMap[TypeID] = TRef;
+            }
+            return TypeID;
+        }
+
+        template <typename E>
+        inline void LTSTermSemanticizer<E>::TypeCheck(const ExpT& Exp) const
+        {
+            Detail::TypeChecker<E, MyType>::Do(Exp, UFMap, TypeMap);
+        }
+
+        template <typename E>
+        inline typename LTSTermSemanticizer<E>::ExpT
+        LTSTermSemanticizer<E>::Canonicalize(const ExpT& Exp)
+        {
+            return Detail::Canonicalizer<E, MyType>::Do(Exp);
+        }
+
+        template <typename E>
+        inline typename LTSTermSemanticizer<E>::ExpT
+        LTSTermSemanticizer<E>::Simplify(const ExpT& Exp)
+        {
+            return Detail::Simplifier<E, MyType>::Do(Exp);
+        }
+        
+        template <typename E>
+        inline string
+        LTSTermSemanticizer<E>::ExprToString(const ExpT& Exp) const
+        {
+            return Detail::Stringifier<E, MyType>::Do(Exp, UFMap, TypeMap);
+        }
+
+        template <typename E>
+        inline string
+        LTSTermSemanticizer<E>::TypeToString(i64 TypeID) const
+        {
+            return Detail::Stringifier<E, MyType>::TypeToString(TypeID, TypeMap);
+        }
+
+        template <typename E>
+        inline i64 
+        LTSTermSemanticizer<E>::RegisterUninterpretedFunction(const string& Name,
+                                                              const vector<i64>& DomTypes,
+                                                              i64 RangeType)
+        {
+            auto MangledName = Exprs::SemUtils::MangleName(Name, DomTypes);
+            if (UFNameToIDMap.find(MangledName) == UFNameToIDMap.end()) {
+                const u32 NumArgs = DomTypes.size();
+                vector<LTSTypeRef> DomVec(NumArgs);
+                for (u32 i = 0; i < NumArgs; ++i) {
+                    auto it = TypeMap.find(DomTypes[i]);
+                    if (it == TypeMap.end()) {
+                        throw Exprs::ExprTypeError((string)"Unknown type " + 
+                                                   to_string(DomTypes[i]) + 
+                                                   " when creating uninterpreted function");
+                    }
+                    DomVec[i] = it->second;
+                }
+
+                auto it = TypeMap.find(RangeType);
+                if (it == TypeMap.end()) {
+                        throw Exprs::ExprTypeError((string)"Unknown type " + 
+                                                   to_string(RangeType) + 
+                                                   " when creating uninterpreted function");
+                }
+                
+                auto TypeRef = MakeType<LTSFuncType>(Name, DomVec, it->second);
+                auto UFID = UFUIDGen.GetUID();
+                UFNameToIDMap[MangledName] = UFID;
+                UFMap[UFID] = TypeRef;
+                return UFID;
+            } else {
+                auto it = UFNameToIDMap.find(MangledName);
+                auto UFID = it->second;
+                auto it2 = UFMap.find(UFID);
+                assert(it2 != UFMap.end());
+                
+                auto it3 = TypeMap.find(RangeType);
+                if (it3 == TypeMap.end()) {
+                    throw Exprs::ExprTypeError((string)"Unknown type " + 
+                                               to_string(RangeType) + 
+                                               " when creating uninterpreted function");
+                }
+                
+                auto Type = it3->second->As<LTSFuncType>();
+                assert (Type != nullptr);
+                if (Type->GetFuncType()->GetTypeID() != RangeType) {
+                    throw Exprs::ExprTypeError((string)"Redeclaration of function " + 
+                                               Name + 
+                                               " with variant return type");
+                }
+                return UFID;
+            }
+        }
+
+        
+        
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
