@@ -43,8 +43,8 @@ esmc_LIB_PATHS= \
 
 PROJECT_LIBS=esmc
 libesmc_OBJS= \
+	LTSTermSemanticizer.o \
 	LTSTypes.o \
-	SemanticizerUtils.o \
 	UIDGenerator.o \
 	Z3Semanticizer.o \
 

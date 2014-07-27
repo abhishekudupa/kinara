@@ -47,7 +47,7 @@
 namespace ESMC {
     namespace LTS {
 
-        UIDGenerator LTSTypeBase::LTSTypeUIDGen;
+        UIDGenerator LTSTypeBase::LTSTypeUIDGen(1);
 
         LTSTypeBase::LTSTypeBase()
             : TypeID(-1)
@@ -664,17 +664,14 @@ namespace ESMC {
         }
 
         LTSParametricType::LTSParametricType(const LTSTypeRef& BaseType,
-                                             const vector<LTSTypeRef>& ParameterTypes)
-            : LTSTypeBase(), BaseType(BaseType), ParameterTypes(ParameterTypes)
+                                             const LTSTypeRef& ParameterType)
+            : LTSTypeBase(), BaseType(BaseType), ParameterType(ParameterType)
         {
-            // Args must be subrange, symmetric or enum types
-            for (auto const& Arg : ParameterTypes) {
-                if (Arg->As<LTSEnumType>() == nullptr &&
-                    Arg->As<LTSRangeType>() == nullptr &&
-                    Arg->As<LTSSymmetricType>() == nullptr) {
-                    throw ESMCError((string)"Parameteric types must have enum, range " + 
-                                    "or symmetric types as type parameters");
-                }
+            if (ParameterType->As<LTSEnumType>() == nullptr &&
+                ParameterType->As<LTSRangeType>() == nullptr &&
+                ParameterType->As<LTSSymmetricType>() == nullptr) {
+                throw ESMCError((string)"Parameteric types must have enum, range " + 
+                                "or symmetric types as type parameters");
             }
         }
 
@@ -688,26 +685,22 @@ namespace ESMC {
             return BaseType;
         }
 
-        const vector<LTSTypeRef>& LTSParametricType::GetParameterTypes() const
+        const LTSTypeRef& LTSParametricType::GetParameterTypes() const
         {
-            return ParameterTypes;
+            return ParameterType;
         }
 
         void LTSParametricType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, BaseType->Hash());
-            for (auto const& Type : ParameterTypes) {
-                boost::hash_combine(HashCode, Type->Hash());
-            }
+            boost::hash_combine(HashCode, ParameterType->Hash());
         }
 
         string LTSParametricType::ToString() const
         {
             string Retval = "(ParamType : ";
-            for (auto const& Type : ParameterTypes) {
-                Retval += (Type->ToString() + " -> ");
-            }
+            Retval += (ParameterType->ToString() + " -> ");
             Retval += (BaseType->ToString() + ")");
             return Retval;
         }
@@ -737,19 +730,94 @@ namespace ESMC {
             if (Cmp != 0) {
                 return Cmp;
             }
-            
-            if (ParameterTypes.size() < OtherAsPar->ParameterTypes.size()) {
-                return -1;
-            } else if (ParameterTypes.size() > OtherAsPar->ParameterTypes.size()) {
+
+            return (ParameterType->Compare(*OtherAsPar->ParameterType));
+        }
+
+        LTSFieldAccessType::LTSFieldAccessType()
+            : LTSTypeBase()
+        {
+            // Nothing here
+        }
+
+        LTSFieldAccessType::~LTSFieldAccessType()
+        {
+            // Nothing here
+        }
+
+        void LTSFieldAccessType::ComputeHashValue() const
+        {
+            HashCode = 0;
+            boost::hash_combine(HashCode, "FieldAccessType");
+        }
+
+        i32 LTSFieldAccessType::Compare(const LTSTypeBase& Other) const
+        {
+            if (Other.As<LTSBoolType>() != nullptr ||
+                Other.As<LTSIntType>() != nullptr ||
+                Other.As<LTSRangeType>() != nullptr ||
+                Other.As<LTSEnumType> () != nullptr ||
+                Other.As<LTSSymmetricType>() != nullptr ||
+                Other.As<LTSFuncType> () != nullptr || 
+                Other.As<LTSArrayType>() != nullptr ||
+                Other.As<LTSRecordType>() != nullptr ||
+                Other.As<LTSParametricType>() != nullptr) {
                 return 1;
+            }
+
+            if (Other.As<LTSFieldAccessType>() == nullptr) {
+                return -1;
             } else {
-                for (u32 i = 0; i < ParameterTypes.size(); ++i) {
-                    Cmp = ParameterTypes[i]->Compare(*(OtherAsPar->ParameterTypes[i]));
-                    if (Cmp != 0) {
-                        return Cmp;
-                    }
-                }
                 return 0;
+            }
+        }
+
+        string LTSFieldAccessType::ToString() const
+        {
+            return "(FieldAccessType)";
+        }
+
+        LTSUndefType::LTSUndefType()
+            : LTSTypeBase()
+        {
+            // NOthing here
+        }
+
+        LTSUndefType::~LTSUndefType()
+        {
+            // Nothing here
+        }
+
+        void LTSUndefType::ComputeHashValue() const
+        {
+            HashCode = 0;
+            boost::hash_combine(HashCode, "UndefType");
+        }
+
+        string LTSUndefType::ToString() const
+        {
+            return "(UndefType)";
+        }
+
+        i32 LTSUndefType::Compare(const LTSTypeBase& Other) const
+        {
+            if (Other.As<LTSBoolType>() != nullptr ||
+                Other.As<LTSIntType>() != nullptr ||
+                Other.As<LTSRangeType>() != nullptr ||
+                Other.As<LTSEnumType> () != nullptr ||
+                Other.As<LTSSymmetricType>() != nullptr ||
+                Other.As<LTSFuncType> () != nullptr || 
+                Other.As<LTSArrayType>() != nullptr ||
+                Other.As<LTSRecordType>() != nullptr ||
+                Other.As<LTSParametricType>() != nullptr ||
+                Other.As<LTSFieldAccessType>() != nullptr) {
+                return 1;
+            }
+
+            if (Other.Is<LTSUndefType>()) {
+                return 0;
+            } else {
+                return -1;
             }
         }
 

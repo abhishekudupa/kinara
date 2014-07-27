@@ -99,7 +99,7 @@ namespace ESMC {
                 return Exp1->FastEQ(Exp2);
             }
         };
-
+ 
 
         class ExpressionPtrHasher
         {
@@ -184,7 +184,7 @@ namespace ESMC {
         private:
             ExprMgr<E, S>* Mgr;
             mutable bool HashValid;
-            mutable i64 ExpType;
+            mutable typename S<E>::TypeT ExpType;
 
         public:
             mutable E ExtensionData;
@@ -199,8 +199,8 @@ namespace ESMC {
 
             inline ExprMgr<E, S>* GetMgr() const;
             inline u64 Hash() const;
-            inline i64 GetType() const;
-            inline void SetType(i64 Type) const;
+            inline const typename S<E>::TypeT& GetType() const;
+            inline void SetType(const typename S<E>::TypeT& Type) const;
             inline bool Equals(const ExpressionBase<E, S>* Other) const;
             inline bool NEquals(const ExpressionBase<E, S>* Other) const;
             inline bool LT(const ExpressionBase<E, S>* Other) const;
@@ -316,17 +316,17 @@ namespace ESMC {
         {
         private:
             string ConstValue;
-            i64 ConstType;
+            typename S<E>::TypeT ConstType;
 
         public:
             inline ConstExpression(ExprMgr<E, S>* Mgr,
                                    const string& ConstValue,
-                                   i64 ConstType, 
+                                   const typename S<E>::TypeT& ConstType, 
                                    const E& ExtData = E());
             inline virtual ~ConstExpression();
 
             inline const string& GetConstValue() const;
-            inline i64 GetConstType() const;
+            inline const typename S<E>::TypeT&  GetConstType() const;
 
         protected:
             inline virtual void ComputeHash() const override;
@@ -342,16 +342,16 @@ namespace ESMC {
         {
         private:
             string VarName;
-            i64 VarType;
+            typename S<E>::TypeT VarType;
 
         public:
             inline VarExpression(ExprMgr<E, S>* Manager, 
                                  const string& VarName,
-                                 i64 VarType, 
+                                 const typename S<E>::TypeT& VarType, 
                                  const E& ExtData = E());
             inline virtual ~VarExpression();
             inline const string& GetVarName() const;
-            inline i64 GetVarType() const;
+            inline const typename S<E>::TypeT& GetVarType() const;
 
         protected:
             inline virtual void ComputeHash() const override;
@@ -365,16 +365,17 @@ namespace ESMC {
         class BoundVarExpression : public ExpressionBase<E, S>
         {
         private:
-            i64 VarType;
+            typename S<E>::TypeT VarType;
             u64 VarIdx;
 
         public:
             inline BoundVarExpression(ExprMgr<E, S>* Manager, 
-                                      i64 VarType, i64 VarIdx,
+                                      const typename S<E>::TypeT& VarType, 
+                                      i64 VarIdx,
                                       const E& ExtData = E());
             inline virtual ~BoundVarExpression();
             inline u64 GetVarIdx() const;
-            inline i64 GetVarType() const;
+            inline const typename S<E>::TypeT& GetVarType() const;
         
         protected:
             inline virtual void ComputeHash() const override;
@@ -416,16 +417,16 @@ namespace ESMC {
         class QuantifiedExpressionBase : public ExpressionBase<E, S>
         {
         private:
-            vector<i64> QVarTypes;
+            vector<typename S<E>::TypeT> QVarTypes;
             Expr<E, S> QExpression;
 
         public:
             inline QuantifiedExpressionBase(ExprMgr<E, S>* Manager,
-                                            const vector<i64>& QVarTypes,
+                                            const vector<typename S<E>::TypeT>& QVarTypes,
                                             const Expr<E, S>& QExpression,
                                             const E& ExtData = E());
             inline virtual ~QuantifiedExpressionBase();
-            inline const vector<i64>& GetQVarTypes() const;
+            inline const vector<typename S<E>::TypeT>& GetQVarTypes() const;
             inline const Expr<E, S>& GetQExpression() const;
 
         protected:
@@ -536,6 +537,7 @@ namespace ESMC {
         public:
             typedef S<E> SemT;
             typedef typename SemT::LExpT LExpT;
+            typedef typename SemT::TypeT TypeT;
             typedef Expr<E, S> ExpT;
             typedef ExprI<E, S> IExpT;
 
@@ -553,7 +555,7 @@ namespace ESMC {
             inline void CheckMgr(const vector<ExpT>& Children) const;
             inline void CheckMgr(const ExpT& Exp) const;
             template <template <typename, template<typename> class> class T>
-            inline ExpT MakeQExpression(const vector<i64>& QVars,
+            inline ExpT MakeQExpression(const vector<TypeT>& QVars,
                                         const ExpT& QExpr,
                                         const E& ExtVal);
 
@@ -566,16 +568,16 @@ namespace ESMC {
             inline ExprMgr(ArgTypes&&... Args);
             inline ~ExprMgr();
             
-            template<typename... ArgTypes>
-            inline i64 MakeType(ArgTypes&&... Args);
+            template<typename T, typename... ArgTypes>
+            inline TypeT MakeType(ArgTypes&&... Args);
 
-            inline ExpT MakeVal(const string& ValString, i64 ValType, 
+            inline ExpT MakeVal(const string& ValString, const TypeT& ValType,
                                 const E& ExtVal = E());
             
-            inline ExpT MakeVar(const string& VarName, i64 VarType,
+            inline ExpT MakeVar(const string& VarName, const TypeT& VarType,
                                 const E& ExtVal = E());
 
-            inline ExpT MakeBoundVar(i64 VarType, i64 VarIdx,
+            inline ExpT MakeBoundVar(const TypeT& VarType, i64 VarIdx,
                                      const E& ExtVal = E());
 
             inline ExpT MakeExpr(i64 OpCode, const vector<ExpT>& Children,
@@ -592,17 +594,17 @@ namespace ESMC {
                                  const ExpT& Child2, const ExpT& Child3,
                                  const E& ExtVal = E());
 
-            inline ExpT MakeExists(const vector<i64>& QVarTypes, 
+            inline ExpT MakeExists(const vector<TypeT>& QVarTypes, 
                                    const ExpT& QExpr,
                                    const E& ExtVal = E());
 
-            inline ExpT MakeForAll(const vector<i64>& QVarTypes,
+            inline ExpT MakeForAll(const vector<TypeT>& QVarTypes,
                                    const ExpT& QExpr,
                                    const E& ExtVal = E());
 
             inline i64 MakeUninterpretedFunction(const string& Name, 
-                                                 const vector<i64>& Range,
-                                                 i64 Domain);
+                                                 const vector<TypeT>& Range,
+                                                 const TypeT& Domain);
 
             template <template <typename, template <typename> class> class T, 
                       typename... ArgTypes>
@@ -1004,7 +1006,7 @@ namespace ESMC {
         inline ExpressionBase<E, S>::ExpressionBase(ExprMgr<E, S>* Manager,
                                                     const E& ExtVal)
             : Mgr(Manager), HashValid(false),
-              ExpType(-1), ExtensionData(ExtVal),
+              ExpType(S<E>::InvalidType), ExtensionData(ExtVal),
               HashCode(0)
         {
             // Nothing here
@@ -1034,13 +1036,15 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline i64 ExpressionBase<E, S>::GetType() const
+        inline const typename S<E>::TypeT& 
+        ExpressionBase<E, S>::GetType() const
         {
             return ExpType;
         }
 
         template <typename E, template <typename> class S>
-        inline void ExpressionBase<E, S>::SetType(i64 Type) const
+        inline void 
+        ExpressionBase<E, S>::SetType(const typename S<E>::TypeT& Type) const
         {
             ExpType = Type;
         }
@@ -1268,7 +1272,7 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline ConstExpression<E, S>::ConstExpression(ExprMgr<E, S>* Manager, 
                                                       const string& ConstValue,
-                                                      i64 ConstType, 
+                                                      const typename S<E>::TypeT& ConstType, 
                                                       const E& ExtVal)
             : ExpressionBase<E, S>(Manager, ExtVal), 
               ConstValue(ConstValue), 
@@ -1290,7 +1294,8 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline i64 ConstExpression<E, S>::GetConstType() const
+        inline const typename S<E>::TypeT& 
+        ConstExpression<E, S>::GetConstType() const
         {
             return ConstType;
         }
@@ -1320,7 +1325,6 @@ namespace ESMC {
         inline void ConstExpression<E, S>::ComputeHash() const
         {
             boost::hash_combine(this->HashCode, ConstValue);
-            boost::hash_combine(this->HashCode, ConstType);
         }
 
         template <typename E, template <typename> class S>
@@ -1333,7 +1337,7 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline VarExpression<E, S>::VarExpression(ExprMgr<E, S>* Manager, 
                                                   const string& VarName,
-                                                  i64 VarType, 
+                                                  const typename S<E>::TypeT& VarType, 
                                                   const E& ExtVal)
             : ExpressionBase<E, S>(Manager, ExtVal),
               VarName(VarName), VarType(VarType)
@@ -1354,7 +1358,8 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline i64 VarExpression<E, S>::GetVarType() const
+        inline const typename S<E>::TypeT&
+        VarExpression<E, S>::GetVarType() const
         {
             return VarType;
         }
@@ -1380,7 +1385,7 @@ namespace ESMC {
             } else if (VarType < OtherAsVar->VarType) {
                 return -1;
             } else if (VarType > OtherAsVar->VarType) {
-                return 1;
+                return 1; 
             } else {
                 return 0;
             }
@@ -1390,7 +1395,6 @@ namespace ESMC {
         inline void VarExpression<E, S>::ComputeHash() const
         {
             boost::hash_combine(this->HashCode, VarName);
-            boost::hash_combine(this->HashCode, VarType);
         }
 
         template <typename E, template <typename> class S>
@@ -1403,7 +1407,8 @@ namespace ESMC {
         // BoundVarExpression implementation
         template <typename E, template <typename> class S>
         inline BoundVarExpression<E, S>::BoundVarExpression(ExprMgr<E, S>* Manager, 
-                                                            i64 VarType, i64 VarIdx,
+                                                            const typename S<E>::TypeT& VarType, 
+                                                            i64 VarIdx,
                                                             const E& ExtVal)
             : ExpressionBase<E, S>(Manager, ExtVal),
               VarType(VarType), VarIdx(VarIdx)
@@ -1424,7 +1429,8 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline i64 BoundVarExpression<E, S>::GetVarType() const
+        inline const typename S<E>::TypeT& 
+        BoundVarExpression<E, S>::GetVarType() const
         {
             return VarType;
         }        
@@ -1458,7 +1464,6 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline void BoundVarExpression<E, S>::ComputeHash() const
         {
-            boost::hash_combine(this->HashCode, VarType);
             boost::hash_combine(this->HashCode, VarIdx);
         }
 
@@ -1574,7 +1579,7 @@ namespace ESMC {
         inline QuantifiedExpressionBase<E, S>::QuantifiedExpressionBase
         (
          ExprMgr<E, S>* Manager,
-         const vector<i64>& QVarTypes,
+         const vector<typename S<E>::TypeT>& QVarTypes,
          const Expr<E, S>& QExpression,
          const E& ExtVal
          )
@@ -1590,7 +1595,8 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline const vector<i64>& QuantifiedExpressionBase<E, S>::GetQVarTypes() const
+        inline const vector<typename S<E>::TypeT>& 
+        QuantifiedExpressionBase<E, S>::GetQVarTypes() const
         {
             return QVarTypes;
         }
@@ -1624,10 +1630,7 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline void QuantifiedExpressionBase<E, S>::ComputeHashInternal() const
         {
-            for (auto const& QVarType : QVarTypes) {
-                boost::hash_combine(this->HashCode, QVarType);
-            }
-        
+            boost::hash_combine(this->HashCode, QVarTypes.size());
             boost::hash_combine(this->HashCode, QExpression->Hash());
         }
 
@@ -1796,10 +1799,11 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        template <typename... ArgTypes>
-        i64 ExprMgr<E, S>::MakeType(ArgTypes&&... Args)
+        template <typename T, typename... ArgTypes>
+        inline typename ExprMgr<E, S>::TypeT
+        ExprMgr<E, S>::MakeType(ArgTypes&&... Args)
         {
-            return Sem->MakeType(forward<ArgTypes>(Args)...);
+            return Sem->MakeType<T>(forward<ArgTypes>(Args)...);
         }
 
         template <typename E, template <typename> class S>
@@ -1863,7 +1867,7 @@ namespace ESMC {
 
         template <typename E, template<typename> class S>
         inline typename ExprMgr<E, S>::ExpT 
-        ExprMgr<E, S>::MakeVal(const string& ValString, i64 ValType,
+        ExprMgr<E, S>::MakeVal(const string& ValString, const TypeT& ValType,
                                const E& ExtVal)
         {
             auto TrimmedValString = boost::algorithm::trim_copy(ValString);
@@ -1877,7 +1881,7 @@ namespace ESMC {
 
         template <typename E, template <typename> class S>
         inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeVar(const string& VarName, i64 VarType,
+        ExprMgr<E, S>::MakeVar(const string& VarName, const TypeT& VarType,
                                const E& ExtVal)
         {
             auto Retval = 
@@ -1888,7 +1892,7 @@ namespace ESMC {
 
         template <typename E, template <typename> class S>
         inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeBoundVar(i64 VarType,
+        ExprMgr<E, S>::MakeBoundVar(const TypeT& VarType,
                                     i64 VarUID, const E& ExtVal)
         {
             auto Retval =
@@ -1948,7 +1952,7 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         template <template <typename, template <typename> class> class T>
         inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeQExpression(const vector<i64>& QVarTypes,
+        ExprMgr<E, S>::MakeQExpression(const vector<TypeT>& QVarTypes,
                                        const ExpT& QExpr,
                                        const E& ExtVal)
         {
@@ -1961,7 +1965,7 @@ namespace ESMC {
 
         template <typename E, template <typename> class S>
         inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeExists(const vector<i64>& QVarTypes,
+        ExprMgr<E, S>::MakeExists(const vector<TypeT>& QVarTypes,
                                   const ExpT& QExpr,
                                   const E& ExtVal)
         {
@@ -1970,7 +1974,7 @@ namespace ESMC {
 
         template <typename E, template <typename> class S>
         inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeForAll(const vector<i64>& QVarTypes,
+        ExprMgr<E, S>::MakeForAll(const vector<TypeT>& QVarTypes,
                                   const ExpT& QExpr,
                                   const E& ExtVal)
         {
@@ -1979,8 +1983,8 @@ namespace ESMC {
 
         template <typename E, template <typename> class S>
         inline i64 ExprMgr<E, S>::MakeUninterpretedFunction(const string& Name,
-                                                            const vector<i64>& Domain,
-                                                            i64 Range)
+                                                            const vector<TypeT>& Domain,
+                                                            const TypeT& Range)
         {
             return Sem->RegisterUninterpretedFunction(Name, Domain, Range);
         }

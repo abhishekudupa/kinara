@@ -79,10 +79,13 @@ namespace ESMC {
         const i64 Z3SemOps::IntType;
         const i64 Z3SemOps::BVTypeAll;
 
+
         namespace Detail {
             
             // Prefix for bound variables
             const string BoundVarPrefix = "dbvar";
+
+            const i64 InvalidType = -1;
 
             // Definition of the OpCodeToNameMap
             const unordered_map<i64, string> OpCodeToNameMap = 
@@ -234,6 +237,74 @@ namespace ESMC {
             {
                 Out << Exp.ToString();
                 return Out;
+            }
+
+            UFDescriptor::UFDescriptor()
+                : RangeType(-1), Name(""), MangledName("")
+            {
+                // Nothing here
+            }
+
+            UFDescriptor::UFDescriptor(const UFDescriptor& Other) 
+                : Identifier(Other.Identifier), 
+                  DomainTypes(Other.DomainTypes), RangeType(Other.RangeType), 
+                  Name(Other.Name), MangledName(Other.MangledName)
+            {
+                // Nothing here
+            }
+
+            UFDescriptor::UFDescriptor(i64 Identifier,
+                                       const vector<i64>& DomainTypes,
+                                       const i64 RangeType,
+                                       const string& Name)
+                : Identifier(Identifier),
+                  DomainTypes(DomainTypes), RangeType(RangeType),
+                  Name(Name), MangledName(MangleName(Name, DomainTypes))
+            {
+                // Nothing here
+            }
+
+            UFDescriptor::~UFDescriptor()
+            {
+                // Nothing here
+            }
+
+            UFDescriptor& UFDescriptor::operator = (const UFDescriptor& Other)
+            {
+                if (&Other == this) {
+                    return *this;
+                }
+                Identifier = Other.Identifier;
+                DomainTypes = Other.DomainTypes;
+                RangeType = Other.RangeType;
+                Name = Other.Name;
+                MangledName = Other.MangledName;
+                return *this;
+            }
+
+            const vector<i64>& UFDescriptor::GetDomainTypes() const
+            {
+                return DomainTypes;
+            }
+
+            i64 UFDescriptor::GetRangeType() const
+            {
+                return RangeType;
+            }
+
+            const string& UFDescriptor::GetName() const
+            {
+                return Name;
+            }
+
+            const string& UFDescriptor::GetMangledName() const
+            {
+                return MangledName;
+            }
+
+            i64 UFDescriptor::GetIdentifier() const
+            {
+                return Identifier;
             }
 
         } /* end namespace Detail */

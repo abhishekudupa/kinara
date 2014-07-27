@@ -168,6 +168,14 @@ else
 	$(LD) -shared $(OPTFLAGS) $(LDFLAGS) $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS)) \
 	-o $(LIB_DIR)/lib$(1).so
 endif
+
+$(LIB_DIR)/lib$(1).a:	$(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS))
+ifeq "x$(VERBOSE_BUILD)" "x"
+	@echo "$(ARPRINTNAME) `basename $(LIB_DIR)/lib$(1).a`"; \
+	$(AR) rcs $(LIB_DIR)/lib$(1).a $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS))
+else 
+	$(AR) rcs $(LIB_DIR)/lib$(1).a $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS))
+endif
 endef
 
 
@@ -188,6 +196,7 @@ $(foreach lib, $(PROJECT_LIBS), \
 		$(eval $(OBJ_DIR)/$(obj) : $(OBJ_DIR)/$(obj:.o=.d))))
 
 QUALIFIED_PROJECT_LIBS=$(addsuffix .so, $(addprefix $(LIB_DIR)/lib, $(PROJECT_LIBS)))
+QUALIFIED_PROJECT_LIBS+=$(addsuffix .a, $(addprefix $(LIB_DIR)/lib, $(PROJECT_LIBS)))
 QUALIFIED_PROJECT_EXES=$(addprefix $(BIN_DIR)/, $(PROJECT_EXECUTABLES))
 
 toplevel: $(QUALIFIED_PROJECT_EXES) $(QUALIFIED_PROJECT_LIBS)

@@ -58,25 +58,25 @@ namespace ESMC {
                 virtual ~TypeInvalidator() {}
                 inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override
                 {
-                    Exp->SetType(-1);
+                    Exp->SetType(S<E>::InvalidType);
                 }
 
                 inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override
                 {
-                    Exp->SetType(-1);
+                    Exp->SetType(S<E>::InvalidType);
                 }
                 
                 
                 inline virtual void 
                 VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) override
                 {
-                    Exp->SetType(-1);
+                    Exp->SetType(S<E>::InvalidType);
                 }
                 
                 inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override
                 {
                     ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
-                    Exp->SetType(-1);
+                    Exp->SetType(S<E>::InvalidType);
                 }
 
                 inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
@@ -97,58 +97,6 @@ namespace ESMC {
                 }
             };
 
-            class UFDescriptor
-            {
-            private:
-                i64 Identifier;
-                vector<i64> DomainTypes;
-                i64 RangeType;
-                string Name;
-                string MangledName;
-
-            public:
-                UFDescriptor();
-                UFDescriptor(const UFDescriptor& Other);
-                UFDescriptor(i64 Identifier,
-                             const vector<i64>& DomainTypes, 
-                             i64 RangeType, const string& Name);
-                ~UFDescriptor();
-
-                UFDescriptor& operator = (const UFDescriptor& Other);
-                bool operator == (const UFDescriptor& Other);
-
-                const vector<i64>& GetDomainTypes() const;
-                i64 GetRangeType() const;
-                const string& GetName() const;
-                const string& GetMangledName() const;
-                i64 GetIdentifier() const;
-            };
-
-            static inline string MangleName(const string& Name, const vector<i64>& DomainTypes)
-            {
-                string Retval = Name;
-                for (auto const& DomType : DomainTypes) {
-                    Retval += "@" + to_string(DomType);
-                }
-                return Retval;
-            }
-
-            static inline i64 GetTypeForBoundVar(const vector<vector<i64>>& ScopeStack,
-                                                 i64 VarIdx)
-            {
-                i64 LeftIdx = VarIdx;
-                for (i64 i = ScopeStack.size(); i > 0; --i) {
-                    auto const& CurScope = ScopeStack[i - 1];
-                    const u32 CurScopeSize = CurScope.size();
-                    if (LeftIdx < (i64) CurScopeSize) {
-                        return CurScope[CurScopeSize - 1 - LeftIdx];
-                    } else {
-                        LeftIdx -= CurScopeSize;
-                    }
-                }
-                // Unbound variable
-                return -1;
-            }
             
         } /* end namespace SemUtils */
     } /* end namespace Exprs */

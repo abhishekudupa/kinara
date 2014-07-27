@@ -101,6 +101,12 @@ namespace ESMC {
             {
                 return static_cast<const T*>(this);
             }
+
+            template <typename T>
+            inline bool Is() const
+            {
+                return (dynamic_cast<const T*>(this) != nullptr);
+            }
         };
 
         class LTSBoolType : public LTSTypeBase
@@ -277,18 +283,46 @@ namespace ESMC {
         {
         private:
             LTSTypeRef BaseType;
-            vector<LTSTypeRef> ParameterTypes;
+            LTSTypeRef ParameterType;
 
         protected:
             virtual void ComputeHashValue() const override;
             
         public:
             LTSParametricType(const LTSTypeRef& BaseType,
-                              const vector<LTSTypeRef>& ParameterTypes);
+                              const LTSTypeRef& ParameterTypes);
             virtual ~LTSParametricType();
 
             const LTSTypeRef& GetBaseType() const;
-            const vector<LTSTypeRef>& GetParameterTypes() const;
+            const LTSTypeRef& GetParameterTypes() const;
+
+            virtual string ToString() const override;
+            virtual i32 Compare(const LTSTypeBase& Other) const override;
+        };
+
+        // A dummy type for field access terms variables
+        class LTSFieldAccessType : public LTSTypeBase
+        {
+        protected:
+            virtual void ComputeHashValue() const override;
+
+        public:
+            LTSFieldAccessType();
+            virtual ~LTSFieldAccessType();
+
+            virtual string ToString() const override;
+            virtual i32 Compare(const LTSTypeBase& Other) const override;
+        };
+
+        // Type for undef values
+        class LTSUndefType : public LTSTypeBase
+        {
+        protected:
+            virtual void ComputeHashValue() const override;
+            
+        public:
+            LTSUndefType();
+            virtual ~LTSUndefType();
 
             virtual string ToString() const override;
             virtual i32 Compare(const LTSTypeBase& Other) const override;
@@ -297,6 +331,7 @@ namespace ESMC {
 
         class LTSTypePtrHasher
         {
+        public:
             // inline u64 operator () (const LTSTypeBase* Type) const
             // {
             //     return Type->Hash();
@@ -310,6 +345,7 @@ namespace ESMC {
 
         class LTSTypePtrEquals
         {
+        public:
             // inline bool operator () (const LTSTypeBase* Type1,
             //                          const LTSTypeBase* Type2) const
             // {
@@ -325,6 +361,7 @@ namespace ESMC {
 
         class LTSTypePtrCompare
         {
+        public:
             // inline bool operator () (const LTSTypeBase* Type1,
             //                          const LTSTypeBase* Type2) const
             // {

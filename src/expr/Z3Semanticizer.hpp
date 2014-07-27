@@ -128,6 +128,60 @@ namespace ESMC {
             // map from opcodes to names
             extern const unordered_map<i64, string> OpCodeToNameMap;
             extern const string BoundVarPrefix;
+            extern const i64 InvalidType;
+
+            class UFDescriptor
+            {
+            private:
+                i64 Identifier;
+                vector<i64> DomainTypes;
+                i64 RangeType;
+                string Name;
+                string MangledName;
+
+            public:
+                UFDescriptor();
+                UFDescriptor(const UFDescriptor& Other);
+                UFDescriptor(i64 Identifier,
+                             const vector<i64>& DomainTypes, 
+                             i64 RangeType, const string& Name);
+                ~UFDescriptor();
+
+                UFDescriptor& operator = (const UFDescriptor& Other);
+                bool operator == (const UFDescriptor& Other);
+
+                const vector<i64>& GetDomainTypes() const;
+                i64 GetRangeType() const;
+                const string& GetName() const;
+                const string& GetMangledName() const;
+                i64 GetIdentifier() const;
+            };
+
+            static inline string MangleName(const string& Name, const vector<i64>& DomainTypes)
+            {
+                string Retval = Name;
+                for (auto const& DomType : DomainTypes) {
+                    Retval += "@" + to_string(DomType);
+                }
+                return Retval;
+            }
+
+            static inline i64 GetTypeForBoundVar(const vector<vector<i64>>& ScopeStack,
+                                                 i64 VarIdx)
+            {
+                i64 LeftIdx = VarIdx;
+                for (i64 i = ScopeStack.size(); i > 0; --i) {
+                    auto const& CurScope = ScopeStack[i - 1];
+                    const u32 CurScopeSize = CurScope.size();
+                    if (LeftIdx < (i64) CurScopeSize) {
+                        return CurScope[CurScopeSize - 1 - LeftIdx];
+                    } else {
+                        LeftIdx -= CurScopeSize;
+                    }
+                }
+                // Unbound variable
+                return -1;
+            }
             
             // A wrapper for ref counting Z3 contexts
             class Z3CtxWrapper : public RefCountable
@@ -175,8 +229,6 @@ namespace ESMC {
             };
 
             extern ostream& operator << (ostream& Out, const Z3Expr& Exp);
-
-            typedef SemUtils::UFDescriptor UFDescriptor;
 
             typedef unordered_map<i64, UFDescriptor> UFID2DMapT;
             typedef unordered_map<string, UFDescriptor> UFName2DMapT;
@@ -344,7 +396,7 @@ namespace ESMC {
             TypeCheckVisitor<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
             {
                 auto PrevType = Exp->GetType();
-                if (PrevType != -1) {
+                if (PrevType != InvalidType) {
                     return;
                 }
                 auto Type = Exp->GetVarType();
@@ -357,7 +409,7 @@ namespace ESMC {
             TypeCheckVisitor<E, S>::VisitConstExpression(const ConstExpression<E, S> *Exp)
             {
                 auto PrevType = Exp->GetType();
-                if (PrevType != -1) {
+                if (PrevType != InvalidType) {
                     return;
                 }
                 auto Type = Exp->GetConstType();
@@ -400,15 +452,15 @@ namespace ESMC {
             TypeCheckVisitor<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
            {
                 auto PrevType = Exp->GetType();
-                if (PrevType != -1) {
+                if (PrevType != InvalidType) {
                     return;
                 }
 
                 auto Type = Exp->GetVarType();
                 CheckType(Type);
                 auto Idx = Exp->GetVarIdx();
-                auto ExpectedType = SemUtils::GetTypeForBoundVar(ScopeStack, Idx);
-                if (ExpectedType != -1 && ExpectedType != Type) {
+                auto ExpectedType = GetTypeForBoundVar(ScopeStack, Idx);
+                if (ExpectedType != InvalidType && ExpectedType != Type) {
                     throw ExprTypeError((string)"Bound variable with index " + to_string(Idx) + 
                                         " has an ambiguous type");
                 }
@@ -427,7 +479,7 @@ namespace ESMC {
             {
                 if (Type < BVTypeOffset ||
                     Type >= BVTypeEnd) {
-                    return -1;
+                    return InvalidType;
                 }
                 return Type - BVTypeOffset;
             }
@@ -446,7 +498,7 @@ namespace ESMC {
                     return (ActualType == ExpectedType);
                 default:
                     if (ExpectedType == Z3SemOps::BVTypeAll) {
-                        return (CheckBVType(ActualType) != -1);
+                        return (CheckBVType(ActualType) != InvalidType);
                     } else if (ExpectedType >= BVTypeEnd) {
                         throw InternalError((string)"Strange type that should have been " + 
                                             "caught earlier: " + __FILE__ + ":" + 
@@ -462,15 +514,15 @@ namespace ESMC {
             TypeCheckVisitor<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
             {
                 auto PrevType = Exp->GetType();
-                if (PrevType != -1) {
+                if (PrevType != InvalidType) {
                     return;
                 }
 
-                i64 Type = -1;
+                i64 Type = InvalidType;
 
                 vector<i64> ChildTypes;
                 for (auto const& Child : Exp->GetChildren()) {
-                    if (Child->GetType() == -1) {
+                    if (Child->GetType() == InvalidType) {
                         Child->Accept(this);
                     }
                     ChildTypes.push_back(Child->GetType());
@@ -588,7 +640,7 @@ namespace ESMC {
                         throw ExprTypeError ("BVNOT op needs exactly one operand");
                     }
                     Type = CheckBVType(ChildTypes[0]);
-                    if (Type == -1) {
+                    if (Type == InvalidType) {
                         throw ExprTypeError ("BVNOT op expects a BV operand");
                     }
                     Exp->SetType(Type);
@@ -600,7 +652,7 @@ namespace ESMC {
                         throw ExprTypeError ("BVREDOR/BVREDAND ops need exactly one operand");
                     }
                     Type = CheckBVType(ChildTypes[0]);
-                    if (Type == -1) {
+                    if (Type == InvalidType) {
                         throw ExprTypeError ("BVREDOR/BVREDAND ops expect a BV operand");
                     }
                     Exp->SetType(Z3SemOps::BVTypeAll + 1);
@@ -613,7 +665,7 @@ namespace ESMC {
                         throw ExprTypeError ("BVAND/BVOR/BVXOR ops need exactly two operands");
                     }
                     if (!all_of(ChildTypes.begin(), ChildTypes.end(),
-                                [](i64 i) { return (CheckBVType(i) != -1); })) {
+                                [](i64 i) { return (CheckBVType(i) != InvalidType); })) {
                         throw ExprTypeError ("BVAND/BVOR/BVXOR ops expect BV operands");
                     }
                     if (!CheckEquality(ChildTypes, ChildTypes[0])) {
@@ -1322,7 +1374,7 @@ namespace ESMC {
                         for (u32 i = 0; i < NumArgs; ++i) {
                             DomTypes[i] = RaiseSort(Z3_get_domain(*Ctx, AppDecl, i));
                         }
-                        string MangledName = SemUtils::MangleName(DeclName, DomTypes);
+                        string MangledName = MangleName(DeclName, DomTypes);
                         auto it = UFMap.find(MangledName);
                         if (it == UFMap.end()) {
                             throw InternalError((string)"Could not find descriptor for function " + 
@@ -1575,6 +1627,8 @@ namespace ESMC {
             typedef Z3SemOps Ops;
             typedef Detail::Z3Expr LExpT;
             typedef Expr<E, ESMC::Z3Sem::Z3Semanticizer> ExpT;
+            typedef i64 TypeT;
+            static const TypeT InvalidType;
 
             Z3Semanticizer();
             ~Z3Semanticizer();
@@ -1732,6 +1786,9 @@ namespace ESMC {
             UFID2DMap[NewID] = Desc;
             return NewID;
         }
+
+        template <typename E>
+        const typename Z3Semanticizer<E>::TypeT  Z3Semanticizer<E>::InvalidType = -1;
 
     } /* end namespace Z3Sem */
 } /* end namespace ESMC */
