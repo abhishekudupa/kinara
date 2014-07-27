@@ -45,6 +45,7 @@ PROJECT_LIBS=esmc
 libesmc_OBJS= \
 	LTSTermSemanticizer.o \
 	LTSTypes.o \
+	SymbolTable.o \
 	UIDGenerator.o \
 	Z3Semanticizer.o \
 

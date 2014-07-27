@@ -49,8 +49,16 @@ namespace ESMC {
         class UFEFSM
         {
         private:
+            UFLTS* TheLTS;
             bool IsFinalized;
+            vector<LTSTypeRef> Params;
 
+        public:
+            UFEFSM(UFLTS* TheLTS, 
+                   const string& Name,
+                   const vector<LTSTypeRef>& Params);
+            ~UFEFSM();
+            
             
         };
 

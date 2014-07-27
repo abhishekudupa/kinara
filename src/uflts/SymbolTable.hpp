@@ -41,11 +41,155 @@
 #define ESMC_SYMBOL_TABLE_HPP_
 
 #include "../common/FwdDecls.hpp"
+#include "../containers/RefCountable.hpp"
+#include "../containers/SmartPtr.hpp"
+
+#include "LTSTypes.hpp"
+
+#include <unordered_map>
 
 namespace ESMC {
     namespace LTS {
-
         
+        class DeclBase : public RefCountable
+        {
+        private:
+            string DeclName;
+
+        protected:
+            mutable u64 HashCode;
+            mutable bool HashValid;
+
+            virtual void ComputeHashValue() const = 0;
+
+        public:
+            DeclBase(const string& DeclName);
+            virtual ~DeclBase();
+
+            const string& GetDeclName() const;
+
+            u64 Hash() const;
+
+            virtual bool Equals(const DeclBase& Other) const = 0;
+            virtual const LTSTypeRef& GetType() const = 0;
+
+            template <typename T>
+            inline T* As()
+            {
+                return dynamic_cast<T*>(this);
+            }
+
+            template <typename T>
+            inline const T* As() const
+            {
+                return dynamic_cast<const T*>(this);
+            }
+
+            template <typename T>
+            inline T* SAs()
+            {
+                return static_cast<T*>(this);
+            }
+
+            template <typename T>
+            inline const T* SAs() const
+            {
+                return static_cast<const T*>(this);
+            }
+
+            template <typename T>
+            inline bool Is() const
+            {
+                return (dynamic_cast<const T*>(this) != nullptr);
+            }
+
+        };
+
+        typedef CSmartPtr<DeclBase> DeclRef;
+
+        class ParamDecl : public DeclBase
+        {
+        private:
+            LTSTypeRef ParamType;
+
+        protected:
+            virtual void ComputeHashValue() const override;
+
+        public:
+            ParamDecl(const string& Name, const LTSTypeRef& Type);
+            virtual ~ParamDecl();
+
+            virtual bool Equals(const DeclBase& Other) const override;
+            virtual const LTSTypeRef& GetType() const override;
+        };
+
+        class VarDecl : public DeclBase
+        {
+        private:
+            LTSTypeRef VarType;
+
+        protected:
+            virtual void ComputeHashValue() const override;
+
+        public:
+            VarDecl(const string& Name, const LTSTypeRef& Type);
+            virtual ~VarDecl();
+
+            virtual bool Equals(const DeclBase& Other) const override;
+            virtual const LTSTypeRef& GetType() const override;
+        };
+
+        class StateDecl : public DeclBase
+        {
+        private:
+            LTSTypeRef Type;
+
+        protected:
+            virtual void ComputeHashValue() const override;
+            
+        public:
+            StateDecl(const LTSTypeRef& Type);
+            virtual ~StateDecl();
+
+            virtual bool Equals(const DeclBase& Other) const override;
+            virtual const LTSTypeRef& GetType() const override;            
+        };
+
+        class SymtabScope : public RefCountable
+        {
+        private:
+            unordered_map<string, DeclRef> DeclMap;
+
+        public:
+            SymtabScope();
+            virtual ~SymtabScope();
+
+            const unordered_map<string, DeclRef>& GetDeclMap() const;
+            void Bind(const string& Name, const DeclRef& Decl);
+            const DeclRef& Lookup(const string& Name) const;
+        };
+
+        typedef SmartPtr<SymtabScope> ScopeRef;
+
+        class SymbolTable
+        {
+        private:
+            vector<ScopeRef> ScopeStack;
+
+        public:
+            SymbolTable();
+            ~SymbolTable();
+
+            void Push();
+            void Push(const ScopeRef& Scope);
+
+            ScopeRef Pop();
+            ScopeRef Top() const;
+            
+            void Bind(const string& Name, const DeclRef& Decl);
+            const DeclRef& Lookup(const string& Name) const;
+            const DeclRef& LookupTop(const string& Name) const;
+        };
         
     } /* end namespace LTS */
 } /* end namespace ESMC */
@@ -54,3 +198,4 @@ namespace ESMC {
 
 // 
 // SymbolTable.hpp ends here
+

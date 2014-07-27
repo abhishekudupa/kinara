@@ -46,12 +46,36 @@
 #define ESMC_UFLTS_HPP_
 
 #include "../common/FwdDecls.hpp"
+#include "../expr/Expressions.hpp"
+
+#include "LTSTermSemanticizer.hpp"
+#include "UFEFSM.hpp"
 
 namespace ESMC {
     namespace LTS {
 
+        struct UFLTSExtType
+        {
+
+        };
+
         class UFLTS 
         {
+        private:
+            ExprMgr<UFLTSExtType, LTSTermSemanticizer> Mgr;
+
+        public:
+            template <typename T, typename... ArgTypes>
+            MakeType(ArgTypes&&... Args);
+
+            // Non parametric message type
+            const LTSTypeRef& MakeMessageType(const LTSTypeRef& MType);
+            const LTSTypeRef& MakeMessageType(const LTSTypeRef& MType,
+                                              const vector<LTSTypeRef>& Params);
+
+            UFEFSM* MakeEFSM(const string& Name, 
+                             const vector<LTSTypeRef>& Params);
+
             
         };
 
