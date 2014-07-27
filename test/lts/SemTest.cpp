@@ -125,6 +125,13 @@ int main()
     cout << "Index Expression: " << IndexExp << endl;
     cout << "Field Expression: " << FieldExp << endl;
 
+    auto FieldVar2 = Mgr->MakeVar("RangeField", FAType);
+    auto FieldExp2 = Mgr->MakeExpr(Ops::OpField, IndexExp, FieldVar2);
+
+    auto ComplexExp = Mgr->MakeExpr(Ops::OpADD, FieldExp2, TenExp);
+    cout << "Field Exp before Simplficiation: " << endl << ComplexExp << endl;
+    cout << "Field Exp after Simplficiation: " << endl << Mgr->Simplify(ComplexExp) << endl;
+
     Mgr->GC();
     delete Mgr;
 }
