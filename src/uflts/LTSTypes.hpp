@@ -378,6 +378,19 @@ namespace ESMC {
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
+namespace std {
+
+    template<>
+    struct hash<ESMC::LTS::LTSTypeRef>
+    {
+        inline size_t operator () (const ESMC::LTS::LTSTypeRef& Type) const 
+        { 
+            return Type->Hash(); 
+        }
+    };
+
+} /* end namespace std */
+
 #endif /* ESMC_LTS_TYPES_HPP_ */
 
 // 

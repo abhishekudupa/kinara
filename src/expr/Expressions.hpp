@@ -1324,7 +1324,10 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline void ConstExpression<E, S>::ComputeHash() const
         {
+            this->HashCode = 0;
             boost::hash_combine(this->HashCode, ConstValue);
+            hash<typename S<E>::TypeT> TypeHasher;
+            boost::hash_combine(this->HashCode, TypeHasher(ConstType));
         }
 
         template <typename E, template <typename> class S>
@@ -1394,7 +1397,10 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline void VarExpression<E, S>::ComputeHash() const
         {
+            this->HashCode = 0;
+            hash<typename S<E>::TypeT> TypeHasher;
             boost::hash_combine(this->HashCode, VarName);
+            boost::hash_combine(this->HashCode, TypeHasher(VarType));
         }
 
         template <typename E, template <typename> class S>
@@ -1464,7 +1470,10 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline void BoundVarExpression<E, S>::ComputeHash() const
         {
+            this->HashCode = 0;
+            hash<typename S<E>::TypeT> TypeHasher;
             boost::hash_combine(this->HashCode, VarIdx);
+            boost::hash_combine(this->HashCode, TypeHasher(VarType));
         }
 
         template <typename E, template <typename> class S>
@@ -1563,6 +1572,7 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline void OpExpression<E, S>::ComputeHash() const
         {
+            this->HashCode = 0;
             boost::hash_combine(this->HashCode, OpCode);
             for (auto const& Child : Children) {
                 boost::hash_combine(this->HashCode, Child->Hash());
@@ -1630,7 +1640,13 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline void QuantifiedExpressionBase<E, S>::ComputeHashInternal() const
         {
-            boost::hash_combine(this->HashCode, QVarTypes.size());
+            hash<typename S<E>::TypeT> TypeHasher;
+            
+            this->HashCode = 0;
+            for (auto const& VarType : QVarTypes) {
+                boost::hash_combine(this->HashCode, TypeHasher(VarType));
+            }
+            
             boost::hash_combine(this->HashCode, QExpression->Hash());
         }
 
@@ -2090,8 +2106,7 @@ namespace ESMC {
             Out << Ptr->ToString();
             return Out;
         }
-        
-        
+
     } /* end namespace */
 } /* end namespace */
 
