@@ -99,6 +99,32 @@ int main()
     cout << "After Simplification:" << endl;
     cout << IndexExp << endl;
 
+
+    // Record access, param types and symmetric types
+    auto SymmType = Mgr->MakeType<LTSSymmetricType>("SymmType", 4);
+    map<string, LTSTypeRef> RecMemMap;
+    
+    RecMemMap["IntField"] = IntType;
+    RecMemMap["BoolField"] = BoolType;
+    RecMemMap["RangeField"] = RangeType;
+
+    auto RecType = Mgr->MakeType<LTSRecordType>("RecType", RecMemMap);
+    auto ParamType = Mgr->MakeType<LTSParametricType>(RecType, SymmType);
+    
+    cout << "ParamType: " << endl << ParamType->ToString() << endl;
+    
+    auto FAType = Mgr->MakeType<LTSFieldAccessType>();
+
+    auto ParamVar = Mgr->MakeVar("ParamVar", ParamType);
+    auto SymmVar = Mgr->MakeVar("SymmC", SymmType);
+    auto FieldVar = Mgr->MakeVar("IntField", FAType);
+
+    IndexExp = Mgr->MakeExpr(Ops::OpIndex, ParamVar, SymmVar);
+    auto FieldExp = Mgr->MakeExpr(Ops::OpField, IndexExp, FieldVar);
+
+    cout << "Index Expression: " << IndexExp << endl;
+    cout << "Field Expression: " << FieldExp << endl;
+
     Mgr->GC();
     delete Mgr;
 }

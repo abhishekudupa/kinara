@@ -285,7 +285,6 @@ namespace ESMC {
                     }
                 } else if(ActType->template As<LTSRangeType>() != nullptr ||
                           ActType->template As<LTSIntType>() != nullptr) {
-                    auto IntType = ActType->template SAs<LTSIntType>();
                     if (!boost::algorithm::all(ConstVal, boost::algorithm::is_digit())) {
                         throw ExprTypeError((string)"Invalid value " + ConstVal);
                     }
@@ -516,17 +515,33 @@ namespace ESMC {
                     CheckNumArgs(2, ChildTypes.size(), "Index");
                     auto Type1 = ChildTypes[0];
                     auto ArrayType = Type1->template As<LTSArrayType>();
+                    auto ParamType = Type1->template As<LTSParametricType>();
 
-                    if (ArrayType == nullptr) {
-                        throw ExprTypeError("Index operator can only be applied to array types");
+                    if (ArrayType == nullptr && ParamType == nullptr) {
+                        throw ExprTypeError((string)"Index operator can only be " + 
+                                            "applied to array types or parametric " + 
+                                            "types");
+                    }
+
+                    LTSTypeRef ExpIndexType;
+
+                    if (ArrayType != nullptr) {
+                        ExpIndexType = ArrayType->GetIndexType();
+                    } else {
+                        ExpIndexType = ParamType->GetParameterType();
                     }
                     
-                    auto ExpIndexType = ArrayType->GetIndexType();
                     if (!CheckTypeCompat(ExpIndexType, ChildTypes[1])) {
                         throw ExprTypeError("Invalid type for index expression");
                     }
 
-                    auto ElemType = ArrayType->GetValueType();
+                    LTSTypeRef ElemType;
+
+                    if (ArrayType != nullptr) {
+                        ElemType = ArrayType->GetValueType();
+                    } else {
+                        ElemType = ParamType->GetBaseType();
+                    }
                     Exp->SetType(ElemType);
                     break;
                 }
@@ -542,7 +557,7 @@ namespace ESMC {
                         throw ExprTypeError("Field access only allowed on record types");
                     }
                     
-                    auto FieldExp = ((Exp->GetChildren())[0])->template As<VarExpression>();
+                    auto FieldExp = ((Exp->GetChildren())[1])->template As<VarExpression>();
                     if (FieldExp == nullptr) {
                         throw ExprTypeError("Field access expression must be a VarExpression");
                     }

@@ -213,8 +213,8 @@ namespace ESMC {
 
         string LTSRangeType::ToString() const
         {
-            return ((string)"(Range " + to_string(RangeLow) + 
-                    ":" + to_string(RangeLow) + ")");
+            return ((string)"(Range [" + to_string(RangeLow) + 
+                    "-" + to_string(RangeHigh) + "])");
         }
 
         i32 LTSRangeType::Compare(const LTSTypeBase& Other) const
@@ -685,7 +685,7 @@ namespace ESMC {
             return BaseType;
         }
 
-        const LTSTypeRef& LTSParametricType::GetParameterTypes() const
+        const LTSTypeRef& LTSParametricType::GetParameterType() const
         {
             return ParameterType;
         }

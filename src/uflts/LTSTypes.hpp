@@ -294,7 +294,7 @@ namespace ESMC {
             virtual ~LTSParametricType();
 
             const LTSTypeRef& GetBaseType() const;
-            const LTSTypeRef& GetParameterTypes() const;
+            const LTSTypeRef& GetParameterType() const;
 
             virtual string ToString() const override;
             virtual i32 Compare(const LTSTypeBase& Other) const override;
