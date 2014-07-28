@@ -1,8 +1,8 @@
-// UFLTS.hpp --- 
+// State.hpp --- 
 // 
-// Filename: UFLTS.hpp
+// Filename: State.hpp
 // Author: Abhishek Udupa
-// Created: Wed Jul 23 15:13:43 2014 (-0400)
+// Created: Mon Jul 28 08:34:10 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,59 +37,81 @@
 
 // Code:
 
-
-// This file contains the class definition of the UFLTS class.
-// The UFLTS class is used to represent a labelled transition
-// system with Uninterpreted Functions
-
-#if !defined ESMC_UFLTS_HPP_
-#define ESMC_UFLTS_HPP_
+#if !defined ESMC_STATE_HPP_
+#define ESMC_STATE_HPP_
 
 #include "../common/FwdDecls.hpp"
-#include "../expr/Expressions.hpp"
-
-#include "LTSTermSemanticizer.hpp"
-#include "UFEFSM.hpp"
 
 namespace ESMC {
     namespace LTS {
 
-        typedef Exprs::ExprTypeRef ExprTypeRef;
-
-        struct UFLTSExtType
-        {
-
-        };
-
-        typedef Expr<UFLTSExtType, LTSTermSemanticizer> ExpT;
-
-        class UFLTS 
+        class State 
         {
         private:
-            ExprMgr<UFLTSExtType, LTSTermSemanticizer> Mgr;
+            const StateInterpretation* Interpretation;
+            u08* StateBuffer;
+            u64 Size;
+            u64 HashCode;
 
         public:
-            template <typename T, typename... ArgTypes>
-            MakeType(ArgTypes&&... Args);
+            State(const StateInterpretation* Interpretation, u64 Size);
+            ~State();
 
-            // Non parametric message type
-            const ExprTypeRef& MakeMessageType(const ExprTypeRef& MType);
-            const ExprTypeRef& MakeMessageType(const ExprTypeRef& MType,
-                                               const vector<ExpT>& Params,
-                                               const ExpT& Constraint);
+            u16 ReadShort(u32 Offset) const;
+            void WriteShort(u32 Offset, u16 Value);
+            
+            u32 ReadWord(u32 Offset) const;
+            void WriteWord(u32 Offset, u32 Value);
 
-            UFEFSM* MakeEFSM(const string& Name, 
-                             const vector<ExpT>& Params,
-                             const ExpT& Constraint);
+            u08& operator [] (u32 Offset);
+            const u08& operator [] (u32 Offset) const;
 
+            void Freeze();
+            u64 Hash() const;
+        };
+
+        class StateFactory
+        {
+        private:
+            const StateInterpretation* Interpretation;
+            const u32 StateSize;
+
+        public:
+            StateFactory(const StateInterpretation* Interpretation, u32 StateSize);
+            State* Make() const;
+        };
+
+        class InterpretationBase
+        {
+        protected:
+            u32 ObjectSize;
+            u32 ObjectOffset;
+            ExprTypeRef ObjectType;
+
+        public:
+            InterpretationBase(u32 ObjectSize, u32 ObjectOffset);
+            virtual ~InterpretationBase();
+
+            u32 GetObjectSize() const;
+            u32 GetObjectOffset() const;
+            const ExprTypeRef& GetObjectType() const;
+        };
+
+        class ScalarInterpretation
+        {
+        public:
+            
+        };
+
+        class StateInterpretation
+        {
             
         };
 
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-#endif /* ESMC_UFLTS_HPP_ */
-
+#endif /* ESMC_STATE_HPP_ */
 
 // 
-// UFLTS.hpp ends here
+// State.hpp ends here

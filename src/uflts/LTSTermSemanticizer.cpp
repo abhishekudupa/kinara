@@ -51,7 +51,7 @@ namespace ESMC {
         const i64 LTSOps::OpIFF;
         const i64 LTSOps::OpXOR;
 
-            // Arithmetic
+        // Arithmetic
         const i64 LTSOps::OpADD;
         const i64 LTSOps::OpSUB;
         const i64 LTSOps::OpMINUS;
@@ -63,27 +63,30 @@ namespace ESMC {
         const i64 LTSOps::OpLT;
         const i64 LTSOps::OpLE;
 
-            // Syntactic operators for symmetry, etc
+        // Syntactic operators for symmetry, etc
         const i64 LTSOps::OpIndex;
         const i64 LTSOps::OpField;
+        
+        // Nondet
+        const i64 LTSOps::OpNonDet;
 
         const i64 LTSOps::UFOffset;
-
-            // Temporal operators
+        
+        // Temporal operators
         const i64 LTSOps::OpTemporalX;
         const i64 LTSOps::OpTemporalU;
         const i64 LTSOps::OpTemporalF;
         const i64 LTSOps::OpTemporalG;
 
-            // Some special types
-            // for creating expressions for field access
+        // Some special types
+        // for creating expressions for field access
         const i64 LTSOps::FieldAccType;
         const i64 LTSOps::UndefType;
 
 
         namespace Detail {
 
-            const LTSTypeRef InvalidType = LTSTypeRef::NullPtr;
+            const Exprs::ExprTypeRef InvalidType = Exprs::ExprTypeRef::NullPtr;
 
             const string BoundVarPrefix = "dbvar";
 
@@ -105,7 +108,8 @@ namespace ESMC {
                   { LTSOps::OpGT, ">" },
                   { LTSOps::OpGE, ">=" },
                   { LTSOps::OpLT, "<" },
-                  { LTSOps::OpLE, "<=" } };
+                  { LTSOps::OpLE, "<=" },
+                  { LTSOps::OpNonDet, "nondet"} };
 
         } /* end namespace Detail */
     } /* end namespace LTS */

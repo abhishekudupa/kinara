@@ -70,7 +70,7 @@ namespace ESMC {
         class ExtListExtBase;
         typedef SmartPtr<ExtListExtBase> ExtListExtRef;
         typedef CSmartPtr<ExtListExtBase> ExtListExtCRef;
-        typedef list<ExtListExtRef> ExtListT;        
+        typedef list<ExtListExtRef> ExtListT;
 
         // Smart ptr types for expressions
         template <typename E, template <typename> class S>
@@ -89,6 +89,10 @@ namespace ESMC {
         // Expression Visitors
         template <typename E, template <typename> class S> class ExpressionVisitorBase;
 
+        class ExprTypeBase;
+        class ExprFuncType;
+        
+        typedef CSmartPtr<ExprTypeBase> ExprTypeRef;
     } /* end namespace Exprs */
     
     namespace LTS {
@@ -96,9 +100,10 @@ namespace ESMC {
         class UFLTS;
         class UFEFSM;
         template <typename E> class LTSTermSemantizer;
-        class LTSTypeBase;
-        
-        typedef CSmartPtr<LTSTypeBase> LTSTypeRef;
+
+        class State;
+        class StateInterpretation;
+        class StateFactory;
 
     } /* end namespace LTS */
 

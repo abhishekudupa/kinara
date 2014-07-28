@@ -43,11 +43,10 @@ esmc_LIB_PATHS= \
 
 PROJECT_LIBS=esmc
 libesmc_OBJS= \
+	ExprTypes.o \
 	LTSTermSemanticizer.o \
-	LTSTypes.o \
 	SymbolTable.o \
 	UIDGenerator.o \
-	Z3Semanticizer.o \
 
 
 PROJECT_EXT_LIBS=boost z3

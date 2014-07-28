@@ -65,13 +65,6 @@ namespace ESMC {
         const i64 UFEnd = 1000000;
         const i64 SortOffset = 1000000;
 
-        // BVTypes range from 1000100 to 1001000
-        // 1000100 = ANY BV type
-        // 100xxxx = BVType of len (1000100 - v)
-        const i64 BVTypeOffset = 1000100;
-        const i64 BVTypeEnd = 1001000;
-
-
         // We put the ops in a separate struct
         // for convenience
         struct Z3SemOps {
@@ -97,31 +90,7 @@ namespace ESMC {
             static const i64 OpGE = 1017;
             static const i64 OpLT = 1018;
             static const i64 OpLE = 1019;
-
-            // Basic Bitvector operators
-            // used for emulating bounded sets
-            static const i64 OpBVNOT = 1020;
-            static const i64 OpBVREDAND = 1021;
-            static const i64 OpBVREDOR = 1022;
-            static const i64 OpBVAND = 1023;
-            static const i64 OpBVOR = 1024;
-            static const i64 OpBVXOR = 1025;
-
-            // Types
-            static const i64 BoolType = 1000000;
-            static const i64 IntType = 1000001;
-            static const i64 BVTypeAll = 1000100;
         };
-
-        // Helper functions
-        static inline i64 MakeBVTypeOfSize(u32 Size)
-        {
-            if (Size <= 0 || Size >= BVTypeEnd - BVTypeOffset) {
-                throw ExprTypeError((string)"Bit Vector types must have size in the range 1 - " + 
-                                    to_string(BVTypeEnd - BVTypeOffset - 1));
-            }
-            return BVTypeOffset + Size;
-        }
 
         namespace Detail {
 
@@ -129,33 +98,6 @@ namespace ESMC {
             extern const unordered_map<i64, string> OpCodeToNameMap;
             extern const string BoundVarPrefix;
             extern const i64 InvalidType;
-
-            class UFDescriptor
-            {
-            private:
-                i64 Identifier;
-                vector<i64> DomainTypes;
-                i64 RangeType;
-                string Name;
-                string MangledName;
-
-            public:
-                UFDescriptor();
-                UFDescriptor(const UFDescriptor& Other);
-                UFDescriptor(i64 Identifier,
-                             const vector<i64>& DomainTypes, 
-                             i64 RangeType, const string& Name);
-                ~UFDescriptor();
-
-                UFDescriptor& operator = (const UFDescriptor& Other);
-                bool operator == (const UFDescriptor& Other);
-
-                const vector<i64>& GetDomainTypes() const;
-                i64 GetRangeType() const;
-                const string& GetName() const;
-                const string& GetMangledName() const;
-                i64 GetIdentifier() const;
-            };
 
             static inline string MangleName(const string& Name, const vector<i64>& DomainTypes)
             {
@@ -166,8 +108,9 @@ namespace ESMC {
                 return Retval;
             }
 
-            static inline i64 GetTypeForBoundVar(const vector<vector<i64>>& ScopeStack,
-                                                 i64 VarIdx)
+            static inline ExprTypeRef GetTypeForBoundVar(const vector<vector<ExprTypeRef>>& 
+                                                         ScopeStack,
+                                                         i64 VarIdx)
             {
                 i64 LeftIdx = VarIdx;
                 for (i64 i = ScopeStack.size(); i > 0; --i) {
@@ -180,7 +123,7 @@ namespace ESMC {
                     }
                 }
                 // Unbound variable
-                return -1;
+                return ExprTypeRef::NullPtr;
             }
             
             // A wrapper for ref counting Z3 contexts

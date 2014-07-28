@@ -1,6 +1,6 @@
-// LTSTypes.cpp --- 
+// ExprTypes.cpp --- 
 // 
-// Filename: LTSTypes.cpp
+// Filename: ExprTypes.cpp
 // Author: Abhishek Udupa
 // Created: Thu Jul 24 15:10:36 2014 (-0400)
 // 
@@ -37,7 +37,7 @@
 
 // Code:
 
-#include "LTSTypes.hpp"
+#include "ExprTypes.hpp"
 #include "../utils/UIDGenerator.hpp"
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
@@ -45,22 +45,22 @@
 #include <boost/functional/hash.hpp>
 
 namespace ESMC {
-    namespace LTS {
+    namespace Exprs {
 
-        UIDGenerator LTSTypeBase::LTSTypeUIDGen(1);
+        UIDGenerator ExprTypeBase::ExprTypeUIDGen(1);
 
-        LTSTypeBase::LTSTypeBase()
+        ExprTypeBase::ExprTypeBase()
             : TypeID(-1)
         {
             // Nothing here
         }
 
-        LTSTypeBase::~LTSTypeBase()
+        ExprTypeBase::~ExprTypeBase()
         {
             // Nothing here
         }
 
-        u64 LTSTypeBase::Hash() const
+        u64 ExprTypeBase::Hash() const
         {
             if (HashValid) {
                 return HashCode;
@@ -71,28 +71,28 @@ namespace ESMC {
             }
         }
 
-        bool LTSTypeBase::Equals(const LTSTypeBase& Other) const
+        bool ExprTypeBase::Equals(const ExprTypeBase& Other) const
         {
             return (this->Compare(Other) == 0);
         }
 
-        bool LTSTypeBase::LT(const LTSTypeBase& Other) const
+        bool ExprTypeBase::LT(const ExprTypeBase& Other) const
         {
             return (this->Compare(Other) < 0);
         }
 
-        i64 LTSTypeBase::GetTypeID() const
+        i64 ExprTypeBase::GetTypeID() const
         {
             return TypeID;
         }
 
-        i64 LTSTypeBase::SetTypeID() const
+        i64 ExprTypeBase::SetTypeID() const
         {
-            TypeID = LTSTypeUIDGen.GetUID();
+            TypeID = ExprTypeUIDGen.GetUID();
             return TypeID;
         }
 
-        i64 LTSTypeBase::GetOrSetTypeID() const
+        i64 ExprTypeBase::GetOrSetTypeID() const
         {
             if (TypeID == -1) {
                 return SetTypeID();
@@ -101,72 +101,72 @@ namespace ESMC {
             }
         }
 
-        LTSBoolType::LTSBoolType()
-            : LTSTypeBase()
+        ExprBoolType::ExprBoolType()
+            : ExprTypeBase()
         {
             // Nothing here
         }
 
-        LTSBoolType::~LTSBoolType()
+        ExprBoolType::~ExprBoolType()
         {
             // Nothing here
         }
 
-        string LTSBoolType::ToString() const
+        string ExprBoolType::ToString() const
         {
             return "(BoolType)";
         }
 
-        i32 LTSBoolType::Compare(const LTSTypeBase& Other) const
+        i32 ExprBoolType::Compare(const ExprTypeBase& Other) const
         {
-            if (Other.As<LTSBoolType>() == nullptr) {
+            if (Other.As<ExprBoolType>() == nullptr) {
                 return -1;
             } else {
                 return 0;
             }
         }
 
-        void LTSBoolType::ComputeHashValue() const
+        void ExprBoolType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, "BoolType");
         }
 
-        LTSIntType::LTSIntType()
-            : LTSTypeBase()
+        ExprIntType::ExprIntType()
+            : ExprTypeBase()
         {
             // Nothing here
         }
 
-        LTSIntType::~LTSIntType()
+        ExprIntType::~ExprIntType()
         {
             // Nothing here
         }
         
-        void LTSIntType::ComputeHashValue() const
+        void ExprIntType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, "IntType");
         }
 
-        string LTSIntType::ToString() const
+        string ExprIntType::ToString() const
         {
             return "(IntType)";
         }
 
-        i32 LTSIntType::Compare(const LTSTypeBase& Other) const
+        i32 ExprIntType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
             
-            if (OtherAsPtr->As<LTSBoolType>() != nullptr) {
+            if (OtherAsPtr->As<ExprBoolType>() != nullptr) {
                 return 1;
             }
             
-            auto OtherAsInt = OtherAsPtr->As<LTSIntType>();
+            auto OtherAsInt = OtherAsPtr->As<ExprIntType>();
             if (OtherAsInt == nullptr) {
                 return -1;
             } else {
-                auto OtherAsRange = OtherAsPtr->As<LTSRangeType>();
+                auto OtherAsRange = OtherAsPtr->As<ExprRangeType>();
                 if (OtherAsRange != nullptr) {
                     return -1;
                 } else {
@@ -176,59 +176,59 @@ namespace ESMC {
         }
 
         // Inclusive range
-        LTSRangeType::LTSRangeType(i64 RangeLow, i64 RangeHigh)
-            : LTSIntType(), 
+        ExprRangeType::ExprRangeType(i64 RangeLow, i64 RangeHigh)
+            : ExprIntType(), 
               RangeLow(RangeLow), RangeHigh(RangeHigh), 
               Size(RangeHigh - RangeLow + 1)
         {
             // Nothing here
         }
 
-        LTSRangeType::~LTSRangeType()
+        ExprRangeType::~ExprRangeType()
         {
             // Nothing here
         }
 
-        i64 LTSRangeType::GetLow() const
+        i64 ExprRangeType::GetLow() const
         {
             return RangeLow;
         }
 
-        i64 LTSRangeType::GetHigh() const
+        i64 ExprRangeType::GetHigh() const
         {
             return RangeHigh;
         }
 
-        u64 LTSRangeType::GetSize() const
+        u64 ExprRangeType::GetSize() const
         {
             return Size;
         }
 
-        void LTSRangeType::ComputeHashValue() const
+        void ExprRangeType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, RangeLow);
             boost::hash_combine(HashCode, RangeHigh);
         }
 
-        string LTSRangeType::ToString() const
+        string ExprRangeType::ToString() const
         {
             return ((string)"(Range [" + to_string(RangeLow) + 
                     "-" + to_string(RangeHigh) + "])");
         }
 
-        i32 LTSRangeType::Compare(const LTSTypeBase& Other) const
+        i32 ExprRangeType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
 
-            if (OtherAsPtr->As<LTSBoolType>() != nullptr) {
+            if (OtherAsPtr->As<ExprBoolType>() != nullptr) {
                 return 1;
             }
 
-            auto OtherAsRange = OtherAsPtr->As<LTSRangeType>();
+            auto OtherAsRange = OtherAsPtr->As<ExprRangeType>();
             
             if (OtherAsRange == nullptr) {
-                if (OtherAsPtr->As<LTSIntType>() != nullptr) {
+                if (OtherAsPtr->As<ExprIntType>() != nullptr) {
                     return 1;
                 } else {
                     return -1;
@@ -250,30 +250,30 @@ namespace ESMC {
             }
         }
 
-        LTSEnumType::LTSEnumType(const string& Name, 
+        ExprEnumType::ExprEnumType(const string& Name, 
                                  const set<string>& Members)
-            : LTSTypeBase(), Name(Name), Members(Members)
+            : ExprTypeBase(), Name(Name), Members(Members)
         {
             // Nothing here
         }
 
-        LTSEnumType::~LTSEnumType()
+        ExprEnumType::~ExprEnumType()
         {
             // Nothing here
         }
 
-        const string& LTSEnumType::GetName() const
+        const string& ExprEnumType::GetName() const
         {
             return Name;
         }
 
-        const set<string>& LTSEnumType::GetMembers() const
+        const set<string>& ExprEnumType::GetMembers() const
         {
             return Members;
         }
 
         // We handle both qualified and unqualified enum names here
-        bool LTSEnumType::IsMember(const string& MemberName) const
+        bool ExprEnumType::IsMember(const string& MemberName) const
         {
             vector<string> SplitVec;
             boost::algorithm::split(SplitVec, MemberName, 
@@ -304,12 +304,12 @@ namespace ESMC {
             }
         }
 
-        string LTSEnumType::ToString() const
+        string ExprEnumType::ToString() const
         {
             return (string)"(Enum " + Name + ")";
         }
 
-        void LTSEnumType::ComputeHashValue() const
+        void ExprEnumType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, Name);
@@ -318,18 +318,18 @@ namespace ESMC {
             }
         }
 
-        i32 LTSEnumType::Compare(const LTSTypeBase& Other) const
+        i32 ExprEnumType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherPtr = &Other;
-            if (OtherPtr->As<LTSBoolType>() != nullptr || 
-                OtherPtr->As<LTSIntType>() != nullptr || 
-                OtherPtr->As<LTSRangeType>() != nullptr) {
+            if (OtherPtr->As<ExprBoolType>() != nullptr || 
+                OtherPtr->As<ExprIntType>() != nullptr || 
+                OtherPtr->As<ExprRangeType>() != nullptr) {
                 return 1;
             }
-            if (OtherPtr->As<LTSEnumType>() == nullptr) {
+            if (OtherPtr->As<ExprEnumType>() == nullptr) {
                 return -1;
             }
-            auto OtherAsEnum = OtherPtr->SAs<LTSEnumType>();
+            auto OtherAsEnum = OtherPtr->SAs<ExprEnumType>();
 
             if (OtherAsEnum->Name > Name) {
                 return -1;
@@ -340,68 +340,68 @@ namespace ESMC {
             }
         }
 
-        LTSSymmetricType::LTSSymmetricType(const string& Name, u32 Size)
-            : LTSTypeBase(), Name(Name), Size(Size), Members(Size)
+        ExprSymmetricType::ExprSymmetricType(const string& Name, u32 Size)
+            : ExprTypeBase(), Name(Name), Size(Size), Members(Size)
         {
             for(u32 i = 0; i < Size; ++i) {
-                Members[i] = Name + to_string(i);
-                MemberSet.insert(Name + to_string(i));
+                Members[i] = Name + "::" + to_string(i);
+                MemberSet.insert(Name + "::" + to_string(i));
             }
         }
 
-        LTSSymmetricType::~LTSSymmetricType()
+        ExprSymmetricType::~ExprSymmetricType()
         {
             // Nothing here
         }
 
-        const string& LTSSymmetricType::GetName() const
+        const string& ExprSymmetricType::GetName() const
         {
             return Name;
         }
 
-        u32 LTSSymmetricType::GetSize() const
+        u32 ExprSymmetricType::GetSize() const
         {
             return Size;
         }
 
-        const vector<string>& LTSSymmetricType::GetMembers() const
+        const vector<string>& ExprSymmetricType::GetMembers() const
         {
             return Members;
         }
 
-        const string& LTSSymmetricType::GetMember(u32 Index) const
+        const string& ExprSymmetricType::GetMember(u32 Index) const
         {
             assert (Index < Members.size());
             return Members[Index];
         }
 
-        const bool LTSSymmetricType::IsMember(const string& Value) const
+        const bool ExprSymmetricType::IsMember(const string& Value) const
         {
             return (MemberSet.find(Value) != MemberSet.end());
         }
 
-        string LTSSymmetricType::ToString() const
+        string ExprSymmetricType::ToString() const
         {
             return (string)"(SymType " + Name + ")";
         }
 
-        void LTSSymmetricType::ComputeHashValue() const
+        void ExprSymmetricType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, Name);
             boost::hash_combine(HashCode, Size);
         }
 
-        i32 LTSSymmetricType::Compare(const LTSTypeBase& Other) const
+        i32 ExprSymmetricType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            if (OtherAsPtr->As<LTSBoolType>() != nullptr ||
-                OtherAsPtr->As<LTSIntType>() != nullptr ||
-                OtherAsPtr->As<LTSRangeType>() != nullptr ||
-                OtherAsPtr->As<LTSEnumType>() != nullptr) {
+            if (OtherAsPtr->As<ExprBoolType>() != nullptr ||
+                OtherAsPtr->As<ExprIntType>() != nullptr ||
+                OtherAsPtr->As<ExprRangeType>() != nullptr ||
+                OtherAsPtr->As<ExprEnumType>() != nullptr) {
                 return 1;
             }
-            auto OtherAsSym = OtherAsPtr->As<LTSSymmetricType>();
+            auto OtherAsSym = OtherAsPtr->As<ExprSymmetricType>();
             if (OtherAsPtr == nullptr) {
                 return -1;
             }
@@ -415,7 +415,7 @@ namespace ESMC {
 
 
         static inline string MangleName(const string& Name, 
-                                        const vector<LTSTypeRef>& Args)
+                                        const vector<ExprTypeRef>& Args)
         {
             string Retval = Name;
             for (auto const& Arg : Args) {
@@ -424,46 +424,46 @@ namespace ESMC {
             return Retval;
         }
 
-        LTSFuncType::LTSFuncType(const string& Name, 
-                                 const vector<LTSTypeRef>& ArgTypes,
-                                 const LTSTypeRef& FuncType)
-            : LTSTypeBase(),
+        ExprFuncType::ExprFuncType(const string& Name, 
+                                 const vector<ExprTypeRef>& ArgTypes,
+                                 const ExprTypeRef& FuncType)
+            : ExprTypeBase(),
               Name(Name), MangledName(MangleName(Name, ArgTypes)), 
               ArgTypes(ArgTypes), FuncType(FuncType)
         {
             for(auto const& Arg : ArgTypes) {
-                if (Arg->As<LTSFuncType>() != nullptr) {
+                if (Arg->As<ExprFuncType>() != nullptr) {
                     throw ESMCError("Function types cannot have function types as params");
                 }
             }
         }
 
-        LTSFuncType::~LTSFuncType()
+        ExprFuncType::~ExprFuncType()
         {
             // Nothing here
         }
 
-        const string& LTSFuncType::GetName() const
+        const string& ExprFuncType::GetName() const
         {
             return Name;
         }
 
-        const string& LTSFuncType::GetMangledName() const
+        const string& ExprFuncType::GetMangledName() const
         {
             return MangledName;
         }
 
-        const vector<LTSTypeRef>& LTSFuncType::GetArgTypes() const
+        const vector<ExprTypeRef>& ExprFuncType::GetArgTypes() const
         {
             return ArgTypes;
         }
 
-        const LTSTypeRef& LTSFuncType::GetFuncType() const
+        const ExprTypeRef& ExprFuncType::GetFuncType() const
         {
             return FuncType;
         }
 
-        void LTSFuncType::ComputeHashValue() const
+        void ExprFuncType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, Name);
@@ -472,7 +472,7 @@ namespace ESMC {
             }
         }
 
-        string LTSFuncType::ToString() const
+        string ExprFuncType::ToString() const
         {
             string Retval = (string)"(Func " + Name + " : ";
             for (auto const& Arg : ArgTypes) {
@@ -482,18 +482,18 @@ namespace ESMC {
             return Retval;
         }
 
-        i32 LTSFuncType::Compare(const LTSTypeBase& Other) const
+        i32 ExprFuncType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            if (OtherAsPtr->As<LTSBoolType>() != nullptr ||
-                OtherAsPtr->As<LTSIntType>() != nullptr ||
-                OtherAsPtr->As<LTSRangeType> () != nullptr ||
-                OtherAsPtr->As<LTSEnumType>() != nullptr ||
-                OtherAsPtr->As<LTSSymmetricType>() != nullptr) {
+            if (OtherAsPtr->As<ExprBoolType>() != nullptr ||
+                OtherAsPtr->As<ExprIntType>() != nullptr ||
+                OtherAsPtr->As<ExprRangeType> () != nullptr ||
+                OtherAsPtr->As<ExprEnumType>() != nullptr ||
+                OtherAsPtr->As<ExprSymmetricType>() != nullptr) {
                 return 1;
             }
             
-            auto OtherAsFunc = OtherAsPtr->As<LTSFuncType>();
+            auto OtherAsFunc = OtherAsPtr->As<ExprFuncType>();
             
             if (OtherAsFunc == nullptr) {
                 return -1;
@@ -520,50 +520,50 @@ namespace ESMC {
             }
         }
 
-        LTSArrayType::LTSArrayType(const LTSTypeRef& IndexType,
-                                   const LTSTypeRef& ValueType)
-            : LTSTypeBase(), IndexType(IndexType), ValueType(ValueType)
+        ExprArrayType::ExprArrayType(const ExprTypeRef& IndexType,
+                                   const ExprTypeRef& ValueType)
+            : ExprTypeBase(), IndexType(IndexType), ValueType(ValueType)
         {
-            if (IndexType->As<LTSFuncType>() != nullptr ||
-                ValueType->As<LTSFuncType>() != nullptr) {
+            if (IndexType->As<ExprFuncType>() != nullptr ||
+                ValueType->As<ExprFuncType>() != nullptr) {
                 throw ESMCError((string)"Array indices and values cannot be functions");
             }
         }
 
-        LTSArrayType::~LTSArrayType()
+        ExprArrayType::~ExprArrayType()
         {
             // Nothing here
         }
 
-        const LTSTypeRef& LTSArrayType::GetIndexType() const
+        const ExprTypeRef& ExprArrayType::GetIndexType() const
         {
             return IndexType;
         }
 
-        const LTSTypeRef& LTSArrayType::GetValueType() const
+        const ExprTypeRef& ExprArrayType::GetValueType() const
         {
             return ValueType;
         }
 
-        string LTSArrayType::ToString() const
+        string ExprArrayType::ToString() const
         {
             return ((string)"(Array : " + IndexType->ToString() + " -> " + 
                     ValueType->ToString() + ")");
         }
 
-        i32 LTSArrayType::Compare(const LTSTypeBase& Other) const
+        i32 ExprArrayType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            if (OtherAsPtr->As<LTSBoolType>() != nullptr ||
-                OtherAsPtr->As<LTSIntType>() != nullptr ||
-                OtherAsPtr->As<LTSRangeType>() != nullptr ||
-                OtherAsPtr->As<LTSEnumType>() != nullptr ||
-                OtherAsPtr->As<LTSSymmetricType>() != nullptr ||
-                OtherAsPtr->As<LTSFuncType>() != nullptr) {
+            if (OtherAsPtr->As<ExprBoolType>() != nullptr ||
+                OtherAsPtr->As<ExprIntType>() != nullptr ||
+                OtherAsPtr->As<ExprRangeType>() != nullptr ||
+                OtherAsPtr->As<ExprEnumType>() != nullptr ||
+                OtherAsPtr->As<ExprSymmetricType>() != nullptr ||
+                OtherAsPtr->As<ExprFuncType>() != nullptr) {
                 return 1;
             }
 
-            auto OtherAsArr = OtherAsPtr->As<LTSArrayType>();
+            auto OtherAsArr = OtherAsPtr->As<ExprArrayType>();
 
             if (OtherAsArr == nullptr) {
                 return -1;
@@ -576,52 +576,52 @@ namespace ESMC {
             return ValueType->Compare(*(OtherAsArr->ValueType));
         }
 
-        void LTSArrayType::ComputeHashValue() const
+        void ExprArrayType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, IndexType->Hash());
             boost::hash_combine(HashCode, ValueType->Hash());
         }
 
-        LTSRecordType::LTSRecordType(const string& Name,
-                                     const map<string, LTSTypeRef>& Members)
-            : LTSTypeBase(), Name(Name), Members(Members)
+        ExprRecordType::ExprRecordType(const string& Name,
+                                       const map<string, ExprTypeRef>& Members)
+            : ExprTypeBase(), Name(Name), Members(Members)
         {
             for (auto const& NTPair : Members) {
-                if (NTPair.second->As<LTSFuncType>() != nullptr) {
+                if (NTPair.second->As<ExprFuncType>() != nullptr) {
                     throw ESMCError("Record members cannot be functions types");
                 }
             }
         }
 
-        LTSRecordType::~LTSRecordType()
+        ExprRecordType::~ExprRecordType()
         {
             // Nothing here
         }
 
-        const string& LTSRecordType::GetName() const
+        const string& ExprRecordType::GetName() const
         {
             return Name;
         }
 
-        const map<string, LTSTypeRef>& LTSRecordType::GetMembers() const
+        const map<string, ExprTypeRef>& ExprRecordType::GetMembers() const
         {
             return Members;
         }
 
-        const LTSTypeRef& LTSRecordType::GetTypeForMember(const string& MemberName) const
+        const ExprTypeRef& ExprRecordType::GetTypeForMember(const string& MemberName) const
         {
             auto it = Members.find(MemberName);
             if (it == Members.end()) {
-                return LTSTypeRef::NullPtr;
+                return ExprTypeRef::NullPtr;
             }
             return it->second;
         }
 
-        string LTSRecordType::ToString() const
+        string ExprRecordType::ToString() const
         {
             string Retval;
-            Retval += "(Rec :";
+            Retval += "(Rec " + Name + " :";
             for (auto const& NTPair : Members) {
                 Retval += (" (" + NTPair.first + " : " + NTPair.second->ToString() + ")");
             }
@@ -629,20 +629,20 @@ namespace ESMC {
             return Retval;
         }
 
-        i32 LTSRecordType::Compare(const LTSTypeBase& Other) const
+        i32 ExprRecordType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            if (OtherAsPtr->As<LTSBoolType>() != nullptr ||
-                OtherAsPtr->As<LTSIntType>() != nullptr ||
-                OtherAsPtr->As<LTSRangeType>() != nullptr ||
-                OtherAsPtr->As<LTSEnumType>() != nullptr ||
-                OtherAsPtr->As<LTSSymmetricType>() != nullptr ||
-                OtherAsPtr->As<LTSFuncType> () != nullptr ||
-                OtherAsPtr->As<LTSArrayType> () != nullptr) {
+            if (OtherAsPtr->As<ExprBoolType>() != nullptr ||
+                OtherAsPtr->As<ExprIntType>() != nullptr ||
+                OtherAsPtr->As<ExprRangeType>() != nullptr ||
+                OtherAsPtr->As<ExprEnumType>() != nullptr ||
+                OtherAsPtr->As<ExprSymmetricType>() != nullptr ||
+                OtherAsPtr->As<ExprFuncType> () != nullptr ||
+                OtherAsPtr->As<ExprArrayType> () != nullptr) {
                 return 1;
             }
 
-            auto OtherAsRec = OtherAsPtr->As<LTSRecordType>();
+            auto OtherAsRec = OtherAsPtr->As<ExprRecordType>();
             if (OtherAsRec == nullptr) {
                 return -1;
             }
@@ -656,48 +656,53 @@ namespace ESMC {
             }
         }
 
-        void LTSRecordType::ComputeHashValue() const
+        void ExprRecordType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, Name);
             boost::hash_combine(HashCode, Members.size());
         }
 
-        LTSParametricType::LTSParametricType(const LTSTypeRef& BaseType,
-                                             const LTSTypeRef& ParameterType)
-            : LTSTypeBase(), BaseType(BaseType), ParameterType(ParameterType)
+        ExprParametricType::ExprParametricType(const ExprTypeRef& BaseType,
+                                              const ExprTypeRef& ParameterType)
+            : ExprTypeBase(), BaseType(BaseType), ParameterType(ParameterType)
         {
-            if (ParameterType->As<LTSEnumType>() == nullptr &&
-                ParameterType->As<LTSRangeType>() == nullptr &&
-                ParameterType->As<LTSSymmetricType>() == nullptr) {
+            if (!BaseType->Is<ExprRecordType>() &&
+                !BaseType->Is<ExprParametricType>()) {
+                throw ESMCError((string)"Only record types (or other parametric types) " + 
+                                "can currently be parametrized");
+            }
+            if (ParameterType->As<ExprEnumType>() == nullptr &&
+                ParameterType->As<ExprRangeType>() == nullptr &&
+                ParameterType->As<ExprSymmetricType>() == nullptr) {
                 throw ESMCError((string)"Parameteric types must have enum, range " + 
                                 "or symmetric types as type parameters");
             }
         }
 
-        LTSParametricType::~LTSParametricType()
+        ExprParametricType::~ExprParametricType()
         {
             // Nothing here
         }
 
-        const LTSTypeRef& LTSParametricType::GetBaseType() const
+        const ExprTypeRef& ExprParametricType::GetBaseType() const
         {
             return BaseType;
         }
 
-        const LTSTypeRef& LTSParametricType::GetParameterType() const
+        const ExprTypeRef& ExprParametricType::GetParameterType() const
         {
             return ParameterType;
         }
 
-        void LTSParametricType::ComputeHashValue() const
+        void ExprParametricType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, BaseType->Hash());
             boost::hash_combine(HashCode, ParameterType->Hash());
         }
 
-        string LTSParametricType::ToString() const
+        string ExprParametricType::ToString() const
         {
             string Retval = "(ParamType : ";
             Retval += (ParameterType->ToString() + " -> ");
@@ -705,22 +710,22 @@ namespace ESMC {
             return Retval;
         }
 
-        i32 LTSParametricType::Compare(const LTSTypeBase& Other) const
+        i32 ExprParametricType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
 
-            if (OtherAsPtr->As<LTSBoolType>() != nullptr ||
-                OtherAsPtr->As<LTSIntType>() != nullptr ||
-                OtherAsPtr->As<LTSRangeType>() != nullptr ||
-                OtherAsPtr->As<LTSEnumType>() != nullptr ||
-                OtherAsPtr->As<LTSSymmetricType>() != nullptr ||
-                OtherAsPtr->As<LTSFuncType>() != nullptr ||
-                OtherAsPtr->As<LTSArrayType>() != nullptr ||
-                OtherAsPtr->As<LTSRecordType>() != nullptr) {
+            if (OtherAsPtr->As<ExprBoolType>() != nullptr ||
+                OtherAsPtr->As<ExprIntType>() != nullptr ||
+                OtherAsPtr->As<ExprRangeType>() != nullptr ||
+                OtherAsPtr->As<ExprEnumType>() != nullptr ||
+                OtherAsPtr->As<ExprSymmetricType>() != nullptr ||
+                OtherAsPtr->As<ExprFuncType>() != nullptr ||
+                OtherAsPtr->As<ExprArrayType>() != nullptr ||
+                OtherAsPtr->As<ExprRecordType>() != nullptr) {
                 return 1;
             }
 
-            auto OtherAsPar = OtherAsPtr->As<LTSParametricType>();
+            auto OtherAsPar = OtherAsPtr->As<ExprParametricType>();
 
             if (OtherAsPar == nullptr) {
                 return -1;
@@ -734,95 +739,95 @@ namespace ESMC {
             return (ParameterType->Compare(*OtherAsPar->ParameterType));
         }
 
-        LTSFieldAccessType::LTSFieldAccessType()
-            : LTSTypeBase()
+        ExprFieldAccessType::ExprFieldAccessType()
+            : ExprTypeBase()
         {
             // Nothing here
         }
 
-        LTSFieldAccessType::~LTSFieldAccessType()
+        ExprFieldAccessType::~ExprFieldAccessType()
         {
             // Nothing here
         }
 
-        void LTSFieldAccessType::ComputeHashValue() const
+        void ExprFieldAccessType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, "FieldAccessType");
         }
 
-        i32 LTSFieldAccessType::Compare(const LTSTypeBase& Other) const
+        i32 ExprFieldAccessType::Compare(const ExprTypeBase& Other) const
         {
-            if (Other.As<LTSBoolType>() != nullptr ||
-                Other.As<LTSIntType>() != nullptr ||
-                Other.As<LTSRangeType>() != nullptr ||
-                Other.As<LTSEnumType> () != nullptr ||
-                Other.As<LTSSymmetricType>() != nullptr ||
-                Other.As<LTSFuncType> () != nullptr || 
-                Other.As<LTSArrayType>() != nullptr ||
-                Other.As<LTSRecordType>() != nullptr ||
-                Other.As<LTSParametricType>() != nullptr) {
+            if (Other.As<ExprBoolType>() != nullptr ||
+                Other.As<ExprIntType>() != nullptr ||
+                Other.As<ExprRangeType>() != nullptr ||
+                Other.As<ExprEnumType> () != nullptr ||
+                Other.As<ExprSymmetricType>() != nullptr ||
+                Other.As<ExprFuncType> () != nullptr || 
+                Other.As<ExprArrayType>() != nullptr ||
+                Other.As<ExprRecordType>() != nullptr ||
+                Other.As<ExprParametricType>() != nullptr) {
                 return 1;
             }
 
-            if (Other.As<LTSFieldAccessType>() == nullptr) {
+            if (Other.As<ExprFieldAccessType>() == nullptr) {
                 return -1;
             } else {
                 return 0;
             }
         }
 
-        string LTSFieldAccessType::ToString() const
+        string ExprFieldAccessType::ToString() const
         {
             return "(FieldAccessType)";
         }
 
-        LTSUndefType::LTSUndefType()
-            : LTSTypeBase()
+        ExprUndefType::ExprUndefType()
+            : ExprTypeBase()
         {
             // NOthing here
         }
 
-        LTSUndefType::~LTSUndefType()
+        ExprUndefType::~ExprUndefType()
         {
             // Nothing here
         }
 
-        void LTSUndefType::ComputeHashValue() const
+        void ExprUndefType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, "UndefType");
         }
 
-        string LTSUndefType::ToString() const
+        string ExprUndefType::ToString() const
         {
             return "(UndefType)";
         }
 
-        i32 LTSUndefType::Compare(const LTSTypeBase& Other) const
+        i32 ExprUndefType::Compare(const ExprTypeBase& Other) const
         {
-            if (Other.As<LTSBoolType>() != nullptr ||
-                Other.As<LTSIntType>() != nullptr ||
-                Other.As<LTSRangeType>() != nullptr ||
-                Other.As<LTSEnumType> () != nullptr ||
-                Other.As<LTSSymmetricType>() != nullptr ||
-                Other.As<LTSFuncType> () != nullptr || 
-                Other.As<LTSArrayType>() != nullptr ||
-                Other.As<LTSRecordType>() != nullptr ||
-                Other.As<LTSParametricType>() != nullptr ||
-                Other.As<LTSFieldAccessType>() != nullptr) {
+            if (Other.As<ExprBoolType>() != nullptr ||
+                Other.As<ExprIntType>() != nullptr ||
+                Other.As<ExprRangeType>() != nullptr ||
+                Other.As<ExprEnumType> () != nullptr ||
+                Other.As<ExprSymmetricType>() != nullptr ||
+                Other.As<ExprFuncType> () != nullptr || 
+                Other.As<ExprArrayType>() != nullptr ||
+                Other.As<ExprRecordType>() != nullptr ||
+                Other.As<ExprParametricType>() != nullptr ||
+                Other.As<ExprFieldAccessType>() != nullptr) {
                 return 1;
             }
 
-            if (Other.Is<LTSUndefType>()) {
+            if (Other.Is<ExprUndefType>()) {
                 return 0;
             } else {
                 return -1;
             }
         }
 
-    } /* end namespace LTS */
+    } /* end namespace Exprs */
 } /* end namespace ESMC */
 
 // 
-// LTSTypes.cpp ends here
+// ExprTypes.cpp ends here

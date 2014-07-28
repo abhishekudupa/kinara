@@ -37,7 +37,10 @@
 
 // Code:
 
+#include "../expr/ExprTypes.hpp"
+
 #include "SymbolTable.hpp"
+
 #include <boost/functional/hash.hpp>
 
 namespace ESMC {
@@ -69,11 +72,11 @@ namespace ESMC {
             return HashCode;
         }
 
-        ParamDecl::ParamDecl(const string& Name, const LTSTypeRef& Type)
+        ParamDecl::ParamDecl(const string& Name, const Exprs::ExprTypeRef& Type)
             : DeclBase(Name), ParamType(Type)
         {
-            if (!(Type->Is<LTSSymmetricType>() ||
-                  Type->Is<LTSRangeType>())) {
+            if (!(Type->Is<Exprs::ExprSymmetricType>() ||
+                  Type->Is<Exprs::ExprRangeType>())) {
                 throw ESMCError("Parameters can only be range or symmetric types");
             }
         }
@@ -91,7 +94,7 @@ namespace ESMC {
             boost::hash_combine(HashCode, ParamType->Hash());
         }
 
-        const LTSTypeRef& ParamDecl::GetType() const
+        const Exprs::ExprTypeRef& ParamDecl::GetType() const
         {
             return ParamType;
         }
@@ -106,7 +109,7 @@ namespace ESMC {
                     OtherPtr->GetType() == ParamType);
         }
         
-        VarDecl::VarDecl(const string& Name, const LTSTypeRef& Type)
+        VarDecl::VarDecl(const string& Name, const Exprs::ExprTypeRef& Type)
             : DeclBase(Name), VarType(Type)
         {
             // Nothing here
@@ -135,15 +138,15 @@ namespace ESMC {
                     OtherPtr->GetType() == VarType);
         }
 
-        const LTSTypeRef& VarDecl::GetType() const
+        const Exprs::ExprTypeRef& VarDecl::GetType() const
         {
             return VarType;
         }
 
-        StateDecl::StateDecl(const LTSTypeRef& Type)
+        StateDecl::StateDecl(const Exprs::ExprTypeRef& Type)
             : DeclBase("state"), Type(Type)
         {
-            if (!Type->Is<LTSEnumType>()) {
+            if (!Type->Is<Exprs::ExprEnumType>()) {
                 throw ESMCError((string)"State variable must be of enumerated type");
             }
         }
@@ -170,7 +173,7 @@ namespace ESMC {
             return (OtherPtr->Type == Type);
         }
 
-        const LTSTypeRef& StateDecl::GetType() const
+        const Exprs::ExprTypeRef& StateDecl::GetType() const
         {
             return Type;
         }

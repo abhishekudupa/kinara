@@ -44,9 +44,8 @@
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
 
-#include "LTSTypes.hpp"
-
 #include <unordered_map>
+#include <vector>
 
 namespace ESMC {
     namespace LTS {
@@ -71,7 +70,7 @@ namespace ESMC {
             u64 Hash() const;
 
             virtual bool Equals(const DeclBase& Other) const = 0;
-            virtual const LTSTypeRef& GetType() const = 0;
+            virtual const Exprs::ExprTypeRef& GetType() const = 0;
 
             template <typename T>
             inline T* As()
@@ -102,7 +101,6 @@ namespace ESMC {
             {
                 return (dynamic_cast<const T*>(this) != nullptr);
             }
-
         };
 
         typedef CSmartPtr<DeclBase> DeclRef;
@@ -110,49 +108,49 @@ namespace ESMC {
         class ParamDecl : public DeclBase
         {
         private:
-            LTSTypeRef ParamType;
+            Exprs::ExprTypeRef ParamType;
 
         protected:
             virtual void ComputeHashValue() const override;
 
         public:
-            ParamDecl(const string& Name, const LTSTypeRef& Type);
+            ParamDecl(const string& Name, const Exprs::ExprTypeRef& Type);
             virtual ~ParamDecl();
 
             virtual bool Equals(const DeclBase& Other) const override;
-            virtual const LTSTypeRef& GetType() const override;
+            virtual const Exprs::ExprTypeRef& GetType() const override;
         };
 
         class VarDecl : public DeclBase
         {
         private:
-            LTSTypeRef VarType;
+            Exprs::ExprTypeRef VarType;
 
         protected:
             virtual void ComputeHashValue() const override;
 
         public:
-            VarDecl(const string& Name, const LTSTypeRef& Type);
+            VarDecl(const string& Name, const Exprs::ExprTypeRef& Type);
             virtual ~VarDecl();
 
             virtual bool Equals(const DeclBase& Other) const override;
-            virtual const LTSTypeRef& GetType() const override;
+            virtual const Exprs::ExprTypeRef& GetType() const override;
         };
 
         class StateDecl : public DeclBase
         {
         private:
-            LTSTypeRef Type;
+            Exprs::ExprTypeRef Type;
 
         protected:
             virtual void ComputeHashValue() const override;
             
         public:
-            StateDecl(const LTSTypeRef& Type);
+            StateDecl(const Exprs::ExprTypeRef& Type);
             virtual ~StateDecl();
 
             virtual bool Equals(const DeclBase& Other) const override;
-            virtual const LTSTypeRef& GetType() const override;            
+            virtual const Exprs::ExprTypeRef& GetType() const override;            
         };
 
         class SymtabScope : public RefCountable

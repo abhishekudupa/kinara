@@ -45,19 +45,40 @@
 namespace ESMC {
     namespace LTS {
 
+        typedef Exprs::ExprTypeRef ExprTypeRef;
+
         // The class for an I/O EFSM which can contain uninterpreted functions
         class UFEFSM
         {
         private:
             UFLTS* TheLTS;
             bool IsFinalized;
-            vector<LTSTypeRef> Params;
+            vector<ExpT> Params;
+            ExpT& Constraint;
 
         public:
             UFEFSM(UFLTS* TheLTS, 
                    const string& Name,
-                   const vector<LTSTypeRef>& Params);
+                   const vector<ExpT>& Params,
+                   const ExpT& Constraint);
+
             ~UFEFSM();
+            
+            void AddInputMsg(const ExprTypeRef& MType);
+            void AddInputMsg(const ExprTypeRef& MType,
+                             const vector<ExpT>& Params,
+                             const ExpT& Constraint);
+
+            void AddOutputMsg(const ExprTypeRef& MType);
+            void AddOutputMsg(const ExprTypeRef& MType,
+                              const vector<ExpT>& Params,
+                              const ExpT& Constraint);
+
+            void AddState(const string& StateName,
+                          bool Initial = false,
+                          bool Final = false,
+                          bool Accepting = false,
+                          bool Error = false);
             
             
         };

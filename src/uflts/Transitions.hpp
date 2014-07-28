@@ -78,10 +78,6 @@ namespace ESMC {
                 // Nothing here
             }
 
-            ~Transition();
-            {
-                // Nothing here
-            }
 
         public:
             Transition(const Transition& Other)
@@ -89,6 +85,11 @@ namespace ESMC {
                   FinalState(Other.FinalState), Guard(Other.Guard),
                   Updates(Other.Updates), MessageName(Other.MessageName),
                   MessageType(Other.MessageType)
+            {
+                // Nothing here
+            }
+
+            ~Transition();
             {
                 // Nothing here
             }
@@ -112,6 +113,11 @@ namespace ESMC {
             inline i32 GetFairnessSet() const
             {
                 return FairnessSet;
+            }
+
+            inline void SetFairnessSet(i32 FairnessSet) const
+            {
+                this->FairnessSet = FairnessSet;
             }
 
             inline TransitionKind GetKind() const

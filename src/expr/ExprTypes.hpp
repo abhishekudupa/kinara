@@ -1,6 +1,6 @@
-// LTSTypes.hpp --- 
+// ExprTypes.hpp --- 
 // 
-// Filename: LTSTypes.hpp
+// Filename: ExprTypes.hpp
 // Author: Abhishek Udupa
 // Created: Thu Jul 24 10:44:06 2014 (-0400)
 // 
@@ -37,8 +37,8 @@
 
 // Code:
 
-#if !defined ESMC_LTS_TYPES_HPP_
-#define ESMC_LTS_TYPES_HPP_
+#if !defined ESMC_EXPR_TYPES_HPP_
+#define ESMC_EXPR_TYPES_HPP_
 
 #include "../common/FwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
@@ -48,13 +48,13 @@
 #include <vector>
 
 namespace ESMC {
-    namespace LTS {
+    namespace Exprs {
 
-        class LTSTypeBase : public RefCountable
+        class ExprTypeBase : public RefCountable
         {
         private:
             mutable i64 TypeID;
-            static UIDGenerator LTSTypeUIDGen;
+            static UIDGenerator ExprTypeUIDGen;
             mutable bool HashValid;
 
         protected:
@@ -63,16 +63,16 @@ namespace ESMC {
             virtual void ComputeHashValue() const = 0;
 
         public:
-            LTSTypeBase();
-            virtual ~LTSTypeBase();
+            ExprTypeBase();
+            virtual ~ExprTypeBase();
 
             virtual string ToString() const = 0;
-            virtual i32 Compare(const LTSTypeBase& Other) const = 0;
+            virtual i32 Compare(const ExprTypeBase& Other) const = 0;
             
             
             u64 Hash() const;
-            bool Equals(const LTSTypeBase& Other) const;
-            bool LT(const LTSTypeBase& Other) const;
+            bool Equals(const ExprTypeBase& Other) const;
+            bool LT(const ExprTypeBase& Other) const;
 
             i64 GetTypeID() const;
             i64 SetTypeID() const;
@@ -109,36 +109,36 @@ namespace ESMC {
             }
         };
 
-        class LTSBoolType : public LTSTypeBase
+        class ExprBoolType : public ExprTypeBase
         {
         protected:
             virtual void ComputeHashValue() const override;
 
         public:
-            LTSBoolType();
-            virtual ~LTSBoolType();
+            ExprBoolType();
+            virtual ~ExprBoolType();
 
             virtual string ToString() const override;
-            virtual i32 Compare(const LTSTypeBase& Other) const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
         };
 
 
         // A generic int type, can be converted to 
         // any kind of subrange type. 
-        class LTSIntType : public LTSTypeBase
+        class ExprIntType : public ExprTypeBase
         {
         protected:
             virtual void ComputeHashValue() const override;
             
         public:
-            LTSIntType();
-            virtual ~LTSIntType();
+            ExprIntType();
+            virtual ~ExprIntType();
             
             virtual string ToString() const override;
-            virtual i32 Compare(const LTSTypeBase& Other) const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
         };
 
-        class LTSRangeType : public LTSIntType
+        class ExprRangeType : public ExprIntType
         {
         private:
             i64 RangeLow;
@@ -149,19 +149,19 @@ namespace ESMC {
             virtual void ComputeHashValue() const;
 
         public:
-            LTSRangeType(i64 RangeLow, i64 RangeHigh);
-            virtual ~LTSRangeType();
+            ExprRangeType(i64 RangeLow, i64 RangeHigh);
+            virtual ~ExprRangeType();
             
             i64 GetLow() const;
             i64 GetHigh() const;
             u64 GetSize() const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const LTSTypeBase& Other) const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
         };
 
         // Mainly for states and such
-        class LTSEnumType : public LTSTypeBase
+        class ExprEnumType : public ExprTypeBase
         {
         private:
             string Name;
@@ -171,18 +171,18 @@ namespace ESMC {
             virtual void ComputeHashValue() const;
 
         public:
-            LTSEnumType(const string& Name, const set<string>& Members);
-            virtual ~LTSEnumType();
+            ExprEnumType(const string& Name, const set<string>& Members);
+            virtual ~ExprEnumType();
             
             const string& GetName() const;
             const set<string>& GetMembers() const;
             
             bool IsMember(const string& MemberName) const;
             virtual string ToString() const override;
-            virtual i32 Compare(const LTSTypeBase& Other) const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
         };
 
-        class LTSSymmetricType : public LTSTypeBase 
+        class ExprSymmetricType : public ExprTypeBase 
         {
         private:
             string Name;
@@ -194,8 +194,8 @@ namespace ESMC {
             virtual void ComputeHashValue() const;
 
         public:
-            LTSSymmetricType(const string& Name, u32 Size);
-            virtual ~LTSSymmetricType();
+            ExprSymmetricType(const string& Name, u32 Size);
+            virtual ~ExprSymmetricType();
 
             const string& GetName() const;
             u32 GetSize() const;
@@ -205,185 +205,185 @@ namespace ESMC {
             const bool IsMember(const string& Value) const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const LTSTypeBase& Other) const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
         };
 
-        class LTSFuncType : public LTSTypeBase
+        class ExprFuncType : public ExprTypeBase
         {
         private:
             string Name;
             string MangledName;
-            vector<LTSTypeRef> ArgTypes;
-            LTSTypeRef FuncType;
+            vector<ExprTypeRef> ArgTypes;
+            ExprTypeRef FuncType;
 
         protected:
             virtual void ComputeHashValue() const;
 
         public:
-            LTSFuncType(const string& Name, const vector<LTSTypeRef>& ArgTypes,
-                        const LTSTypeRef& FuncType);
-            virtual ~LTSFuncType();
+            ExprFuncType(const string& Name, const vector<ExprTypeRef>& ArgTypes,
+                        const ExprTypeRef& FuncType);
+            virtual ~ExprFuncType();
 
             const string& GetName() const;
-            const vector<LTSTypeRef>& GetArgTypes() const;
-            const LTSTypeRef& GetFuncType() const;
+            const vector<ExprTypeRef>& GetArgTypes() const;
+            const ExprTypeRef& GetFuncType() const;
             const string& GetMangledName() const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const LTSTypeBase& Other) const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
         };
 
-        class LTSArrayType : public LTSTypeBase
+        class ExprArrayType : public ExprTypeBase
         {
         private:
-            LTSTypeRef IndexType;
-            LTSTypeRef ValueType;
+            ExprTypeRef IndexType;
+            ExprTypeRef ValueType;
 
         protected:
             virtual void ComputeHashValue() const;
 
         public:
-            LTSArrayType(const LTSTypeRef& IndexType,
-                         const LTSTypeRef& ValueType);
-            virtual ~LTSArrayType();
+            ExprArrayType(const ExprTypeRef& IndexType,
+                         const ExprTypeRef& ValueType);
+            virtual ~ExprArrayType();
 
-            const LTSTypeRef& GetIndexType() const;
-            const LTSTypeRef& GetValueType() const;
+            const ExprTypeRef& GetIndexType() const;
+            const ExprTypeRef& GetValueType() const;
             
             virtual string ToString() const override;
-            virtual i32 Compare(const LTSTypeBase& Other) const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
         };
 
-        class LTSRecordType : public LTSTypeBase
+        class ExprRecordType : public ExprTypeBase
         {
         private:
             string Name;
-            map<string, LTSTypeRef> Members;
+            map<string, ExprTypeRef> Members;
 
         protected:
             virtual void ComputeHashValue() const;
 
         public:
-            LTSRecordType(const string& Name,
-                          const map<string, LTSTypeRef>& RecordMembers);
-            virtual ~LTSRecordType();
+            ExprRecordType(const string& Name,
+                          const map<string, ExprTypeRef>& RecordMembers);
+            virtual ~ExprRecordType();
 
             const string& GetName() const;
-            const map<string, LTSTypeRef>& GetMembers() const;
-            const LTSTypeRef& GetTypeForMember(const string& MemberName) const;
+            const map<string, ExprTypeRef>& GetMembers() const;
+            const ExprTypeRef& GetTypeForMember(const string& MemberName) const;
 
             virtual string ToString() const;
-            virtual i32 Compare(const LTSTypeBase& Other) const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
         };
 
-        // A VALUE of a parametric type RESOLVES to a VALUE
-        // of the BASE TYPE, when instantiated with 
+        // A parametric type RESOLVES to
+        // the BASE TYPE, when instantiated with 
         // VALUES of the appropriate types.
-        class LTSParametricType : public LTSTypeBase
+        class ExprParametricType : public ExprTypeBase
         {
         private:
-            LTSTypeRef BaseType;
-            LTSTypeRef ParameterType;
+            ExprTypeRef BaseType;
+            ExprTypeRef ParameterType;
 
         protected:
             virtual void ComputeHashValue() const override;
             
         public:
-            LTSParametricType(const LTSTypeRef& BaseType,
-                              const LTSTypeRef& ParameterTypes);
-            virtual ~LTSParametricType();
+            ExprParametricType(const ExprTypeRef& BaseType,
+                               const ExprTypeRef& ParameterTypes);
+            virtual ~ExprParametricType();
 
-            const LTSTypeRef& GetBaseType() const;
-            const LTSTypeRef& GetParameterType() const;
+            const ExprTypeRef& GetBaseType() const;
+            const ExprTypeRef& GetParameterType() const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const LTSTypeBase& Other) const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
         };
 
         // A dummy type for field access terms variables
-        class LTSFieldAccessType : public LTSTypeBase
+        class ExprFieldAccessType : public ExprTypeBase
         {
         protected:
             virtual void ComputeHashValue() const override;
 
         public:
-            LTSFieldAccessType();
-            virtual ~LTSFieldAccessType();
+            ExprFieldAccessType();
+            virtual ~ExprFieldAccessType();
 
             virtual string ToString() const override;
-            virtual i32 Compare(const LTSTypeBase& Other) const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
         };
 
         // Type for undef values
-        class LTSUndefType : public LTSTypeBase
+        class ExprUndefType : public ExprTypeBase
         {
         protected:
             virtual void ComputeHashValue() const override;
             
         public:
-            LTSUndefType();
-            virtual ~LTSUndefType();
+            ExprUndefType();
+            virtual ~ExprUndefType();
 
             virtual string ToString() const override;
-            virtual i32 Compare(const LTSTypeBase& Other) const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
         };
 
 
-        class LTSTypePtrHasher
+        class ExprTypePtrHasher
         {
         public:
-            // inline u64 operator () (const LTSTypeBase* Type) const
+            // inline u64 operator () (const ExprTypeBase* Type) const
             // {
             //     return Type->Hash();
             // }
             
-            inline u64 operator () (const LTSTypeRef& Type) const
+            inline u64 operator () (const ExprTypeRef& Type) const
             {
                 return Type->Hash();
             }
         };
 
-        class LTSTypePtrEquals
+        class ExprTypePtrEquals
         {
         public:
-            // inline bool operator () (const LTSTypeBase* Type1,
-            //                          const LTSTypeBase* Type2) const
+            // inline bool operator () (const ExprTypeBase* Type1,
+            //                          const ExprTypeBase* Type2) const
             // {
             //     return Type1->Equals(*Type2);
             // }
 
-            inline bool operator () (const LTSTypeRef& Type1,
-                                     const LTSTypeRef& Type2) const
+            inline bool operator () (const ExprTypeRef& Type1,
+                                     const ExprTypeRef& Type2) const
             {
                 return Type1->Equals(*Type2);
             }
         };
 
-        class LTSTypePtrCompare
+        class ExprTypePtrCompare
         {
         public:
-            // inline bool operator () (const LTSTypeBase* Type1,
-            //                          const LTSTypeBase* Type2) const
+            // inline bool operator () (const ExprTypeBase* Type1,
+            //                          const ExprTypeBase* Type2) const
             // {
             //     return Type1->LT(*Type2);
             // }
 
-            inline bool operator () (const LTSTypeRef& Type1,
-                                     const LTSTypeRef& Type2) const
+            inline bool operator () (const ExprTypeRef& Type1,
+                                     const ExprTypeRef& Type2) const
             {
                 return Type1->LT(*Type2);
             }
         };
 
-    } /* end namespace LTS */
+    } /* end namespace Exprs */
 } /* end namespace ESMC */
 
 namespace std {
 
     template<>
-    struct hash<ESMC::LTS::LTSTypeRef>
+    struct hash<ESMC::Exprs::ExprTypeRef>
     {
-        inline size_t operator () (const ESMC::LTS::LTSTypeRef& Type) const 
+        inline size_t operator () (const ESMC::Exprs::ExprTypeRef& Type) const 
         { 
             return Type->Hash(); 
         }
@@ -391,7 +391,7 @@ namespace std {
 
 } /* end namespace std */
 
-#endif /* ESMC_LTS_TYPES_HPP_ */
+#endif /* ESMC_EXPR_TYPES_HPP_ */
 
 // 
-// LTSTypes.hpp ends here
+// ExprTypes.hpp ends here

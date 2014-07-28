@@ -54,9 +54,9 @@ int main()
     typedef SemT::Ops Ops;
 
     // Tests for basic variable creation
-    auto IntType = Mgr->MakeType<LTSIntType>();
-    auto BoolType = Mgr->MakeType<LTSBoolType>();
-    auto RangeType = Mgr->MakeType<LTSRangeType>(0, 100);
+    auto IntType = Mgr->MakeType<ExprIntType>();
+    auto BoolType = Mgr->MakeType<ExprBoolType>();
+    auto RangeType = Mgr->MakeType<ExprRangeType>(0, 100);
 
     auto AExp = Mgr->MakeVar("DummyA", IntType);
     auto BExp = Mgr->MakeVar("DummyB", RangeType);
@@ -89,7 +89,7 @@ int main()
     cout << "After Simplification:" << endl << FApp << endl;
 
     // Tests for record and array accesses
-    auto ArrayType = Mgr->MakeType<LTSArrayType>(RangeType, RangeType);
+    auto ArrayType = Mgr->MakeType<ExprArrayType>(RangeType, RangeType);
     auto ArrVar = Mgr->MakeVar("ArrA", ArrayType);
     auto IndexExp = Mgr->MakeExpr(Ops::OpIndex, ArrVar, TenExp);
 
@@ -101,32 +101,37 @@ int main()
 
 
     // Record access, param types and symmetric types
-    auto SymmType = Mgr->MakeType<LTSSymmetricType>("SymmType", 4);
-    map<string, LTSTypeRef> RecMemMap;
+    auto SymmType = Mgr->MakeType<ExprSymmetricType>("SymmType", 4);
+    map<string, ExprTypeRef> RecMemMap;
     
     RecMemMap["IntField"] = IntType;
     RecMemMap["BoolField"] = BoolType;
     RecMemMap["RangeField"] = RangeType;
 
-    auto RecType = Mgr->MakeType<LTSRecordType>("RecType", RecMemMap);
-    auto ParamType = Mgr->MakeType<LTSParametricType>(RecType, SymmType);
+    auto RecType = Mgr->MakeType<ExprRecordType>("RecType", RecMemMap);
+    auto ParamType = Mgr->MakeType<ExprParametricType>(RecType, SymmType);
     
     cout << "ParamType: " << endl << ParamType->ToString() << endl;
     
-    auto FAType = Mgr->MakeType<LTSFieldAccessType>();
+    auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+    auto ConstExp = Mgr->MakeVal("SymmType::0", SymmType);
+    vector<MgrType::ExpT> ParamVals(1);
+    ParamVals[0] = ConstExp;
+    auto InstType = Mgr->InstantiateType(ParamType, ParamVals);
 
-    auto ParamVar = Mgr->MakeVar("ParamVar", ParamType);
-    auto SymmVar = Mgr->MakeVar("SymmC", SymmType);
+    cout << "Instantiated Param Type: " << endl << InstType->ToString() << endl;
+    
+    auto RecVar = Mgr->MakeVar("RecVar", InstType);
     auto FieldVar = Mgr->MakeVar("IntField", FAType);
 
-    IndexExp = Mgr->MakeExpr(Ops::OpIndex, ParamVar, SymmVar);
-    auto FieldExp = Mgr->MakeExpr(Ops::OpField, IndexExp, FieldVar);
+
+    auto FieldExp = Mgr->MakeExpr(Ops::OpField, RecVar, FieldVar);
 
     cout << "Index Expression: " << IndexExp << endl;
     cout << "Field Expression: " << FieldExp << endl;
 
     auto FieldVar2 = Mgr->MakeVar("RangeField", FAType);
-    auto FieldExp2 = Mgr->MakeExpr(Ops::OpField, IndexExp, FieldVar2);
+    auto FieldExp2 = Mgr->MakeExpr(Ops::OpField, RecVar, FieldVar2);
 
     auto ComplexExp = Mgr->MakeExpr(Ops::OpADD, FieldExp2, TenExp);
     cout << "Field Exp before Simplficiation: " << endl << ComplexExp << endl;

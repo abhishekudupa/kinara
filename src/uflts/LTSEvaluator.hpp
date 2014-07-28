@@ -1,8 +1,8 @@
-// UFLTS.hpp --- 
+// LTSEvaluator.hpp --- 
 // 
-// Filename: UFLTS.hpp
+// Filename: LTSEvaluator.hpp
 // Author: Abhishek Udupa
-// Created: Wed Jul 23 15:13:43 2014 (-0400)
+// Created: Mon Jul 28 14:11:39 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,59 +37,20 @@
 
 // Code:
 
-
-// This file contains the class definition of the UFLTS class.
-// The UFLTS class is used to represent a labelled transition
-// system with Uninterpreted Functions
-
-#if !defined ESMC_UFLTS_HPP_
-#define ESMC_UFLTS_HPP_
+#if !defined ESMC_LTS_EVALUATOR_HPP_
+#define ESMC_LTS_EVALUATOR_HPP_
 
 #include "../common/FwdDecls.hpp"
-#include "../expr/Expressions.hpp"
-
-#include "LTSTermSemanticizer.hpp"
-#include "UFEFSM.hpp"
 
 namespace ESMC {
     namespace LTS {
 
-        typedef Exprs::ExprTypeRef ExprTypeRef;
-
-        struct UFLTSExtType
-        {
-
-        };
-
-        typedef Expr<UFLTSExtType, LTSTermSemanticizer> ExpT;
-
-        class UFLTS 
-        {
-        private:
-            ExprMgr<UFLTSExtType, LTSTermSemanticizer> Mgr;
-
-        public:
-            template <typename T, typename... ArgTypes>
-            MakeType(ArgTypes&&... Args);
-
-            // Non parametric message type
-            const ExprTypeRef& MakeMessageType(const ExprTypeRef& MType);
-            const ExprTypeRef& MakeMessageType(const ExprTypeRef& MType,
-                                               const vector<ExpT>& Params,
-                                               const ExpT& Constraint);
-
-            UFEFSM* MakeEFSM(const string& Name, 
-                             const vector<ExpT>& Params,
-                             const ExpT& Constraint);
-
-            
-        };
+        
 
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-#endif /* ESMC_UFLTS_HPP_ */
-
+#endif /* ESMC_LTS_EVALUATOR_HPP_ */
 
 // 
-// UFLTS.hpp ends here
+// LTSEvaluator.hpp ends here

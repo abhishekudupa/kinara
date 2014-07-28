@@ -55,7 +55,7 @@
 #include "../containers/RefCache.hpp"
 #include "../utils/UIDGenerator.hpp"
 
-
+#include "ExprTypes.hpp"
 
 // This classes in this file are heavily templatized
 // to allow for flexibility via arbitrary extension objects
@@ -184,7 +184,7 @@ namespace ESMC {
         private:
             ExprMgr<E, S>* Mgr;
             mutable bool HashValid;
-            mutable typename S<E>::TypeT ExpType;
+            mutable ExprTypeRef ExpType;
 
         public:
             mutable E ExtensionData;
@@ -199,8 +199,8 @@ namespace ESMC {
 
             inline ExprMgr<E, S>* GetMgr() const;
             inline u64 Hash() const;
-            inline const typename S<E>::TypeT& GetType() const;
-            inline void SetType(const typename S<E>::TypeT& Type) const;
+            inline const ExprTypeRef& GetType() const;
+            inline void SetType(const ExprTypeRef& Type) const;
             inline bool Equals(const ExpressionBase<E, S>* Other) const;
             inline bool NEquals(const ExpressionBase<E, S>* Other) const;
             inline bool LT(const ExpressionBase<E, S>* Other) const;
@@ -316,17 +316,17 @@ namespace ESMC {
         {
         private:
             string ConstValue;
-            typename S<E>::TypeT ConstType;
+            ExprTypeRef ConstType;
 
         public:
             inline ConstExpression(ExprMgr<E, S>* Mgr,
                                    const string& ConstValue,
-                                   const typename S<E>::TypeT& ConstType, 
+                                   const ExprTypeRef& ConstType, 
                                    const E& ExtData = E());
             inline virtual ~ConstExpression();
 
             inline const string& GetConstValue() const;
-            inline const typename S<E>::TypeT&  GetConstType() const;
+            inline const ExprTypeRef&  GetConstType() const;
 
         protected:
             inline virtual void ComputeHash() const override;
@@ -342,16 +342,16 @@ namespace ESMC {
         {
         private:
             string VarName;
-            typename S<E>::TypeT VarType;
+            ExprTypeRef VarType;
 
         public:
             inline VarExpression(ExprMgr<E, S>* Manager, 
                                  const string& VarName,
-                                 const typename S<E>::TypeT& VarType, 
+                                 const ExprTypeRef& VarType, 
                                  const E& ExtData = E());
             inline virtual ~VarExpression();
             inline const string& GetVarName() const;
-            inline const typename S<E>::TypeT& GetVarType() const;
+            inline const ExprTypeRef& GetVarType() const;
 
         protected:
             inline virtual void ComputeHash() const override;
@@ -365,17 +365,17 @@ namespace ESMC {
         class BoundVarExpression : public ExpressionBase<E, S>
         {
         private:
-            typename S<E>::TypeT VarType;
+            ExprTypeRef VarType;
             u64 VarIdx;
 
         public:
             inline BoundVarExpression(ExprMgr<E, S>* Manager, 
-                                      const typename S<E>::TypeT& VarType, 
+                                      const ExprTypeRef& VarType, 
                                       i64 VarIdx,
                                       const E& ExtData = E());
             inline virtual ~BoundVarExpression();
             inline u64 GetVarIdx() const;
-            inline const typename S<E>::TypeT& GetVarType() const;
+            inline const ExprTypeRef& GetVarType() const;
         
         protected:
             inline virtual void ComputeHash() const override;
@@ -417,16 +417,16 @@ namespace ESMC {
         class QuantifiedExpressionBase : public ExpressionBase<E, S>
         {
         private:
-            vector<typename S<E>::TypeT> QVarTypes;
+            vector<ExprTypeRef> QVarTypes;
             Expr<E, S> QExpression;
 
         public:
             inline QuantifiedExpressionBase(ExprMgr<E, S>* Manager,
-                                            const vector<typename S<E>::TypeT>& QVarTypes,
+                                            const vector<ExprTypeRef>& QVarTypes,
                                             const Expr<E, S>& QExpression,
                                             const E& ExtData = E());
             inline virtual ~QuantifiedExpressionBase();
-            inline const vector<typename S<E>::TypeT>& GetQVarTypes() const;
+            inline const vector<ExprTypeRef>& GetQVarTypes() const;
             inline const Expr<E, S>& GetQExpression() const;
 
         protected:
@@ -494,50 +494,13 @@ namespace ESMC {
             }
         };
 
-        // This is a default semanticizer.
-        // All semanticizers must implement this signature.
-        template<typename E>
-        class SemanticizerBase
-        {
-        private:
-            const string Name;
-
-        public:
-            // The type of the lowered expressions
-            // Since we don't do anything special, we 
-            // set it to the type of expressions itself
-            typedef Expr<E, ESMC::Exprs::SemanticizerBase> LExpType;
-            typedef Expr<E, ESMC::Exprs::SemanticizerBase> ExpType;
-
-            SemanticizerBase() : Name("SemanticizerBase") {}
-            ~SemanticizerBase() {}
-            
-            inline void TypeCheck(const ExpType& Exp) const {}
-
-            inline ExpType Canonicalize(const ExpType& Exp) const { return Exp; }
-            inline LExpType LowerExpr(const ExpType& Exp) { return Exp; }
-            inline ExpType RaiseExpr(const LExpType& LExp) { return LExp; }
-            inline ExpType Simplify(const ExpType& Exp) { return Exp; }
-            inline ExpType ElimQuantifiers(const ExpType& Exp) { return Exp; }
-            inline string ExprToString(const LExpType& Exp) { return "NoExp"; }
-            inline string TypeToString(i64 Type) const { return "NoType"; }
-            
-
-            inline i64 RegisterUninterpretedFunction(const string& Name,
-                                                     const vector<i64> DomTypes,
-                                                     i64 RangeType)
-            {
-                return 0;
-            }
-        };
-
         template <typename E, template <typename> class S>
         class ExprMgr
         {
         public:
             typedef S<E> SemT;
             typedef typename SemT::LExpT LExpT;
-            typedef typename SemT::TypeT TypeT;
+            typedef ExprTypeRef TypeT;
             typedef Expr<E, S> ExpT;
             typedef ExprI<E, S> IExpT;
 
@@ -548,10 +511,19 @@ namespace ESMC {
             typedef RefCache<ExpressionBase<E, S>, ExpressionPtrHasher,
                              ExpressionPtrEquals, CSmartPtr> ExpCacheT;
 
+            typedef RefCache<ExprTypeBase, ExprTypePtrHasher,
+                             ExprTypePtrEquals, CSmartPtr> TypeCacheT;
+
             typedef unordered_set<ExpT, ExpressionPtrHasher, FastExpressionPtrEquals> ExpSetT;
+
         private:
             SemT* Sem;
             ExpCacheT ExpCache;
+            TypeCacheT TypeCache;
+
+            ExprTypeRef BoolType;
+            ExprTypeRef IntType;
+            
             inline void CheckMgr(const vector<ExpT>& Children) const;
             inline void CheckMgr(const ExpT& Exp) const;
             template <template <typename, template<typename> class> class T>
@@ -562,6 +534,11 @@ namespace ESMC {
             // Insert the expression and all subexpressions
             // into the set of expressions owned by this manager
             inline ExpT Internalize(const ExpT& Exp);
+
+            inline TypeT InstantiateTypeRec(const ExprParametricType* ParamType,
+                                            const vector<ExpT>& ParamValues,
+                                            u32 ParamIndex);
+
             
         public:
             template <typename... ArgTypes>
@@ -570,6 +547,9 @@ namespace ESMC {
             
             template<typename T, typename... ArgTypes>
             inline TypeT MakeType(ArgTypes&&... Args);
+
+            inline TypeT InstantiateType(const TypeT& ParamType,
+                                         const vector<ExpT>& ParamValues);
 
             inline ExpT MakeVal(const string& ValString, const TypeT& ValType,
                                 const E& ExtVal = E());
@@ -621,7 +601,6 @@ namespace ESMC {
             Gather(const ExpT& Exp, 
                    const function<bool(const ExpressionBase<E, S>*)>& Pred) const;
 
-            inline string TypeToString(i64 TypeID) const;
             inline void GC();
 
             static inline ExprMgr* Make();
@@ -1036,7 +1015,7 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline const typename S<E>::TypeT& 
+        inline const ExprTypeRef& 
         ExpressionBase<E, S>::GetType() const
         {
             return ExpType;
@@ -1044,7 +1023,7 @@ namespace ESMC {
 
         template <typename E, template <typename> class S>
         inline void 
-        ExpressionBase<E, S>::SetType(const typename S<E>::TypeT& Type) const
+        ExpressionBase<E, S>::SetType(const ExprTypeRef& Type) const
         {
             ExpType = Type;
         }
@@ -1272,7 +1251,7 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline ConstExpression<E, S>::ConstExpression(ExprMgr<E, S>* Manager, 
                                                       const string& ConstValue,
-                                                      const typename S<E>::TypeT& ConstType, 
+                                                      const ExprTypeRef& ConstType, 
                                                       const E& ExtVal)
             : ExpressionBase<E, S>(Manager, ExtVal), 
               ConstValue(ConstValue), 
@@ -1294,7 +1273,7 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline const typename S<E>::TypeT& 
+        inline const ExprTypeRef& 
         ConstExpression<E, S>::GetConstType() const
         {
             return ConstType;
@@ -1326,8 +1305,7 @@ namespace ESMC {
         {
             this->HashCode = 0;
             boost::hash_combine(this->HashCode, ConstValue);
-            hash<typename S<E>::TypeT> TypeHasher;
-            boost::hash_combine(this->HashCode, TypeHasher(ConstType));
+            boost::hash_combine(this->HashCode, ConstType->Hash());
         }
 
         template <typename E, template <typename> class S>
@@ -1340,7 +1318,7 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline VarExpression<E, S>::VarExpression(ExprMgr<E, S>* Manager, 
                                                   const string& VarName,
-                                                  const typename S<E>::TypeT& VarType, 
+                                                  const ExprTypeRef& VarType, 
                                                   const E& ExtVal)
             : ExpressionBase<E, S>(Manager, ExtVal),
               VarName(VarName), VarType(VarType)
@@ -1361,7 +1339,7 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline const typename S<E>::TypeT&
+        inline const ExprTypeRef&
         VarExpression<E, S>::GetVarType() const
         {
             return VarType;
@@ -1398,9 +1376,8 @@ namespace ESMC {
         inline void VarExpression<E, S>::ComputeHash() const
         {
             this->HashCode = 0;
-            hash<typename S<E>::TypeT> TypeHasher;
             boost::hash_combine(this->HashCode, VarName);
-            boost::hash_combine(this->HashCode, TypeHasher(VarType));
+            boost::hash_combine(this->HashCode, VarType->Hash());
         }
 
         template <typename E, template <typename> class S>
@@ -1413,7 +1390,7 @@ namespace ESMC {
         // BoundVarExpression implementation
         template <typename E, template <typename> class S>
         inline BoundVarExpression<E, S>::BoundVarExpression(ExprMgr<E, S>* Manager, 
-                                                            const typename S<E>::TypeT& VarType, 
+                                                            const ExprTypeRef& VarType, 
                                                             i64 VarIdx,
                                                             const E& ExtVal)
             : ExpressionBase<E, S>(Manager, ExtVal),
@@ -1435,7 +1412,7 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline const typename S<E>::TypeT& 
+        inline const ExprTypeRef& 
         BoundVarExpression<E, S>::GetVarType() const
         {
             return VarType;
@@ -1471,9 +1448,8 @@ namespace ESMC {
         inline void BoundVarExpression<E, S>::ComputeHash() const
         {
             this->HashCode = 0;
-            hash<typename S<E>::TypeT> TypeHasher;
             boost::hash_combine(this->HashCode, VarIdx);
-            boost::hash_combine(this->HashCode, TypeHasher(VarType));
+            boost::hash_combine(this->HashCode, VarType->Hash());
         }
 
         template <typename E, template <typename> class S>
@@ -1589,7 +1565,7 @@ namespace ESMC {
         inline QuantifiedExpressionBase<E, S>::QuantifiedExpressionBase
         (
          ExprMgr<E, S>* Manager,
-         const vector<typename S<E>::TypeT>& QVarTypes,
+         const vector<ExprTypeRef>& QVarTypes,
          const Expr<E, S>& QExpression,
          const E& ExtVal
          )
@@ -1605,7 +1581,7 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline const vector<typename S<E>::TypeT>& 
+        inline const vector<ExprTypeRef>& 
         QuantifiedExpressionBase<E, S>::GetQVarTypes() const
         {
             return QVarTypes;
@@ -1640,11 +1616,9 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline void QuantifiedExpressionBase<E, S>::ComputeHashInternal() const
         {
-            hash<typename S<E>::TypeT> TypeHasher;
-            
             this->HashCode = 0;
             for (auto const& VarType : QVarTypes) {
-                boost::hash_combine(this->HashCode, TypeHasher(VarType));
+                boost::hash_combine(this->HashCode, VarType->Hash());
             }
             
             boost::hash_combine(this->HashCode, QExpression->Hash());
@@ -1803,9 +1777,12 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         template <typename... ArgTypes>
         inline ExprMgr<E, S>::ExprMgr(ArgTypes&&... Args)
-            : Sem(new SemT(forward<ArgTypes>(Args)...))
         {
-            // Nothing here
+            BoolType = TypeCache.Get<ExprBoolType>();
+            IntType = TypeCache.Get<ExprIntType>();
+            (void)BoolType->GetOrSetTypeID();
+            (void)IntType->GetOrSetTypeID();
+            Sem = new S<E>(this, BoolType, IntType, forward<ArgTypes>(Args)...);
         }
 
         template <typename E, template <typename> class S>
@@ -1819,7 +1796,64 @@ namespace ESMC {
         inline typename ExprMgr<E, S>::TypeT
         ExprMgr<E, S>::MakeType(ArgTypes&&... Args)
         {
-            return Sem->MakeType<T>(forward<ArgTypes>(Args)...);
+            auto Retval = TypeCache.Get<T>(forward<ArgTypes>(Args)...);
+            Retval->GetOrSetTypeID();
+            return Retval;
+        }
+
+        template <typename E, template <typename> class S>
+        typename ExprMgr<E, S>::TypeT
+        ExprMgr<E, S>::InstantiateTypeRec(const ExprParametricType* Type, 
+                                          const vector<typename ExprMgr<E, S>::ExpT>& Params,
+                                          u32 ParamIndex)
+        {
+            auto ExpType = Type->GetParameterType();
+            if (ExpType != Params[ParamIndex]->GetType()) {
+                throw ExprTypeError((string)"Invalid parameter value " + 
+                                    Params[ParamIndex]->ToString() + 
+                                    " in instantiation of " + 
+                                    "parametric type " + Type->ToString());
+            }
+            auto BaseType = Type->GetBaseType();
+            bool ParamsLeft = (ParamIndex < Params.size() - 1);
+
+            if (BaseType->template Is<ExprParametricType>() !=
+                ParamsLeft) {
+                throw ExprTypeError((string)"Incorrect number of parameters in " + 
+                                    "parametric type instantiation");
+            }
+            if (!ParamsLeft) {
+                if (!BaseType->template Is<ExprRecordType>()) {
+                    throw InternalError((string)"Expected a record type.\nAt: " + 
+                                        __FILE__ + ":" + to_string(__LINE__));
+                }
+                auto RecType = BaseType->template As<ExprRecordType>();
+                auto TypeName = RecType->GetName();
+                for(u32 i = 0; i < Params.size(); ++i) {
+                    TypeName += ((string)"[" + Params[i]->ToString() + "]");
+                }
+                return MakeType<ExprRecordType>(TypeName, RecType->GetMembers());
+            } else {
+                auto ParamType = BaseType->template As<ExprParametricType>();
+                if (ParamType == nullptr) {
+                    throw InternalError((string)"Expected a parametric type.\nAt: " + 
+                                        __FILE__ + ":" + to_string(__LINE__));
+                }
+                return InstantiateTypeRec(ParamType, Params, ParamIndex + 1);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::TypeT
+        ExprMgr<E, S>::InstantiateType(const TypeT& Type,
+                                       const vector<ExpT>& Params)
+        {
+            auto TypeAsPType = Type->template As<ExprParametricType>();
+            if (TypeAsPType == nullptr) {
+                throw ExprTypeError((string)"Cannot instantiate non-parametric type " +
+                                    Type->ToString());
+            }
+            return InstantiateTypeRec(TypeAsPType, Params, 0);
         }
 
         template <typename E, template <typename> class S>
