@@ -45,14 +45,18 @@
 namespace ESMC {
     namespace LTS {
 
+        class UFLTS;
         typedef Exprs::ExprTypeRef ExprTypeRef;
+        typedef Exprs::Expr<E, S> ExpT;
 
         // The class for an I/O EFSM which can contain uninterpreted functions
         class UFEFSM
         {
+            friend class UFLTS;
+            
         private:
             UFLTS* TheLTS;
-            bool IsFinalized;
+            bool Finalized;
             vector<ExpT> Params;
             ExpT& Constraint;
 
@@ -79,8 +83,34 @@ namespace ESMC {
                           bool Final = false,
                           bool Accepting = false,
                           bool Error = false);
+
+            // Add an internal, non-initial, non-final,
+            // non-accepting, non-error state
+            string AddState();
             
-            
+            void AddInputTransition(const string& InitState,
+                                    const string& FinalState,
+                                    const ExpT& Guard,
+                                    const vector<Assignment<E, S>>& Updates,
+                                    const string& MessageName,
+                                    const LTSTypeRef& MessageType);
+
+            void AddOutputTransition(const string& InitState,
+                                     const string& FinalState,
+                                     const ExpT& Guard,
+                                     const vector<Assignment<E, S>>& Updates,
+                                     const string& MessageName,
+                                     const LTSTypeRef& MessageType,
+                                     i32 FairnessSet = -1);
+
+            void AddInternalTransition(const string& InitState,
+                                       const string& FinalState,
+                                       const ExpT& Guard,
+                                       const vector<Assignment<E, S>>& Updates,
+                                       const string& MessageName,
+                                       const LTSTypeRef& MessageType,
+                                       i32 FairnessSet = -1);
+
         };
 
     } /* end namespace LTS */

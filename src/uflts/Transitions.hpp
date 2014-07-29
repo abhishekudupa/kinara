@@ -117,6 +117,10 @@ namespace ESMC {
 
             inline void SetFairnessSet(i32 FairnessSet) const
             {
+                if (Kind == TransitionKind::INPUT) {
+                    throw ESMCError((string)"An input transition cannot be part of " + 
+                                    "a fairness constraint");
+                }
                 this->FairnessSet = FairnessSet;
             }
 
