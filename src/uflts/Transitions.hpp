@@ -225,6 +225,19 @@ namespace ESMC {
             }
         };
 
+
+        // A guarded command
+        template <typename E, template <typename> class S>
+        class GuardedCommandBase
+        {
+        private:
+            typedef Expr<E, S> ExpT;
+            typedef Assignment<E, S> AsgnT;
+
+            ExpT Guard;
+            
+        };
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

@@ -173,6 +173,20 @@ namespace ESMC {
             };
         } /* end namespace Detail */
 
+        // non-parametric, frozen efsm
+        class FrozenEFSM
+        {
+            friend class UFLTS;
+
+        private:
+            ExprTypeRef StateType;
+            SymbolTable SymTab;
+            set<ExprTypeRef> Inputs;
+            set<ExprTypeRef> Outputs;
+
+            
+        };
+
         // The class for an I/O EFSM which can contain uninterpreted functions
         class UFEFSM
         {

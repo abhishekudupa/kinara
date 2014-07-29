@@ -1532,21 +1532,21 @@ namespace ESMC {
         inline typename LTSTermSemanticizer<E>::ExpT
         LTSTermSemanticizer<E>::RaiseExpr(const LExpT& LExp)
         {
-            throw Exprs::ExprTypeError((string)"RaiseExpr() is ill-defined for LTS Terms");
+            throw ESMCError((string)"RaiseExpr() not implemented in LTSTermSemanticizer");
         }
 
         template <typename E>
         inline typename LTSTermSemanticizer<E>::LExpT
         LTSTermSemanticizer<E>::LowerExpr(const ExpT& Exp)
         {
-            throw Exprs::ExprTypeError((string)"RaiseExpr() is ill-defined for LTS Terms");
+            throw ESMCError((string)"LowerExpr() not implemented in LTSTermSemanticizer");
         }
 
         template <typename E>
         inline typename LTSTermSemanticizer<E>::ExpT
         LTSTermSemanticizer<E>::ElimQuantifiers(const ExpT& Exp)
         {
-            throw Exprs::ExprTypeError((string)"RaiseExpr() is ill-defined for LTS Terms");            
+            throw ESMCError((string)"ElimQuantifiers() not implemented in LTSTermSemanticizer");
         }
 
         template<typename E>

@@ -369,6 +369,7 @@ namespace ESMC {
 
         inline UFEFSM* UFEFSM::Instantiate(const MgrType::SubstMapT& SubstMap) const
         {
+            auto Mgr = TheLTS->Mgr;
             string InstName = Name;
             for (auto const& Param : Params) {
                 auto it = SubstMap.find(Param);
@@ -380,7 +381,8 @@ namespace ESMC {
             }
             
             UFEFSM* Retval = new UFEFSM(TheLTS, InstName);
-            // Add the parametrized message types
+            // Add the states
+            
             
         }
 
