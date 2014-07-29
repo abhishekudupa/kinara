@@ -46,6 +46,7 @@ libesmc_OBJS= \
 	ExprTypes.o \
 	LTSTermSemanticizer.o \
 	SymbolTable.o \
+	UFEFSM.o \
 	UIDGenerator.o \
 
 

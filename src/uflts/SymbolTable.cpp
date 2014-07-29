@@ -108,6 +108,43 @@ namespace ESMC {
             return (OtherPtr->GetDeclName() == GetDeclName() &&
                     OtherPtr->GetType() == ParamType);
         }
+
+        MsgDecl::MsgDecl(const string& Name, const Exprs::ExprTypeRef& Type)
+            : DeclBase(Name), MsgType(Type)
+        {
+            if (!Type->Is<Exprs::ExprRecordType>()) {
+                throw ESMCError((string)"Message decls must be record types");
+            }
+        }
+
+        MsgDecl::~MsgDecl() 
+        {
+            // Nothing here
+        }
+
+        void MsgDecl::ComputeHashValue() const
+        {
+            HashCode = 0;
+            boost::hash_combine(HashCode, "Msg");
+            boost::hash_combine(HashCode, GetDeclName());
+            boost::hash_combine(HashCode, MsgType->Hash());
+        }
+
+        const Exprs::ExprTypeRef& MsgDecl::GetType() const
+        {
+            return MsgType;
+        }
+
+        bool MsgDecl::Equals(const DeclBase& Other) const
+        {
+            if (!Other.Is<MsgDecl>()) {
+                return false;
+            }
+
+            auto OtherPtr = Other.As<MsgDecl>();
+            return (OtherPtr->GetDeclName() == GetDeclName() &&
+                    OtherPtr->GetType() == MsgType);
+        }
         
         VarDecl::VarDecl(const string& Name, const Exprs::ExprTypeRef& Type)
             : DeclBase(Name), VarType(Type)

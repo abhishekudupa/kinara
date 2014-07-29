@@ -126,6 +126,12 @@ namespace ESMC {
             }
         }
 
+        vector<string> ExprBoolType::GetElements() const
+        {
+            vector<string> Retval = { "true", "false" };
+            return Retval;
+        }
+
         void ExprBoolType::ComputeHashValue() const
         {
             HashCode = 0;
@@ -175,13 +181,20 @@ namespace ESMC {
             }
         }
 
+        vector<string> ExprIntType::GetElements() const
+        {
+            throw ESMCError((string)"Cannot GetElements() on unbounded type IntType");
+        }
+
         // Inclusive range
         ExprRangeType::ExprRangeType(i64 RangeLow, i64 RangeHigh)
             : ExprIntType(), 
               RangeLow(RangeLow), RangeHigh(RangeHigh), 
               Size(RangeHigh - RangeLow + 1)
         {
-            // Nothing here
+            if (RangeLow > RangeHigh) {
+                throw ESMCError((string)"Negative size specified for Range type");
+            }
         }
 
         ExprRangeType::~ExprRangeType()
@@ -248,6 +261,15 @@ namespace ESMC {
                     return 0;
                 }
             }
+        }
+
+        vector<string> ExprRangeType::GetElements() const
+        {
+            vector<string> Retval;
+            for(i64 i = RangeLow; i <= RangeHigh; ++i) {
+                Retval.push_back(to_string(i));
+            }
+            return Retval;
         }
 
         ExprEnumType::ExprEnumType(const string& Name, 
@@ -340,6 +362,11 @@ namespace ESMC {
             }
         }
 
+        vector<string> ExprEnumType::GetElements() const
+        {
+            return (vector<string>(Members.begin(), Members.end()));
+        }
+
         ExprSymmetricType::ExprSymmetricType(const string& Name, u32 Size)
             : ExprTypeBase(), Name(Name), Size(Size), Members(Size)
         {
@@ -379,6 +406,16 @@ namespace ESMC {
         {
             return (MemberSet.find(Value) != MemberSet.end());
         }
+        
+        void ExprSymmetricType::SetIndex(u32 Index) const
+        {
+            this->Index = Index;
+        }
+
+        u32 ExprSymmetricType::GetIndex() const
+        {
+            return Index;
+        }
 
         string ExprSymmetricType::ToString() const
         {
@@ -413,6 +450,10 @@ namespace ESMC {
             return 0;
         }
 
+        vector<string> ExprSymmetricType::GetElements() const
+        {
+            return (vector<string>(MemberSet.begin(), MemberSet.end()));
+        }
 
         static inline string MangleName(const string& Name, 
                                         const vector<ExprTypeRef>& Args)
@@ -520,6 +561,11 @@ namespace ESMC {
             }
         }
 
+        vector<string> ExprFuncType::GetElements() const
+        {
+            throw ESMCError((string)"Cannot GetElements() of a function type");
+        }
+
         ExprArrayType::ExprArrayType(const ExprTypeRef& IndexType,
                                    const ExprTypeRef& ValueType)
             : ExprTypeBase(), IndexType(IndexType), ValueType(ValueType)
@@ -574,6 +620,11 @@ namespace ESMC {
                 return Cmp;
             }
             return ValueType->Compare(*(OtherAsArr->ValueType));
+        }
+
+        vector<string> ExprArrayType::GetElements() const
+        {
+            throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
         void ExprArrayType::ComputeHashValue() const
@@ -654,6 +705,11 @@ namespace ESMC {
             } else {
                 return 0;
             }
+        }
+
+        vector<string> ExprRecordType::GetElements() const
+        {
+            throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
         void ExprRecordType::ComputeHashValue() const
@@ -739,6 +795,11 @@ namespace ESMC {
             return (ParameterType->Compare(*OtherAsPar->ParameterType));
         }
 
+        vector<string> ExprParametricType::GetElements() const
+        {
+            throw ESMCError((string)"Cannot get elements of non-scalar type");
+        }
+
         ExprFieldAccessType::ExprFieldAccessType()
             : ExprTypeBase()
         {
@@ -776,6 +837,12 @@ namespace ESMC {
                 return 0;
             }
         }
+
+        vector<string> ExprFieldAccessType::GetElements() const
+        {
+            throw ESMCError((string)"Cannot get elements of non-scalar type");
+        }
+
 
         string ExprFieldAccessType::ToString() const
         {
@@ -824,6 +891,12 @@ namespace ESMC {
             } else {
                 return -1;
             }
+        }
+
+        vector<string> ExprUndefType::GetElements() const
+        {
+            vector<string> Retval = { "undef" };
+            return Retval;
         }
 
     } /* end namespace Exprs */

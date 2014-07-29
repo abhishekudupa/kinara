@@ -68,7 +68,7 @@ namespace ESMC {
 
             virtual string ToString() const = 0;
             virtual i32 Compare(const ExprTypeBase& Other) const = 0;
-            
+            virtual vector<string> GetElements() const = 0;
             
             u64 Hash() const;
             bool Equals(const ExprTypeBase& Other) const;
@@ -120,6 +120,7 @@ namespace ESMC {
 
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
         };
 
 
@@ -136,6 +137,7 @@ namespace ESMC {
             
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
         };
 
         class ExprRangeType : public ExprIntType
@@ -158,6 +160,7 @@ namespace ESMC {
 
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
         };
 
         // Mainly for states and such
@@ -180,6 +183,7 @@ namespace ESMC {
             bool IsMember(const string& MemberName) const;
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
         };
 
         class ExprSymmetricType : public ExprTypeBase 
@@ -189,6 +193,10 @@ namespace ESMC {
             u32 Size;
             vector<string> Members;
             set<string> MemberSet;
+            
+            // An index into the permutation
+            // set
+            mutable u32 Index;
 
         protected:
             virtual void ComputeHashValue() const;
@@ -204,8 +212,12 @@ namespace ESMC {
             const string& GetMember(u32 Index) const;
             const bool IsMember(const string& Value) const;
 
+            void SetIndex(u32 Index) const;
+            u32 GetIndex() const;
+
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
         };
 
         class ExprFuncType : public ExprTypeBase
@@ -231,6 +243,7 @@ namespace ESMC {
 
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
         };
 
         class ExprArrayType : public ExprTypeBase
@@ -252,6 +265,7 @@ namespace ESMC {
             
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
         };
 
         class ExprRecordType : public ExprTypeBase
@@ -274,6 +288,7 @@ namespace ESMC {
 
             virtual string ToString() const;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
         };
 
         // A parametric type RESOLVES to
@@ -298,6 +313,7 @@ namespace ESMC {
 
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
         };
 
         // A dummy type for field access terms variables
@@ -312,6 +328,7 @@ namespace ESMC {
 
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
         };
 
         // Type for undef values
@@ -326,6 +343,7 @@ namespace ESMC {
 
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
         };
 
 

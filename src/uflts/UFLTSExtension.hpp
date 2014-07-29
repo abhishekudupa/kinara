@@ -1,8 +1,8 @@
-// CombUtils.hpp --- 
+// UFLTSExtension.hpp --- 
 // 
-// Filename: CombUtils.hpp
+// Filename: UFLTSExtension.hpp
 // Author: Abhishek Udupa
-// Created: Mon Jul 28 23:52:36 2014 (-0400)
+// Created: Tue Jul 29 08:53:58 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,48 +37,26 @@
 
 // Code:
 
-#if !defined ESMC_COMB_UTILS_HPP_
-#define ESMC_COMB_UTILS_HPP_
+#if !defined ESMC_UFLTS_EXTENSION_HPP_
+#define ESMC_UFLTS_EXTENSION_HPP_
 
 #include "../common/FwdDecls.hpp"
 
-#include <vector>
+// moved this single definition into a separate
+// header file to eliminate circular deps.
 
 namespace ESMC {
+    namespace LTS {
 
-    template <typename E>
-    static void CrossProdInt(vector<vector<E>>& Result,
-                             vector<E>& Scratch,
-                             typename vector<vector<E>>::const_iterator Me,
-                             typename vector<vector<E>>::const_iterator End)
-    {
-        if (Me == End) {
-            Result.push_back(Scratch);
-            return;
-        }
+        struct UFLTSExtensionT
+        {
+            
+        };
 
-        const vector<E>& MyVec = *Me;
-        for (auto it = MyVec.begin(); it != MyVec.end(); ++it) {
-            Scratch.push_back(*it);
-            CrossProdInt(Result, Scratch, Me + 1, End);
-            Scratch.pop_back();
-        }
-    }
+    } /* end namespace LTS */
+} /* end namespace ESMC */
 
-    template <typename E>
-    static vector<vector<E>> CrossProduct(typename vector<vector<E>>::const_iterator Begin,
-                                          typename vector<vector<E>>::const_iterator End)
-    {
-        vector<vector<E>> Result;
-        vector<E> Scratch;
-        CrossProdInt(Result, Scratch, Begin, End);
-        return Result;
-    }
-
-
-} /* end namespace */
-
-#endif /* ESMC_COMB_UTILS_HPP_ */
+#endif /* ESMC_UFLTS_EXTENSION_HPP_ */
 
 // 
-// CombUtils.hpp ends here
+// UFLTSExtension.hpp ends here

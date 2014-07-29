@@ -66,7 +66,7 @@ namespace ESMC {
             
             inline bool operator == (const Assignment& Other) const;
             inline bool operator < (const Assignment& Other) const;
-            inline Assignment& operator = (const Assignment& Other) const;
+            inline Assignment& operator = (const Assignment& Other);
 
             inline const ExpT& GetLHS() const;
             inline const ExpT& GetRHS() const;
@@ -133,7 +133,7 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline Assignment<E, S>& Assignment<E, S>::operator = (const Assignment& Other) const
+        inline Assignment<E, S>& Assignment<E, S>::operator = (const Assignment& Other)
         {
             if (&Other == this) {
                 return *this;

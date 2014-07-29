@@ -232,6 +232,9 @@ namespace ESMC {
 
             template <template <typename, template <typename> class> class U> 
             inline const U<E, S>* SAs() const;
+
+            template <template <typename, template <typename> class> class U>
+            inline bool Is() const;
         };
 
         // Specialization for extension lists
@@ -952,6 +955,14 @@ namespace ESMC {
             return static_cast<const U<E, S>*>(this);
         }
 
+        template <typename E, template <typename> class S> 
+        template <template <typename, template <typename> class> class U>
+        inline bool ExpressionBase<E, S>::Is() const
+        {
+            return (this->template As<U>() != nullptr);
+        }
+        
+
         template <template <typename> class S>
         template <template <typename, template <typename> class> class U>
         inline U<ExtListT, S>* ExpressionBase<ExtListT, S>::As()
@@ -1195,7 +1206,7 @@ namespace ESMC {
         ExpressionBase<ExtListT, S>::GetExtension() const
         {
             for (auto const& Ext : ExtensionData) {
-                if (Ext->As<U>() != nullptr) {
+                if (Ext->template As<U>() != nullptr) {
                     return Ext;
                 }
             }
@@ -1209,7 +1220,7 @@ namespace ESMC {
             vector<ExtListExtRef> Retval;
 
             for(auto const& Ext : ExtensionData) {
-                if (Ext->As<U>() != nullptr) {
+                if (Ext->template As<U>() != nullptr) {
                     Retval.push_back(Ext);
                 }
             }
@@ -1230,7 +1241,7 @@ namespace ESMC {
             vector<ExtListT::iterator> ToRemove;
 
             for (auto it = ExtensionData.begin(); it != ExtensionData.end(); ++it) {
-                if ((*it)->As<U>() != nullptr) {
+                if ((*it)->template As<U>() != nullptr) {
                     ToRemove.push_back(it);
                 }
             }

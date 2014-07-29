@@ -121,6 +121,22 @@ namespace ESMC {
             virtual const Exprs::ExprTypeRef& GetType() const override;
         };
 
+        class MsgDecl : public DeclBase
+        {
+        private:
+            Exprs::ExprTypeRef MsgType;
+
+        protected:
+            virtual void ComputeHashValue() const override;
+            
+        public:
+            MsgDecl(const string& Name, const Exprs::ExprTypeRef& Type);
+            ~MsgDecl();
+            
+            virtual bool Equals(const DeclBase& Other) const override;
+            virtual const Exprs::ExprTypeRef& GetType() const override;
+        };
+
         class VarDecl : public DeclBase
         {
         private:

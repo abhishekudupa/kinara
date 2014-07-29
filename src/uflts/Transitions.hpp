@@ -42,11 +42,11 @@
 
 #include "../common/FwdDecls.hpp"
 #include "../expr/Expressions.hpp"
+#include "../expr/ExprTypes.hpp"
 #include "../symexec/Analyses.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
 
-#include "LTSTypes.hpp"
 
 #include <boost/functional/hash.hpp>
 
@@ -60,26 +60,28 @@ namespace ESMC {
         class Transition
         {
         private:
+
+            typedef Exprs::Expr<E, S> ExpT;
+            typedef Analyses::Assignment<E, S> AsgnT;
+            typedef Exprs::ExprTypeRef ExprTypeRef;
+
             i32 FairnessSet;
             TransitionKind Kind;
 
             STATETYPE InitState;
             STATETYPE FinalState;
-            Expr<E, S> Guard;
-            vector<Assignment<E, S>> Updates;
+            ExpT Guard;
+            vector<AsgnT> Updates;
             
             string MessageName;
-            LTSTypeRef MessageType;
+            ExprTypeRef MessageType;
 
-            // We use static constructor methods
+        public:
             Transition()
-                : Kind(INTERNAL)
             {
                 // Nothing here
             }
 
-
-        public:
             Transition(const Transition& Other)
                 : Kind(Other.Kind), InitState(Other.InitState),
                   FinalState(Other.FinalState), Guard(Other.Guard),
@@ -89,7 +91,7 @@ namespace ESMC {
                 // Nothing here
             }
 
-            ~Transition();
+            ~Transition()
             {
                 // Nothing here
             }
@@ -139,7 +141,7 @@ namespace ESMC {
                 return FinalState;
             }
 
-            inline const Expr<E, S>& GetGuard() const
+            inline const ExpT& GetGuard() const
             {
                 return Guard;
             }
@@ -149,7 +151,7 @@ namespace ESMC {
                 return MessageName;
             }
 
-            inline const LTSTypeRef& GetMessageType() const
+            inline const ExprTypeRef& GetMessageType() const
             {
                 return MessageType;
             }
@@ -170,10 +172,10 @@ namespace ESMC {
 
             static Transition MakeInputTransition(const STATETYPE& InitState,
                                                   const STATETYPE& FinalState,
-                                                  const Expr<E, S>& Guard,
-                                                  const vector<Assignment<E, S>>& Updates,
+                                                  const ExpT& Guard,
+                                                  const vector<AsgnT>& Updates,
                                                   const string& MessageName,
-                                                  const LTSTypeRef& MessageType)
+                                                  const ExprTypeRef& MessageType)
             {
                 Transition Retval;
                 Retval.Kind = TransitionKind::INPUT;
@@ -188,10 +190,10 @@ namespace ESMC {
 
             static Transition MakeOutputTransition(const STATETYPE& InitState,
                                                    const STATETYPE& FinalState,
-                                                   const Expr<E, S>& Guard,
-                                                   const vector<Assignment<E, S>>& Updates,
+                                                   const ExpT& Guard,
+                                                   const vector<AsgnT>& Updates,
                                                    const string& MessageName,
-                                                   const LTSTypeRef& MessageType,
+                                                   const ExprTypeRef& MessageType,
                                                    i32 FairnessSet = -1)
             {
                 Transition Retval;
@@ -208,8 +210,8 @@ namespace ESMC {
 
             static Transition MakeInternalTransition(const STATETYPE& InitState,
                                                      const STATETYPE& FinalState,
-                                                     const Expr<E, S>& Guard,
-                                                     const vector<Assignment<E, S>>& Updates,
+                                                     const ExpT& Guard,
+                                                     const vector<AsgnT>& Updates,
                                                      i32 FairnessSet = -1)
             {
                 Transition Retval;

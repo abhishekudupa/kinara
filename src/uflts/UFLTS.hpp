@@ -50,27 +50,25 @@
 
 #include "LTSTermSemanticizer.hpp"
 #include "UFEFSM.hpp"
+#include "UFLTSExtension.hpp"
 
 namespace ESMC {
     namespace LTS {
 
         typedef Exprs::ExprTypeRef ExprTypeRef;
-
-        struct UFLTSExtType
-        {
-
-        };
-
-        typedef Expr<UFLTSExtType, LTSTermSemanticizer> ExpT;
+        typedef Exprs::Expr<UFLTSExtensionT, LTSTermSemanticizer> ExpT;
+        typedef Exprs::ExprMgr<UFLTSExtensionT, LTSTermSemanticizer> MgrType;
 
         class UFLTS 
         {
+            friend class UFEFSM;
+
         private:
-            ExprMgr<UFLTSExtType, LTSTermSemanticizer> Mgr;
+            MgrType* Mgr;
 
         public:
             template <typename T, typename... ArgTypes>
-            MakeType(ArgTypes&&... Args);
+            ExprTypeRef MakeType(ArgTypes&&... Args);
 
             // Non parametric message type
             const ExprTypeRef& MakeMessageType(const ExprTypeRef& MType);

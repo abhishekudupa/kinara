@@ -326,8 +326,9 @@ namespace ESMC {
                 }
             }
 
-            const ExprTypeRef& GetTypeForBoundVar(const vector<vector<ExprTypeRef>>& ScopeStack,
-                                                 i64 VarIdx)
+            static inline const ExprTypeRef& GetTypeForBoundVar
+            (const vector<vector<ExprTypeRef>>& ScopeStack,
+             i64 VarIdx)
             {
                 i64 LeftIdx = VarIdx;
                 for (i64 i = ScopeStack.size(); i > 0; --i) {
@@ -1386,9 +1387,7 @@ namespace ESMC {
         class LTSTermSemanticizer
         {
         private:
-            template <typename S>
-            using MyType = ESMC::LTS::LTSTermSemanticizer<S>;
-            typedef typename Exprs::ExprMgr<E, MyType> MgrType;
+            typedef typename Exprs::ExprMgr<E, LTS::LTSTermSemanticizer> MgrType;
 
             Detail::UFID2TypeMapT UFMap;
             unordered_map<string, i64> UFNameToIDMap;
@@ -1445,35 +1444,35 @@ namespace ESMC {
         template <typename E>
         inline void LTSTermSemanticizer<E>::TypeCheck(const ExpT& Exp) const
         {
-            Detail::TypeChecker<E, MyType>::Do(Exp, UFMap, BoolType, IntType);
+            Detail::TypeChecker<E, LTS::LTSTermSemanticizer>::Do(Exp, UFMap, BoolType, IntType);
         }
 
         template <typename E>
         inline typename LTSTermSemanticizer<E>::ExpT
         LTSTermSemanticizer<E>::Canonicalize(const ExpT& Exp)
         {
-            return Detail::Canonicalizer<E, MyType>::Do(Exp);
+            return Detail::Canonicalizer<E, LTS::LTSTermSemanticizer>::Do(Exp);
         }
 
         template <typename E>
         inline typename LTSTermSemanticizer<E>::ExpT
         LTSTermSemanticizer<E>::Simplify(const ExpT& Exp)
         {
-            return Detail::Simplifier<E, MyType>::Do(Exp, BoolType, IntType);
+            return Detail::Simplifier<E, LTS::LTSTermSemanticizer>::Do(Exp, BoolType, IntType);
         }
         
         template <typename E>
         inline string
         LTSTermSemanticizer<E>::ExprToString(const ExpT& Exp) const
         {
-            return Detail::Stringifier<E, MyType>::Do(Exp, UFMap);
+            return Detail::Stringifier<E, LTS::LTSTermSemanticizer>::Do(Exp, UFMap);
         }
 
         template <typename E>
         inline string
         LTSTermSemanticizer<E>::TypeToString(i64 TypeID) const
         {
-            return Detail::Stringifier<E, MyType>::TypeToString(TypeID);
+            return Detail::Stringifier<E, LTS::LTSTermSemanticizer>::TypeToString(TypeID);
         }
 
         static inline string MangleName(const string& Name,
@@ -1517,7 +1516,7 @@ namespace ESMC {
                 auto it2 = UFMap.find(UFID);
                 assert(it2 != UFMap.end());
                                 
-                auto Type = it2->second->As<Exprs::ExprFuncType>();
+                auto Type = it2->second->template As<Exprs::ExprFuncType>();
 
                 assert (Type != nullptr);
                 if (Type->GetFuncType() != RangeType) {
