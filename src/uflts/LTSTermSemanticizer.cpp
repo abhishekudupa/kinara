@@ -81,8 +81,6 @@ namespace ESMC {
         // Some special types
         // for creating expressions for field access
         const i64 LTSOps::FieldAccType;
-        const i64 LTSOps::UndefType;
-
 
         namespace Detail {
 

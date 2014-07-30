@@ -254,6 +254,12 @@ namespace ESMC {
             ScopeStack.push_back(new SymtabScope());
         }
 
+        SymbolTable::SymbolTable(const SymbolTable& Other)
+            : ScopeStack(Other.ScopeStack)
+        {
+            // Nothing here
+        }
+
         SymbolTable::~SymbolTable()
         {
             // Nothing here
@@ -281,6 +287,11 @@ namespace ESMC {
             return ScopeStack.back();
         }
 
+        ScopeRef SymbolTable::Bot() const
+        {
+            return ScopeStack[0];
+        }
+
         void SymbolTable::Bind(const string& Name, const DeclRef& Decl)
         {
             ScopeStack.back()->Bind(Name, Decl);
@@ -300,6 +311,15 @@ namespace ESMC {
         const DeclRef& SymbolTable::LookupTop(const string& Name) const
         {
             return ScopeStack.back()->Lookup(Name);
+        }
+
+        SymbolTable& SymbolTable::operator = (const SymbolTable& Other)
+        {
+            if (&Other == this) {
+                return *this;
+            }
+            ScopeStack = Other.ScopeStack;
+            return *this;
         }
         
     } /* end namespace LTS */

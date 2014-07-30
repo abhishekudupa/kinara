@@ -102,7 +102,6 @@ namespace ESMC {
             // Some special types
             // for creating expressions for field access
             static const i64 FieldAccType = 1000000000;
-            static const i64 UndefType = 1000000001;
         };
 
         namespace Detail {
@@ -274,17 +273,14 @@ namespace ESMC {
                 auto ConstVal = Exp->GetConstValue();
                 boost::algorithm::trim(ConstVal);
 
-                auto Type = Exp->GetConstType();
-
-                if (Type->template Is<ExprUndefType>()) {
-                    boost::algorithm::to_lower(ConstVal);
-                    if (ConstVal != "undef") {
-                        throw ExprTypeError("Illegal Undefined constant");
-                    } else {
-                        Exp->SetType(Type);
-                        return;
-                    }
+                // All types have a "clear" value, which is an alias for
+                // the lowest value of the type
+                if (ConstVal == "clear") {
+                    Exp->SetType(Exp->GetConstType());
+                    return;
                 }
+
+                auto Type = Exp->GetConstType();
 
                 auto ActType = Type;
                 if (ActType->template As<ExprBoolType>() != nullptr) {
@@ -354,9 +350,7 @@ namespace ESMC {
                 }
 
                 auto Type = Exp->GetVarType();
-                if (Type->template As<ExprBoolType>() != nullptr ||
-                    Type->template As<ExprRangeType>() != nullptr ||
-                    Type->template As<ExprSymmetricType>() != nullptr) {
+                if (Type->template Is<ExprScalarType>()) {
                     auto Idx = Exp->GetVarIdx();
                     auto ExpectedType = GetTypeForBoundVar(ScopeStack, Idx);
                     if (ExpectedType != InvalidType && ExpectedType != Type) {
@@ -365,17 +359,14 @@ namespace ESMC {
                     }
                     Exp->SetType(Type);
                 } else {
-                    throw ExprTypeError((string)"Only boolean, symmetric, and range types " + 
+                    throw ExprTypeError((string)"Only scalar types " + 
                                         "may be used as quanfiers");
                 }
             }
 
-            static inline bool CheckTypeCompat(const ExprTypeRef& ExpType, const ExprTypeRef& ActType)
+            static inline bool CheckTypeCompat(const ExprTypeRef& ExpType, 
+                                               const ExprTypeRef& ActType)
             {
-                if (ActType->Is<ExprUndefType>()) {
-                    return true;
-                }
-
                 if (ExpType == ActType) {
                     return true;
                 } else {
@@ -411,6 +402,15 @@ namespace ESMC {
                 }
             }
 
+            static inline bool CheckAllScalar(const vector<ExprTypeRef>& Types)
+            {
+                return all_of(Types.begin(), Types.end(),
+                              [] (const ExprTypeRef& Type) -> bool 
+                              {
+                                  return (Type->Is<ExprScalarType>());
+                              });
+            }
+
             template <typename E, template <typename> class S>
             inline void 
             TypeChecker<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
@@ -421,6 +421,7 @@ namespace ESMC {
                 }
 
                 vector<ExprTypeRef> ChildTypes;
+                auto const& Children = Exp->GetChildren();
                 for (auto const& Child : Exp->GetChildren()) {
                     Child->Accept(this);
                     ChildTypes.push_back(Child->GetType());
@@ -431,10 +432,19 @@ namespace ESMC {
                 switch(OpCode) {
                 case LTSOps::OpEQ: {
                     CheckNumArgs(2, ChildTypes.size(), "=");
+                    if (!CheckAllScalar(ChildTypes)) {
+                        throw ExprTypeError("Only scalar types can be used in = comparisons");
+                    }
                     if (!CheckTypeCompat(ChildTypes[1], ChildTypes[0])) {
                         throw ExprTypeError("All types to = op must be the same");
                     }
-                    // Assumption: The boolean type has type id 1
+                    if (ChildTypes[0]->template Is<ExprSymmetricType>()) {
+                        if (!Children[0]->template Is<ConstExpression>() ||
+                            !Children[1]->template Is<ConstExpression>()) {
+                            throw ExprTypeError((string)"Only constant values of symmetric " + 
+                                                "types can be compared");
+                        }
+                    }
                     Exp->SetType(BoolType);
                     break;
                 }
@@ -1552,6 +1562,27 @@ namespace ESMC {
         template<typename E>
         const typename LTSTermSemanticizer<E>::TypeT LTSTermSemanticizer<E>::InvalidType = 
             LTSTermSemanticizer<E>::TypeT::NullPtr;
+
+        // A helper routine to check if an expression is an LVAlue
+        template <typename E, template <typename> class S>
+        static inline bool IsLVal(const ESMC::Exprs::Expr<E, S>& Exp)
+        {
+            auto ExpAsVar = Exp->template As<ESMC::Exprs::VarExpression>();
+            if (ExpAsVar != nullptr) {
+                return true;
+            }
+            auto ExpAsOp = Exp->template As<ESMC::Exprs::OpExpression>();
+            if (ExpAsOp != nullptr) {
+                auto Op = ExpAsOp->GetOpCode();
+                if (Op != LTSOps::OpIndex &&
+                    Op != LTSOps::OpField) {
+                    return false;
+                } else {
+                    return IsLVal(ExpAsOp->GetChildren()[0]);
+                }
+            }
+            return false;
+        }
         
     } /* end namespace LTS */
 } /* end namespace ESMC */

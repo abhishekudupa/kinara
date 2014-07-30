@@ -50,7 +50,7 @@ namespace ESMC {
         UIDGenerator ExprTypeBase::ExprTypeUIDGen(1);
 
         ExprTypeBase::ExprTypeBase()
-            : TypeID(-1)
+            : TypeID(-1), LastExtension(nullptr)
         {
             // Nothing here
         }
@@ -101,8 +101,19 @@ namespace ESMC {
             }
         }
 
-        ExprBoolType::ExprBoolType()
+        ExprScalarType::ExprScalarType()
             : ExprTypeBase()
+        {
+            // Nothing here
+        }
+
+        ExprScalarType::~ExprScalarType()
+        {
+            // Nothing here
+        }
+
+        ExprBoolType::ExprBoolType()
+            : ExprScalarType()
         {
             // Nothing here
         }
@@ -139,7 +150,7 @@ namespace ESMC {
         }
 
         ExprIntType::ExprIntType()
-            : ExprTypeBase()
+            : ExprScalarType()
         {
             // Nothing here
         }
@@ -274,7 +285,7 @@ namespace ESMC {
 
         ExprEnumType::ExprEnumType(const string& Name, 
                                  const set<string>& Members)
-            : ExprTypeBase(), Name(Name), Members(Members)
+            : ExprScalarType(), Name(Name), Members(Members)
         {
             // Nothing here
         }
@@ -368,7 +379,7 @@ namespace ESMC {
         }
 
         ExprSymmetricType::ExprSymmetricType(const string& Name, u32 Size)
-            : ExprTypeBase(), Name(Name), Size(Size), Members(Size)
+            : ExprScalarType(), Name(Name), Size(Size), Members(Size)
         {
             for(u32 i = 0; i < Size; ++i) {
                 Members[i] = Name + "::" + to_string(i);
@@ -847,56 +858,6 @@ namespace ESMC {
         string ExprFieldAccessType::ToString() const
         {
             return "(FieldAccessType)";
-        }
-
-        ExprUndefType::ExprUndefType()
-            : ExprTypeBase()
-        {
-            // NOthing here
-        }
-
-        ExprUndefType::~ExprUndefType()
-        {
-            // Nothing here
-        }
-
-        void ExprUndefType::ComputeHashValue() const
-        {
-            HashCode = 0;
-            boost::hash_combine(HashCode, "UndefType");
-        }
-
-        string ExprUndefType::ToString() const
-        {
-            return "(UndefType)";
-        }
-
-        i32 ExprUndefType::Compare(const ExprTypeBase& Other) const
-        {
-            if (Other.As<ExprBoolType>() != nullptr ||
-                Other.As<ExprIntType>() != nullptr ||
-                Other.As<ExprRangeType>() != nullptr ||
-                Other.As<ExprEnumType> () != nullptr ||
-                Other.As<ExprSymmetricType>() != nullptr ||
-                Other.As<ExprFuncType> () != nullptr || 
-                Other.As<ExprArrayType>() != nullptr ||
-                Other.As<ExprRecordType>() != nullptr ||
-                Other.As<ExprParametricType>() != nullptr ||
-                Other.As<ExprFieldAccessType>() != nullptr) {
-                return 1;
-            }
-
-            if (Other.Is<ExprUndefType>()) {
-                return 0;
-            } else {
-                return -1;
-            }
-        }
-
-        vector<string> ExprUndefType::GetElements() const
-        {
-            vector<string> Retval = { "undef" };
-            return Retval;
         }
 
     } /* end namespace Exprs */

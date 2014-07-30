@@ -65,7 +65,7 @@ namespace ESMC {
             typedef Analyses::Assignment<E, S> AsgnT;
             typedef Exprs::ExprTypeRef ExprTypeRef;
 
-            i32 FairnessSet;
+            unordered_set<u32> FairnessSet;
             TransitionKind Kind;
 
             STATETYPE InitState;
@@ -112,18 +112,23 @@ namespace ESMC {
                 return *this;
             }
 
-            inline i32 GetFairnessSet() const
+            inline const unordered_set<u32>& GetFairnessSet() const
             {
                 return FairnessSet;
             }
 
-            inline void SetFairnessSet(i32 FairnessSet) const
+            inline void SetFairnessSet(const unordered_set<u32>& FairnessSet) const
             {
                 if (Kind == TransitionKind::INPUT) {
                     throw ESMCError((string)"An input transition cannot be part of " + 
                                     "a fairness constraint");
                 }
                 this->FairnessSet = FairnessSet;
+            }
+
+            inline void AddToFairnessSet(u32 Fairness)
+            {
+                this->FairnessSet.insert(Fairness);
             }
 
             inline TransitionKind GetKind() const
@@ -144,6 +149,11 @@ namespace ESMC {
             inline const ExpT& GetGuard() const
             {
                 return Guard;
+            }
+
+            inline const vector<AsgnT>& GetUpdates() const
+            {
+                return Updates;
             }
 
             inline const string& GetMessageName() const
@@ -194,7 +204,7 @@ namespace ESMC {
                                                    const vector<AsgnT>& Updates,
                                                    const string& MessageName,
                                                    const ExprTypeRef& MessageType,
-                                                   i32 FairnessSet = -1)
+                                                   const unordered_set<u32>& FairnessSet)
             {
                 Transition Retval;
                 Retval.Kind = TransitionKind::OUTPUT;
@@ -212,7 +222,7 @@ namespace ESMC {
                                                      const STATETYPE& FinalState,
                                                      const ExpT& Guard,
                                                      const vector<AsgnT>& Updates,
-                                                     i32 FairnessSet = -1)
+                                                     const unordered_set<u32>& FairnessSet)
             {
                 Transition Retval;
                 Retval.Kind = TransitionKind::INTERNAL;
@@ -223,19 +233,6 @@ namespace ESMC {
                 Retval.FairnessSet = FairnessSet;
                 return Retval;
             }
-        };
-
-
-        // A guarded command
-        template <typename E, template <typename> class S>
-        class GuardedCommandBase
-        {
-        private:
-            typedef Expr<E, S> ExpT;
-            typedef Assignment<E, S> AsgnT;
-
-            ExpT Guard;
-            
         };
 
     } /* end namespace LTS */

@@ -58,6 +58,7 @@ namespace ESMC {
         typedef Exprs::Expr<UFLTSExtensionT, LTSTermSemanticizer> ExpT;
         typedef Exprs::ExprMgr<UFLTSExtensionT, LTSTermSemanticizer> MgrType;
         typedef Analyses::Assignment<UFLTSExtensionT, LTSTermSemanticizer> AsgnT;
+        typedef Transition<UFLTSExtensionT, LTSTermSemanticizer, string> TransitionT;
 
         namespace Detail {
 
@@ -68,16 +69,18 @@ namespace ESMC {
                 bool IsFinal;
                 bool IsAccepting;
                 bool IsError;
+                bool IsDead;
             
                 inline StateDescriptor() {}
                 inline StateDescriptor(const string& StateName,
                                        bool IsInitial = false,
                                        bool IsFinal = false,
                                        bool IsAccepting = false,
-                                       bool IsError = false)
+                                       bool IsError = false,
+                                       bool IsDead = false)
                     : StateName(StateName), IsInitial(IsInitial),
                       IsFinal(IsFinal), IsAccepting(IsAccepting),
-                      IsError(IsError)
+                      IsError(IsError), IsDead(IsDead)
                 {
                     // Nothing here
                 }
@@ -88,7 +91,8 @@ namespace ESMC {
                             IsInitial == Other.IsInitial &&
                             IsFinal == Other.IsFinal &&
                             IsAccepting == Other.IsAccepting &&
-                            IsError == Other.IsError);
+                            IsError == Other.IsError &&
+                            IsDead == Other.IsDead);
                 }
 
                 inline bool operator != (const StateDescriptor& Other) const
@@ -108,7 +112,7 @@ namespace ESMC {
                 vector<ExpT> Params;
                 ExpT Constraint;
                 ExprTypeRef MessageType;
-                i32 FairnessSet;
+                unordered_set<u32> FairnessSet;
                 ScopeRef Scope;
 
                 ParametrizedTransition() {}
@@ -121,7 +125,7 @@ namespace ESMC {
                                        const vector<ExpT>& Params,
                                        const ExpT& Constraint,
                                        const ExprTypeRef& MessageType,
-                                       i32 FairnessSet,
+                                       const unordered_set<u32>& FairnessSet,
                                        const ScopeRef& Scope)
                 : Input(Input), InitialState(InitialState),
                     FinalState(FinalState), Guard(Guard),
@@ -174,17 +178,68 @@ namespace ESMC {
         } /* end namespace Detail */
 
         // non-parametric, frozen efsm
+        // It has the following properties:
+        // 1. No parametric transitions
+        // 2. No non-det updates in transitions
+        // 3. The guard includes state pred 
+        // 4. The updates include state update
+
         class FrozenEFSM
         {
             friend class UFLTS;
 
         private:
+            string Name;
+            UFLTS* TheLTS;
             ExprTypeRef StateType;
             SymbolTable SymTab;
             set<ExprTypeRef> Inputs;
             set<ExprTypeRef> Outputs;
-
+            map<string, Detail::StateDescriptor> States;
             
+            vector<pair<TransitionT, ScopeRef>> Transitions;
+            
+        public:
+            FrozenEFSM(const string& Name, UFLTS* TheLTS,
+                       const ExprTypeRef& StateType,
+                       const map<string, Detail::StateDescriptor>& States);
+            ~FrozenEFSM();
+
+            void AddVariable(const string& VarName,
+                             const ExprTypeRef& VarType);
+
+            void AddInputMsg(const ExprTypeRef& MType);
+            void AddOutputMsg(const ExprTypeRef& MType);
+
+            void AddInputTransition(const string& InitState,
+                                    const string& FinalState,
+                                    const ExpT& Guard,
+                                    const vector<AsgnT>& Updates,
+                                    const string& MessageName,
+                                    const ExprTypeRef& MessageType);
+
+            void AddOutputTransition(const string& InitState,
+                                     const string& FinalState,
+                                     const ExpT& Guard,
+                                     const vector<AsgnT>& Updates,
+                                     const string& MessageName,
+                                     const ExprTypeRef& MessageType,
+                                     const unordered_set<u32>& FairnessSet);
+
+            void AddInternalTransition(const string& InitState,
+                                       const string& FinalState,
+                                       const ExpT& Guard,
+                                       const vector<AsgnT>& Updates,
+                                       const unordered_set<u32>& FairnessSet);
+            
+            const set<ExprTypeRef>& GetInputs() const;
+            const set<ExprTypeRef>& GetOutputs() const;
+            const ExprTypeRef& GetStateType() const;
+            const SymbolTable& GetSymTab() const;
+            const vector<TransitionT>& GetTransitions() const;
+            const string& GetName() const;
+            UFLTS* GetLTS() const;
+            const map<string, Detail::StateDescriptor>& GetStates() const;
         };
 
         // The class for an I/O EFSM which can contain uninterpreted functions
@@ -207,25 +262,10 @@ namespace ESMC {
             set<Detail::ParametrizedMessage> ParametrizedOutputs;
 
             map<string, Detail::StateDescriptor> States;
-            typedef Transition<UFLTSExtensionT, LTSTermSemanticizer, string> TransitionT;
             vector<pair<TransitionT, ScopeRef>> Transitions;
             vector<Detail::ParametrizedTransition> ParametrizedTransitions;
             
             SymbolTable SymTab;
-
-            inline void CheckUpdates(const vector<AsgnT>& Updates) const;
-            inline void CheckMsg(const ExprTypeRef& MsgType, bool Input = true) const;
-            inline void CheckState(const string& StateName) const;
-            inline void CheckExpr(const ExpT& Exp) const;
-            inline void CheckParamPurity(const ExpT& Exp) const;
-            inline void CheckParams(const vector<ExpT>& Params, 
-                                    const ExpT& Constraint);
-
-            inline UFEFSM* Instantiate(const typename MgrType::SubstMapT& SubstMap) const;
-            inline vector<UFEFSM*> Instantiate();
-
-            inline vector<MgrType::SubstMapT> InstantiateParams(const vector<ExpT>& Params,
-                                                                const ExpT& Constraint) const;
 
         public:
             UFEFSM(UFLTS* TheLTS, const string& Name);
@@ -256,7 +296,10 @@ namespace ESMC {
 
             // Add an internal, non-initial, non-final,
             // non-accepting, non-error state
-            string AddState();
+            string AddState(bool Initial = false,
+                            bool Final = false,
+                            bool Accepting = false,
+                            bool Error = false);
 
             void AddVariable(const string& VarName,
                              const ExprTypeRef& VarType);
@@ -284,7 +327,8 @@ namespace ESMC {
                                      const vector<AsgnT>& Updates,
                                      const string& MessageName,
                                      const ExprTypeRef& MessageType,
-                                     i32 FairnessSet = -1);
+                                     const unordered_set<u32>& FairnessSet = 
+                                     unordered_set<u32>());
 
             // Parametrized output transition
             void AddOutputTransition(const string& InitState,
@@ -295,13 +339,19 @@ namespace ESMC {
                                      const vector<ExpT>& Params,
                                      const ExpT& Constraint,
                                      const ExprTypeRef& MessageType,
-                                     i32 FairnessSet = -1);
+                                     const unordered_set<u32>& FairnessSet = 
+                                     unordered_set<u32>());
 
             void AddInternalTransition(const string& InitState,
                                        const string& FinalState,
                                        const ExpT& Guard,
                                        const vector<AsgnT>& Updates,
-                                       i32 FairnessSet = -1);
+                                       const unordered_set<u32>& FairnessSet = 
+                                       unordered_set<u32>());
+
+            vector<FrozenEFSM*> Instantiate() const;
+            FrozenEFSM* Instantiate(const vector<ExpT>& ParamVals,
+                                    const ExprTypeRef& StateType) const;
 
         };
 

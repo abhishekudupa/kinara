@@ -46,9 +46,47 @@
 #include <set>
 #include <map>
 #include <vector>
+#include <list>
 
 namespace ESMC {
     namespace Exprs {
+
+        class ExprTypeExtensionBase
+        {
+        public:
+            ExprTypeExtensionBase();
+            virtual ~ExprTypeExtensionBase();
+
+            template <typename T> 
+            inline T* As()
+            {
+                return dynamic_cast<T*>(this);
+            }
+
+            template <typename T> 
+            inline const T* As() const
+            {
+                return dynamic_cast<const T*>(this);
+            }
+
+            template <typename T> 
+            inline T* SAs()
+            {
+                return static_cast<T*>(this);
+            }
+
+            template <typename T> 
+            inline const T* SAs() const
+            {
+                return static_cast<const T*>(this);
+            }
+
+            template <typename T>
+            inline bool Is() const
+            {
+                return (dynamic_cast<const T*>(this) != nullptr);
+            }
+        };
 
         class ExprTypeBase : public RefCountable
         {
@@ -56,6 +94,8 @@ namespace ESMC {
             mutable i64 TypeID;
             static UIDGenerator ExprTypeUIDGen;
             mutable bool HashValid;
+            mutable list<ExprTypeExtensionBase*> Extensions;
+            mutable ExprTypeExtensionBase* LastExtension;
 
         protected:
             mutable u64 HashCode;
@@ -107,9 +147,74 @@ namespace ESMC {
             {
                 return (dynamic_cast<const T*>(this) != nullptr);
             }
+
+            template <typename T>
+            inline T* GetExtension() const
+            {
+                if (LastExtension->Is<T>()) {
+                    return LastExtension->SAs<T>();
+                }
+
+                for (auto it = Extensions.begin(); it != Extensions.end(); ++it) {
+                    auto Ext = *it;
+                    if (Ext->Is<T>()) {
+                        // Cache and move to head of list
+                        LastExtension = Ext;
+                        Extensions.erase(it);
+                        Extensions.push_front(LastExtension);
+                        return LastExtension->SAs<T>();
+                    }
+                }
+                return nullptr;
+            }
+
+            template <typename T>
+            vector<T*> GetAllExtensions() const
+            {
+                vector<T*> Retval;
+                for (auto const& Ext : Extensions) {
+                    if (Ext->Is<T>()) {
+                        Retval.push_back(Ext->SAs<T>());
+                    }
+                }
+                return Retval;
+            }
+
+            template <typename T>
+            void PurgeExtensionsOfType() const
+            {
+                vector<list<ExprTypeExtensionBase*>::iterator> ToDelete;
+
+                for(auto it = Extensions.begin(); it != Extensions.end(); ++it) {
+                    if ((*it)->Is<T>()) {
+                        ToDelete.push_back(it);
+                    }
+                }
+                
+                for (auto const& it : ToDelete) {
+                    Extensions.erase(it);
+                    delete (*it);
+                }
+            }
+
+            void PurgeAllExtension() const
+            {
+                for (auto const& Ext : Extensions) {
+                    delete Ext;
+                }
+                Extensions.clear();
+            }
         };
 
-        class ExprBoolType : public ExprTypeBase
+        // An abstract base for all scalar types
+        class ExprScalarType : public ExprTypeBase
+        {
+        public:
+            ExprScalarType();
+            virtual ~ExprScalarType();
+        };
+
+        class ExprBoolType : public ExprScalarType
         {
         protected:
             virtual void ComputeHashValue() const override;
@@ -126,7 +231,7 @@ namespace ESMC {
 
         // A generic int type, can be converted to 
         // any kind of subrange type. 
-        class ExprIntType : public ExprTypeBase
+        class ExprIntType : public ExprScalarType
         {
         protected:
             virtual void ComputeHashValue() const override;
@@ -164,7 +269,7 @@ namespace ESMC {
         };
 
         // Mainly for states and such
-        class ExprEnumType : public ExprTypeBase
+        class ExprEnumType : public ExprScalarType
         {
         private:
             string Name;
@@ -186,7 +291,7 @@ namespace ESMC {
             virtual vector<string> GetElements() const override;
         };
 
-        class ExprSymmetricType : public ExprTypeBase 
+        class ExprSymmetricType : public ExprScalarType
         {
         private:
             string Name;
@@ -330,22 +435,6 @@ namespace ESMC {
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
         };
-
-        // Type for undef values
-        class ExprUndefType : public ExprTypeBase
-        {
-        protected:
-            virtual void ComputeHashValue() const override;
-            
-        public:
-            ExprUndefType();
-            virtual ~ExprUndefType();
-
-            virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
-            virtual vector<string> GetElements() const override;
-        };
-
 
         class ExprTypePtrHasher
         {

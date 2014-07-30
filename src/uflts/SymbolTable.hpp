@@ -192,6 +192,7 @@ namespace ESMC {
 
         public:
             SymbolTable();
+            SymbolTable(const SymbolTable& Other);
             ~SymbolTable();
 
             void Push();
@@ -199,10 +200,13 @@ namespace ESMC {
 
             ScopeRef Pop();
             ScopeRef Top() const;
+            ScopeRef Bot() const;
             
             void Bind(const string& Name, const DeclRef& Decl);
             const DeclRef& Lookup(const string& Name) const;
             const DeclRef& LookupTop(const string& Name) const;
+
+            SymbolTable& operator = (const SymbolTable& Other);
         };
         
     } /* end namespace LTS */

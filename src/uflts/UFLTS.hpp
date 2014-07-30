@@ -62,6 +62,7 @@ namespace ESMC {
         class UFLTS 
         {
             friend class UFEFSM;
+            friend class FrozenEFSM;
 
         private:
             MgrType* Mgr;
