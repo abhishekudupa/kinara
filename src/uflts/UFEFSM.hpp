@@ -103,7 +103,7 @@ namespace ESMC {
         
             struct ParametrizedTransition
             {
-                bool Input;
+                TransitionKind Kind;
                 string InitialState;
                 string FinalState;
                 ExpT Guard;
@@ -113,10 +113,9 @@ namespace ESMC {
                 ExpT Constraint;
                 ExprTypeRef MessageType;
                 unordered_set<u32> FairnessSet;
-                ScopeRef Scope;
 
                 ParametrizedTransition() {}
-                ParametrizedTransition(bool Input,
+                ParametrizedTransition(TransitionKind Kind,
                                        const string& InitialState,
                                        const string& FinalState,
                                        const ExpT& Guard,
@@ -125,14 +124,13 @@ namespace ESMC {
                                        const vector<ExpT>& Params,
                                        const ExpT& Constraint,
                                        const ExprTypeRef& MessageType,
-                                       const unordered_set<u32>& FairnessSet,
-                                       const ScopeRef& Scope)
-                : Input(Input), InitialState(InitialState),
+                                       const unordered_set<u32>& FairnessSet)
+
+                : Kind(Kind), InitialState(InitialState),
                     FinalState(FinalState), Guard(Guard),
                     Updates(Updates), MessageName(MessageName),
                     Params(Params), Constraint(Constraint),
-                    MessageType(MessageType), FairnessSet(FairnessSet),
-                    Scope(Scope)
+                    MessageType(MessageType), FairnessSet(FairnessSet)
                 {
                     // Nothing here
                 }
@@ -346,6 +344,16 @@ namespace ESMC {
                                        const string& FinalState,
                                        const ExpT& Guard,
                                        const vector<AsgnT>& Updates,
+                                       const unordered_set<u32>& FairnessSet = 
+                                       unordered_set<u32>());
+
+            // Parametrized internal transition
+            void AddInternalTransition(const string& InitState,
+                                       const string& FinalState,
+                                       const ExpT& Guard,
+                                       const vector<AsgnT>& Updates,
+                                       const vector<ExpT>& Params,
+                                       const ExpT& Constraint,
                                        const unordered_set<u32>& FairnessSet = 
                                        unordered_set<u32>());
 

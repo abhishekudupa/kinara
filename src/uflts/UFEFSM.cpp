@@ -233,6 +233,9 @@ namespace ESMC {
                                  const ExpT& Constraint,
                                  const ExprTypeRef& MType)
         {
+            SymTab.Push();
+            CheckParams(Params, Constraint, SymTab, TheLTS->Mgr);
+            SymTab.Pop();
             ParametrizedInputs.insert(Detail::ParametrizedMessage(MType, Params, Constraint));
         }
 
@@ -248,6 +251,9 @@ namespace ESMC {
                                   const ExpT& Constraint,
                                   const ExprTypeRef& MType)
         {
+            SymTab.Push();
+            CheckParams(Params, Constraint, SymTab, TheLTS->Mgr);
+            SymTab.Pop();
             ParametrizedOutputs.insert(Detail::ParametrizedMessage(MType, Params, Constraint));
         }
 
@@ -337,7 +343,7 @@ namespace ESMC {
 
             SymTab.Push();
             CheckParams(Params, Constraint, SymTab, TheLTS->Mgr);
-            auto Scope = SymTab.Pop();
+            SymTab.Pop();
 
             if (!MessageType->Is<Exprs::ExprParametricType>()) {
                 throw ESMCError((string)"Non-parametric message type in parametrized " + 
@@ -346,10 +352,11 @@ namespace ESMC {
 
             // We defer the rest of the checks until later
 
-            Detail::ParametrizedTransition Transition(true, InitState, FinalState,
+            Detail::ParametrizedTransition Transition(TransitionKind::INPUT, 
+                                                      InitState, FinalState,
                                                       Guard, Updates, MessageName,
                                                       Params, Constraint, MessageType,
-                                                      unordered_set<u32>(), Scope);
+                                                      unordered_set<u32>());
 
             ParametrizedTransitions.push_back(Transition);
         }
@@ -402,7 +409,7 @@ namespace ESMC {
             
             SymTab.Push();
             CheckParams(Params, Constraint, SymTab, TheLTS->Mgr);
-            auto Scope = SymTab.Pop();
+            SymTab.Pop();
 
             if (!MessageType->Is<Exprs::ExprParametricType>()) {
                 throw ESMCError((string)"Non-parametric message type in parametrized " + 
@@ -410,10 +417,11 @@ namespace ESMC {
             }
 
             // We defer the rest of the checks until later
-            Detail::ParametrizedTransition Transition(false, InitState, FinalState,
+            Detail::ParametrizedTransition Transition(TransitionKind::OUTPUT, 
+                                                      InitState, FinalState,
                                                       Guard, Updates, MessageName,
                                                       Params, Constraint, MessageType,
-                                                      FairnessSet, Scope);
+                                                      FairnessSet);
 
             ParametrizedTransitions.push_back(Transition);
         }
@@ -440,6 +448,29 @@ namespace ESMC {
                                                                   Updates,
                                                                   FairnessSet);
             Transitions.push_back(pair<TransitionT, ScopeRef>(Transition, ScopeRef::NullPtr));
+        }
+
+        void UFEFSM::AddInternalTransition(const string& InitState,
+                                           const string& FinalState,
+                                           const ExpT& Guard,
+                                           const vector<AsgnT>& Updates,
+                                           const vector<ExpT>& Params,
+                                           const ExpT& Constraint,
+                                           const unordered_set<u32>& FairnessSet)
+        {
+            CheckState(InitState, States);
+            CheckState(FinalState, States);
+            
+            SymTab.Push();
+            CheckParams(Params, Constraint, SymTab, TheLTS->Mgr);
+            SymTab.Pop();
+            
+            Detail::ParametrizedTransition Transition(TransitionKind::INTERNAL,
+                                                      InitState, FinalState,
+                                                      Guard, Updates, "", Params,
+                                                      Constraint, ExprTypeRef::NullPtr,
+                                                      FairnessSet);
+            ParametrizedTransitions.push_back(Transition);
         }
 
         FrozenEFSM* UFEFSM::Instantiate(const vector<ExpT>& ParamVals,
