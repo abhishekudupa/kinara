@@ -47,6 +47,7 @@ libesmc_OBJS= \
 	LTSTermSemanticizer.o \
 	SymbolTable.o \
 	UFEFSM.o \
+	UFLTS.o \
 	UIDGenerator.o \
 
 

@@ -39,6 +39,8 @@
 
 #include "ExprTypes.hpp"
 #include "../utils/UIDGenerator.hpp"
+#include "../utils/SizeUtils.hpp"
+
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
@@ -149,6 +151,11 @@ namespace ESMC {
             boost::hash_combine(HashCode, "BoolType");
         }
 
+        u32 ExprBoolType::GetByteSize() const
+        {
+            return 1;
+        }
+
         ExprIntType::ExprIntType()
             : ExprScalarType()
         {
@@ -197,6 +204,12 @@ namespace ESMC {
             throw ESMCError((string)"Cannot GetElements() on unbounded type IntType");
         }
 
+        u32 ExprIntType::GetByteSize() const
+        {
+            throw InternalError((string)"ExprIntType::GetByteSize() should never have been " + 
+                                "called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
+        }
+
         // Inclusive range
         ExprRangeType::ExprRangeType(i64 RangeLow, i64 RangeHigh)
             : ExprIntType(), 
@@ -233,6 +246,11 @@ namespace ESMC {
             HashCode = 0;
             boost::hash_combine(HashCode, RangeLow);
             boost::hash_combine(HashCode, RangeHigh);
+        }
+
+        u32 ExprRangeType::GetByteSize() const 
+        {
+            return BytesForRange(RangeHigh - RangeLow + 1);
         }
 
         string ExprRangeType::ToString() const
@@ -351,6 +369,11 @@ namespace ESMC {
             }
         }
 
+        u32 ExprEnumType::GetByteSize() const
+        {
+            return BytesForRange(Members.size());
+        }
+
         i32 ExprEnumType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherPtr = &Other;
@@ -440,6 +463,11 @@ namespace ESMC {
             boost::hash_combine(HashCode, Size);
         }
 
+        u32 ExprSymmetricType::GetByteSize() const
+        {
+            return BytesForRange(Members.size());
+        }
+
         i32 ExprSymmetricType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
@@ -487,6 +515,10 @@ namespace ESMC {
                 if (Arg->As<ExprFuncType>() != nullptr) {
                     throw ESMCError("Function types cannot have function types as params");
                 }
+                // if (!Arg->Is<ExprScalarType>()) {
+                //     throw ESMCError((string)"Only function types with scalar domain types " + 
+                //                     "are currenly supported");
+                // }
             }
         }
 
@@ -577,6 +609,17 @@ namespace ESMC {
             throw ESMCError((string)"Cannot GetElements() of a function type");
         }
 
+        u32 ExprFuncType::GetByteSize() const
+        {
+            // We return the byte size of the range multiplied
+            // by the product of the domains
+            u32 Retval = FuncType->GetByteSize();
+            for (auto const& ArgType : ArgTypes) {
+                Retval *= ArgType->GetElements().size();
+            }
+            return Retval;
+        }
+
         ExprArrayType::ExprArrayType(const ExprTypeRef& IndexType,
                                    const ExprTypeRef& ValueType)
             : ExprTypeBase(), IndexType(IndexType), ValueType(ValueType)
@@ -643,6 +686,12 @@ namespace ESMC {
             HashCode = 0;
             boost::hash_combine(HashCode, IndexType->Hash());
             boost::hash_combine(HashCode, ValueType->Hash());
+        }
+
+        u32 ExprArrayType::GetByteSize() const
+        {
+            u32 Retval = ValueType->GetByteSize();
+            return (Retval * IndexType->GetElements().size());
         }
 
         ExprRecordType::ExprRecordType(const string& Name,
@@ -730,6 +779,18 @@ namespace ESMC {
             boost::hash_combine(HashCode, Members.size());
         }
 
+        u32 ExprRecordType::GetByteSize() const
+        {
+            u32 Offset = 0;
+            u32 Retval = 0;
+            for (auto const& Member : Members) {
+                auto CurSize = Member.second->GetByteSize();
+                Offset = NextMultiple(Retval, CurSize);
+                Retval += (Offset + CurSize);
+            }
+            return Retval;
+        }
+
         ExprParametricType::ExprParametricType(const ExprTypeRef& BaseType,
                                               const ExprTypeRef& ParameterType)
             : ExprTypeBase(), BaseType(BaseType), ParameterType(ParameterType)
@@ -811,6 +872,12 @@ namespace ESMC {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
+        u32 ExprParametricType::GetByteSize() const
+        {
+            throw InternalError((string)"ExprParametricType::GetByteSize() should never " + 
+                                "have been called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
+        }
+
         ExprFieldAccessType::ExprFieldAccessType()
             : ExprTypeBase()
         {
@@ -858,6 +925,12 @@ namespace ESMC {
         string ExprFieldAccessType::ToString() const
         {
             return "(FieldAccessType)";
+        }
+
+        u32 ExprFieldAccessType::GetByteSize() const
+        {
+            throw InternalError((string)"ExprFieldAccessType::GetByteSize() should never " + 
+                                "have been called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
         }
 
     } /* end namespace Exprs */

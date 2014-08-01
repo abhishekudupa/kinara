@@ -58,6 +58,9 @@ namespace ESMC {
         typedef Exprs::ExprTypeRef ExprTypeRef;
         typedef Exprs::Expr<UFLTSExtensionT, LTSTermSemanticizer> ExpT;
         typedef Exprs::ExprMgr<UFLTSExtensionT, LTSTermSemanticizer> MgrType;
+        
+        extern const string MTypeFieldName;
+        extern const u32 MaxMessageTypes;
 
         class UFLTS 
         {
@@ -66,22 +69,47 @@ namespace ESMC {
 
         private:
             MgrType* Mgr;
+            bool Frozen;
+            bool MsgsFrozen;
+            UIDGenerator MTypeUIDGen;
+            map<string, ExprTypeRef> MTypes;
+            map<string, u32> MTypeIDs;
 
         public:
+            UFLTS();
+            ~UFLTS();
+
             template <typename T, typename... ArgTypes>
             ExprTypeRef MakeType(ArgTypes&&... Args);
 
             // Non parametric message type
-            const ExprTypeRef& MakeMessageType(const ExprTypeRef& MType);
-            const ExprTypeRef& MakeMessageType(const ExprTypeRef& MType,
-                                               const vector<ExpT>& Params,
-                                               const ExpT& Constraint);
+            const ExprTypeRef& MakeMessageType(const string& Name, 
+                                               const map<string, ExprTypeRef>& Fields,
+                                               bool IncludePrimed = false);
+
+            // Parametric message type
+            const ExprTypeRef& MakeMessageType(const string& Name,
+                                               const map<string, ExprTypeRef>& Fields,
+                                               const vector<ExpT>& ParamTypes,
+                                               const ExpT& Constraint,
+                                               bool IncludePrimed = false);
+
+            void FreezeMessages();
+
+            const ExprTypeRef& GetMessageType(const string& Name) const;
+            i32 GetTypeIDForMessageType(const string& Name) const;
+
+            bool CheckMessageType(const ExprTypeRef& MType);
+
+            
 
             UFEFSM* MakeEFSM(const string& Name, 
                              const vector<ExpT>& Params,
                              const ExpT& Constraint);
-
             
+
+            void Freeze();
+            MgrType* GetMgr();
         };
 
     } /* end namespace LTS */

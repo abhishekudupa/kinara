@@ -39,56 +39,12 @@
 
 #include "UFEFSM.hpp"
 #include "UFLTS.hpp"
-
-#include "../utils/CombUtils.hpp"
+#include "ParamUtils.hpp"
 
 #include <type_traits>
 
 namespace ESMC {
     namespace LTS {
-
-        static inline vector<vector<ExpT>> InstantiateParams(const vector<ExpT>& Params,
-                                                             const ExpT& Constraint,
-                                                             MgrType* Mgr)
-        {
-            vector<vector<ExpT>> Retval;
-            vector<vector<string>> CPElems;
-            for (auto const& Param : Params) {
-                CPElems.push_back(Param->GetType()->GetElements());
-            }
-
-            auto&& CPRes = CrossProduct<string>(CPElems.begin(), CPElems.end());
-            vector<MgrType::SubstMapT> SubstMaps;
-
-            for (auto const& Prod : CPRes) {
-                MgrType::SubstMapT SubstMap;
-                for (u32 i = 0; i < Params.size(); ++i) {
-                    auto Type = Params[i]->GetType();
-                    SubstMap[Params[i]] = Mgr->MakeVal(Prod[i], Type);
-                }
-                auto SubstConst = Mgr->Substitute(SubstMap, Constraint);
-                auto SimpConst = Mgr->Simplify(SubstConst);
-                auto SimpAsConst = SimpConst->As<Exprs::ConstExpression>();
-                if (SimpAsConst == nullptr) {
-                    throw ESMCError((string)"Did not get a constant on the constraint " + 
-                                    "after substituting parameters! Perhaps the constraint " +
-                                    "cannot be simplified?\nConstraint:\n" + 
-                                    Constraint->ToString());
-                }
-                if (SimpAsConst->GetType()->As<Exprs::ExprBoolType>() == nullptr) {
-                    throw InternalError((string)"Expected a boolean constant.\nAt: " + 
-                                        __FILE__ + ":" + to_string(__LINE__));
-                }
-                if (SimpAsConst->GetConstValue() == "true") {
-                    vector<ExpT> CurVec;
-                    for (auto const& Param : Params) {
-                        CurVec.push_back(SubstMap[Param]);
-                    }
-                    Retval.push_back(CurVec);
-                }
-            }
-            return Retval;
-        }
 
         static inline void CheckExpr(const ExpT& Exp,
                                      const SymbolTable& SymTab,
@@ -204,12 +160,31 @@ namespace ESMC {
             }
         }
 
+        static inline vector<ExprTypeRef> InstantiateMsg(const Detail::ParametrizedMessage& PMesg,
+                                                         MgrType* Mgr,
+                                                         const MgrType::SubstMapT& GlobalSM)
+        {
+            auto const& MType = PMesg.PType;
+            auto const& Params = PMesg.Params;
+            auto const& Constraint = PMesg.Constraint;
+            vector<ExprTypeRef> Retval;
+
+            auto&& ParamVals = InstantiatePendingParams(Params, Mgr, GlobalSM, Constraint);
+            
+            for (auto const& SubstParams : ParamVals) {
+                // Now we're finally ready to instantiate the message
+                Retval.push_back(Mgr->InstantiateType(MType, SubstParams));
+            }
+            
+            return Retval;
+        }
+
         // Implementation of UFEFSM
         UFEFSM::UFEFSM(UFLTS* TheLTS,
                        const string& Name,
                        const vector<ExpT>& Params,
                        const ExpT& Constraint)
-            : TheLTS(TheLTS), Name(Name), Finalized(false), Params(Params),
+            : TheLTS(TheLTS), Name(Name), Params(Params),
               Constraint(Constraint)
         {
             CheckParams(Params, Constraint, SymTab, TheLTS->Mgr);
@@ -225,6 +200,10 @@ namespace ESMC {
         {
             if (!MType->Is<Exprs::ExprRecordType>()) {
                 throw ESMCError((string)"Only record types can be message types");
+            }
+            if (!TheLTS->CheckMessageType(MType)) {
+                throw ESMCError((string)"Message Type: " + MType->ToString() + 
+                                " has not been declared in the LTS");
             }
             Inputs.insert(MType);
         }
@@ -244,6 +223,10 @@ namespace ESMC {
             if (!MType->Is<Exprs::ExprRecordType>()) {
                 throw ESMCError((string)"Only record types can be message types");
             }
+            if (!TheLTS->CheckMessageType(MType)) {
+                throw ESMCError((string)"Message Type: " + MType->ToString() + 
+                                " has not been declared in the LTS");
+            }
             Outputs.insert(MType);
         }
 
@@ -261,9 +244,10 @@ namespace ESMC {
                               bool Initial,
                               bool Final,
                               bool Accepting,
-                              bool Error)
+                              bool Error,
+                              bool Dead)
         {
-            Detail::StateDescriptor Desc(StateName, Initial, Final, Accepting, Error);
+            Detail::StateDescriptor Desc(StateName, Initial, Final, Accepting, Error, Dead);
             auto it = States.find(StateName);
             if (it == States.end()) {
                 States[StateName] = Desc;
@@ -275,11 +259,12 @@ namespace ESMC {
         string UFEFSM::AddState(bool Initial,
                                 bool Final,
                                 bool Accepting,
-                                bool Error)
+                                bool Error,
+                                bool Dead)
         {
             auto StateUID = StateUIDGenerator.GetUID();
             string StateName = (string)"State_" + to_string(StateUID);
-            Detail::StateDescriptor Desc(StateName, Initial, Final, Accepting, Error);
+            Detail::StateDescriptor Desc(StateName, Initial, Final, Accepting, Error, Dead);
             States[StateName] = Desc;
             return StateName;
         }
@@ -326,6 +311,7 @@ namespace ESMC {
                                                                Updates,
                                                                MessageName,
                                                                MessageType);
+
             Transitions.push_back(pair<TransitionT, ScopeRef>(Transition, Scope));
         }
 
@@ -473,44 +459,6 @@ namespace ESMC {
             ParametrizedTransitions.push_back(Transition);
         }
 
-        static inline vector<ExprTypeRef> InstantiateMsg(const Detail::ParametrizedMessage& PMesg,
-                                                         MgrType* Mgr,
-                                                         const MgrType::SubstMapT& GlobalSM)
-        {
-            auto const& MType = PMesg.PType;
-            auto const& Params = PMesg.Params;
-            auto const& Constraint = PMesg.Constraint;
-            vector<ExprTypeRef> Retval;
-
-            const u32 NumParams = Params.size();
-
-            vector<ExpT> SubstParams = Params;
-            vector<ExpT> ParamsToInstantiate;
-
-            for (u32 i = 0; i < NumParams; ++i) {
-                SubstParams[i] = Mgr->Substitute(GlobalSM, SubstParams[i]);
-                if (!SubstParams[i]->Is<Exprs::ConstExpression>()) {
-                    ParamsToInstantiate.push_back(SubstParams[i]);
-                }
-            }
-            
-            auto SubstConstraint = Mgr->Substitute(GlobalSM, Constraint);
-                
-            auto&& ParamVec = InstantiateParams(ParamsToInstantiate, SubstConstraint, Mgr);
-            for (auto const& ParamVal : ParamVec) {
-                u32 j = 0;
-                for (u32 i = 0; i < NumParams; ++i) {
-                    if (!SubstParams[i]->Is<Exprs::ConstExpression>()) {
-                        SubstParams[i] = ParamVal[j++];
-                    }
-                }
-                // Now we're finally ready to instantiate the message
-                Retval.push_back(Mgr->InstantiateType(MType, SubstParams));
-            }
-            
-            return Retval;
-        }
-                                                         
 
         FrozenEFSM* UFEFSM::Instantiate(const vector<ExpT>& ParamVals,
                                         const ExprTypeRef& StateType) const
@@ -601,12 +549,69 @@ namespace ESMC {
                                                   NewUpdates,
                                                   Trans.GetFairnessSet());
                 }
+                return Retval;
             }
 
             // Instantiate the parametric transitions
             for (auto const& PTrans : ParametrizedTransitions) {
-                
+                auto const& Params = PTrans.Params;
+                const u32 NumParams = Params.size();
+                auto const& Constraint = PTrans.Constraint;
+                auto const&& ParamVals = InstantiatePendingParams(Params, Mgr, 
+                                                                  SubstMapGlobal,
+                                                                  Constraint);
+                MgrType::SubstMapT SubstMapLocal;
+                for (auto const& SubstParams : ParamVals) {
+                    SubstMapLocal = SubstMapGlobal;
+                    for (u32 i = 0; i < NumParams; ++i) {
+                        if (!Params[i]->Is<Exprs::ConstExpression>()) {
+                            SubstMapLocal[Params[i]] = SubstParams[i];
+                        }
+                    }
+                    
+                    auto SubstGuard = Mgr->Substitute(SubstMapLocal, PTrans.Guard);
+                    vector<AsgnT> SubstUpdates;
+                    for (auto const& Update : PTrans.Updates) {
+                        auto SubstLHS = Mgr->Substitute(SubstMapLocal, Update.GetLHS());
+                        auto SubstRHS = Mgr->Substitute(SubstMapLocal, Update.GetRHS());
+                        SubstUpdates.push_back(AsgnT(SubstLHS, SubstRHS));
+                    }
+
+                    if (PTrans.Kind == TransitionKind::INPUT) {
+                        ExprTypeRef MType;
+                        if (PTrans.MessageType->Is<Exprs::ExprParametricType>()) {
+                            MType = Mgr->InstantiateType(PTrans.MessageType, SubstParams);
+                        } else {
+                            MType = PTrans.MessageType;
+                        }
+                        Retval->AddInputTransition(PTrans.InitialState,
+                                                   PTrans.FinalState,
+                                                   SubstGuard, SubstUpdates,
+                                                   PTrans.MessageName,
+                                                   MType);
+                    } else if (PTrans.Kind == TransitionKind::OUTPUT) {
+                        ExprTypeRef MType;
+                        if (PTrans.MessageType->Is<Exprs::ExprParametricType>()) {
+                            MType = Mgr->InstantiateType(PTrans.MessageType, SubstParams);
+                        } else {
+                            MType = PTrans.MessageType;
+                        }
+                        Retval->AddOutputTransition(PTrans.InitialState,
+                                                    PTrans.FinalState,
+                                                    SubstGuard, SubstUpdates,
+                                                    PTrans.MessageName,
+                                                    MType, PTrans.FairnessSet);
+                    } else {
+                        Retval->AddInternalTransition(PTrans.InitialState,
+                                                      PTrans.FinalState,
+                                                      SubstGuard, SubstUpdates,
+                                                      PTrans.FairnessSet);
+                    }
+                }
             }
+
+            Retval->CanonicalizeFairness();
+            return Retval;
         }
 
         vector<FrozenEFSM*> UFEFSM::Instantiate() const
@@ -626,6 +631,62 @@ namespace ESMC {
                 Retval.push_back(Instantiate(SubstMap, StateType));
             }
             return Retval;
+        }
+
+        // Channel EFSM implementation
+        ChannelEFSM::ChannelEFSM(u32 Capacity, bool Ordered, bool Lossy, 
+                                 bool Duplicating, bool Blocking, 
+                                 bool FiniteLoss, bool FiniteDup, 
+                                 bool Compassionate, bool Just, UFLTS* TheLTS)
+            : TheLTS(TheLTS), Capacity(Capacity), Ordered(Ordered), Lossy(Lossy),
+              Duplicating(Duplicating), Blocking(Blocking),
+              FiniteLoss(FiniteLoss), FiniteDup(FiniteDup),
+              Compassionate(Compassionate), Just(Just)
+        {
+            // Sanity checks on params
+            if (Blocking && !Lossy) {
+                throw ESMCError((string)"Only Lossy channels can be declared Blocking");
+            }
+            if (FiniteLoss && !Lossy) {
+                throw ESMCError((string)"Only Lossy channels can be declared FiniteLoss");
+            }
+            if (FiniteDup && !Duplicating) {
+                throw ESMCError((string)"Only Duplicating channels can be declared FiniteDup");
+            }
+            if (Compassionate && Just) {
+                throw ESMCError((string)"A channel can be compassionate or just, not both!");
+            }
+        }
+
+        ChannelEFSM::~ChannelEFSM()
+        {
+            // Nothing here
+        }
+
+        void ChannelEFSM::AddMessage(const ExprTypeRef& Type)
+        {
+            if (!Type->Is<Exprs::ExprRecordType>()) {
+                throw ESMCError((string)"Only record types can be messages");
+            }
+            Messages.insert(Type);
+        }
+
+        void ChannelEFSM::AddMessage(const ExprTypeRef& Type,
+                                     const vector<ExpT>& Params,
+                                     const ExpT& Constraint)
+        {
+            if (!Type->Is<Exprs::ExprParametricType>()) {
+                throw ESMCError((string)"Only parametric types can be used as parametric " + 
+                                "messages");
+            }
+
+            PMessages.insert(Detail::ParametrizedMessage(Type, Params, Constraint));
+        }
+
+        UFEFSM* ChannelEFSM::ToEFSM()
+        {
+            // TODO
+            return nullptr;
         }
 
         // Frozen EFSM implementation
@@ -655,11 +716,19 @@ namespace ESMC {
 
         void FrozenEFSM::AddInputMsg(const ExprTypeRef& MType)
         {
+            if (!TheLTS->CheckMessageType(MType)) {
+                throw ESMCError((string)"Message Type: " + MType->ToString() + 
+                                " has not been declared in the LTS");
+            }
             Inputs.insert(MType);
         }
 
         void FrozenEFSM::AddOutputMsg(const ExprTypeRef& MType)
         {
+            if (!TheLTS->CheckMessageType(MType)) {
+                throw ESMCError((string)"Message Type: " + MType->ToString() + 
+                                " has not been declared in the LTS");
+            }
             Outputs.insert(MType);
         }
         
@@ -676,6 +745,11 @@ namespace ESMC {
             CheckExpr(Guard, SymTab, TheLTS->Mgr);
             if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
                 throw ESMCError((string)"Guard of a transition must be boolean valued");
+            }
+
+            if (Inputs.find(MessageType) == Inputs.end()) {
+                throw ESMCError((string)"Message type \"" + MessageType->ToString() + 
+                                "\" is not an input for EFSM \"" + Name + "\"");
             }
 
             SymTab.Push();
@@ -702,6 +776,10 @@ namespace ESMC {
         {
             CheckState(InitState, States);
             CheckState(FinalState, States);
+            if (Inputs.find(MessageType) == Outputs.end()) {
+                throw ESMCError((string)"Message type \"" + MessageType->ToString() + 
+                                "\" is not an output for EFSM \"" + Name + "\"");
+            }
             
             CheckExpr(Guard, SymTab, TheLTS->Mgr);
             if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
@@ -744,6 +822,35 @@ namespace ESMC {
             Transitions.push_back(pair<TransitionT, ScopeRef>(Transition, ScopeRef::NullPtr));
         }
               
+        void FrozenEFSM::CanonicalizeFairness()
+        {
+            UIDGenerator FairnessUIDGen;
+            unordered_map<u32, u32> FairnessMap;
+
+            for (auto const& TransScope : Transitions) {
+                auto const& Trans = TransScope.first;
+                auto const& CurFairnessSet = Trans.GetFairnessSet();
+                for (auto const& Fairness : CurFairnessSet) {
+                    if (FairnessMap.find(Fairness) != FairnessMap.end()) {
+                        continue;
+                    } else {
+                        FairnessMap[Fairness] = FairnessUIDGen.GetUID();
+                    }
+                }
+            }
+
+            // We've mapped all the fairnesses now
+            // Substitute them out
+            for (auto const& TransScope : Transitions) {
+                auto const& Trans = TransScope.first;
+                auto const& OldFairnessSet = Trans.GetFairnessSet();
+                unordered_set<u32> NewFairnessSet;
+                for (auto const& Fairness : OldFairnessSet) {
+                    NewFairnessSet.insert(FairnessMap[Fairness]);
+                }
+                Trans.SetFairnessSet(NewFairnessSet);
+            }
+        }
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

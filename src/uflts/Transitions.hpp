@@ -65,7 +65,7 @@ namespace ESMC {
             typedef Analyses::Assignment<E, S> AsgnT;
             typedef Exprs::ExprTypeRef ExprTypeRef;
 
-            unordered_set<u32> FairnessSet;
+            mutable unordered_set<u32> FairnessSet;
             TransitionKind Kind;
 
             STATETYPE InitState;

@@ -185,6 +185,7 @@ namespace ESMC {
         class FrozenEFSM
         {
             friend class UFLTS;
+            friend class UFEFSM;
 
         private:
             string Name;
@@ -196,6 +197,8 @@ namespace ESMC {
             map<string, Detail::StateDescriptor> States;
             
             vector<pair<TransitionT, ScopeRef>> Transitions;
+
+            void CanonicalizeFairness();
             
         public:
             FrozenEFSM(const string& Name, UFLTS* TheLTS,
@@ -248,7 +251,6 @@ namespace ESMC {
         private:
             UFLTS* TheLTS;
             string Name;
-            bool Finalized;
             vector<ExpT> Params;
             ExpT Constraint;
             UIDGenerator StateUIDGenerator;
@@ -290,14 +292,16 @@ namespace ESMC {
                           bool Initial = false,
                           bool Final = false,
                           bool Accepting = false,
-                          bool Error = false);
+                          bool Error = false,
+                          bool Dead = false);
 
             // Add an internal, non-initial, non-final,
             // non-accepting, non-error state
             string AddState(bool Initial = false,
                             bool Final = false,
                             bool Accepting = false,
-                            bool Error = false);
+                            bool Error = false,
+                            bool Dead = false);
 
             void AddVariable(const string& VarName,
                              const ExprTypeRef& VarType);
@@ -361,6 +365,40 @@ namespace ESMC {
             FrozenEFSM* Instantiate(const vector<ExpT>& ParamVals,
                                     const ExprTypeRef& StateType) const;
 
+        };
+
+        // A class for channels
+        class ChannelEFSM
+        {
+        private:
+            UFLTS* TheLTS;
+            u32 Capacity;
+            bool Ordered;
+            bool Lossy;
+            bool Duplicating;
+            bool Blocking;
+            bool FiniteLoss;
+            bool FiniteDup;
+            bool Compassionate;
+            bool Just;
+            vector<ExpT> Params;
+            set<ExprTypeRef> Messages;
+            set<Detail::ParametrizedMessage> PMessages;
+            SymbolTable SymTab;
+
+        public:
+            ChannelEFSM(u32 Capacity, bool Ordered, bool Lossy, bool Duplicating,
+                        bool Blocking, bool FiniteLoss, bool FiniteDup, bool Compassionate,
+                        bool Just, UFLTS* TheLTS);
+            ~ChannelEFSM();
+
+            void AddMessage(const ExprTypeRef& Type);
+            void AddMessage(const ExprTypeRef& Type,
+                            const vector<ExpT>& Params,
+                            const ExpT& Constraints);
+            
+            // We convert to an EFSM 
+            UFEFSM* ToEFSM();
         };
 
     } /* end namespace LTS */

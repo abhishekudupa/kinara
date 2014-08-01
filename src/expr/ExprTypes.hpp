@@ -109,6 +109,7 @@ namespace ESMC {
             virtual string ToString() const = 0;
             virtual i32 Compare(const ExprTypeBase& Other) const = 0;
             virtual vector<string> GetElements() const = 0;
+            virtual u32 GetByteSize() const = 0;
             
             u64 Hash() const;
             bool Equals(const ExprTypeBase& Other) const;
@@ -117,6 +118,7 @@ namespace ESMC {
             i64 GetTypeID() const;
             i64 SetTypeID() const;
             i64 GetOrSetTypeID() const;
+
 
             template <typename T> 
             inline T* As()
@@ -226,6 +228,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual u32 GetByteSize() const override;
         };
 
 
@@ -243,6 +246,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual u32 GetByteSize() const override;
         };
 
         class ExprRangeType : public ExprIntType
@@ -266,6 +270,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual u32 GetByteSize() const override;
         };
 
         // Mainly for states and such
@@ -289,6 +294,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual u32 GetByteSize() const override;
         };
 
         class ExprSymmetricType : public ExprScalarType
@@ -323,6 +329,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual u32 GetByteSize() const override;
         };
 
         class ExprFuncType : public ExprTypeBase
@@ -349,6 +356,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual u32 GetByteSize() const override;
         };
 
         class ExprArrayType : public ExprTypeBase
@@ -371,6 +379,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual u32 GetByteSize() const override;
         };
 
         class ExprRecordType : public ExprTypeBase
@@ -394,6 +403,7 @@ namespace ESMC {
             virtual string ToString() const;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual u32 GetByteSize() const override;
         };
 
         // A parametric type RESOLVES to
@@ -419,6 +429,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual u32 GetByteSize() const override;
         };
 
         // A dummy type for field access terms variables
@@ -434,6 +445,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual u32 GetByteSize() const override;
         };
 
         class ExprTypePtrHasher

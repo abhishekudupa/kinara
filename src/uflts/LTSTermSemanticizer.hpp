@@ -88,8 +88,6 @@ namespace ESMC {
             static const i64 OpIndex = 1018;
             static const i64 OpField = 1019;
 
-            // Operator for NonDet choices
-            static const i64 OpNonDet = 1020;
 
             static const i64 UFOffset = 1000000;
 
@@ -581,20 +579,6 @@ namespace ESMC {
                     break;
                 }
 
-                case LTSOps::OpNonDet: {
-                    CheckNumArgs(2, ChildTypes.size(), "NonDet");
-                    if (!ChildTypes[0]->Is<ExprRangeType>() &&
-                        !ChildTypes[0]->Is<ExprEnumType>() &&
-                        !ChildTypes[0]->Is<ExprBoolType>()) {
-                        throw ExprTypeError((string)"Non Det operator can only be applied " +
-                                            "to subrange, enum and boolean (scalar) types");
-                    }
-                    if (!ChildTypes[1]->Is<ExprBoolType>()) {
-                        throw ExprTypeError((string)"Non Det constraint must be boolean");
-                    }
-                    Exp->SetType(ChildTypes[0]);
-                    break;
-                }
                 default: {
                     // Must be an uninterpreted function
                     auto it = UFMap.find(OpCode);

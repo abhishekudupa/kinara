@@ -67,9 +67,6 @@ namespace ESMC {
         const i64 LTSOps::OpIndex;
         const i64 LTSOps::OpField;
         
-        // Nondet
-        const i64 LTSOps::OpNonDet;
-
         const i64 LTSOps::UFOffset;
         
         // Temporal operators
@@ -106,8 +103,7 @@ namespace ESMC {
                   { LTSOps::OpGT, ">" },
                   { LTSOps::OpGE, ">=" },
                   { LTSOps::OpLT, "<" },
-                  { LTSOps::OpLE, "<=" },
-                  { LTSOps::OpNonDet, "nondet"} };
+                  { LTSOps::OpLE, "<=" } };
 
         } /* end namespace Detail */
     } /* end namespace LTS */
