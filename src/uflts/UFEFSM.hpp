@@ -276,6 +276,8 @@ namespace ESMC {
                    const ExpT& Constraint);
 
             ~UFEFSM();
+
+            const string& GetName() const;
             
             void AddInputMsg(const ExprTypeRef& MType);
             void AddOutputMsg(const ExprTypeRef& MType);
@@ -372,6 +374,9 @@ namespace ESMC {
         {
         private:
             UFLTS* TheLTS;
+            string Name;
+            vector<ExpT> Params;
+            ExpT Constraint;
             u32 Capacity;
             bool Ordered;
             bool Lossy;
@@ -381,16 +386,22 @@ namespace ESMC {
             bool FiniteDup;
             bool Compassionate;
             bool Just;
-            vector<ExpT> Params;
+
             set<ExprTypeRef> Messages;
             set<Detail::ParametrizedMessage> PMessages;
             SymbolTable SymTab;
 
         public:
-            ChannelEFSM(u32 Capacity, bool Ordered, bool Lossy, bool Duplicating,
+            ChannelEFSM(UFLTS* TheLTS, 
+                        const string& Name,
+                        const vector<ExpT>& Params,
+                        const ExpT& Constraint,
+                        u32 Capacity, bool Ordered, bool Lossy, bool Duplicating,
                         bool Blocking, bool FiniteLoss, bool FiniteDup, bool Compassionate,
-                        bool Just, UFLTS* TheLTS);
+                        bool Just);
             ~ChannelEFSM();
+
+            const string& GetName() const;
 
             void AddMessage(const ExprTypeRef& Type);
             void AddMessage(const ExprTypeRef& Type,

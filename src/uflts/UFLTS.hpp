@@ -74,20 +74,28 @@ namespace ESMC {
             UIDGenerator MTypeUIDGen;
             map<string, ExprTypeRef> MTypes;
             map<string, u32> MTypeIDs;
+            u32 MessageSize;
+            vector<UFEFSM*> EFSMs;
+            vector<ChannelEFSM*> Channels;
 
         public:
             UFLTS();
             ~UFLTS();
-
+            MgrType* GetMgr() const;
+            
+            // Arbitrary types
             template <typename T, typename... ArgTypes>
-            ExprTypeRef MakeType(ArgTypes&&... Args);
+            inline ExprTypeRef MakeType(ArgTypes&&... Args)
+            {
+                return Mgr->MakeType<T>(forward<ArgTypes>(Args)...);
+            }
 
-            // Non parametric message type
+            // Non parametric MESSAGE type
             const ExprTypeRef& MakeMessageType(const string& Name, 
                                                const map<string, ExprTypeRef>& Fields,
                                                bool IncludePrimed = false);
 
-            // Parametric message type
+            // Parametric MESSAGE type
             const ExprTypeRef& MakeMessageType(const string& Name,
                                                const map<string, ExprTypeRef>& Fields,
                                                const vector<ExpT>& ParamTypes,
@@ -95,21 +103,23 @@ namespace ESMC {
                                                bool IncludePrimed = false);
 
             void FreezeMessages();
-
             const ExprTypeRef& GetMessageType(const string& Name) const;
             i32 GetTypeIDForMessageType(const string& Name) const;
-
             bool CheckMessageType(const ExprTypeRef& MType);
-
-            
+            u32 GetMessageSize() const;
 
             UFEFSM* MakeEFSM(const string& Name, 
                              const vector<ExpT>& Params,
                              const ExpT& Constraint);
             
+            ChannelEFSM* MakeChannel(const string& Name,
+                                     const vector<ExpT>& Params,
+                                     const ExpT& Constraint,
+                                     u32 Capacity, bool Ordered, bool Lossy,
+                                     bool Duplicating, bool Blocking, bool FiniteLoss,
+                                     bool Compassionate, bool Just);
 
             void Freeze();
-            MgrType* GetMgr();
         };
 
     } /* end namespace LTS */

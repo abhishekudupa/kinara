@@ -57,6 +57,11 @@ namespace ESMC {
             delete Mgr;
         }
 
+        MgrType* UFLTS::GetMgr() const
+        {
+            return Mgr;
+        }
+
         const ExprTypeRef& UFLTS::MakeMessageType(const string& Name,
                                                   const map<string, ExprTypeRef>& Fields,
                                                   bool IncludePrimed)
@@ -210,26 +215,83 @@ namespace ESMC {
 
         void UFLTS::FreezeMessages()
         {
-            MsgsFrozen = true;
+            u32 MaxSize = 0;
             
             // Find out the maximum size of each message
-            
+            for (auto MType : MTypes) {
+                auto const& ActType = MType.second;
+                if (!ActType->Is<Exprs::ExprRecordType>()) {
+                    continue;
+                }
+                auto CurSize = ActType->GetByteSize();
+                if (CurSize > MaxSize) {
+                    MaxSize = CurSize;
+                }
+            }
+
+            MessageSize = MaxSize;
+            MsgsFrozen = true;
         }
+
+        u32 UFLTS::GetMessageSize() const
+        {
+            if (!MsgsFrozen) {
+                throw ESMCError((string)"UFLTS::GetMessageSize() can only be called after " + 
+                                "freezing the message declarations");
+            }
+            return MessageSize;
+        }
+
+        UFEFSM* UFLTS::MakeEFSM(const string& Name,
+                                const vector<ExpT>& Params,
+                                const ExpT& Constraint)
+        {
+            if (!MsgsFrozen) {
+                throw ESMCError((string)"UFLTS::MakeEFSM() can only be called after " + 
+                                "freezing the message declarations");
+            }
+            for (auto const& EFSM : EFSMs) {
+                if (EFSM->GetName() == Name) {
+                    throw ESMCError((string)"EFSM with name \"" + Name + "\" already created");
+                }
+            }
+
+            auto Retval = new UFEFSM(this, Name, Params, Constraint);
+            EFSMs.push_back(Retval);
+            return Retval;
+        }
+
+        ChannelEFSM* UFLTS::MakeChannel(const string& Name, 
+                                        const vector<ExpT>& Params, 
+                                        const ExpT& Constraint,
+                                        u32 Capacity, bool Ordered, bool Lossy,
+                                        bool Duplicating, bool Blocking, bool FiniteLoss,
+                                        bool Compassionate, bool Just)
+        {
+            if (!MsgsFrozen) {
+                throw ESMCError((string)"UFLTS::MakeEFSM() can only be called after " + 
+                                "freezing the message declarations");
+            }
+            for (auto const& EFSM : EFSMs) {
+                if (EFSM->GetName() == Name) {
+                    throw ESMCError((string)"EFSM with name \"" + Name + "\" already created");
+                }
+            }
+
+            for (auto const& Channel : Channels) {
+                if (Channel->GetName() == Name) {
+                    throw ESMCError((string)"Channel with name \"" + Name + "\" already created");
+                }
+            }
+            // TODO: implement the rest of me
+            return nullptr;
+        }
+
+
+        
 
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
 // 
 // UFLTS.cpp ends here
-
-
-
-
-
-
-
-
-
-
-
-

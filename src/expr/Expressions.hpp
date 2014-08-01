@@ -554,6 +554,9 @@ namespace ESMC {
             inline TypeT InstantiateType(const TypeT& ParamType,
                                          const vector<ExpT>& ParamValues);
 
+            inline ExpT MakeTrue(const E& ExtVal = E());
+            inline ExpT MakeFalse(const E& ExtVal = E());
+
             inline ExpT MakeVal(const string& ValString, const TypeT& ValType,
                                 const E& ExtVal = E());
             
@@ -1924,6 +1927,26 @@ namespace ESMC {
             } else {
                 throw ExprTypeError("Strange type of expression encountered");
             }
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::MakeTrue(const E& ExtVal)
+        {
+            auto Retval = ExpCache.template Get<ConstExpression<E, S>>(this, "true", 
+                                                                       BoolType);
+            Sem->TypeCheck(Retval);
+            return Retval;
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::MakeFalse(const E& ExtVal)
+        {
+            auto Retval = ExpCache.template Get<ConstExpression<E, S>>(this, "false", 
+                                                                       BoolType);
+            Sem->TypeCheck(Retval);
+            return Retval;
         }
 
         template <typename E, template<typename> class S>

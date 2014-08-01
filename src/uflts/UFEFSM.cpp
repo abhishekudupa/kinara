@@ -195,6 +195,10 @@ namespace ESMC {
             // Nothing here
         }
 
+        const string& UFEFSM::GetName() const
+        {
+            return Name;
+        }
 
         void UFEFSM::AddInputMsg(const ExprTypeRef& MType)
         {
@@ -634,14 +638,20 @@ namespace ESMC {
         }
 
         // Channel EFSM implementation
-        ChannelEFSM::ChannelEFSM(u32 Capacity, bool Ordered, bool Lossy, 
+        ChannelEFSM::ChannelEFSM(UFLTS* TheLTS,
+                                 const string& Name, 
+                                 const vector<ExpT>& Params,
+                                 const ExpT& Constraint,
+                                 u32 Capacity, bool Ordered, bool Lossy, 
                                  bool Duplicating, bool Blocking, 
                                  bool FiniteLoss, bool FiniteDup, 
-                                 bool Compassionate, bool Just, UFLTS* TheLTS)
-            : TheLTS(TheLTS), Capacity(Capacity), Ordered(Ordered), Lossy(Lossy),
+                                 bool Compassionate, bool Just)
+            : TheLTS(TheLTS), Name(Name), Params(Params), Constraint(Constraint),
+              Capacity(Capacity), Ordered(Ordered), Lossy(Lossy),
               Duplicating(Duplicating), Blocking(Blocking),
               FiniteLoss(FiniteLoss), FiniteDup(FiniteDup),
               Compassionate(Compassionate), Just(Just)
+              
         {
             // Sanity checks on params
             if (Blocking && !Lossy) {
@@ -661,6 +671,11 @@ namespace ESMC {
         ChannelEFSM::~ChannelEFSM()
         {
             // Nothing here
+        }
+
+        const string& ChannelEFSM::GetName() const
+        {
+            return Name;
         }
 
         void ChannelEFSM::AddMessage(const ExprTypeRef& Type)
