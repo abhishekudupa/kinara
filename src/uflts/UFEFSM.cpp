@@ -473,6 +473,45 @@ namespace ESMC {
             ParametrizedTransitions.push_back(Transition);
         }
 
+        static inline vector<ExprTypeRef> InstantiateMsg(const Detail::ParametrizedMessage& PMesg,
+                                                         MgrType* Mgr,
+                                                         const MgrType::SubstMapT& GlobalSM)
+        {
+            auto const& MType = PMesg.PType;
+            auto const& Params = PMesg.Params;
+            auto const& Constraint = PMesg.Constraint;
+            vector<ExprTypeRef> Retval;
+
+            const u32 NumParams = Params.size();
+
+            vector<ExpT> SubstParams = Params;
+            vector<ExpT> ParamsToInstantiate;
+
+            for (u32 i = 0; i < NumParams; ++i) {
+                SubstParams[i] = Mgr->Substitute(GlobalSM, SubstParams[i]);
+                if (!SubstParams[i]->Is<Exprs::ConstExpression>()) {
+                    ParamsToInstantiate.push_back(SubstParams[i]);
+                }
+            }
+            
+            auto SubstConstraint = Mgr->Substitute(GlobalSM, Constraint);
+                
+            auto&& ParamVec = InstantiateParams(ParamsToInstantiate, SubstConstraint, Mgr);
+            for (auto const& ParamVal : ParamVec) {
+                u32 j = 0;
+                for (u32 i = 0; i < NumParams; ++i) {
+                    if (!SubstParams[i]->Is<Exprs::ConstExpression>()) {
+                        SubstParams[i] = ParamVal[j++];
+                    }
+                }
+                // Now we're finally ready to instantiate the message
+                Retval.push_back(Mgr->InstantiateType(MType, SubstParams));
+            }
+            
+            return Retval;
+        }
+                                                         
+
         FrozenEFSM* UFEFSM::Instantiate(const vector<ExpT>& ParamVals,
                                         const ExprTypeRef& StateType) const
         {
@@ -510,27 +549,17 @@ namespace ESMC {
 
             // Instantiate the parametric inputs
             for(auto const& PMesg : ParametrizedInputs) {
-                auto const& MType = PMesg.PType;
-                auto const& Params = PMesg.Params;
-                auto const& Constraint = PMesg.Constraint;
-
-                auto&& ParamVec = InstantiateParams(Params, Constraint, Mgr);
-                for (auto const& ParamVals : ParamVec) {
-                    auto Type = Mgr->InstantiateType(MType, ParamVals);
-                    Retval->AddInputMsg(Type);
+                auto&& InstMsgTypes = InstantiateMsg(PMesg, Mgr, SubstMapGlobal);
+                for (auto const& InstMsgType : InstMsgTypes) {
+                    Retval->AddInputMsg(InstMsgType);
                 }
             }
 
             // Instantiate the parametric outputs
             for(auto const& PMesg : ParametrizedOutputs) {
-                auto const& MType = PMesg.PType;
-                auto const& Params = PMesg.Params;
-                auto const& Constraint = PMesg.Constraint;
-                
-                auto&& ParamVec = InstantiateParams(Params, Constraint, Mgr);
-                for (auto const& ParamVals : ParamVec) {
-                    auto Type = Mgr->InstantiateType(MType, ParamVals);
-                    Retval->AddOutputMsg(Type);
+                auto&& InstMsgTypes = InstantiateMsg(PMesg, Mgr, SubstMapGlobal);
+                for (auto const& InstMsgType : InstMsgTypes) {
+                    Retval->AddOutputMsg(InstMsgType);
                 }
             }
 
