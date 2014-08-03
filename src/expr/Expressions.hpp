@@ -1846,7 +1846,7 @@ namespace ESMC {
                 for(u32 i = 0; i < Params.size(); ++i) {
                     TypeName += ((string)"[" + Params[i]->ToString() + "]");
                 }
-                return MakeType<ExprRecordType>(TypeName, RecType->GetMembers());
+                return MakeType<ExprRecordType>(TypeName, RecType->GetMemberVec());
             } else {
                 auto ParamType = BaseType->template As<ExprParametricType>();
                 if (ParamType == nullptr) {

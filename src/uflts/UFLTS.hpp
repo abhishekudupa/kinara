@@ -61,12 +61,10 @@ namespace ESMC {
         
         extern const string MTypeFieldName;
         extern const u32 MaxMessageTypes;
+        extern const string UnifiedMTypeName;
 
         class UFLTS 
         {
-            friend class UFEFSM;
-            friend class FrozenEFSM;
-
         private:
             MgrType* Mgr;
             bool Frozen;
@@ -74,6 +72,7 @@ namespace ESMC {
             UIDGenerator MTypeUIDGen;
             map<string, ExprTypeRef> MTypes;
             map<string, u32> MTypeIDs;
+            ExprTypeRef UnifiedMType;
             u32 MessageSize;
             vector<UFEFSM*> EFSMs;
             vector<ChannelEFSM*> Channels;
@@ -92,12 +91,12 @@ namespace ESMC {
 
             // Non parametric MESSAGE type
             const ExprTypeRef& MakeMessageType(const string& Name, 
-                                               const map<string, ExprTypeRef>& Fields,
+                                               const vector<pair<string, ExprTypeRef>>& Fields,
                                                bool IncludePrimed = false);
 
             // Parametric MESSAGE type
             const ExprTypeRef& MakeMessageType(const string& Name,
-                                               const map<string, ExprTypeRef>& Fields,
+                                               const vector<pair<string, ExprTypeRef>>& Fields,
                                                const vector<ExpT>& ParamTypes,
                                                const ExpT& Constraint,
                                                bool IncludePrimed = false);
@@ -107,6 +106,7 @@ namespace ESMC {
             i32 GetTypeIDForMessageType(const string& Name) const;
             bool CheckMessageType(const ExprTypeRef& MType);
             u32 GetMessageSize() const;
+            const ExprTypeRef& GetUnifiedMType() const;
 
             UFEFSM* MakeEFSM(const string& Name, 
                              const vector<ExpT>& Params,
@@ -116,8 +116,8 @@ namespace ESMC {
                                      const vector<ExpT>& Params,
                                      const ExpT& Constraint,
                                      u32 Capacity, bool Ordered, bool Lossy,
-                                     bool Duplicating, bool Blocking, bool FiniteLoss,
-                                     bool Compassionate, bool Just);
+                                     bool Duplicating, bool Blocking, 
+                                     bool FiniteLoss, bool FiniteDup, bool Fair);
 
             void Freeze();
         };

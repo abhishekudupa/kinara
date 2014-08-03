@@ -386,18 +386,20 @@ namespace ESMC {
         {
         private:
             string Name;
-            map<string, ExprTypeRef> Members;
+            map<string, ExprTypeRef> MemberMap;
+            vector<pair<string, ExprTypeRef>> MemberVec;
 
         protected:
             virtual void ComputeHashValue() const;
 
         public:
             ExprRecordType(const string& Name,
-                          const map<string, ExprTypeRef>& RecordMembers);
+                           const vector<pair<string, ExprTypeRef>>& RecordMembers);
             virtual ~ExprRecordType();
 
             const string& GetName() const;
-            const map<string, ExprTypeRef>& GetMembers() const;
+            const map<string, ExprTypeRef>& GetMemberMap() const;
+            const vector<pair<string, ExprTypeRef>>& GetMemberVec() const;
             const ExprTypeRef& GetTypeForMember(const string& MemberName) const;
 
             virtual string ToString() const;
@@ -424,7 +426,9 @@ namespace ESMC {
             virtual ~ExprParametricType();
 
             const ExprTypeRef& GetBaseType() const;
+            ExprTypeRef GetTrueBaseType() const;
             const ExprTypeRef& GetParameterType() const;
+            const string& GetName() const;
 
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
@@ -442,6 +446,57 @@ namespace ESMC {
             ExprFieldAccessType();
             virtual ~ExprFieldAccessType();
 
+            virtual string ToString() const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
+            virtual u32 GetByteSize() const override;
+        };
+
+        // A type that is a union of two or more record types
+        class ExprUnionType : public ExprTypeBase
+        {
+        private:
+            string Name;
+            set<ExprTypeRef> MemberTypes;
+            map<string, ExprTypeRef> FieldMap;
+            vector<pair<string, ExprTypeRef>> FieldVec;
+            map<ExprTypeRef, map<string, string>> MemberFieldToFieldMap;
+
+        protected:
+            virtual void ComputeHashValue() const override;
+
+        public:
+            ExprUnionType(const string& Name,
+                          const set<ExprTypeRef>& MemberTypes);
+            virtual ~ExprUnionType();
+
+            const string& GetName() const;
+            const set<ExprTypeRef>& GetMemberTypes() const;
+            bool IsMember(const ExprTypeRef& Type) const;
+            const ExprTypeRef& GetTypeForMemberField(const ExprTypeRef& MemberType,
+                                                     const string& MemberField) const;
+
+            virtual string ToString() const override;
+            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElements() const override;
+            virtual u32 GetByteSize() const override;
+        };
+        
+        // Type for accessing union fields
+        class ExprUFAType : public ExprTypeBase
+        {
+        private:
+            ExprTypeRef UnionMemberType;
+
+        protected:
+            virtual void ComputeHashValue() const override;
+            
+        public:
+            ExprUFAType(const ExprTypeRef& UnionMemberType);
+            virtual ~ExprUFAType();
+
+            const ExprTypeRef& GetUnionMemberType() const;
+            
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;

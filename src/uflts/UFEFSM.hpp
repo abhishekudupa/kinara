@@ -384,12 +384,18 @@ namespace ESMC {
             bool Blocking;
             bool FiniteLoss;
             bool FiniteDup;
-            bool Compassionate;
-            bool Just;
+            bool Fair;
+
+            const u32 FairnessSetID = 1;
+            const u32 LossFairnessSetID = 2;
+            const u32 DupFairnessSetID = 3;
 
             set<ExprTypeRef> Messages;
             set<Detail::ParametrizedMessage> PMessages;
             SymbolTable SymTab;
+
+            // helper functions
+            inline void MakeInputTransitions(UFEFSM* EFSM);
 
         public:
             ChannelEFSM(UFLTS* TheLTS, 
@@ -397,8 +403,7 @@ namespace ESMC {
                         const vector<ExpT>& Params,
                         const ExpT& Constraint,
                         u32 Capacity, bool Ordered, bool Lossy, bool Duplicating,
-                        bool Blocking, bool FiniteLoss, bool FiniteDup, bool Compassionate,
-                        bool Just);
+                        bool Blocking, bool FiniteLoss, bool FiniteDup, bool Fair);
             ~ChannelEFSM();
 
             const string& GetName() const;

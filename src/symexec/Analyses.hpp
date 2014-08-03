@@ -87,10 +87,9 @@ namespace ESMC {
         inline Assignment<E, S>::Assignment(const ExpT& LHS, const ExpT& RHS)
             : LHS(LHS), RHS(RHS), HashCode(0)
         {
-            if (LHS == ExpT::NullPtr || RHS == ExpT::NullPtr ||
-                LHS->template As<VarExpression>() == nullptr) {
+            if (LHS == ExpT::NullPtr || RHS == ExpT::NullPtr) {
                 throw ExprTypeError((string)"Args for constructing an assignment object " + 
-                                    "must be non-null and LHS must be a VarExpression object");
+                                    "must be non-null");
             }
             boost::hash_combine(HashCode, LHS->Hash());
             boost::hash_combine(HashCode, RHS->Hash());

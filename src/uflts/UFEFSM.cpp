@@ -187,7 +187,7 @@ namespace ESMC {
             : TheLTS(TheLTS), Name(Name), Params(Params),
               Constraint(Constraint)
         {
-            CheckParams(Params, Constraint, SymTab, TheLTS->Mgr);
+            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
         }
 
         UFEFSM::~UFEFSM()
@@ -217,7 +217,7 @@ namespace ESMC {
                                  const ExprTypeRef& MType)
         {
             SymTab.Push();
-            CheckParams(Params, Constraint, SymTab, TheLTS->Mgr);
+            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
             SymTab.Pop();
             ParametrizedInputs.insert(Detail::ParametrizedMessage(MType, Params, Constraint));
         }
@@ -239,7 +239,7 @@ namespace ESMC {
                                   const ExprTypeRef& MType)
         {
             SymTab.Push();
-            CheckParams(Params, Constraint, SymTab, TheLTS->Mgr);
+            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
             SymTab.Pop();
             ParametrizedOutputs.insert(Detail::ParametrizedMessage(MType, Params, Constraint));
         }
@@ -276,6 +276,13 @@ namespace ESMC {
         void UFEFSM::AddVariable(const string& VarName,
                                  const ExprTypeRef& VarType)
         {
+            if (!VarType->Is<Exprs::ExprScalarType>() &&
+                !VarType->Is<Exprs::ExprRecordType> () &&
+                !VarType->Is<Exprs::ExprArrayType> ()) {
+                throw ESMCError((string)"Variable \"" + VarName + "\" has an " + 
+                                "unsupported type. Only scalar types, record " + 
+                                "types and array types can be EFSM variables");
+            }
             if (SymTab.LookupTop(VarName) != DeclRef::NullPtr) {
                 throw ESMCError((string)"Rebinding of variable \"" + VarName + "\"");
             }
@@ -297,12 +304,12 @@ namespace ESMC {
             SymTab.Push();
             SymTab.Bind(MessageName, new MsgDecl(MessageName, MessageType));
             
-            CheckUpdates(Updates, SymTab, TheLTS->Mgr);
+            CheckUpdates(Updates, SymTab, TheLTS->GetMgr());
 
             // Guard cannot refer to message fields
             auto Scope = SymTab.Pop();
 
-            CheckExpr(Guard, SymTab, TheLTS->Mgr);
+            CheckExpr(Guard, SymTab, TheLTS->GetMgr());
 
 
             if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
@@ -332,7 +339,7 @@ namespace ESMC {
             CheckState(FinalState, States);
 
             SymTab.Push();
-            CheckParams(Params, Constraint, SymTab, TheLTS->Mgr);
+            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
             SymTab.Pop();
 
             if (!MessageType->Is<Exprs::ExprParametricType>()) {
@@ -366,10 +373,10 @@ namespace ESMC {
             SymTab.Push();
             SymTab.Bind(MessageName, new VarDecl(MessageName, MessageType));
             
-            CheckUpdates(Updates, SymTab, TheLTS->Mgr);
+            CheckUpdates(Updates, SymTab, TheLTS->GetMgr());
             auto Scope = SymTab.Pop();
             
-            CheckExpr(Guard, SymTab, TheLTS->Mgr);
+            CheckExpr(Guard, SymTab, TheLTS->GetMgr());
             if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
                 throw ESMCError((string)"Guard for transition is not boolean");
             }
@@ -398,7 +405,7 @@ namespace ESMC {
             CheckState(FinalState, States);
             
             SymTab.Push();
-            CheckParams(Params, Constraint, SymTab, TheLTS->Mgr);
+            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
             SymTab.Pop();
 
             if (!MessageType->Is<Exprs::ExprParametricType>()) {
@@ -425,8 +432,8 @@ namespace ESMC {
         {
             CheckState(InitState, States);
             CheckState(FinalState, States);
-            CheckUpdates(Updates, SymTab, TheLTS->Mgr);
-            CheckExpr(Guard, SymTab, TheLTS->Mgr);
+            CheckUpdates(Updates, SymTab, TheLTS->GetMgr());
+            CheckExpr(Guard, SymTab, TheLTS->GetMgr());
             
             if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
                 throw ESMCError((string)"Guard for transition is not boolean");
@@ -452,7 +459,7 @@ namespace ESMC {
             CheckState(FinalState, States);
             
             SymTab.Push();
-            CheckParams(Params, Constraint, SymTab, TheLTS->Mgr);
+            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
             SymTab.Pop();
             
             Detail::ParametrizedTransition Transition(TransitionKind::INTERNAL,
@@ -467,7 +474,7 @@ namespace ESMC {
         FrozenEFSM* UFEFSM::Instantiate(const vector<ExpT>& ParamVals,
                                         const ExprTypeRef& StateType) const
         {
-            auto Mgr = TheLTS->Mgr;
+            auto Mgr = TheLTS->GetMgr();
             string InstName = Name;
             for (auto const& Param : ParamVals) {
                 auto ParamAsConst = Param->As<Exprs::ConstExpression>();
@@ -621,7 +628,7 @@ namespace ESMC {
         vector<FrozenEFSM*> UFEFSM::Instantiate() const
         {
             // Create a type for the states first
-            auto Mgr = TheLTS->Mgr;
+            auto Mgr = TheLTS->GetMgr();
             set<string> StateNames;
             for (auto const& StateD : States) {
                 StateNames.insert(StateD.first);
@@ -644,13 +651,12 @@ namespace ESMC {
                                  const ExpT& Constraint,
                                  u32 Capacity, bool Ordered, bool Lossy, 
                                  bool Duplicating, bool Blocking, 
-                                 bool FiniteLoss, bool FiniteDup, 
-                                 bool Compassionate, bool Just)
+                                 bool FiniteLoss, bool FiniteDup, bool Fair)
             : TheLTS(TheLTS), Name(Name), Params(Params), Constraint(Constraint),
               Capacity(Capacity), Ordered(Ordered), Lossy(Lossy),
               Duplicating(Duplicating), Blocking(Blocking),
-              FiniteLoss(FiniteLoss), FiniteDup(FiniteDup),
-              Compassionate(Compassionate), Just(Just)
+              FiniteLoss(FiniteLoss), FiniteDup(FiniteDup), Fair(Fair)
+              
               
         {
             // Sanity checks on params
@@ -662,9 +668,6 @@ namespace ESMC {
             }
             if (FiniteDup && !Duplicating) {
                 throw ESMCError((string)"Only Duplicating channels can be declared FiniteDup");
-            }
-            if (Compassionate && Just) {
-                throw ESMCError((string)"A channel can be compassionate or just, not both!");
             }
         }
 
@@ -698,10 +701,217 @@ namespace ESMC {
             PMessages.insert(Detail::ParametrizedMessage(Type, Params, Constraint));
         }
 
+        inline void ChannelEFSM::MakeInputTransitions(UFEFSM* EFSM)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto CountType = Mgr->MakeType<Exprs::ExprRangeType>(0, Capacity);
+            EFSM->AddVariable("NumMsgs", CountType);
+            auto ValType = TheLTS->GetUnifiedMType();
+            auto ArrayType = Mgr->MakeType<Exprs::ExprArrayType>(CountType, ValType);
+            EFSM->AddVariable("MsgBuffer", ArrayType);
+
+            auto CountVar = Mgr->MakeVar("NumMsgs", CountType);
+            auto MaxCount = Mgr->MakeVal(to_string(Capacity), CountType);
+            auto One = Mgr->MakeVal("1", CountType);
+            auto Zero = Mgr->MakeVal("0", CountType);
+            auto ArrayVar = Mgr->MakeVar("MsgBuffer", ArrayType);
+
+            auto Guard = Mgr->MakeExpr(LTSOps::OpLT, CountVar, MaxCount);
+            auto CountUpdate = AsgnT(CountVar, Mgr->MakeExpr(LTSOps::OpADD, CountVar, One));
+            auto CountDec = AsgnT(CountVar, Mgr->MakeExpr(LTSOps::OpSUB, CountVar, One));
+            auto GuardSend = Mgr->MakeExpr(LTSOps::OpGT, CountVar, Zero);
+
+
+            EFSM->AddState("InitState", true);
+            if (Lossy && FiniteLoss) {
+                EFSM->AddState("LossDecideState");
+                EFSM->AddVariable("LastMsg", ValType);
+            }
+            
+            // Receive Transitions
+            for (auto const& MsgType : Messages) {
+                auto InMsg = Mgr->MakeVar("InMsg", MsgType);
+                auto MsgAsRec = MsgType->SAs<Exprs::ExprRecordType>();
+                vector<AsgnT> Updates;
+                vector<AsgnT> Step2Updates;
+                MgrType::ExpT IndexExp = nullptr;
+                if (!(Lossy && FiniteLoss)) {
+                    Updates.push_back(CountUpdate);
+                    IndexExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayVar, CountVar);
+                } else {
+                    IndexExp = Mgr->MakeVar("LastMsg", ValType);
+                }
+
+                auto const& MsgFields = MsgAsRec->GetMemberVec();
+                auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
+                auto UFAType = Mgr->MakeType<Exprs::ExprUFAType>(MsgType);
+
+                for (auto const& Field : MsgFields) {
+                    auto InFieldVar = Mgr->MakeVar(Field.first, FAType);
+                    auto ArrFieldVar = Mgr->MakeVar(Field.first, UFAType);
+
+                    auto ArrFieldExp = Mgr->MakeExpr(LTSOps::OpField, IndexExp, ArrFieldVar);
+                    auto InFieldExp = Mgr->MakeExpr(LTSOps::OpField, InMsg, InFieldVar);
+                    Updates.push_back(AsgnT(ArrFieldExp, InFieldExp));
+                    
+                    if (Lossy && FiniteLoss) {
+                        Step2Updates.push_back(CountUpdate);
+                        auto ActIndexExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayVar, CountVar);
+                        ArrFieldExp = Mgr->MakeExpr(LTSOps::OpField, ActIndexExp, ArrFieldVar);
+                        InFieldExp = Mgr->MakeExpr(LTSOps::OpField, IndexExp, InFieldVar);
+                        Step2Updates.push_back(AsgnT(ArrFieldExp, InFieldExp));
+                    }
+                }
+                
+                if (!Lossy) {
+                    EFSM->AddInputTransition("InitState", "InitState", Guard, 
+                                             Updates, "InMsg", MsgType);
+                }
+
+                if (Lossy) {
+                    if (!FiniteLoss) {
+                        EFSM->AddInputTransition("InitState", "InitState", Guard, 
+                                                 Updates, "InMsg", MsgType);
+                        if (Blocking) {
+                            EFSM->AddInputTransition("InitState", "InitState", Guard,
+                                                     vector<AsgnT>(), "InMsg", MsgType);
+                        } else {
+                            EFSM->AddInputTransition("InitState", "InitState", Mgr->MakeTrue(),
+                                                     vector<AsgnT>(), "InMsg", MsgType);
+                        }
+                    } else {
+                        if (Blocking) {
+                            EFSM->AddInputTransition("InitState", "LossDecideState", Guard,
+                                                     Updates, "InMsg", MsgType);
+                            EFSM->AddInternalTransition("LossDecideState", "InitState", 
+                                                        Mgr->MakeTrue(), Step2Updates);
+                            EFSM->AddInternalTransition("LossDecideState", "InitState", 
+                                                        Mgr->MakeTrue(), vector<AsgnT>());
+                        } else {
+                            EFSM->AddInputTransition("InitState", "LossDecideState", Mgr->MakeTrue(),
+                                                     Updates, "InMsg", MsgType);
+                            EFSM->AddInternalTransition("LossDecideState", "InitState", 
+                                                        Guard, Step2Updates);
+                            EFSM->AddInternalTransition("LossDecideState", "InitState", 
+                                                        Mgr->MakeTrue(), vector<AsgnT>());
+                        }
+                    }
+                }
+            }
+            
+            // Parametrized Receive Transitions
+            for (auto const& MsgType : PMessages) {
+                auto TypeAsPar = MsgType.PType->SAs<Exprs::ExprParametricType>();
+                auto BaseMsgType = TypeAsPar->GetTrueBaseType();
+                auto InMsg = Mgr->MakeVar("InMsg", BaseMsgType);
+                auto MsgAsRec = BaseMsgType->SAs<Exprs::ExprRecordType>();
+                vector<AsgnT> Updates;
+                vector<AsgnT> Step2Updates;
+
+                MgrType::ExpT IndexExp = nullptr;
+                if (!(Lossy && FiniteLoss)) {
+                    Updates.push_back(CountUpdate);
+                    auto IndexExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayVar, CountVar);
+                } else {
+                    IndexExp = Mgr->MakeVar("LastMsg", ValType);
+                }
+                auto const& MsgFields = MsgAsRec->GetMemberVec();
+                auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
+                auto UFAType = Mgr->MakeType<Exprs::ExprUFAType>(BaseMsgType);
+
+                for (auto const& Field : MsgFields) {
+                    auto InFieldVar = Mgr->MakeVar(Field.first, FAType);
+                    auto ArrFieldVar = Mgr->MakeVar(Field.first, UFAType);
+
+                    auto ArrFieldExp = Mgr->MakeExpr(LTSOps::OpField, IndexExp, ArrFieldVar);
+                    auto InFieldExp = Mgr->MakeExpr(LTSOps::OpField, InMsg, InFieldVar);
+                    Updates.push_back(AsgnT(ArrFieldExp, InFieldExp));
+
+                    if (Lossy && FiniteLoss) {
+                        Step2Updates.push_back(CountUpdate);
+                        auto ActIndexExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayVar, CountVar);
+                        ArrFieldExp = Mgr->MakeExpr(LTSOps::OpField, ActIndexExp, ArrFieldVar);
+                        InFieldExp = Mgr->MakeExpr(LTSOps::OpField, IndexExp, InFieldVar);
+                        Step2Updates.push_back(AsgnT(ArrFieldExp, InFieldExp));                        
+                    }
+                }
+                
+                if (!Lossy) {
+                    EFSM->AddInputTransition("InitState", "InitState", Guard, Updates, 
+                                             "InMsg", MsgType.Params, MsgType.Constraint, 
+                                             MsgType.PType);
+                } 
+
+                if (Lossy) {
+                    if (!FiniteLoss) {
+                        EFSM->AddInputTransition("InitState", "InitState", Guard, Updates, 
+                                                 "InMsg", MsgType.Params, MsgType.Constraint, 
+                                                 MsgType.PType);
+                        if (Blocking) {
+                            EFSM->AddInputTransition("InitState", "InitState", Guard,
+                                                     vector<AsgnT>(), "InMsg", MsgType.Params, 
+                                                     MsgType.Constraint, MsgType.PType);
+                        } else {
+                            EFSM->AddInputTransition("InitState", "InitState", Mgr->MakeTrue(),
+                                                     vector<AsgnT>(), "InMsg", MsgType.Params,
+                                                     MsgType.Constraint, MsgType.PType);
+                        }
+                    } else {
+                        if (Blocking) {
+                            EFSM->AddInputTransition("InitState", "LossDecideState", Guard, Updates, 
+                                                     "InMsg", MsgType.Params, MsgType.Constraint, 
+                                                     MsgType.PType);
+                            EFSM->AddInternalTransition("LossDecideState", "InitState",
+                                                        Mgr->MakeTrue(), Step2Updates);
+                            EFSM->AddInternalTransition("LossDecideState", "InitState",
+                                                        Mgr->MakeTrue(), vector<AsgnT>());
+                        } else {
+                            EFSM->AddInputTransition("InitState", "LossDecideState", 
+                                                     Mgr->MakeTrue(), Updates, 
+                                                     "InMsg", MsgType.Params, MsgType.Constraint, 
+                                                     MsgType.PType);
+                            EFSM->AddInternalTransition("LossDecideState", "InitState",
+                                                        Guard, Step2Updates);
+                            EFSM->AddInternalTransition("LossDecideState", "InitState",
+                                                        Mgr->MakeTrue(), vector<AsgnT>());
+                        }
+                    }
+                }
+            }
+        }
+
+
         UFEFSM* ChannelEFSM::ToEFSM()
         {
-            // TODO
-            return nullptr;
+            UFEFSM* EFSM = new UFEFSM(TheLTS, Name, Params, Constraint);
+            for (auto const& Message : Messages) {
+                auto MsgType = Message->As<Exprs::ExprRecordType>();
+                auto const& MsgName = MsgType->GetName();
+                auto PrimedName = MsgName + "'";
+                auto const& PrimedMsgType = TheLTS->GetMessageType(PrimedName);
+
+                EFSM->AddInputMsg(Message);
+                EFSM->AddOutputMsg(PrimedMsgType);
+            }
+
+            for (auto const& PMessage : PMessages) {
+                auto PType = PMessage.PType->SAs<Exprs::ExprParametricType>();
+                auto const& TypeName = PType->GetName();
+                string PrimedName = TypeName + "'";
+                auto const& PrimedMsgType = TheLTS->GetMessageType(PrimedName);
+
+                EFSM->AddInputMsg(PMessage.Params, PMessage.Constraint, 
+                                  PMessage.PType);
+
+                EFSM->AddOutputMsg(PMessage.Params, PMessage.Constraint,
+                                   PrimedMsgType);
+            }
+            
+            MakeInputTransitions(EFSM);
+
+            // Parametrized receive transitions
+
+            return EFSM;
         }
 
         // Frozen EFSM implementation
@@ -757,7 +967,7 @@ namespace ESMC {
             CheckState(InitState, States);
             CheckState(FinalState, States);
             
-            CheckExpr(Guard, SymTab, TheLTS->Mgr);
+            CheckExpr(Guard, SymTab, TheLTS->GetMgr());
             if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
                 throw ESMCError((string)"Guard of a transition must be boolean valued");
             }
@@ -769,7 +979,7 @@ namespace ESMC {
 
             SymTab.Push();
             SymTab.Bind(MessageName, new MsgDecl(MessageName, MessageType));
-            CheckUpdates(Updates, SymTab, TheLTS->Mgr);
+            CheckUpdates(Updates, SymTab, TheLTS->GetMgr());
             auto Scope = SymTab.Pop();
             
             auto Transition = TransitionT::MakeInputTransition(InitState,
@@ -796,14 +1006,14 @@ namespace ESMC {
                                 "\" is not an output for EFSM \"" + Name + "\"");
             }
             
-            CheckExpr(Guard, SymTab, TheLTS->Mgr);
+            CheckExpr(Guard, SymTab, TheLTS->GetMgr());
             if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
                 throw ESMCError((string)"Guard of a transition must be boolean valued");
             }
 
             SymTab.Push();
             SymTab.Bind(MessageName, new MsgDecl(MessageName, MessageType));
-            CheckUpdates(Updates, SymTab, TheLTS->Mgr);
+            CheckUpdates(Updates, SymTab, TheLTS->GetMgr());
             
             auto Scope = SymTab.Pop();
             auto Transition = TransitionT::MakeOutputTransition(InitState,
@@ -824,7 +1034,7 @@ namespace ESMC {
         {
             CheckState(InitState, States);
             CheckState(FinalState, States);
-            CheckExpr(Guard, SymTab, TheLTS->Mgr);
+            CheckExpr(Guard, SymTab, TheLTS->GetMgr());
             if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
                 throw ESMCError((string)"Guard of a transition must be boolean valued");
             }

@@ -87,7 +87,7 @@ namespace ESMC {
             // Syntactic operators for symmetry, etc
             static const i64 OpIndex = 1018;
             static const i64 OpField = 1019;
-
+            
 
             static const i64 UFOffset = 1000000;
 
@@ -556,26 +556,51 @@ namespace ESMC {
                 case LTSOps::OpField: {
                     CheckNumArgs(2, ChildTypes.size(), "Field");
 
-                    if (!ChildTypes[1]->Is<ExprFieldAccessType>()) {
-                        throw ExprTypeError("Field accessor must be of FieldAccType");
+                    if (!ChildTypes[0]->template Is<ExprRecordType>() &&
+                        !ChildTypes[0]->template Is<ExprUnionType>()) {
+                        throw ExprTypeError("Field access only allowed on record or union types");
                     }
 
-                    auto RecType = ChildTypes[0]->template As<ExprRecordType>();
-                    if (RecType == nullptr) {
-                        throw ExprTypeError("Field access only allowed on record types");
+                    if (ChildTypes[0]->template Is<ExprRecordType>() &&
+                        !ChildTypes[1]->template Is<ExprFieldAccessType>()) {
+                        throw ExprTypeError((string)"Record Field accesses must be made with " + 
+                                            "variables of type FieldAccessType");
                     }
-                    
+                    if (ChildTypes[0]->template Is<ExprUnionType>() &&
+                        !ChildTypes[1]->template Is<ExprUFAType>()) {
+                        throw ExprTypeError((string)"Union Field accesses must be made with " + 
+                                            "variables of type UFAType with appropriate " + 
+                                            "member types");
+                    }
+
                     auto FieldExp = ((Exp->GetChildren())[1])->template As<VarExpression>();
                     if (FieldExp == nullptr) {
                         throw ExprTypeError("Field access expression must be a VarExpression");
                     }
+                    
+                    auto const& FieldName = FieldExp->GetVarName();
+                    if (ChildTypes[0]->Is<ExprRecordType>()) {
+                        auto RecType = ChildTypes[0]->template SAs<ExprRecordType>();
+                        auto ValType = RecType->GetTypeForMember(FieldName);
+                        if (ValType == ExprTypeRef::NullPtr) {
+                            throw ExprTypeError((string)"Field name \"" + 
+                                                FieldName + "\" is invalid for " + 
+                                                "record type \"" + RecType->GetName() + "\"");
+                        }
+                        Exp->SetType(ValType);
+                    } else {
+                        auto const& UnionType = ChildTypes[0]->template SAs<ExprUnionType>();
+                        auto const& UFAType = ChildTypes[1]->template SAs<ExprUFAType>();
+                        auto const& UMemType = UFAType->GetUnionMemberType();
 
-                    auto ValType = RecType->GetTypeForMember(FieldExp->GetVarName());
-                    if (ValType == ExprTypeRef::NullPtr) {
-                        throw ExprTypeError((string)"Field name \"" + 
-                                            FieldExp->GetVarName() + "\" invalid");
+                        auto ValType = UnionType->GetTypeForMemberField(UMemType, FieldName);
+                        if (ValType == ExprTypeRef::NullPtr) {
+                            throw ExprTypeError((string)"Field name \"" + 
+                                                FieldName + "\" is invalid for " + 
+                                                "union type \"" + UnionType->GetName() + "\"");
+                        }
+                        Exp->SetType(ValType);
                     }
-                    Exp->SetType(ValType);
                     break;
                 }
 

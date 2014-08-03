@@ -66,7 +66,7 @@ namespace ESMC {
         // Syntactic operators for symmetry, etc
         const i64 LTSOps::OpIndex;
         const i64 LTSOps::OpField;
-        
+
         const i64 LTSOps::UFOffset;
         
         // Temporal operators
