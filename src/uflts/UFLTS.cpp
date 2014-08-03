@@ -40,6 +40,10 @@
 #include "UFLTS.hpp"
 #include "ParamUtils.hpp"
 
+#include "UFEFSM.hpp"
+#include "ChannelEFSM.hpp"
+#include "FrozenEFSM.hpp"
+
 namespace ESMC {
     namespace LTS {
 
@@ -276,7 +280,8 @@ namespace ESMC {
                                         const ExpT& Constraint,
                                         u32 Capacity, bool Ordered, bool Lossy,
                                         bool Duplicating, bool Blocking, 
-                                        bool FiniteLoss, bool FiniteDup, bool Fair)
+                                        bool FiniteLoss, bool FiniteDup, bool Fair,
+                                        bool PerMessageFair)
         {
             if (!MsgsFrozen) {
                 throw ESMCError((string)"UFLTS::MakeEFSM() can only be called after " + 
@@ -296,7 +301,7 @@ namespace ESMC {
             auto Channel = new ChannelEFSM(this, Name, Params, Constraint, 
                                            Capacity, Ordered, Lossy,
                                            Duplicating, Blocking, FiniteLoss,
-                                           FiniteDup, Fair);
+                                           FiniteDup, Fair, PerMessageFair);
             Channels.push_back(Channel);
             return Channel;
         }

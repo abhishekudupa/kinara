@@ -43,7 +43,9 @@ esmc_LIB_PATHS= \
 
 PROJECT_LIBS=esmc
 libesmc_OBJS= \
+	ChannelEFSM.o \
 	ExprTypes.o \
+	FrozenEFSM.o \
 	LTSTermSemanticizer.o \
 	SymbolTable.o \
 	UFEFSM.o \

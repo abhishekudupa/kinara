@@ -117,7 +117,8 @@ namespace ESMC {
                                      const ExpT& Constraint,
                                      u32 Capacity, bool Ordered, bool Lossy,
                                      bool Duplicating, bool Blocking, 
-                                     bool FiniteLoss, bool FiniteDup, bool Fair);
+                                     bool FiniteLoss, bool FiniteDup, bool Fair,
+                                     bool PerMessageFair);
 
             void Freeze();
         };
