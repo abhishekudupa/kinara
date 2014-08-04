@@ -78,7 +78,8 @@ namespace ESMC {
                                const vector<ExpT>& MParams,
                                bool IsInput);
 
-            inline void AddMsgs(const ExprTypeRef& MType,
+            inline void AddMsgs(const vector<ExpT>& NewParams,
+                                const ExprTypeRef& MType,
                                 const vector<ExpT>& MParams,
                                 const ExpT& Constraint,
                                 bool IsInput);
@@ -110,16 +111,23 @@ namespace ESMC {
             void AddOutputMsg(const ExprTypeRef& MType,
                               const vector<ExpT>& MParams);
             
-            void AddInputMsgs(const ExprTypeRef& MType,
+            void AddInputMsgs(const vector<ExpT>& NewParams,
+                              const ExprTypeRef& MType,
                               const vector<ExpT>& MParams,
                               const ExpT& MConstraint);
 
-            void AddOutputMsgs(const ExprTypeRef& MType,
+            void AddOutputMsgs(const vector<ExpT>& NewParams,
+                               const ExprTypeRef& MType,
                                const vector<ExpT>& MParams,
                                const ExpT& MConstraint);
 
             void AddVariable(const string& VarName,
                              const ExprTypeRef& VarType);
+
+            // A helper function to figure out how many transitions
+            // a particular parameterized transition expands to
+            u32 GetNumExpansions(const vector<ExpT>& NewParams,
+                                 const ExpT& Constraint);
             
             void AddInputTransition(const string& InitState,
                                     const string& FinalState,
@@ -148,6 +156,7 @@ namespace ESMC {
                                      const vector<ExpT>& MessageParams,
                                      const unordered_set<u32>& FairnessSet = 
                                      unordered_set<u32>());
+
 
             // The fairness sets can be either:
             // 1. Empty : in which case, no fairness assumptions on transitions

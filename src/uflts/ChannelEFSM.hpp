@@ -50,7 +50,7 @@ namespace ESMC {
             NONE, PLAIN, NOT_ALWAYS_LOST, NOT_ALWAYS_DUP,
             NOT_ALWAYS_LOST_DUP
         };
-
+        
         // A class for channels
         // Really just a wrapper around 
         // UFEFSM, which instantiates 
@@ -58,9 +58,16 @@ namespace ESMC {
         class ChannelEFSM
         {
         private:
-            UFEFSM* TheEFSM;
             UFLTS* TheLTS;
             string Name;
+            vector<ExpT> Params;
+            ExpT Constraint;
+            SymbolTable SymTab;
+            vector<FrozenEFSM*> FrozenEFSMs;
+            vector<vector<ExpT>> ParamInsts;
+            vector<MgrType::SubstMapT> ParamSubsts;
+            map<string, Detail::StateDescriptor> States;
+
             u32 Capacity;
             bool Ordered;
             bool Lossy;
@@ -69,19 +76,25 @@ namespace ESMC {
 
             ExprTypeRef ValType;
             ExprTypeRef CountType;
+            ExprTypeRef IndexType;
             ExprTypeRef ArrayType;
 
             ExpT ArrayExp;
             ExpT CountExp;
             ExpT LastMsgExp;
+            ExpT MaxChanExp;
+            ExpT OneExp;
+            ExpT ZeroExp;
+            
+            UIDGenerator FairnessUIDGen;
 
             // helper functions
             inline void MakeInputTransition(const ExprTypeRef& MType,
-                                            const vector<ExpT>& MParams,
+                                            FrozenEFSM* TheEFSM,
                                             MessageFairnessType Fairness);
 
             inline void MakeOutputTransition(const ExprTypeRef& MType,
-                                             const vector<ExpT>& MParams,
+                                             FrozenEFSM* TheEFSM,
                                              MessageFairnessType Fairness);
 
         public:
@@ -100,12 +113,13 @@ namespace ESMC {
                             const vector<ExpT>& MParams,
                             const MessageFairnessType = MessageFairnessType::NONE);
 
-            void AddMessages(const ExprTypeRef& MType,
+            void AddMessages(const vector<ExpT>& NewParams,
+                             const ExprTypeRef& MType,
                              const vector<ExpT>& MParams,
                              const ExpT& MConstraint,
                              const MessageFairnessType = MessageFairnessType::NONE);
             
-            UFEFSM* GetEFSM();
+            const vector<FrozenEFSM*>& GetFrozenEFSMs();
         };
 
     } /* end namespace LTS */

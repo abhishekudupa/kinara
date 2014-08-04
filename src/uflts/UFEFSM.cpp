@@ -110,7 +110,8 @@ namespace ESMC {
             if (Params.size() == 0) {
                 ParamInsts.push_back(vector<ExpT>());
                 ParamSubsts.push_back(MgrType::SubstMapT());
-                FrozenEFSMs.push_back(new FrozenEFSM(Name, TheLTS, StateType, States));
+                FrozenEFSMs.push_back(new FrozenEFSM(Name, TheLTS, Params, this, 
+                                                     StateType, States));
                 return;
             }
             
@@ -120,20 +121,16 @@ namespace ESMC {
             for (auto const& ParamVal : ParamInsts) {
 
                 MgrType::SubstMapT SubstMap;
-                string InstName = Name;
 
                 const u32 NumParams = Params.size();
 
                 for (u32 i = 0; i < NumParams; ++i) {
-                    auto const& Param = ParamVal[i];
-                    auto ParamAsConst = Param->As<Exprs::ConstExpression>();
-                    auto const& ConstVal = ParamAsConst->GetConstValue();
-                    InstName += ((string)"[" + ConstVal + "]");
                     SubstMap[Params[i]] = ParamVal[i];
                 }
                 
                 ParamSubsts.push_back(SubstMap);
-                FrozenEFSMs.push_back(new FrozenEFSM(InstName, TheLTS, StateType, States));
+                FrozenEFSMs.push_back(new FrozenEFSM(Name, TheLTS, ParamVal, this, 
+                                                     StateType, States));
             }
         }
 
@@ -166,7 +163,8 @@ namespace ESMC {
             }
         }
 
-        inline void UFEFSM::AddMsgs(const ExprTypeRef& MType, 
+        inline void UFEFSM::AddMsgs(const vector<ExpT>& NewParams,
+                                    const ExprTypeRef& MType, 
                                     const vector<ExpT>& MParams, 
                                     const ExpT& Constraint, 
                                     bool IsInput)
@@ -182,23 +180,30 @@ namespace ESMC {
             auto Mgr = TheLTS->GetMgr();
 
             SymTab.Push();
-            CheckParams(MParams, Constraint, SymTab, Mgr);
+            CheckParams(NewParams, Constraint, SymTab, Mgr, true);
+            CheckParams(MParams, SymTab);
             SymTab.Pop();
-            
+
             const u32 NumInsts = ParamInsts.size();
+            const u32 NumNewParams = NewParams.size();
+
             for (u32 i = 0; i < NumInsts; ++i) {
-                auto&& SubstParams = SubstAll(MParams, ParamSubsts[i], Mgr);
-                auto&& ActParamInsts = InstantiatePendingParams(SubstParams, Mgr, 
-                                                                ParamSubsts[i], 
-                                                                Constraint);
-                const u32 NumActInsts = ActParamInsts.size();
+                auto const& SubstMap = ParamSubsts[i];
+                auto SubstConstraint = Mgr->Substitute(SubstMap, Constraint);
 
-                if (NumActInsts == 0) {
-                    throw ESMCError((string)"No additional quantifications in AddMsgs()");
-                }
+                auto NewInsts = InstantiateParams(NewParams, SubstConstraint, Mgr);
+                const u32 NumNewInsts = NewInsts.size();
 
-                for (u32 j = 0; j < NumActInsts; ++j) {
-                    auto Type = InstantiateType(MType, ActParamInsts[j], Mgr);
+                for (u32 j = 0; j < NumNewInsts; ++j) {
+                    auto LocalSubstMap = SubstMap;
+                    auto const& CurNewInst = NewInsts[j];
+
+                    for (u32 k = 0; k < NumNewParams; ++k) {
+                        LocalSubstMap[NewParams[k]] = CurNewInst[k];
+                    }
+
+                    auto&& SubstMsgParams = SubstAll(MParams, LocalSubstMap, Mgr);
+                    auto Type = InstantiateType(MType, SubstMsgParams, Mgr);
                     if (IsInput) {
                         FrozenEFSMs[i]->AddInputMsg(Type);
                     } else {
@@ -214,11 +219,12 @@ namespace ESMC {
             AddMsg(MType, MParams, true);
         }
 
-        void UFEFSM::AddInputMsgs(const ExprTypeRef& MType,
+        void UFEFSM::AddInputMsgs(const vector<ExpT>& NewParams,
+                                  const ExprTypeRef& MType,
                                   const vector<ExpT>& MParams,
                                   const ExpT& MConstraint)
         {
-            AddMsgs(MType, MParams, MConstraint, true);
+            AddMsgs(NewParams, MType, MParams, MConstraint, true);
         }
 
         void UFEFSM::AddOutputMsg(const ExprTypeRef& MType,
@@ -227,11 +233,12 @@ namespace ESMC {
             AddMsg(MType, MParams, false);
         }
 
-        void UFEFSM::AddOutputMsgs(const ExprTypeRef& MType,
+        void UFEFSM::AddOutputMsgs(const vector<ExpT>& NewParams,
+                                   const ExprTypeRef& MType,
                                    const vector<ExpT>& MParams,
                                    const ExpT& MConstraint)
         {
-            AddMsgs(MType, MParams, MConstraint, false);
+            AddMsgs(NewParams, MType, MParams, MConstraint, false);
         }
 
         void UFEFSM::AddVariable(const string& VarName,
@@ -263,6 +270,24 @@ namespace ESMC {
             }
         }
 
+        u32 UFEFSM::GetNumExpansions(const vector<ExpT>& NewParams,
+                                     const ExpT& Constraint)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            SymTab.Push();
+            CheckParams(NewParams, Constraint, SymTab, Mgr, true);
+            SymTab.Pop();
+            
+            const u32 NumInsts = ParamInsts.size();
+            u32 Retval = 0;
+            for (u32 i = 0; i < NumInsts; ++i) {
+                auto const& SubstMap = ParamSubsts[i];
+                auto const& SubstConstraint = Mgr->Substitute(SubstMap, Constraint);
+                auto&& NewInsts = InstantiateParams(NewParams, SubstConstraint, Mgr);
+                Retval += NewInsts.size();;
+            }
+            return Retval;
+        }
             
         void UFEFSM::AddInputTransition(const string& InitState,
                                         const string& FinalState,

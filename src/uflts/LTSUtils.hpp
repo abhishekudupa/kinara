@@ -163,12 +163,37 @@ namespace ESMC {
 
         static inline void CheckUpdates(const vector<AsgnT>& Updates,
                                         const SymbolTable& SymTab,
-                                        MgrType* Mgr)
+                                        MgrType* Mgr, bool IsInput,
+                                        const string& MsgVarName)
         {
             for(auto const& Asgn : Updates) {
                 CheckExpr(Asgn.GetLHS(), SymTab, Mgr);
+                if (IsInput) {
+                    auto Gatherer = Detail::VarGatherer();
+                    auto Vars = Mgr->Gather(Asgn.GetLHS(), Gatherer);
+                    for (auto const& Var : Vars) {
+                        auto const& VarExp = Var->As<Exprs::VarExpression>();
+                        auto const& VarName = VarExp->GetVarName();
+                        if (VarName == MsgVarName) {
+                            throw ESMCError((string)"Input message cannot be updated " + 
+                                            "in an input transition");
+                        }
+                    }
+                }
                 CheckLValCompat(Asgn.GetLHS(), SymTab);
                 CheckExpr(Asgn.GetRHS(), SymTab, Mgr);
+                if (!IsInput) {
+                    auto Gatherer = Detail::VarGatherer();
+                    auto Vars = Mgr->Gather(Asgn.GetRHS(), Gatherer);
+                    for (auto const& Var : Vars) {
+                        auto const& VarExp = Var->As<Exprs::VarExpression>();
+                        auto const& VarName = VarExp->GetVarName();
+                        if (VarName == MsgVarName) {
+                            throw ESMCError((string)"Output message cannot be used on RHS of " + 
+                                            "assignment in an output transition");
+                        }
+                    }
+                }
             }
         }
 
@@ -335,7 +360,6 @@ namespace ESMC {
                 return Mgr->InstantiateType(PType, Params);
             }
         }
-
 
         static inline vector<vector<ExpT>> InstantiatePendingParams(const vector<ExpT>& Params,
                                                                     MgrType* Mgr,

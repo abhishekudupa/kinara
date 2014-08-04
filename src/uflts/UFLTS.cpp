@@ -110,6 +110,7 @@ namespace ESMC {
                 }
 
                 MTypeIDs[Name] = TypeUID;
+                TypeToPrimed[Retval] = Type;
             }
             
             return MTypes[Name];
@@ -148,12 +149,24 @@ namespace ESMC {
             ActFields.insert(ActFields.begin(), MTypePair);
 
             auto RecType = Mgr->MakeType<Exprs::ExprRecordType>(Name, ActFields);
+            ExprTypeRef PrimedRecType = nullptr;
+            if (IncludePrimed) {
+                PrimedRecType = Mgr->MakeType<Exprs::ExprRecordType>(Name + "'", ActFields);
+            }
+
             auto PType = RecType;
+            auto PrimedPType = PrimedRecType;
             for (auto it = ParamTypes.rbegin(); it != ParamTypes.rend(); ++it) {
                 PType = Mgr->MakeType<Exprs::ExprParametricType>(PType, *it);
+                if (IncludePrimed) {
+                    PrimedPType = Mgr->MakeType<Exprs::ExprParametricType>(PType, *it);
+                }
             }
             
             PMTypes[Name] = PType;
+            if (IncludePrimed) {
+                PMTypes[Name + "'"] = PrimedPType;
+            }
 
             // Instantiate the parametric type
             auto&& ParamVec = InstantiateParams(Params, Constraint, Mgr);
@@ -166,31 +179,21 @@ namespace ESMC {
                     throw ESMCError((string)"Exceeded maximum number of message types");
                 }
                 MTypeIDs[TypeName] = TypeUID;
-            }
 
-            // Do we need a primed version as well?
-            if (IncludePrimed) {
-                RecType = Mgr->MakeType<Exprs::ExprRecordType>(Name + "'", ActFields);
-                PType = RecType;
-                for (auto it = ParamTypes.rbegin(); it != ParamTypes.rend(); ++it) {
-                    PType = Mgr->MakeType<Exprs::ExprParametricType>(PType, *it);
-                }
-                PMTypes[Name + "'"] = PType;
-
-                // Instantiate the parametric type
-                auto&& ParamVec = InstantiateParams(Params, Constraint, Mgr);
-                for (auto const& ParamVals : ParamVec) {
-                    auto InstType = Mgr->InstantiateType(PType, ParamVals);
-                    auto const& TypeName = InstType->SAs<Exprs::ExprRecordType>()->GetName();
-                    MTypes[TypeName] = InstType;
+                if (IncludePrimed) {
+                    auto PrimedInstType = Mgr->InstantiateType(PrimedPType, ParamVals);
+                    auto const& PrimedTypeName = InstType->SAs<Exprs::ExprRecordType>()->GetName();
+                    MTypes[PrimedTypeName] = PrimedInstType;
                     auto TypeUID = MTypeUIDGen.GetUID();
                     if (TypeUID > MaxMessageTypes) {
                         throw ESMCError((string)"Exceeded maximum number of message types");
                     }
-
-                    MTypeIDs[TypeName] = TypeUID;
+                    
+                    TypeToPrimed[InstType] = PrimedInstType;
+                    MTypeIDs[PrimedTypeName] = TypeUID;
                 }
             }
+
             return PMTypes[Name];
         }
 
@@ -204,6 +207,17 @@ namespace ESMC {
                 } else {
                     return it->second;
                 }
+            } else {
+                return it->second;
+            }
+        }
+
+        const ExprTypeRef& UFLTS::GetPrimedType(const ExprTypeRef& Type) const
+        {
+            auto it = TypeToPrimed.find(Type);
+            if (it == TypeToPrimed.end()) {
+                throw ESMCError((string)"Type " + Type->ToString() + " does not " + 
+                                "have a primed type associated with it!");
             } else {
                 return it->second;
             }
@@ -249,6 +263,11 @@ namespace ESMC {
                                 "freezing the message declarations");
             }
             return MessageSize;
+        }
+
+        const ExprTypeRef& UFLTS::GetMessageIDType() const
+        {
+            return MessageIDType;
         }
 
         const ExprTypeRef& UFLTS::GetUnifiedMType() const

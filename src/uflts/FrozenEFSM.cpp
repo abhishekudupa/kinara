@@ -44,12 +44,41 @@ namespace ESMC {
     namespace LTS {
 
         // Frozen EFSM implementation
-        FrozenEFSM::FrozenEFSM(const string& Name, UFLTS* TheLTS,
+        FrozenEFSM::FrozenEFSM(const string& BaseName, UFLTS* TheLTS,
+                               const vector<ExpT>& InstParams,
+                               UFEFSM* TheEFSM,
                                const ExprTypeRef& StateType,
                                const map<string, Detail::StateDescriptor>& States)
-            : Name(Name), TheLTS(TheLTS), StateType(StateType),
-              States(States)
+            : BaseName(BaseName), TheLTS(TheLTS), InstParams(InstParams), 
+              TheEFSM(TheEFSM), TheChannel(nullptr), StateType(StateType), States(States)
         {
+            InstName = BaseName;
+            
+            for (u32 i = 0; i < InstParams.size(); ++i) {
+                auto ParamAsConst = InstParams[i]->As<Exprs::ConstExpression>();
+                auto const& ConstVal = ParamAsConst->GetConstValue();
+                InstName += ((string)"[" + ConstVal + "]");
+            }
+            
+            SymTab.Bind("state", new VarDecl("state", StateType));
+        }
+
+        FrozenEFSM::FrozenEFSM(const string& BaseName, UFLTS* TheLTS,
+                               const vector<ExpT>& InstParams,
+                               ChannelEFSM* TheChannel,
+                               const ExprTypeRef& StateType,
+                               const map<string, Detail::StateDescriptor>& States)
+            : BaseName(BaseName), TheLTS(TheLTS), InstParams(InstParams), 
+              TheEFSM(nullptr), TheChannel(TheChannel), StateType(StateType), States(States)
+        {
+            InstName = BaseName;
+            
+            for (u32 i = 0; i < InstParams.size(); ++i) {
+                auto ParamAsConst = InstParams[i]->As<Exprs::ConstExpression>();
+                auto const& ConstVal = ParamAsConst->GetConstValue();
+                InstName += ((string)"[" + ConstVal + "]");
+            }
+            
             SymTab.Bind("state", new VarDecl("state", StateType));
         }
 
@@ -104,12 +133,12 @@ namespace ESMC {
 
             if (Inputs.find(MessageType) == Inputs.end()) {
                 throw ESMCError((string)"Message type \"" + MessageType->ToString() + 
-                                "\" is not an input for EFSM \"" + Name + "\"");
+                                "\" is not an input for EFSM \"" + InstName + "\"");
             }
 
             SymTab.Push();
             SymTab.Bind(MessageName, new MsgDecl(MessageName, MessageType));
-            CheckUpdates(Updates, SymTab, TheLTS->GetMgr());
+            CheckUpdates(Updates, SymTab, TheLTS->GetMgr(), true, MessageName);
             auto Scope = SymTab.Pop();
 
             // Add the check on the state into guard
@@ -128,6 +157,7 @@ namespace ESMC {
                                                                MessageName,
                                                                MessageType);
             Transitions.push_back(pair<TransitionT, ScopeRef>(Transition, Scope));
+            TransitionVec.push_back(Transition);
         }
 
         void FrozenEFSM::AddOutputTransition(const string& InitState,
@@ -143,7 +173,7 @@ namespace ESMC {
             CheckState(FinalState, States);
             if (Inputs.find(MessageType) == Outputs.end()) {
                 throw ESMCError((string)"Message type \"" + MessageType->ToString() + 
-                                "\" is not an output for EFSM \"" + Name + "\"");
+                                "\" is not an output for EFSM \"" + InstName + "\"");
             }
             
             CheckExpr(Guard, SymTab, TheLTS->GetMgr());
@@ -153,7 +183,7 @@ namespace ESMC {
 
             SymTab.Push();
             SymTab.Bind(MessageName, new MsgDecl(MessageName, MessageType));
-            CheckUpdates(Updates, SymTab, TheLTS->GetMgr());
+            CheckUpdates(Updates, SymTab, TheLTS->GetMgr(), false, MessageName);
             
             auto Scope = SymTab.Pop();
 
@@ -174,6 +204,7 @@ namespace ESMC {
                                                                 MessageType,
                                                                 FairnessSet);
             Transitions.push_back(pair<TransitionT, ScopeRef>(Transition, Scope));
+            TransitionVec.push_back(Transition);
         }
         
         void FrozenEFSM::AddInternalTransition(const string& InitState,
@@ -189,6 +220,7 @@ namespace ESMC {
             if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
                 throw ESMCError((string)"Guard of a transition must be boolean valued");
             }
+            CheckUpdates(Updates, SymTab, TheLTS->GetMgr(), false, "");
             // Add the check on the state into guard
             auto NewGuard = Mgr->MakeExpr(LTSOps::OpAND, Guard,
                                           Mgr->MakeExpr(LTSOps::OpEQ, 
@@ -204,6 +236,7 @@ namespace ESMC {
                                                                   NewUpdates,
                                                                   FairnessSet);
             Transitions.push_back(pair<TransitionT, ScopeRef>(Transition, ScopeRef::NullPtr));
+            TransitionVec.push_back(Transition);
         }
               
         void FrozenEFSM::CanonicalizeFairness()
@@ -234,6 +267,66 @@ namespace ESMC {
                 }
                 Trans.SetFairnessSet(NewFairnessSet);
             }
+        }
+
+        const set<ExprTypeRef>& FrozenEFSM::GetInputs() const
+        {
+            return Inputs;
+        }
+
+        const set<ExprTypeRef>& FrozenEFSM::GetOutputs() const
+        {
+            return Outputs;
+        }
+
+        const ExprTypeRef& FrozenEFSM::GetStateType() const
+        {
+            return StateType;
+        }
+
+        const SymbolTable& FrozenEFSM::GetSymTab() const
+        {
+            return SymTab;
+        }
+
+        const vector<TransitionT>& FrozenEFSM::GetTransitions() const
+        {
+            return TransitionVec;
+        }
+
+        const string& FrozenEFSM::GetName() const
+        {
+            return InstName;
+        }
+
+        const string& FrozenEFSM::GetBaseName() const
+        {
+            return BaseName;
+        }
+
+        const vector<ExpT>& FrozenEFSM::GetInstParams() const
+        {
+            return InstParams;
+        }
+
+        UFLTS* FrozenEFSM::GetLTS() const
+        {
+            return TheLTS;
+        }
+
+        UFEFSM* FrozenEFSM::GetEFSM() const
+        {
+            return TheEFSM;
+        }
+
+        ChannelEFSM* FrozenEFSM::GetChannel() const
+        {
+            return TheChannel;
+        }
+
+        const map<string, Detail::StateDescriptor>& FrozenEFSM::GetStates() const
+        {
+            return States;
         }
 
     } /* end namespace LTS */

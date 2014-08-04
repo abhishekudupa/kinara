@@ -52,8 +52,13 @@ namespace ESMC {
             friend class UFEFSM;
 
         private:
-            string Name;
+            string BaseName;
+            string InstName;
             UFLTS* TheLTS;
+            vector<ExpT> InstParams;
+            UFEFSM* TheEFSM;
+            ChannelEFSM* TheChannel;
+
             ExprTypeRef StateType;
             SymbolTable SymTab;
             set<ExprTypeRef> Inputs;
@@ -61,13 +66,23 @@ namespace ESMC {
             map<string, Detail::StateDescriptor> States;
             
             vector<pair<TransitionT, ScopeRef>> Transitions;
+            vector<TransitionT> TransitionVec;
 
             void CanonicalizeFairness();
             
         public:
-            FrozenEFSM(const string& Name, UFLTS* TheLTS,
+            FrozenEFSM(const string& BaseName, UFLTS* TheLTS,
+                       const vector<ExpT>& InstParams,
+                       UFEFSM* TheEFSM,
                        const ExprTypeRef& StateType,
                        const map<string, Detail::StateDescriptor>& States);
+
+            FrozenEFSM(const string& BaseName, UFLTS* TheLTS,
+                       const vector<ExpT>& InstParams,
+                       ChannelEFSM* TheChannel,
+                       const ExprTypeRef& StateType,
+                       const map<string, Detail::StateDescriptor>& States);
+            
             ~FrozenEFSM();
 
             void AddVariable(const string& VarName,
@@ -103,7 +118,12 @@ namespace ESMC {
             const SymbolTable& GetSymTab() const;
             const vector<TransitionT>& GetTransitions() const;
             const string& GetName() const;
+            const string& GetBaseName() const;
+            const vector<ExpT>& GetInstParams() const;
             UFLTS* GetLTS() const;
+            UFEFSM* GetEFSM() const;
+            ChannelEFSM* GetChannel() const;
+            
             const map<string, Detail::StateDescriptor>& GetStates() const;
         };
         
