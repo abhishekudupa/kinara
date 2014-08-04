@@ -51,13 +51,10 @@
 #include "LTSTermSemanticizer.hpp"
 #include "UFEFSM.hpp"
 #include "UFLTSExtension.hpp"
+#include "LTSUtils.hpp"
 
 namespace ESMC {
     namespace LTS {
-
-        typedef Exprs::ExprTypeRef ExprTypeRef;
-        typedef Exprs::Expr<UFLTSExtensionT, LTSTermSemanticizer> ExpT;
-        typedef Exprs::ExprMgr<UFLTSExtensionT, LTSTermSemanticizer> MgrType;
         
         extern const string MTypeFieldName;
         extern const u32 MaxMessageTypes;
@@ -71,11 +68,13 @@ namespace ESMC {
             bool MsgsFrozen;
             UIDGenerator MTypeUIDGen;
             map<string, ExprTypeRef> MTypes;
+            map<string, ExprTypeRef> PMTypes;
             map<string, u32> MTypeIDs;
             ExprTypeRef UnifiedMType;
             u32 MessageSize;
             vector<UFEFSM*> EFSMs;
             vector<ChannelEFSM*> Channels;
+            ExprTypeRef MessageIDType;
 
         public:
             UFLTS();
@@ -116,9 +115,7 @@ namespace ESMC {
                                      const vector<ExpT>& Params,
                                      const ExpT& Constraint,
                                      u32 Capacity, bool Ordered, bool Lossy,
-                                     bool Duplicating, bool Blocking, 
-                                     bool FiniteLoss, bool FiniteDup, bool Fair,
-                                     bool PerMessageFair);
+                                     bool Duplicating, bool Blocking);
 
             void Freeze();
         };

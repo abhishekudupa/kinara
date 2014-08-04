@@ -43,11 +43,13 @@
 #include "../common/FwdDecls.hpp"
 #include "../expr/Expressions.hpp"
 #include "../symexec/Analyses.hpp"
+#include "../utils/CombUtils.hpp"
 
 #include "LTSTermSemanticizer.hpp"
 #include "UFLTSExtension.hpp"
 #include "Transitions.hpp"
 #include "SymbolTable.hpp"
+
 
 namespace ESMC {
     namespace LTS {
@@ -104,62 +106,6 @@ namespace ESMC {
                 }
             };
         
-            struct ParametrizedTransition
-            {
-                TransitionKind Kind;
-                string InitialState;
-                string FinalState;
-                ExpT Guard;
-                vector<AsgnT> Updates;
-                string MessageName;
-                vector<ExpT> Params;
-                ExpT Constraint;
-                ExprTypeRef MessageType;
-                unordered_set<u32> FairnessSet;
-
-                ParametrizedTransition() {}
-                ParametrizedTransition(TransitionKind Kind,
-                                       const string& InitialState,
-                                       const string& FinalState,
-                                       const ExpT& Guard,
-                                       const vector<AsgnT>& Updates,
-                                       const string& MessageName,
-                                       const vector<ExpT>& Params,
-                                       const ExpT& Constraint,
-                                       const ExprTypeRef& MessageType,
-                                       const unordered_set<u32>& FairnessSet)
-
-                : Kind(Kind), InitialState(InitialState),
-                    FinalState(FinalState), Guard(Guard),
-                    Updates(Updates), MessageName(MessageName),
-                    Params(Params), Constraint(Constraint),
-                    MessageType(MessageType), FairnessSet(FairnessSet)
-                {
-                    // Nothing here
-                }
-            };
-
-            struct ParametrizedMessage
-            {
-                ExprTypeRef PType;
-                vector<ExpT> Params;
-                ExpT Constraint;
-
-                ParametrizedMessage();
-                ParametrizedMessage(const ExprTypeRef& PType,
-                                    const vector<ExpT>& Params,
-                                    const ExpT& Constraint)
-                    : PType(PType), Params(Params), Constraint(Constraint)
-                {
-                    // Nothing here
-                }
-
-                inline bool operator < (const ParametrizedMessage& Other) const
-                {
-                    return (memcmp(this, &Other, sizeof(ParametrizedMessage)) < 0);
-                }
-            };
-
             struct VarGatherer
             {
                 typedef const Exprs::ExpressionBase<UFLTSExtensionT, LTSTermSemanticizer>* ExpCPtrT;
@@ -176,7 +122,6 @@ namespace ESMC {
                     return (TypeAsFA == nullptr);                    
                 }
             };
-
             
         } /* end namespace Detail */
 
@@ -263,7 +208,8 @@ namespace ESMC {
         static inline void CheckParams(const vector<ExpT>& Params,
                                        const ExpT& Constraint,
                                        SymbolTable& SymTab,
-                                       MgrType* Mgr)
+                                       MgrType* Mgr, 
+                                       bool NoReuse = false)
         {
             for (auto const& Param : Params) {
                 auto ParamAsVar = Param->As<Exprs::VarExpression>();
@@ -281,7 +227,8 @@ namespace ESMC {
 
                 auto Res = SymTab.Lookup(VarName);
                 if (Res != DeclRef::NullPtr && 
-                    Res->GetType() != Param->GetType()) {
+                    (Res->GetType() != Param->GetType() ||
+                     NoReuse)) {
                     throw ESMCError((string)"Parameter \"" + VarName + "\" already " + 
                                     "declared with a different type!");
                 } else {
@@ -297,22 +244,41 @@ namespace ESMC {
             }
         }
 
-        static inline vector<ExprTypeRef> InstantiateMsg(const Detail::ParametrizedMessage& PMesg,
-                                                         MgrType* Mgr,
-                                                         const MgrType::SubstMapT& GlobalSM)
+        static inline void CheckParams(const vector<ExpT>& Params,
+                                       const SymbolTable& SymTab)
         {
-            auto const& MType = PMesg.PType;
-            auto const& Params = PMesg.Params;
-            auto const& Constraint = PMesg.Constraint;
-            vector<ExprTypeRef> Retval;
-
-            auto&& ParamVals = InstantiatePendingParams(Params, Mgr, GlobalSM, Constraint);
-            
-            for (auto const& SubstParams : ParamVals) {
-                // Now we're finally ready to instantiate the message
-                Retval.push_back(Mgr->InstantiateType(MType, SubstParams));
+            for (auto const& Param : Params) {
+                auto ParamAsVar = Param->As<Exprs::VarExpression>();
+                if (ParamAsVar == nullptr) {
+                    throw ESMCError((string)"Parameters to EFSMS must be variable expressions");
+                }
+                auto Type = ParamAsVar->GetVarType();
+                if ((!Type->Is<Exprs::ExprSymmetricType>()) &&
+                    (!Type->Is<Exprs::ExprRangeType>()) &&
+                    (!Type->Is<Exprs::ExprEnumType>())) {
+                    throw ESMCError((string)"Parameter types must be symmetric, range or enum");
+                }
+                
+                auto const& VarName = ParamAsVar->GetVarName();
+                
+                auto Res = SymTab.Lookup(VarName);
+                
+                if (Res == DeclRef::NullPtr) {
+                    throw ESMCError((string)"Parameter \"" + VarName + "\" could not be resolved");
+                }
             }
+        }
+
+        static inline vector<ExpT>
+        SubstAll(const vector<ExpT>& Params, 
+                 const MgrType::SubstMapT& SubstMap, MgrType* Mgr)
+        {
+            const u32 NumParams = Params.size();
+            vector<ExpT> Retval(NumParams);
             
+            for (u32 i = 0; i < NumParams; ++i) {
+                Retval[i] = Mgr->Substitute(SubstMap, Params[i]);
+            }
             return Retval;
         }
 
@@ -358,6 +324,18 @@ namespace ESMC {
             }
             return Retval;
         }
+
+        static inline ExprTypeRef InstantiateType(const ExprTypeRef& PType,
+                                                  const vector<ExpT>& Params,
+                                                  MgrType* Mgr)
+        {
+            if (Params.size() == 0) {
+                return PType; 
+            } else {
+                return Mgr->InstantiateType(PType, Params);
+            }
+        }
+
 
         static inline vector<vector<ExpT>> InstantiatePendingParams(const vector<ExpT>& Params,
                                                                     MgrType* Mgr,

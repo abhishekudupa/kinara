@@ -48,53 +48,65 @@ namespace ESMC {
 
         enum class MessageFairnessType {
             NONE, PLAIN, NOT_ALWAYS_LOST, NOT_ALWAYS_DUP,
+            NOT_ALWAYS_LOST_DUP
         };
 
         // A class for channels
+        // Really just a wrapper around 
+        // UFEFSM, which instantiates 
+        // transitions as messages are added
         class ChannelEFSM
         {
         private:
+            UFEFSM* TheEFSM;
             UFLTS* TheLTS;
             string Name;
-            vector<ExpT> Params;
-            ExpT Constraint;
             u32 Capacity;
             bool Ordered;
             bool Lossy;
             bool Duplicating;
             bool Blocking;
-            // For converting to frozen EFSM
-            map<string, Detail::StateDescriptor> States;
-            map<ExprTypeRef, Detail::MessageFairnessType> Messages;
-            map<Detail::ParametrizedMessage, Detail::MessageFairnessType> PMessages;
-            SymbolTable SymTab;
+
+            ExprTypeRef ValType;
+            ExprTypeRef CountType;
+            ExprTypeRef ArrayType;
+
+            ExpT ArrayExp;
+            ExpT CountExp;
+            ExpT LastMsgExp;
 
             // helper functions
-            inline void MakeInputTransitions(UFEFSM* EFSM);
-            inline void MakeOutputTransitions(UFEFSM* EFSM);
+            inline void MakeInputTransition(const ExprTypeRef& MType,
+                                            const vector<ExpT>& MParams,
+                                            MessageFairnessType Fairness);
 
-            inline FrozenEFSM* Instantiate(const vector<ExpT>& ParamVals,
-                                           const ExprTypeRef& StateType);
+            inline void MakeOutputTransition(const ExprTypeRef& MType,
+                                             const vector<ExpT>& MParams,
+                                             MessageFairnessType Fairness);
 
         public:
             ChannelEFSM(UFLTS* TheLTS, 
                         const string& Name,
                         const vector<ExpT>& Params,
                         const ExpT& Constraint,
-                        u32 Capacity, bool Ordered, bool Lossy, bool Duplicating,
+                        u32 Capacity, bool Ordered, 
+                        bool Lossy, bool Duplicating,
                         bool Blocking);
             ~ChannelEFSM();
 
             const string& GetName() const;
 
-            void AddMessage(const ExprTypeRef& Type);
-            void AddMessage(const ExprTypeRef& Type,
-                            const vector<ExpT>& Params,
-                            const ExpT& Constraints);
-            // We convert to a frozen EFSM
+            void AddMessage(const ExprTypeRef& MType,
+                            const vector<ExpT>& MParams,
+                            const MessageFairnessType = MessageFairnessType::NONE);
+
+            void AddMessages(const ExprTypeRef& MType,
+                             const vector<ExpT>& MParams,
+                             const ExpT& MConstraint,
+                             const MessageFairnessType = MessageFairnessType::NONE);
             
-            vector<FrozenEFSM*> ToEFSM();
-        };        
+            UFEFSM* GetEFSM();
+        };
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

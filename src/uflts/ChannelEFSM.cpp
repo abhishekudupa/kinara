@@ -40,7 +40,7 @@
 #include "ChannelEFSM.hpp"
 #include "UFLTSExtension.hpp"
 #include "UFLTS.hpp"
-#include "FrozenEFSM.hpp"
+#include "UFEFSM.hpp"
 
 namespace ESMC {
     namespace LTS {
@@ -51,20 +51,29 @@ namespace ESMC {
                                  const ExpT& Constraint,
                                  u32 Capacity, bool Ordered, bool Lossy, 
                                  bool Duplicating, bool Blocking)
-            : TheLTS(TheLTS), Name(Name), Params(Params), Constraint(Constraint),
-              Capacity(Capacity), Ordered(Ordered), Lossy(Lossy),
-              Duplicating(Duplicating), Blocking(Blocking)
+            : TheEFSM(new UFEFSM(TheLTS, Name, Params, Constraint)),
+              TheLTS(TheLTS), Name(Name), Capacity(Capacity), 
+              Ordered(Ordered), Lossy(Lossy), Duplicating(Duplicating), 
+              Blocking(Blocking)
         {
-            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
+            auto Mgr = TheLTS->GetMgr();
             // Sanity checks on params
             if (Blocking && !Lossy) {
                 throw ESMCError((string)"Only Lossy channels can be declared Blocking");
             }
-            if (FiniteLoss && !Lossy) {
-                throw ESMCError((string)"Only Lossy channels can be declared FiniteLoss");
+            TheEFSM->AddState("ChanInitState");
+            if (Lossy) {
+                TheEFSM->AddState("LossDecideState");
             }
-            if (FiniteDup && !Duplicating) {
-                throw ESMCError((string)"Only Duplicating channels can be declared FiniteDup");
+            TheEFSM->FreezeStates();
+            ValType = TheLTS->GetUnifiedMType();
+            CountType = Mgr->MakeType<Exprs::ExprRangeType>(0, Capacity);
+            ArrayType = Mgr->MakeType<Exprs::ExprArrayType>(CountType, ValType);
+
+            TheEFSM->AddVariable("MsgCount", CountType);
+            TheEFSM->AddVariable("MsgBuffer", ArrayType);
+            if (Lossy) {
+                TheEFSM->AddVariable("LastMsg", ValType);
             }
         }
 
@@ -77,37 +86,45 @@ namespace ESMC {
         {
             return Name;
         }
-
-        void ChannelEFSM::AddMessage(const ExprTypeRef& Type)
-        {
-            if (!Type->Is<Exprs::ExprRecordType>()) {
-                throw ESMCError((string)"Only record types can be messages");
-            }
-            if (!TheLTS->CheckMessageType(MType)) {
-                throw ESMCError((string)"Message Type: " + MType->ToString() + 
-                                " has not been declared in the LTS");
-            }
-            Messages.insert(Type);
-        }
-
-        void ChannelEFSM::AddMessage(const ExprTypeRef& Type,
-                                     const vector<ExpT>& Params,
-                                     const ExpT& Constraint)
+        
+        inline void ChannelEFSM::MakeInputTransition(const ExprTypeRef& MType, 
+                                                     const vector<ExpT>& MParams, 
+                                                     MessageFairnessType Fairness)
         {
             
-            if (!Type->Is<Exprs::ExprParametricType>()) {
-                throw ESMCError((string)"Only parametric types can be used as parametric " + 
-                                "messages");
-            }
-            SymTab.Push();
-            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
-            SymTab.Pop();
-            PMessages.insert(Detail::ParametrizedMessage(Type, Params, Constraint));
         }
 
-        vector<FrozenEFSM*> ChannelEFSM::ToEFSM()
+        inline void ChannelEFSM::MakeOutputTransition(const ExprTypeRef& MType, 
+                                                      const vector<ExpT>& MParams, 
+                                                      MessageFairnessType Fairness)
         {
             
+        }
+
+        void ChannelEFSM::AddMessage(const ExprTypeRef& MType,
+                                     const vector<ExpT>& MParams,
+                                     MessageFairnessType Fairness)
+        {
+            TheEFSM->AddInputMsg(MType, MParams);
+            auto TypeAsRec = MType->SAs<Exprs::ExprRecordType>();
+            TheEFSM->AddOutputMsg(TheLTS->GetMessageType(TypeAsRec->GetName()), 
+                                  MParams);
+
+            MakeInputTransition(MType, MParams, Fairness);
+            MakeOutputTransition(MType, MParams, Fairness);
+        }
+
+        void ChannelEFSM::AddMessages(const ExprTypeRef& Type,
+                                      const vector<ExpT>& Params,
+                                      const ExpT& Constraint,
+                                      MessageFairnessType Fairness)
+        {
+            // TODO
+        }
+
+        UFEFSM* ChannelEFSM::GetEFSM()
+        {
+            return TheEFSM;
         }
 
     } /* end namespace LTS */

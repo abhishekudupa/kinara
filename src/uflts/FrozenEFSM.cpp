@@ -50,7 +50,7 @@ namespace ESMC {
             : Name(Name), TheLTS(TheLTS), StateType(StateType),
               States(States)
         {
-            // Nothing here
+            SymTab.Bind("state", new VarDecl("state", StateType));
         }
 
         FrozenEFSM::~FrozenEFSM()
@@ -61,7 +61,7 @@ namespace ESMC {
         void FrozenEFSM::AddVariable(const string& VarName,
                                      const ExprTypeRef& VarType)
         {
-            if (SymTab.LookupTop(VarName) != DeclRef::NullPtr) {
+            if (SymTab.Lookup(VarName) != DeclRef::NullPtr) {
                 throw ESMCError((string)"Redeclaration of variable \"" + VarName + 
                                 "\" in FrozenEFSM");
             }
@@ -93,6 +93,7 @@ namespace ESMC {
                                             const string& MessageName,
                                             const ExprTypeRef& MessageType)
         {
+            auto Mgr = TheLTS->GetMgr();
             CheckState(InitState, States);
             CheckState(FinalState, States);
             
@@ -110,11 +111,20 @@ namespace ESMC {
             SymTab.Bind(MessageName, new MsgDecl(MessageName, MessageType));
             CheckUpdates(Updates, SymTab, TheLTS->GetMgr());
             auto Scope = SymTab.Pop();
+
+            // Add the check on the state into guard
+            auto NewGuard = Mgr->MakeExpr(LTSOps::OpAND, Guard,
+                                          Mgr->MakeExpr(LTSOps::OpEQ, 
+                                                        Mgr->MakeVar("state", StateType), 
+                                                        Mgr->MakeVal(InitState, StateType)));
+            auto NewUpdates = Updates;
+            NewUpdates.push_back(AsgnT(Mgr->MakeVar("state", StateType),
+                                       Mgr->MakeVal(FinalState, StateType)));
             
             auto Transition = TransitionT::MakeInputTransition(InitState,
                                                                FinalState,
-                                                               Guard,
-                                                               Updates,
+                                                               NewGuard,
+                                                               NewUpdates,
                                                                MessageName,
                                                                MessageType);
             Transitions.push_back(pair<TransitionT, ScopeRef>(Transition, Scope));
@@ -128,6 +138,7 @@ namespace ESMC {
                                              const ExprTypeRef& MessageType,
                                              const unordered_set<u32>& FairnessSet)
         {
+            auto Mgr = TheLTS->GetMgr();
             CheckState(InitState, States);
             CheckState(FinalState, States);
             if (Inputs.find(MessageType) == Outputs.end()) {
@@ -145,10 +156,20 @@ namespace ESMC {
             CheckUpdates(Updates, SymTab, TheLTS->GetMgr());
             
             auto Scope = SymTab.Pop();
+
+            // Add the check on the state into guard
+            auto NewGuard = Mgr->MakeExpr(LTSOps::OpAND, Guard,
+                                          Mgr->MakeExpr(LTSOps::OpEQ, 
+                                                        Mgr->MakeVar("state", StateType), 
+                                                        Mgr->MakeVal(InitState, StateType)));
+            auto NewUpdates = Updates;
+            NewUpdates.push_back(AsgnT(Mgr->MakeVar("state", StateType),
+                                       Mgr->MakeVal(FinalState, StateType)));
+
             auto Transition = TransitionT::MakeOutputTransition(InitState,
                                                                 FinalState,
-                                                                Guard,
-                                                                Updates,
+                                                                NewGuard,
+                                                                NewUpdates,
                                                                 MessageName,
                                                                 MessageType,
                                                                 FairnessSet);
@@ -161,17 +182,26 @@ namespace ESMC {
                                                const vector<AsgnT>& Updates,
                                                const unordered_set<u32>& FairnessSet)
         {
+            auto Mgr = TheLTS->GetMgr();
             CheckState(InitState, States);
             CheckState(FinalState, States);
             CheckExpr(Guard, SymTab, TheLTS->GetMgr());
             if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
                 throw ESMCError((string)"Guard of a transition must be boolean valued");
             }
+            // Add the check on the state into guard
+            auto NewGuard = Mgr->MakeExpr(LTSOps::OpAND, Guard,
+                                          Mgr->MakeExpr(LTSOps::OpEQ, 
+                                                        Mgr->MakeVar("state", StateType), 
+                                                        Mgr->MakeVal(InitState, StateType)));
+            auto NewUpdates = Updates;
+            NewUpdates.push_back(AsgnT(Mgr->MakeVar("state", StateType),
+                                       Mgr->MakeVal(FinalState, StateType)));
 
             auto Transition = TransitionT::MakeInternalTransition(InitState,
                                                                   FinalState,
-                                                                  Guard,
-                                                                  Updates,
+                                                                  NewGuard,
+                                                                  NewUpdates,
                                                                   FairnessSet);
             Transitions.push_back(pair<TransitionT, ScopeRef>(Transition, ScopeRef::NullPtr));
         }

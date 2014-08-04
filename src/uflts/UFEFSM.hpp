@@ -54,14 +54,6 @@
 namespace ESMC {
     namespace LTS {
 
-        // non-parametric, frozen efsm
-        // It has the following properties:
-        // 1. No parametric transitions
-        // 2. No non-det updates in transitions
-        // 3. The guard includes state pred 
-        // 4. The updates include state update
-
-
         // The class for an I/O EFSM which can contain uninterpreted functions
         class UFEFSM
         {
@@ -72,23 +64,27 @@ namespace ESMC {
             string Name;
             vector<ExpT> Params;
             ExpT Constraint;
-            UIDGenerator StateUIDGenerator;
-
-            set<ExprTypeRef> Inputs;
-            set<ExprTypeRef> Outputs;
-
-            set<Detail::ParametrizedMessage> ParametrizedInputs;
-            set<Detail::ParametrizedMessage> ParametrizedOutputs;
-
-            map<string, Detail::StateDescriptor> States;
-            vector<pair<TransitionT, ScopeRef>> Transitions;
-            vector<Detail::ParametrizedTransition> ParametrizedTransitions;
-            
             SymbolTable SymTab;
+            vector<FrozenEFSM*> FrozenEFSMs;
+            bool StatesFrozen;
+            bool AllFrozen;
+            map<string, Detail::StateDescriptor> States;
+            vector<vector<ExpT>> ParamInsts;
+            vector<MgrType::SubstMapT> ParamSubsts;
+            ExprTypeRef StateType;
+
+            // Helpers
+            inline void AddMsg(const ExprTypeRef& MType,
+                               const vector<ExpT>& MParams,
+                               bool IsInput);
+
+            inline void AddMsgs(const ExprTypeRef& MType,
+                                const vector<ExpT>& MParams,
+                                const ExpT& Constraint,
+                                bool IsInput);
 
         public:
             UFEFSM(UFLTS* TheLTS, const string& Name);
-
             UFEFSM(UFLTS* TheLTS, 
                    const string& Name,
                    const vector<ExpT>& Params,
@@ -97,17 +93,6 @@ namespace ESMC {
             ~UFEFSM();
 
             const string& GetName() const;
-            
-            void AddInputMsg(const ExprTypeRef& MType);
-            void AddOutputMsg(const ExprTypeRef& MType);
-            
-            void AddInputMsg(const vector<ExpT>& Params,
-                             const ExpT& Constraint,
-                             const ExprTypeRef& MType);
-
-            void AddOutputMsg(const vector<ExpT>& Params,
-                              const ExpT& Constraint,
-                              const ExprTypeRef& MType);
 
             void AddState(const string& StateName,
                           bool Initial = false,
@@ -115,14 +100,23 @@ namespace ESMC {
                           bool Accepting = false,
                           bool Error = false,
                           bool Dead = false);
+            
+            void FreezeStates();
+            void FreezeAll();
+            
+            void AddInputMsg(const ExprTypeRef& MType,
+                             const vector<ExpT>& MParams);
 
-            // Add an internal, non-initial, non-final,
-            // non-accepting, non-error state
-            string AddState(bool Initial = false,
-                            bool Final = false,
-                            bool Accepting = false,
-                            bool Error = false,
-                            bool Dead = false);
+            void AddOutputMsg(const ExprTypeRef& MType,
+                              const vector<ExpT>& MParams);
+            
+            void AddInputMsgs(const ExprTypeRef& MType,
+                              const vector<ExpT>& MParams,
+                              const ExpT& MConstraint);
+
+            void AddOutputMsgs(const ExprTypeRef& MType,
+                               const vector<ExpT>& MParams,
+                               const ExpT& MConstraint);
 
             void AddVariable(const string& VarName,
                              const ExprTypeRef& VarType);
@@ -132,17 +126,18 @@ namespace ESMC {
                                     const ExpT& Guard,
                                     const vector<AsgnT>& Updates,
                                     const string& MessageName,
-                                    const ExprTypeRef& MessageType);
-            
-            // Parametrized input transition
-            void AddInputTransition(const string& InitState,
-                                    const string& FinalState,
-                                    const ExpT& Guard,
-                                    const vector<AsgnT>& Updates,
-                                    const string& MessageName,
-                                    const vector<ExpT>& Params,
-                                    const ExpT& Constraint,
-                                    const ExprTypeRef& MessageType);
+                                    const ExprTypeRef& MessageType,
+                                    const vector<ExpT>& MessageParams);
+
+            void AddInputTransitions(const string& InitState,
+                                     const string& FinalState,
+                                     const vector<ExpT> TransParams,
+                                     const ExpT& TransConstraint,
+                                     const ExpT& Guard,
+                                     const vector<AsgnT>& Updates,
+                                     const string& MessageName,
+                                     const ExprTypeRef& MessageType,
+                                     const vector<ExpT>& MessageParams);
 
             void AddOutputTransition(const string& InitState,
                                      const string& FinalState,
@@ -150,20 +145,26 @@ namespace ESMC {
                                      const vector<AsgnT>& Updates,
                                      const string& MessageName,
                                      const ExprTypeRef& MessageType,
+                                     const vector<ExpT>& MessageParams,
                                      const unordered_set<u32>& FairnessSet = 
                                      unordered_set<u32>());
 
-            // Parametrized output transition
-            void AddOutputTransition(const string& InitState,
-                                     const string& FinalState,
-                                     const ExpT& Guard,
-                                     const vector<AsgnT>& Updates,
-                                     const string& MessageName,
-                                     const vector<ExpT>& Params,
-                                     const ExpT& Constraint,
-                                     const ExprTypeRef& MessageType,
-                                     const unordered_set<u32>& FairnessSet = 
-                                     unordered_set<u32>());
+            // The fairness sets can be either:
+            // 1. Empty : in which case, no fairness assumptions on transitions
+            // 2. A singleton : in which case, the fairness is splat across all transitions
+            // 3. A vector with as many assumptions as the transition splits up to
+
+            void AddOutputTransitions(const string& InitState,
+                                      const string& FinalState,
+                                      const vector<ExpT>& TransParams,
+                                      const ExpT& TransConstraint,
+                                      const ExpT& Guard,
+                                      const vector<AsgnT>& Updates,
+                                      const string& MessageName,
+                                      const ExprTypeRef& MessageType,
+                                      const vector<ExpT>& MessageParams,
+                                      const vector<unordered_set<u32>>& FairnessSets = 
+                                      vector<unordered_set<u32>>());
 
             void AddInternalTransition(const string& InitState,
                                        const string& FinalState,
@@ -172,20 +173,16 @@ namespace ESMC {
                                        const unordered_set<u32>& FairnessSet = 
                                        unordered_set<u32>());
 
-            // Parametrized internal transition
-            void AddInternalTransition(const string& InitState,
-                                       const string& FinalState,
-                                       const ExpT& Guard,
-                                       const vector<AsgnT>& Updates,
-                                       const vector<ExpT>& Params,
-                                       const ExpT& Constraint,
-                                       const unordered_set<u32>& FairnessSet = 
-                                       unordered_set<u32>());
+            void AddInternalTransitions(const string& InitState,
+                                        const string& FinalState,
+                                        const vector<ExpT>& TransParams,
+                                        const ExpT& TransConstraint,
+                                        const ExpT& Guard,
+                                        const vector<AsgnT>& Updates,
+                                        const vector<unordered_set<u32>>& FairnessSets = 
+                                        vector<unordered_set<u32>>());
 
-            vector<FrozenEFSM*> Instantiate() const;
-            FrozenEFSM* Instantiate(const vector<ExpT>& ParamVals,
-                                    const ExprTypeRef& StateType) const;
-
+            const vector<FrozenEFSM*>& GetFrozenEFSMs();
         };
 
 

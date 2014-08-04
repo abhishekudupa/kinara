@@ -39,7 +39,7 @@
 
 #include "UFEFSM.hpp"
 #include "UFLTS.hpp"
-#include "ParamUtils.hpp"
+#include "LTSUtils.hpp"
 #include "FrozenEFSM.hpp"
 
 #include <type_traits>
@@ -47,13 +47,19 @@
 namespace ESMC {
     namespace LTS {
 
+        UFEFSM::UFEFSM(UFLTS* TheLTS, const string& Name)
+            : TheLTS(TheLTS), Name(Name), StatesFrozen(false)
+        {
+            // Nothing here
+        }
+
         // Implementation of UFEFSM
         UFEFSM::UFEFSM(UFLTS* TheLTS,
                        const string& Name,
                        const vector<ExpT>& Params,
                        const ExpT& Constraint)
             : TheLTS(TheLTS), Name(Name), Params(Params),
-              Constraint(Constraint)
+              Constraint(Constraint), StatesFrozen(false)
         {
             CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
         }
@@ -68,54 +74,6 @@ namespace ESMC {
             return Name;
         }
 
-        void UFEFSM::AddInputMsg(const ExprTypeRef& MType)
-        {
-            if (!MType->Is<Exprs::ExprRecordType>()) {
-                throw ESMCError((string)"Only record types can be message types");
-            }
-            if (!TheLTS->CheckMessageType(MType)) {
-                throw ESMCError((string)"Message Type: " + MType->ToString() + 
-                                " has not been declared in the LTS");
-            }
-            Inputs.insert(MType);
-        }
-
-        void UFEFSM::AddInputMsg(const vector<ExpT>& Params,
-                                 const ExpT& Constraint,
-                                 const ExprTypeRef& MType)
-        {
-            if (!MType->Is<Exprs::ExprParametricType>()) {
-                throw ESMCError((string)"Only parametric types can be used as parametric " +
-                                "messages");
-            }
-            SymTab.Push();
-            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
-            SymTab.Pop();
-            ParametrizedInputs.insert(Detail::ParametrizedMessage(MType, Params, Constraint));
-        }
-
-        void UFEFSM::AddOutputMsg(const ExprTypeRef& MType)
-        {
-            if (!MType->Is<Exprs::ExprRecordType>()) {
-                throw ESMCError((string)"Only record types can be message types");
-            }
-            if (!TheLTS->CheckMessageType(MType)) {
-                throw ESMCError((string)"Message Type: " + MType->ToString() + 
-                                " has not been declared in the LTS");
-            }
-            Outputs.insert(MType);
-        }
-
-        void UFEFSM::AddOutputMsg(const vector<ExpT>& Params,
-                                  const ExpT& Constraint,
-                                  const ExprTypeRef& MType)
-        {
-            SymTab.Push();
-            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
-            SymTab.Pop();
-            ParametrizedOutputs.insert(Detail::ParametrizedMessage(MType, Params, Constraint));
-        }
-
         void UFEFSM::AddState(const string& StateName,
                               bool Initial,
                               bool Final,
@@ -123,6 +81,9 @@ namespace ESMC {
                               bool Error,
                               bool Dead)
         {
+            if (StatesFrozen) {
+                throw ESMCError((string)"Cannot add states to EFSM after freezing states");
+            }
             Detail::StateDescriptor Desc(StateName, Initial, Final, Accepting, Error, Dead);
             auto it = States.find(StateName);
             if (it == States.end()) {
@@ -131,23 +92,159 @@ namespace ESMC {
                 throw ESMCError((string)"Redeclaration of state with different parameters");
             }
         }
-        
-        string UFEFSM::AddState(bool Initial,
-                                bool Final,
-                                bool Accepting,
-                                bool Error,
-                                bool Dead)
+
+        void UFEFSM::FreezeStates()
         {
-            auto StateUID = StateUIDGenerator.GetUID();
-            string StateName = (string)"State_" + to_string(StateUID);
-            Detail::StateDescriptor Desc(StateName, Initial, Final, Accepting, Error, Dead);
-            States[StateName] = Desc;
-            return StateName;
+            if (StatesFrozen) {
+                return;
+            }
+            StatesFrozen = true;
+            // Create the state type
+            auto Mgr = TheLTS->GetMgr();
+            set<string> StateNames;
+            for (auto const& StateD : States) {
+                StateNames.insert(StateD.first);
+            }
+            StateType = Mgr->MakeType<Exprs::ExprEnumType>(Name + "StateT", StateNames);
+
+            if (Params.size() == 0) {
+                ParamInsts.push_back(vector<ExpT>());
+                ParamSubsts.push_back(MgrType::SubstMapT());
+                FrozenEFSMs.push_back(new FrozenEFSM(Name, TheLTS, StateType, States));
+                return;
+            }
+            
+            // Instantiate each of the parameters
+            ParamInsts = InstantiateParams(Params, Constraint, Mgr);
+            
+            for (auto const& ParamVal : ParamInsts) {
+
+                MgrType::SubstMapT SubstMap;
+                string InstName = Name;
+
+                const u32 NumParams = Params.size();
+
+                for (u32 i = 0; i < NumParams; ++i) {
+                    auto const& Param = ParamVal[i];
+                    auto ParamAsConst = Param->As<Exprs::ConstExpression>();
+                    auto const& ConstVal = ParamAsConst->GetConstValue();
+                    InstName += ((string)"[" + ConstVal + "]");
+                    SubstMap[Params[i]] = ParamVal[i];
+                }
+                
+                ParamSubsts.push_back(SubstMap);
+                FrozenEFSMs.push_back(new FrozenEFSM(InstName, TheLTS, StateType, States));
+            }
+        }
+
+
+        inline void UFEFSM::AddMsg(const ExprTypeRef& MType,
+                                   const vector<ExpT>& MParams,
+                                   bool IsInput)
+        {
+            if (!StatesFrozen) {
+                throw ESMCError((string)"Cannot add messages until states are frozen");
+            }
+            if (AllFrozen) {
+                throw ESMCError((string)"Cannot add message to EFSM after it has been frozen");
+            }
+
+            CheckParams(MParams, SymTab);
+
+            auto Mgr = TheLTS->GetMgr();
+            const u32 NumInsts = ParamInsts.size();
+
+            for (u32 i = 0; i < NumInsts; ++i) {
+                auto&& SubstParams = SubstAll(MParams, ParamSubsts[i], Mgr);
+                auto Type = InstantiateType(MType, SubstParams, Mgr);
+                
+                if (IsInput) {
+                    FrozenEFSMs[i]->AddInputMsg(Type);
+                } else {
+                    FrozenEFSMs[i]->AddOutputMsg(Type);
+                }
+            }
+        }
+
+        inline void UFEFSM::AddMsgs(const ExprTypeRef& MType, 
+                                    const vector<ExpT>& MParams, 
+                                    const ExpT& Constraint, 
+                                    bool IsInput)
+        {
+            if (!StatesFrozen) {
+                throw ESMCError((string)"Cannot add messages until states are frozen");
+            }
+
+            if (AllFrozen) {
+                throw ESMCError((string)"Cannot add message to EFSM after it has been frozen");
+            }
+
+            auto Mgr = TheLTS->GetMgr();
+
+            SymTab.Push();
+            CheckParams(MParams, Constraint, SymTab, Mgr);
+            SymTab.Pop();
+            
+            const u32 NumInsts = ParamInsts.size();
+            for (u32 i = 0; i < NumInsts; ++i) {
+                auto&& SubstParams = SubstAll(MParams, ParamSubsts[i], Mgr);
+                auto&& ActParamInsts = InstantiatePendingParams(SubstParams, Mgr, 
+                                                                ParamSubsts[i], 
+                                                                Constraint);
+                const u32 NumActInsts = ActParamInsts.size();
+
+                if (NumActInsts == 0) {
+                    throw ESMCError((string)"No additional quantifications in AddMsgs()");
+                }
+
+                for (u32 j = 0; j < NumActInsts; ++j) {
+                    auto Type = InstantiateType(MType, ActParamInsts[j], Mgr);
+                    if (IsInput) {
+                        FrozenEFSMs[i]->AddInputMsg(Type);
+                    } else {
+                        FrozenEFSMs[i]->AddOutputMsg(Type);
+                    }
+                }
+            }
+        }
+
+        void UFEFSM::AddInputMsg(const ExprTypeRef& MType, 
+                                 const vector<ExpT>& MParams)
+        {
+            AddMsg(MType, MParams, true);
+        }
+
+        void UFEFSM::AddInputMsgs(const ExprTypeRef& MType,
+                                  const vector<ExpT>& MParams,
+                                  const ExpT& MConstraint)
+        {
+            AddMsgs(MType, MParams, MConstraint, true);
+        }
+
+        void UFEFSM::AddOutputMsg(const ExprTypeRef& MType,
+                                  const vector<ExpT>& MParams)
+        {
+            AddMsg(MType, MParams, false);
+        }
+
+        void UFEFSM::AddOutputMsgs(const ExprTypeRef& MType,
+                                   const vector<ExpT>& MParams,
+                                   const ExpT& MConstraint)
+        {
+            AddMsgs(MType, MParams, MConstraint, false);
         }
 
         void UFEFSM::AddVariable(const string& VarName,
                                  const ExprTypeRef& VarType)
         {
+            if (!StatesFrozen) {
+                throw ESMCError((string)"Cannot add variables to EFSM until states " + 
+                                "have been frozen");
+            }
+            if (AllFrozen) {
+                throw ESMCError((string)"Cannot add variables to EFSM after it has been frozen");
+            }
+
             if (!VarType->Is<Exprs::ExprScalarType>() &&
                 !VarType->Is<Exprs::ExprRecordType> () &&
                 !VarType->Is<Exprs::ExprArrayType> ()) {
@@ -159,6 +256,11 @@ namespace ESMC {
                 throw ESMCError((string)"Rebinding of variable \"" + VarName + "\"");
             }
             SymTab.Bind(VarName, new VarDecl(VarName, VarType));
+
+            const u32 NumInsts = ParamInsts.size();
+            for (u32 i = 0; i < NumInsts; ++i) {
+                FrozenEFSMs[i]->AddVariable(VarName, VarType);
+            }
         }
 
             
@@ -167,353 +269,343 @@ namespace ESMC {
                                         const ExpT& Guard,
                                         const vector<AsgnT>& Updates,
                                         const string& MessageName,
-                                        const ExprTypeRef& MessageType)
+                                        const ExprTypeRef& MessageType,
+                                        const vector<ExpT>& MessageParams)
         {
-            CheckMsg(MessageType, Inputs);
-            CheckState(InitState, States);
-            CheckState(FinalState, States);
-
-            SymTab.Push();
-            SymTab.Bind(MessageName, new MsgDecl(MessageName, MessageType));
-            
-            CheckUpdates(Updates, SymTab, TheLTS->GetMgr());
-
-            // Guard cannot refer to message fields
-            auto Scope = SymTab.Pop();
-
-            CheckExpr(Guard, SymTab, TheLTS->GetMgr());
-
-
-            if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
-                throw ESMCError((string)"Guard for transition is not boolean");
+            if (!StatesFrozen) {
+                throw ESMCError((string)"Cannot add transitions to EFSM until states " + 
+                                "have been frozen");
+            }
+            if (AllFrozen) {
+                throw ESMCError((string)"Cannot add transitions to EFSM after it has been frozen");
             }
 
-            auto Transition = TransitionT::MakeInputTransition(InitState,
-                                                               FinalState,
-                                                               Guard,
-                                                               Updates,
-                                                               MessageName,
-                                                               MessageType);
+            CheckParams(MessageParams, SymTab);
 
-            Transitions.push_back(pair<TransitionT, ScopeRef>(Transition, Scope));
-        }
-
-        void UFEFSM::AddInputTransition(const string& InitState,
-                                        const string& FinalState,
-                                        const ExpT& Guard,
-                                        const vector<AsgnT>& Updates,
-                                        const string& MessageName,
-                                        const vector<ExpT>& Params,
-                                        const ExpT& Constraint,
-                                        const ExprTypeRef& MessageType)
-        {
-            CheckState(InitState, States);
-            CheckState(FinalState, States);
-
-            SymTab.Push();
-            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
-            SymTab.Pop();
-
-            if (!MessageType->Is<Exprs::ExprParametricType>()) {
-                throw ESMCError((string)"Non-parametric message type in parametrized " + 
-                                "input transition");
-            }
-
-            // We defer the rest of the checks until later
-
-            Detail::ParametrizedTransition Transition(TransitionKind::INPUT, 
-                                                      InitState, FinalState,
-                                                      Guard, Updates, MessageName,
-                                                      Params, Constraint, MessageType,
-                                                      unordered_set<u32>());
-
-            ParametrizedTransitions.push_back(Transition);
-        }
-
-        void UFEFSM::AddOutputTransition(const string& InitState,
-                                         const string& FinalState,
-                                         const ExpT& Guard,
-                                         const vector<AsgnT>& Updates,
-                                         const string& MessageName,
-                                         const ExprTypeRef& MessageType,
-                                         const unordered_set<u32>& FairnessSet)
-        {
-            CheckMsg(MessageType, Outputs);
-            CheckState(InitState, States);
-            CheckState(FinalState, States);
-            
-            SymTab.Push();
-            SymTab.Bind(MessageName, new VarDecl(MessageName, MessageType));
-            
-            CheckUpdates(Updates, SymTab, TheLTS->GetMgr());
-            auto Scope = SymTab.Pop();
-            
-            CheckExpr(Guard, SymTab, TheLTS->GetMgr());
-            if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
-                throw ESMCError((string)"Guard for transition is not boolean");
-            }
-
-            auto Transition = TransitionT::MakeOutputTransition(InitState,
-                                                                FinalState,
-                                                                Guard,
-                                                                Updates,
-                                                                MessageName,
-                                                                MessageType,
-                                                                FairnessSet);
-            Transitions.push_back(pair<TransitionT, ScopeRef>(Transition, Scope));
-        }
-
-        void UFEFSM::AddOutputTransition(const string& InitState,
-                                         const string& FinalState,
-                                         const ExpT& Guard,
-                                         const vector<AsgnT>& Updates,
-                                         const string& MessageName,
-                                         const vector<ExpT>& Params,
-                                         const ExpT& Constraint,
-                                         const ExprTypeRef& MessageType,
-                                         const unordered_set<u32>& FairnessSet)
-        {
-            CheckState(InitState, States);
-            CheckState(FinalState, States);
-            
-            SymTab.Push();
-            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
-            SymTab.Pop();
-
-            if (!MessageType->Is<Exprs::ExprParametricType>()) {
-                throw ESMCError((string)"Non-parametric message type in parametrized " + 
-                                "output transition");
-            }
-
-            // We defer the rest of the checks until later
-            Detail::ParametrizedTransition Transition(TransitionKind::OUTPUT, 
-                                                      InitState, FinalState,
-                                                      Guard, Updates, MessageName,
-                                                      Params, Constraint, MessageType,
-                                                      FairnessSet);
-
-            ParametrizedTransitions.push_back(Transition);
-        }
-
-
-        void UFEFSM::AddInternalTransition(const string& InitState,
-                                           const string& FinalState,
-                                           const ExpT& Guard,
-                                           const vector<AsgnT>& Updates,
-                                           const unordered_set<u32>& FairnessSet)
-        {
-            CheckState(InitState, States);
-            CheckState(FinalState, States);
-            CheckUpdates(Updates, SymTab, TheLTS->GetMgr());
-            CheckExpr(Guard, SymTab, TheLTS->GetMgr());
-            
-            if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
-                throw ESMCError((string)"Guard for transition is not boolean");
-            }
-
-            auto Transition = TransitionT::MakeInternalTransition(InitState,
-                                                                  FinalState,
-                                                                  Guard,
-                                                                  Updates,
-                                                                  FairnessSet);
-            Transitions.push_back(pair<TransitionT, ScopeRef>(Transition, ScopeRef::NullPtr));
-        }
-
-        void UFEFSM::AddInternalTransition(const string& InitState,
-                                           const string& FinalState,
-                                           const ExpT& Guard,
-                                           const vector<AsgnT>& Updates,
-                                           const vector<ExpT>& Params,
-                                           const ExpT& Constraint,
-                                           const unordered_set<u32>& FairnessSet)
-        {
-            CheckState(InitState, States);
-            CheckState(FinalState, States);
-            
-            SymTab.Push();
-            CheckParams(Params, Constraint, SymTab, TheLTS->GetMgr());
-            SymTab.Pop();
-            
-            Detail::ParametrizedTransition Transition(TransitionKind::INTERNAL,
-                                                      InitState, FinalState,
-                                                      Guard, Updates, "", Params,
-                                                      Constraint, ExprTypeRef::NullPtr,
-                                                      FairnessSet);
-            ParametrizedTransitions.push_back(Transition);
-        }
-
-
-        FrozenEFSM* UFEFSM::Instantiate(const vector<ExpT>& ParamVals,
-                                        const ExprTypeRef& StateType) const
-        {
             auto Mgr = TheLTS->GetMgr();
-            string InstName = Name;
-            for (auto const& Param : ParamVals) {
-                auto ParamAsConst = Param->As<Exprs::ConstExpression>();
-                auto const& Val = ParamAsConst->GetConstValue();
-                InstName += ((string)"[" + Val + "]");
+            const u32 NumInsts = ParamInsts.size();
+            for (u32 i = 0; i < NumInsts; ++i) {
+                auto const& SubstMap = ParamSubsts[i];
+                auto&& SubstParams = SubstAll(MessageParams, SubstMap, Mgr);
+                auto MType = InstantiateType(MessageType, SubstParams, Mgr);
+                
+                auto SubstGuard = Mgr->Substitute(SubstMap, Guard);
+                const u32 NumUpdates = Updates.size();
+                vector<AsgnT> SubstUpdates(NumUpdates);
+                for (u32 j = 0; j < NumUpdates; ++j) {
+                    SubstUpdates[i] = AsgnT(Mgr->Substitute(SubstMap, Updates[j].GetLHS()),
+                                            Mgr->Substitute(SubstMap, Updates[j].GetRHS()));
+                }
+                
+                FrozenEFSMs[i]->AddInputTransition(InitState, FinalState, SubstGuard, SubstUpdates, 
+                                                   MessageName, MType);
             }
+        }
+
+        void UFEFSM::AddInputTransitions(const string& InitState,
+                                         const string& FinalState,
+                                         const vector<ExpT> TransParams,
+                                         const ExpT& TransConstraint,
+                                         const ExpT& Guard,
+                                         const vector<AsgnT>& Updates,
+                                         const string& MessageName,
+                                         const ExprTypeRef& MessageType,
+                                         const vector<ExpT>& MessageParams)
+        {
+            if (!StatesFrozen) {
+                throw ESMCError((string)"Cannot add transitions to EFSM until states " + 
+                                "have been frozen");
+            }
+            if (AllFrozen) {
+                throw ESMCError((string)"Cannot add transitions to EFSM after it has been frozen");
+            }
+
+            auto Mgr = TheLTS->GetMgr();
             
-            FrozenEFSM* Retval = new FrozenEFSM(InstName, TheLTS, StateType, States);
-            MgrType::SubstMapT SubstMapGlobal;
-            
-            for (u32 i = 0; i < Params.size(); ++i) {
-                SubstMapGlobal[Params[i]] = ParamVals[i];
-            }
-            
-            // Push only the variables from the bottom scope
-            auto BotScope = SymTab.Bot();
-            auto DeclMap = BotScope->GetDeclMap();
-            for (auto const& Decl : DeclMap) {
-                if (Decl.second->Is<VarDecl>()) {
-                    Retval->AddVariable(Decl.first, Decl.second->GetType());
-                }
-            }
-            
-            // Push through the common inputs
-            for (auto const& Input : Inputs) {
-                Retval->AddInputMsg(Input);
-            }
-            for (auto const& Output : Outputs) {
-                Retval->AddOutputMsg(Output);
-            }
+            // Push the transition params
+            SymTab.Push();
+            // The new params CANNOT reuse existing params
+            CheckParams(TransParams, TransConstraint, SymTab, Mgr, true);
+            // This binds the transition params
+            CheckParams(MessageParams, SymTab);
+            SymTab.Pop();
 
-            // Instantiate the parametric inputs
-            for(auto const& PMesg : ParametrizedInputs) {
-                auto&& InstMsgTypes = InstantiateMsg(PMesg, Mgr, SubstMapGlobal);
-                for (auto const& InstMsgType : InstMsgTypes) {
-                    Retval->AddInputMsg(InstMsgType);
-                }
-            }
+            const u32 NumInsts = ParamInsts.size();
+            const u32 NumTransParams = TransParams.size();
 
-            // Instantiate the parametric outputs
-            for(auto const& PMesg : ParametrizedOutputs) {
-                auto&& InstMsgTypes = InstantiateMsg(PMesg, Mgr, SubstMapGlobal);
-                for (auto const& InstMsgType : InstMsgTypes) {
-                    Retval->AddOutputMsg(InstMsgType);
-                }
-            }
+            for (u32 i = 0; i < NumInsts; ++i) {
+                auto const& SubstMap = ParamSubsts[i];
+                auto SubstTransConstraint = Mgr->Substitute(SubstMap, TransConstraint);
+                
+                auto&& TransInsts = InstantiateParams(TransParams, SubstTransConstraint, Mgr);
+                const u32 NumTransInsts = TransInsts.size();
 
-            // Instantiate all the non parametric transitions
-            for (auto const& TranScope : Transitions) {
-                auto Trans = TranScope.first;
-                auto Scope = TranScope.second;
+                for (u32 j = 0; j < NumTransInsts; ++j) {
+                    auto LocalSubstMap = SubstMap;
+                    auto const& CurTransInst = TransInsts[j];
 
-                auto const& Updates = Trans.GetUpdates();
-                vector<AsgnT> NewUpdates;
+                    for (u32 k = 0; k < NumTransParams; ++k) {
+                        LocalSubstMap[TransParams[k]] = CurTransInst[k];
+                    }
 
-                for (auto const& Update : Updates) {
-                    auto NewLHS = Mgr->Substitute(SubstMapGlobal, Update.GetLHS());
-                    auto NewRHS = Mgr->Substitute(SubstMapGlobal, Update.GetRHS());
-                    NewUpdates.push_back(AsgnT(NewLHS, NewRHS));
-                }
+                    auto&& SubstMsgParams = SubstAll(MessageParams, LocalSubstMap, Mgr);
+                    auto Type = InstantiateType(MessageType, SubstMsgParams, Mgr);
 
-                auto NewGuard = Mgr->Substitute(SubstMapGlobal, Trans.GetGuard());
+                    auto SubstGuard = Mgr->Substitute(LocalSubstMap, Guard);
+                    const u32 NumUpdates = Updates.size();
 
-                if (Trans.GetKind() == TransitionKind::INPUT) {
-                    Retval->AddInputTransition(Trans.GetInitState(),
-                                               Trans.GetFinalState(),
-                                               NewGuard,
-                                               NewUpdates,
-                                               Trans.GetMessageName(),
-                                               Trans.GetMessageType());
-                } else if (Trans.GetKind() == TransitionKind::OUTPUT) {
-                    Retval->AddOutputTransition(Trans.GetInitState(),
-                                                Trans.GetFinalState(),
-                                                NewGuard,
-                                                NewUpdates,
-                                                Trans.GetMessageName(),
-                                                Trans.GetMessageType(),
-                                                Trans.GetFairnessSet());
-                } else {
-                    Retval->AddInternalTransition(Trans.GetInitState(),
-                                                  Trans.GetFinalState(),
-                                                  NewGuard,
-                                                  NewUpdates,
-                                                  Trans.GetFairnessSet());
-                }
-                return Retval;
-            }
-
-            // Instantiate the parametric transitions
-            for (auto const& PTrans : ParametrizedTransitions) {
-                auto const& Params = PTrans.Params;
-                const u32 NumParams = Params.size();
-                auto const& Constraint = PTrans.Constraint;
-                auto const&& ParamVals = InstantiatePendingParams(Params, Mgr, 
-                                                                  SubstMapGlobal,
-                                                                  Constraint);
-                MgrType::SubstMapT SubstMapLocal;
-                for (auto const& SubstParams : ParamVals) {
-                    SubstMapLocal = SubstMapGlobal;
-                    for (u32 i = 0; i < NumParams; ++i) {
-                        if (!Params[i]->Is<Exprs::ConstExpression>()) {
-                            SubstMapLocal[Params[i]] = SubstParams[i];
-                        }
+                    vector<AsgnT> SubstUpdates(NumUpdates);
+                    for (u32 k = 0; k < NumUpdates; ++k) {
+                        SubstUpdates[k] = AsgnT(Mgr->Substitute(LocalSubstMap, Updates[k].GetLHS()),
+                                                Mgr->Substitute(LocalSubstMap, Updates[k].GetRHS()));
                     }
                     
-                    auto SubstGuard = Mgr->Substitute(SubstMapLocal, PTrans.Guard);
-                    vector<AsgnT> SubstUpdates;
-                    for (auto const& Update : PTrans.Updates) {
-                        auto SubstLHS = Mgr->Substitute(SubstMapLocal, Update.GetLHS());
-                        auto SubstRHS = Mgr->Substitute(SubstMapLocal, Update.GetRHS());
-                        SubstUpdates.push_back(AsgnT(SubstLHS, SubstRHS));
-                    }
-
-                    if (PTrans.Kind == TransitionKind::INPUT) {
-                        ExprTypeRef MType;
-                        if (PTrans.MessageType->Is<Exprs::ExprParametricType>()) {
-                            MType = Mgr->InstantiateType(PTrans.MessageType, SubstParams);
-                        } else {
-                            MType = PTrans.MessageType;
-                        }
-                        Retval->AddInputTransition(PTrans.InitialState,
-                                                   PTrans.FinalState,
-                                                   SubstGuard, SubstUpdates,
-                                                   PTrans.MessageName,
-                                                   MType);
-                    } else if (PTrans.Kind == TransitionKind::OUTPUT) {
-                        ExprTypeRef MType;
-                        if (PTrans.MessageType->Is<Exprs::ExprParametricType>()) {
-                            MType = Mgr->InstantiateType(PTrans.MessageType, SubstParams);
-                        } else {
-                            MType = PTrans.MessageType;
-                        }
-                        Retval->AddOutputTransition(PTrans.InitialState,
-                                                    PTrans.FinalState,
-                                                    SubstGuard, SubstUpdates,
-                                                    PTrans.MessageName,
-                                                    MType, PTrans.FairnessSet);
-                    } else {
-                        Retval->AddInternalTransition(PTrans.InitialState,
-                                                      PTrans.FinalState,
-                                                      SubstGuard, SubstUpdates,
-                                                      PTrans.FairnessSet);
-                    }
+                    FrozenEFSMs[i]->AddInputTransition(InitState, FinalState, SubstGuard, 
+                                                       SubstUpdates, MessageName, Type);
                 }
             }
-
-            Retval->CanonicalizeFairness();
-            return Retval;
         }
 
-        vector<FrozenEFSM*> UFEFSM::Instantiate() const
+        void UFEFSM::AddOutputTransition(const string& InitState,
+                                         const string& FinalState,
+                                         const ExpT& Guard,
+                                         const vector<AsgnT>& Updates,
+                                         const string& MessageName,
+                                         const ExprTypeRef& MessageType,
+                                         const vector<ExpT>& MessageParams,
+                                         const unordered_set<u32>& FairnessSet)
         {
-            // Create a type for the states first
-            auto Mgr = TheLTS->GetMgr();
-            set<string> StateNames;
-            for (auto const& StateD : States) {
-                StateNames.insert(StateD.first);
+            if (!StatesFrozen) {
+                throw ESMCError((string)"Cannot add transitions to EFSM until states " + 
+                                "have been frozen");
             }
-            auto StateType = Mgr->MakeType<Exprs::ExprEnumType>(Name + "StateT", StateNames);
+            if (AllFrozen) {
+                throw ESMCError((string)"Cannot add transitions to EFSM after it has been frozen");
+            }
 
-            // Construct the Frozen EFSM
-            vector<FrozenEFSM*> Retval;
-            auto&& SubstMaps = InstantiateParams(Params, Constraint, Mgr);
-            for (auto const& SubstMap : SubstMaps) {
-                Retval.push_back(Instantiate(SubstMap, StateType));
+            auto Mgr = TheLTS->GetMgr();
+            CheckParams(MessageParams, SymTab);
+
+            const u32 NumInsts = ParamInsts.size();
+            for (u32 i = 0; i < NumInsts; ++i) {
+                auto const& SubstMap = ParamSubsts[i];
+                auto&& SubstParams = SubstAll(MessageParams, SubstMap, Mgr);
+                auto MType = InstantiateType(MessageType, SubstParams, Mgr);
+
+                auto SubstGuard = Mgr->Substitute(SubstMap, Guard);
+                const u32 NumUpdates = Updates.size();
+                vector<AsgnT> SubstUpdates(NumUpdates);
+                for (u32 j = 0; j < NumUpdates; ++j) {
+                    SubstUpdates[j] = AsgnT(Mgr->Substitute(SubstMap, Updates[j].GetLHS()),
+                                            Mgr->Substitute(SubstMap, Updates[j].GetRHS()));
+                }
+
+                FrozenEFSMs[i]->AddOutputTransition(InitState, FinalState, SubstGuard, 
+                                                    SubstUpdates, MessageName, MType, 
+                                                    FairnessSet);
             }
-            return Retval;
+        }
+
+        void UFEFSM::AddOutputTransitions(const string& InitState,
+                                          const string& FinalState,
+                                          const vector<ExpT>& TransParams,
+                                          const ExpT& TransConstraint,
+                                          const ExpT& Guard,
+                                          const vector<AsgnT>& Updates,
+                                          const string& MessageName,
+                                          const ExprTypeRef& MessageType,
+                                          const vector<ExpT>& MessageParams,
+                                          const vector<unordered_set<u32>>& FairnessSets)
+        {
+            if (!StatesFrozen) {
+                throw ESMCError((string)"Cannot add transitions to EFSM until states " + 
+                                "have been frozen");
+            }
+            if (AllFrozen) {
+                throw ESMCError((string)"Cannot add transitions to EFSM after it has been frozen");
+            }
+
+            auto Mgr = TheLTS->GetMgr();
+            
+            SymTab.Push();
+            CheckParams(TransParams, TransConstraint, SymTab, Mgr, true);
+            CheckParams(MessageParams, SymTab);
+            SymTab.Pop();
+
+            const u32 NumInsts = ParamInsts.size();
+            const u32 NumTransParams = TransParams.size();
+
+            for (u32 i = 0; i < NumInsts; ++i) {
+                auto const& SubstMap = ParamSubsts[i];
+                auto SubstTransConstraint = Mgr->Substitute(SubstMap, TransConstraint);
+
+                auto&& TransInsts = InstantiateParams(TransParams, SubstTransConstraint, Mgr);
+                const u32 NumTransInsts = TransInsts.size();
+
+                vector<unordered_set<u32>> ActFairnessSets;
+                if (FairnessSets.size() == 0) {
+                    ActFairnessSets = vector<unordered_set<u32>>(NumTransInsts);
+                } else if (FairnessSets.size() == 1) {
+                    ActFairnessSets = vector<unordered_set<u32>>(NumTransInsts, FairnessSets[0]);
+                } else if (FairnessSets.size() == NumTransInsts) {
+                    ActFairnessSets = FairnessSets;
+                } else {
+                    throw ESMCError((string)"Number of fairness sets does not match " + 
+                                    "number of transitions that the parametrized " + 
+                                    "transition expands to");
+                }
+                
+
+                for (u32 j = 0; j < NumTransInsts; ++j) {
+                    auto LocalSubstMap = SubstMap;
+                    auto const& CurTransInst = TransInsts[j];
+
+                    for (u32 k = 0; k < NumTransParams; ++k) {
+                        LocalSubstMap[TransParams[k]] = CurTransInst[k];
+                    }
+
+                    auto&& SubstMsgParams = SubstAll(MessageParams, LocalSubstMap, Mgr);
+                    auto Type = InstantiateType(MessageType, SubstMsgParams, Mgr);
+
+                    auto SubstGuard = Mgr->Substitute(LocalSubstMap, Guard);
+                    const u32 NumUpdates = Updates.size();
+
+                    vector<AsgnT> SubstUpdates(NumUpdates);
+                    for (u32 k = 0; k < NumUpdates; ++k) {
+                        SubstUpdates[k] = AsgnT(Mgr->Substitute(LocalSubstMap, Updates[k].GetLHS()),
+                                                Mgr->Substitute(LocalSubstMap, Updates[k].GetRHS()));
+                    }
+                    
+                    FrozenEFSMs[i]->AddOutputTransition(InitState, FinalState, SubstGuard, 
+                                                        SubstUpdates, MessageName, Type, 
+                                                        ActFairnessSets[i]);
+                }
+            }
+        }
+
+
+        void UFEFSM::AddInternalTransition(const string& InitState,
+                                           const string& FinalState,
+                                           const ExpT& Guard,
+                                           const vector<AsgnT>& Updates,
+                                           const unordered_set<u32>& FairnessSet)
+        {
+            if (!StatesFrozen) {
+                throw ESMCError((string)"Cannot add transitions to EFSM until states " + 
+                                "have been frozen");
+            }
+            if (AllFrozen) {
+                throw ESMCError((string)"Cannot add transitions to EFSM after it has been frozen");
+            }
+
+            auto Mgr = TheLTS->GetMgr();
+            const u32 NumInsts = ParamInsts.size();
+
+            for (u32 i = 0; i < NumInsts; ++i) {
+                auto const& SubstMap = ParamSubsts[i];
+                auto SubstGuard = Mgr->Substitute(SubstMap, Guard);
+                const u32 NumUpdates = Updates.size();
+                vector<AsgnT> SubstUpdates(NumUpdates);
+                
+                for (u32 j = 0; j < NumUpdates; ++j) {
+                    SubstUpdates[j] = AsgnT(Mgr->Substitute(SubstMap, Updates[j].GetLHS()),
+                                            Mgr->Substitute(SubstMap, Updates[j].GetRHS()));
+                }
+                FrozenEFSMs[i]->AddInternalTransition(InitState, FinalState, 
+                                                      SubstGuard, SubstUpdates, 
+                                                      FairnessSet);
+            }
+        }
+
+        void UFEFSM::AddInternalTransitions(const string& InitState,
+                                            const string& FinalState,
+                                            const vector<ExpT>& TransParams,
+                                            const ExpT& TransConstraint,
+                                            const ExpT& Guard,
+                                            const vector<AsgnT>& Updates,
+                                            const vector<unordered_set<u32>>& FairnessSets)
+        {
+            if (!StatesFrozen) {
+                throw ESMCError((string)"Cannot add transitions to EFSM until states " + 
+                                "have been frozen");
+            }
+            if (AllFrozen) {
+                throw ESMCError((string)"Cannot add transitions to EFSM after it has been frozen");
+            }
+
+            auto Mgr = TheLTS->GetMgr();
+
+            SymTab.Push();
+            CheckParams(TransParams, TransConstraint, SymTab, Mgr, true);
+            SymTab.Pop();
+
+            const u32 NumInsts = ParamInsts.size();
+            const u32 NumTransParams = TransParams.size();
+
+            for (u32 i = 0; i < NumInsts; ++i) {
+                auto const& SubstMap = ParamSubsts[i];
+                auto SubstTransConstraint = Mgr->Substitute(SubstMap, TransConstraint);
+                
+                auto const&& TransInsts = InstantiateParams(TransParams, SubstTransConstraint, Mgr);
+                const u32 NumTransInsts = TransInsts.size();
+
+                vector<unordered_set<u32>> ActFairnessSets;
+                if (FairnessSets.size() == 0) {
+                    ActFairnessSets = vector<unordered_set<u32>>(NumTransInsts);
+                } else if (ActFairnessSets.size() == 1) {
+                    ActFairnessSets = vector<unordered_set<u32>>(NumTransInsts, FairnessSets[0]);
+                } else if (ActFairnessSets.size() == NumTransInsts) {
+                    ActFairnessSets = FairnessSets;
+                } else {
+                    throw ESMCError((string)"Number of fairness sets does not match " + 
+                                    "number of transitions that the parametrized " + 
+                                    "transition expands to");
+                }
+                
+                for (u32 j = 0; j < NumTransInsts; ++j) {
+                    auto LocalSubstMap = SubstMap;
+                    auto const& CurTransInst = TransInsts[j];
+
+                    for (u32 k = 0; k < NumTransParams; ++k) {
+                        LocalSubstMap[TransParams[k]] = CurTransInst[k];
+                    }
+
+                    auto SubstGuard = Mgr->Substitute(LocalSubstMap, Guard);
+                    const u32 NumUpdates = Updates.size();
+                    vector<AsgnT> SubstUpdates(NumUpdates);
+                    for (u32 k = 0; k < NumUpdates; ++k) {
+                        SubstUpdates[k] = AsgnT(Mgr->Substitute(LocalSubstMap, Updates[k].GetLHS()),
+                                                Mgr->Substitute(LocalSubstMap, Updates[k].GetRHS()));
+                    }
+                    FrozenEFSMs[i]->AddInternalTransition(InitState, FinalState, 
+                                                          SubstGuard, SubstUpdates, 
+                                                          ActFairnessSets[i]);
+                }
+            }
+        }
+
+        void UFEFSM::FreezeAll()
+        {
+            if (!StatesFrozen) {
+                throw ESMCError((string)"Cannot call FreezeAll() on EFSM before calling " + 
+                                "FreezeStates()");
+            }
+            if (AllFrozen) {
+                return;
+            }
+            for (auto const& FEFSM : FrozenEFSMs) {
+                FEFSM->CanonicalizeFairness();
+            }
+            AllFrozen = true;
+        }
+
+        const vector<FrozenEFSM*>& UFEFSM::GetFrozenEFSMs()
+        {
+            if (!AllFrozen) {
+                throw ESMCError((string)"Cannot GetFrozenEFSMs() on EFSM before calling " + 
+                                "UFEFSM::FreezeAll()");
+            }
+            return FrozenEFSMs;
         }
 
     } /* end namespace LTS */

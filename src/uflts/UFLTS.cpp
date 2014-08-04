@@ -38,8 +38,7 @@
 // Code:
 
 #include "UFLTS.hpp"
-#include "ParamUtils.hpp"
-
+#include "LTSUtils.hpp"
 #include "UFEFSM.hpp"
 #include "ChannelEFSM.hpp"
 #include "FrozenEFSM.hpp"
@@ -54,7 +53,7 @@ namespace ESMC {
         UFLTS::UFLTS()
             : Mgr(new MgrType()), Frozen(false), MsgsFrozen(false)
         {
-            // Nothing here
+            MessageIDType = Mgr->MakeType<Exprs::ExprRangeType>(0, MaxMessageTypes);
         }
 
         UFLTS::~UFLTS()
@@ -75,21 +74,24 @@ namespace ESMC {
                 throw ESMCError((string)"Cannot create messages after a call to " + 
                                 "UFLTS::FreezeMsgs()");
             }
-            // We augment the set of fields with a dedicated
-            // field called MType for message types
-            for (auto const& Field : Fields) {
-                if (Field.first == MTypeFieldName) {
-                    throw ESMCError((string)"The field named \"" + MTypeFieldName + "\" is " + 
-                                    "reserved in message types");                
+            for (auto const& Char : Name) {
+                if (Char == '[' || Char == ']') {
+                    throw ESMCError((string)"Illegal characters in Message Type Name \"" + 
+                                    Name + "\". Names cannot contain '[' or ']' " + 
+                                    "characters.");
                 }
             }
-            if (MTypes.find(Name) != MTypes.end()) {
-                throw ESMCError((string)"Message type named \"" + Name + "\" already declared");
+
+            for (auto const& Field : Fields) {
+                if (Field.first == MTypeFieldName) {
+                    throw ESMCError((string)"The field name \"" + MTypeFieldName + "\" is " + 
+                                    "reserved in messages");
+                }
             }
 
-            auto MTypeRangeType = Mgr->MakeType<Exprs::ExprRangeType>(0, MaxMessageTypes);
-            vector<pair<string, ExprTypeRef>> ActFields = Fields;
-            ActFields.insert(ActFields.begin(), make_pair(MTypeFieldName, MTypeRangeType));
+            auto MTypePair = make_pair(MTypeFieldName, MessageIDType);
+            auto ActFields = Fields;
+            ActFields.insert(ActFields.begin(), MTypePair);
 
             auto Retval = Mgr->MakeType<Exprs::ExprRecordType>(Name, ActFields);
             MTypes[Name] = Retval;
@@ -124,14 +126,7 @@ namespace ESMC {
                                 "UFLTS::FreezeMsgs()");
             }
 
-            for (auto const& Field : Fields) {
-                if (Field.first == MTypeFieldName) {
-                    throw ESMCError((string)"The field named \"" + MTypeFieldName + "\" is " + 
-                                    "reserved in message types");                
-                }
-            }
-
-            if (MTypes.find(Name) != MTypes.end()) {
+            if (PMTypes.find(Name) != PMTypes.end()) {
                 throw ESMCError((string)"Message type named \"" + Name + "\" already declared");
             }
             const u32 NumParams = Params.size();
@@ -141,9 +136,16 @@ namespace ESMC {
                 ParamTypes[i] = Params[i]->GetType();
             }
 
-            auto MTypeRangeType = Mgr->MakeType<Exprs::ExprRangeType>(0, MaxMessageTypes);
+            for (auto const& Field : Fields) {
+                if (Field.first == MTypeFieldName) {
+                    throw ESMCError((string)"The field name \"" + MTypeFieldName + "\" is " + 
+                                    "reserved in messages");
+                }
+            }
+
+            auto MTypePair = make_pair(MTypeFieldName, MessageIDType);
             auto ActFields = Fields;
-            ActFields.insert(ActFields.begin(), make_pair(MTypeFieldName, MTypeRangeType));
+            ActFields.insert(ActFields.begin(), MTypePair);
 
             auto RecType = Mgr->MakeType<Exprs::ExprRecordType>(Name, ActFields);
             auto PType = RecType;
@@ -151,7 +153,7 @@ namespace ESMC {
                 PType = Mgr->MakeType<Exprs::ExprParametricType>(PType, *it);
             }
             
-            MTypes[Name] = PType;
+            PMTypes[Name] = PType;
 
             // Instantiate the parametric type
             auto&& ParamVec = InstantiateParams(Params, Constraint, Mgr);
@@ -173,7 +175,7 @@ namespace ESMC {
                 for (auto it = ParamTypes.rbegin(); it != ParamTypes.rend(); ++it) {
                     PType = Mgr->MakeType<Exprs::ExprParametricType>(PType, *it);
                 }
-                MTypes[Name + "'"] = PType;
+                PMTypes[Name + "'"] = PType;
 
                 // Instantiate the parametric type
                 auto&& ParamVec = InstantiateParams(Params, Constraint, Mgr);
@@ -189,14 +191,19 @@ namespace ESMC {
                     MTypeIDs[TypeName] = TypeUID;
                 }
             }
-            return MTypes[Name];
+            return PMTypes[Name];
         }
 
         const ExprTypeRef& UFLTS::GetMessageType(const string& Name) const
         {
             auto it = MTypes.find(Name);
             if (it == MTypes.end()) {
-                return ExprTypeRef::NullPtr;
+                auto it = PMTypes.find(Name);
+                if (it == PMTypes.end()) {
+                    return ExprTypeRef::NullPtr;
+                } else {
+                    return it->second;
+                }
             } else {
                 return it->second;
             }
@@ -230,8 +237,7 @@ namespace ESMC {
             for (auto const& MType : MTypes) {
                 UnionTypes.insert(MType.second);
             }
-            UnifiedMType = Mgr->MakeType<Exprs::ExprUnionType>(UnifiedMTypeName,  
-                                                               UnionTypes);
+            UnifiedMType = Mgr->MakeType<Exprs::ExprUnionType>(UnifiedMTypeName, UnionTypes);
             MessageSize = UnifiedMType->GetByteSize();
             MsgsFrozen = true;
         }
@@ -279,9 +285,7 @@ namespace ESMC {
                                         const vector<ExpT>& Params, 
                                         const ExpT& Constraint,
                                         u32 Capacity, bool Ordered, bool Lossy,
-                                        bool Duplicating, bool Blocking, 
-                                        bool FiniteLoss, bool FiniteDup, bool Fair,
-                                        bool PerMessageFair)
+                                        bool Duplicating, bool Blocking)
         {
             if (!MsgsFrozen) {
                 throw ESMCError((string)"UFLTS::MakeEFSM() can only be called after " + 
@@ -300,8 +304,7 @@ namespace ESMC {
             }
             auto Channel = new ChannelEFSM(this, Name, Params, Constraint, 
                                            Capacity, Ordered, Lossy,
-                                           Duplicating, Blocking, FiniteLoss,
-                                           FiniteDup, Fair, PerMessageFair);
+                                           Duplicating, Blocking);
             Channels.push_back(Channel);
             return Channel;
         }

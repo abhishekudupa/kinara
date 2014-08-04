@@ -625,8 +625,14 @@ namespace ESMC {
             : ExprTypeBase(), IndexType(IndexType), ValueType(ValueType)
         {
             if (IndexType->As<ExprFuncType>() != nullptr ||
-                ValueType->As<ExprFuncType>() != nullptr) {
-                throw ESMCError((string)"Array indices and values cannot be functions");
+                ValueType->As<ExprFuncType>() != nullptr || 
+                IndexType->As<ExprScalarType>() != nullptr ||
+                ValueType->As<ExprParametricType>() != nullptr || 
+                ValueType->As<ExprFieldAccessType>() != nullptr || 
+                ValueType->As<ExprUFAType>() != nullptr) {
+                throw ESMCError((string)"Array indices and values cannot be functions, " + 
+                                "further, indices must be scalar and values cannot be " + 
+                                "field access tyeps or parametric types");
             }
         }
 
@@ -699,8 +705,12 @@ namespace ESMC {
             : ExprTypeBase(), Name(Name), MemberVec(Members)
         {
             for (auto const& NTPair : Members) {
-                if (NTPair.second->As<ExprFuncType>() != nullptr) {
-                    throw ESMCError("Record members cannot be functions types");
+                if (NTPair.second->As<ExprFuncType>() != nullptr ||
+                    NTPair.second->As<ExprFieldAccessType>() != nullptr || 
+                    NTPair.second->As<ExprUFAType>() != nullptr || 
+                    NTPair.second->As<ExprParametricType>() != nullptr) {
+                    throw ESMCError((string)"Record members cannot be functions types or " + 
+                                    "field access types, or parametric types");
                 }
             }
             for (auto const& Member : Members) {
