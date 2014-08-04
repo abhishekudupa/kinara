@@ -56,14 +56,14 @@ namespace ESMC {
         enum class TransitionKind { INTERNAL, INPUT, OUTPUT };
         
         template <typename E, template <typename> class S, 
-                  typename STATETYPE>
+                  typename ExpType, typename STATETYPE>
         class Transition
         {
         private:
 
             typedef Exprs::Expr<E, S> ExpT;
             typedef Analyses::Assignment<E, S> AsgnT;
-            typedef Exprs::ExprTypeRef ExprTypeRef;
+
 
             mutable unordered_set<u32> FairnessSet;
             TransitionKind Kind;
@@ -74,7 +74,7 @@ namespace ESMC {
             vector<AsgnT> Updates;
             
             string MessageName;
-            ExprTypeRef MessageType;
+            ExpType MessageType;
 
         public:
             Transition()
@@ -161,7 +161,7 @@ namespace ESMC {
                 return MessageName;
             }
 
-            inline const ExprTypeRef& GetMessageType() const
+            inline const ExpType& GetMessageType() const
             {
                 return MessageType;
             }
@@ -185,7 +185,7 @@ namespace ESMC {
                                                   const ExpT& Guard,
                                                   const vector<AsgnT>& Updates,
                                                   const string& MessageName,
-                                                  const ExprTypeRef& MessageType)
+                                                  const ExpType& MessageType)
             {
                 Transition Retval;
                 Retval.Kind = TransitionKind::INPUT;
@@ -203,7 +203,7 @@ namespace ESMC {
                                                    const ExpT& Guard,
                                                    const vector<AsgnT>& Updates,
                                                    const string& MessageName,
-                                                   const ExprTypeRef& MessageType,
+                                                   const ExpType& MessageType,
                                                    const unordered_set<u32>& FairnessSet)
             {
                 Transition Retval;
@@ -235,6 +235,70 @@ namespace ESMC {
             }
         };
 
+        template <typename E, template <typename> class S>
+        class GuardedCommand
+        {
+        private:
+            typedef Exprs::Expr<E, S> ExpT;
+            typedef Analyses::Assignment<E, S> AsgnT;
+            typedef Exprs::ExprTypeRef ExprTypeRef;
+
+            ExpT Guard;
+            ExprTypeRef MessageType;
+            string MessageName;
+            vector<AsgnT> LeaderUpdates;
+            vector<AsgnT> OtherUpdates;
+            unordered_set<u32> FairnessSets;
+
+        public:
+            GuardedCommand(const ExpT& Guard,
+                           const ExprTypeRef& MessageType,
+                           const string& MessageName,
+                           const vector<AsgnT>& LeaderUpdates,
+                           const vector<AsgnT>& OtherUpdates,
+                           const unordered_set<u32>& FairnessSets)
+                : Guard(Guard), MessageType(MessageType),
+                  MessageName(MessageName), LeaderUpdates(LeaderUpdates),
+                  OtherUpdates(OtherUpdates), FairnessSets(FairnessSets)
+            {
+                // Nothing here
+            }
+
+            ~GuardedCommand()
+            {
+                // Nothing here
+            }
+
+            inline const ExpT& GetGuard() const
+            {
+                return Guard;
+            }
+
+            inline const vector<AsgnT>& GetLeaderUpdates() const
+            {
+                return LeaderUpdates;
+            }
+
+            inline const vector<AsgnT>& GetOtherUpdates() const
+            {
+                return OtherUpdates;
+            }
+
+            inline const unordered_set<u32>& GetFairnessSets() const
+            {
+                return FairnessSets;
+            }
+
+            inline const string& GetMessageName() const
+            {
+                return MessageName;
+            }
+
+            inline const string& GetMessageType() const
+            {
+                return MessageType;
+            }
+        };
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

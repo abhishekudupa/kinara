@@ -46,6 +46,34 @@
 namespace ESMC {
     namespace LTS {
 
+        namespace Detail
+        {
+            class MsgTransformer : public VisitorBaseT
+            {
+            private:
+                vector<ExpT> ExpStack;
+                MgrType* Mgr;
+                string MsgVarName;
+                ExprTypeRef MsgRecType;
+
+            public:
+                MsgTransformer(MgrType* Mgr, const string& MsgVarName,
+                               const ExprTypeRef& MsgRecType);
+                virtual ~MsgTransformer();
+
+                virtual void VisitVarExpression(const VarExpT* Exp) override;
+                virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
+                virtual void VisitConstExpression(const ConstExpT* Exp) override;
+                virtual void VisitOpExpression(const OpExpT* Exp) override;
+                virtual inline void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+                virtual inline void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+                
+                static ExpT Do(const ExpT& Exp, 
+                               MgrType* Mgr, const string& MsgVarName,
+                               const ExprTypeRef& MsgRecType);
+            };
+        } /* end namespace Detail */
+
         class FrozenEFSM
         {
             friend class UFLTS;
@@ -123,8 +151,13 @@ namespace ESMC {
             UFLTS* GetLTS() const;
             UFEFSM* GetEFSM() const;
             ChannelEFSM* GetChannel() const;
+            // Rebase all internal variables to be field access on 
+            // the given record expression
+            void Rebase(const ExpT& RecordExp, const ExprTypeRef& MsgRecType);
             
             const map<string, Detail::StateDescriptor>& GetStates() const;
+            vector<TransitionT> GetTransitionsOnMsg(const ExprTypeRef& MsgType) const;
+            vector<TransitionT> GetInteralTransitions() const;
         };
         
 

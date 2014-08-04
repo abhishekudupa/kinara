@@ -592,8 +592,7 @@ namespace ESMC {
                                                  const vector<TypeT>& Range,
                                                  const TypeT& Domain);
 
-            template <template <typename, template <typename> class> class T, 
-                      typename... ArgTypes>
+            template <class T, typename... ArgTypes>
             inline ExpT ApplyTransform(const ExpT& Exp, ArgTypes&&... Args);
 
             inline SemT* GetSemanticizer() const;
@@ -2074,13 +2073,13 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        template <template <typename, template <typename> class> class T, typename... ArgTypes>
+        template <class T, typename... ArgTypes>
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::ApplyTransform(const ExpT& Exp, 
                                       ArgTypes&&... Args)
         {
             CheckMgr(Exp);
-            return Internalize(Sem->Canonicalize(T<E, S>::Do(Exp, forward<ArgTypes>(Args)...)));
+            return Internalize(Sem->Canonicalize(T::Do(Exp, forward<ArgTypes>(Args)...)));
         }
 
         template <typename E, template <typename> class S>
@@ -2140,7 +2139,7 @@ namespace ESMC {
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::Substitute(const SubstMapT& Subst, const ExpT& Exp)
         {
-            return ApplyTransform<Substitutor>(Exp, Subst);
+            return ApplyTransform<Substitutor<E, S>>(Exp, Subst);
         }
         
 

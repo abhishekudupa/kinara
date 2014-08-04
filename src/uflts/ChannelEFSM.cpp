@@ -53,7 +53,7 @@ namespace ESMC {
                                  bool Duplicating, bool Blocking)
             : TheLTS(TheLTS), Name(Name), Capacity(Capacity),
               Ordered(Ordered), Lossy(Lossy), Duplicating(Duplicating),
-              Blocking(Blocking)
+              Blocking(Blocking), Frozen(false)
         {
             auto Mgr = TheLTS->GetMgr();
             // Sanity checks on params
@@ -305,6 +305,10 @@ namespace ESMC {
                                      const vector<ExpT>& MParams,
                                      MessageFairnessType Fairness)
         {
+            if (Frozen) {
+                throw ESMCError((string)"Cannot add messages to a frozen channel");
+            }
+
             auto Mgr = TheLTS->GetMgr();
             
             CheckParams(MParams, SymTab);
@@ -328,6 +332,9 @@ namespace ESMC {
                                       const ExpT& Constraint,
                                       MessageFairnessType Fairness)
         {
+            if (Frozen) {
+                throw ESMCError((string)"Cannot add messages to a frozen channel");
+            }
             auto Mgr = TheLTS->GetMgr();
             
             SymTab.Push();
@@ -366,6 +373,12 @@ namespace ESMC {
         {
             return FrozenEFSMs;
         }
+
+        void ChannelEFSM::FreezeAll()
+        {
+            Frozen = true;
+        }
+       
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

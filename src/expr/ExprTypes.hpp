@@ -475,6 +475,8 @@ namespace ESMC {
             bool IsMember(const ExprTypeRef& Type) const;
             const ExprTypeRef& GetTypeForMemberField(const ExprTypeRef& MemberType,
                                                      const string& MemberField) const;
+            const vector<pair<string, ExprTypeRef>>& GetActFields() const;
+            const map<ExprTypeRef, map<string, string>>& GetMemberFieldToActFieldMap() const;
 
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
@@ -548,6 +550,26 @@ namespace ESMC {
                 return Type1->LT(*Type2);
             }
         };
+
+        // A helper routine to check if types are assignment compatible
+        static inline bool CheckAsgnCompat(const ExprTypeRef& LHS,
+                                           const ExprTypeRef& RHS)
+        {
+            if (LHS->Equals(*RHS)) {
+                return true;
+            }
+
+            if (LHS->Is<ExprIntType>() &&
+                RHS->Is<ExprRangeType>()) {
+                return true;
+            }
+            
+            if (RHS->Is<ExprIntType>() &&
+                LHS->Is<ExprRangeType>()) {
+                return true;
+            }
+            return false;
+        }
 
     } /* end namespace Exprs */
 } /* end namespace ESMC */

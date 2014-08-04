@@ -1,8 +1,8 @@
-// State.hpp --- 
+// CompiledLTS.hpp --- 
 // 
-// Filename: State.hpp
+// Filename: CompiledLTS.hpp
 // Author: Abhishek Udupa
-// Created: Mon Jul 28 08:34:10 2014 (-0400)
+// Created: Mon Aug  4 14:29:59 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,82 +37,34 @@
 
 // Code:
 
-#if !defined ESMC_STATE_HPP_
-#define ESMC_STATE_HPP_
+#if !defined ESMC_COMPILED_LTS_HPP_
+#define ESMC_COMPILED_LTS_HPP_
 
 #include "../common/FwdDecls.hpp"
+
+#include "LTSUtils.hpp"
 
 namespace ESMC {
     namespace LTS {
 
-        class State 
+        class CompiledLTS
         {
         private:
-            u08* StateBuffer;
-            u64 Size;
-            u64 HashCode;
+            map<string, ExprTypeRef> Variables;
+            set<ExpT> ChannelArraysToSort;
+            vector<GCmdT> Commands;
 
         public:
-            State(u64 Size);
-            ~State();
+            CompiledLTS();
+            ~CompiledLTS();
 
-            u16 ReadShort(u32 Offset) const;
-            void WriteShort(u32 Offset, u16 Value);
-            
-            u32 ReadWord(u32 Offset) const;
-            void WriteWord(u32 Offset, u32 Value);
-
-            u08& operator [] (u32 Offset);
-            const u08& operator [] (u32 Offset) const;
-
-            void Freeze();
-            u64 Hash() const;
-        };
-
-        class StateFactory
-        {
-        private:
-            const StateInterpretation* Interpretation;
-            const u32 StateSize;
-
-        public:
-            StateFactory(const StateInterpretation* Interpretation, u32 StateSize);
-            State* Make() const;
-        };
-
-        class InterpretationBase
-        {
-        protected:
-            u32 ObjectSize;
-            u32 ObjectOffset;
-            ExprTypeRef ObjectType;
-
-        public:
-            InterpretationBase(u32 ObjectSize, u32 ObjectOffset);
-            virtual ~InterpretationBase();
-
-            u32 GetObjectSize() const;
-            u32 GetObjectOffset() const;
-            const ExprTypeRef& GetObjectType() const;
-            virtual string ObjectToString(const State* StatePtr) const = 0;
-            virtual u32 ObjectToInt(const State* StatePtr) const = 0;
-        };
-
-        class ScalarInterpretation
-        {
-        public:
-            
-        };
-
-        class StateInterpretation
-        {
             
         };
 
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-#endif /* ESMC_STATE_HPP_ */
+#endif /* ESMC_COMPILED_LTS_HPP_ */
 
 // 
-// State.hpp ends here
+// CompiledLTS.hpp ends here

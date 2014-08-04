@@ -66,6 +66,7 @@ namespace ESMC {
             MgrType* Mgr;
             bool Frozen;
             bool MsgsFrozen;
+            bool EFSMsFrozen;
             UIDGenerator MTypeUIDGen;
             map<string, ExprTypeRef> MTypes;
             map<string, ExprTypeRef> PMTypes;
@@ -76,6 +77,11 @@ namespace ESMC {
             vector<UFEFSM*> EFSMs;
             vector<ChannelEFSM*> Channels;
             ExprTypeRef MessageIDType;
+
+            vector<FrozenEFSM*> FrozenEFSMs;
+            vector<FrozenEFSM*> FrozenChannels;
+            CompiledLTS* TheCompiledLTS;
+            map<string, ExprTypeRef> SymmetricTypes;
 
         public:
             UFLTS();
@@ -88,6 +94,10 @@ namespace ESMC {
             {
                 return Mgr->MakeType<T>(forward<ArgTypes>(Args)...);
             }
+
+            // All symmetric types must be registered here
+            const ExprTypeRef& MakeSymmetricType(const string& Name,
+                                                 u32 NumElements);
 
             // Non parametric MESSAGE type
             const ExprTypeRef& MakeMessageType(const string& Name, 
@@ -119,6 +129,8 @@ namespace ESMC {
                                      const ExpT& Constraint,
                                      u32 Capacity, bool Ordered, bool Lossy,
                                      bool Duplicating, bool Blocking);
+
+            void FreezeEFSMs();
 
             void Freeze();
         };

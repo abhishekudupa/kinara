@@ -74,6 +74,8 @@ namespace ESMC {
             bool Duplicating;
             bool Blocking;
 
+            bool Frozen;
+
             ExprTypeRef ValType;
             ExprTypeRef CountType;
             ExprTypeRef IndexType;
@@ -120,6 +122,7 @@ namespace ESMC {
                              const MessageFairnessType = MessageFairnessType::NONE);
             
             const vector<FrozenEFSM*>& GetFrozenEFSMs();
+            void FreezeAll();
         };
 
     } /* end namespace LTS */

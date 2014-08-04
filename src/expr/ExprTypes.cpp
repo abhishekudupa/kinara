@@ -1096,6 +1096,18 @@ namespace ESMC {
             }
         }
 
+        const vector<pair<string, ExprTypeRef>>& ExprUnionType::GetActFields() const
+        {
+            return FieldVec;
+        }
+
+        const map<ExprTypeRef, map<string, string> >& 
+        ExprUnionType::GetMemberFieldToActFieldMap() const
+        {
+            return MemberFieldToFieldMap;
+        }
+
+
         string ExprUnionType::ToString() const
         {
             string Retval = "(UnionType : (";

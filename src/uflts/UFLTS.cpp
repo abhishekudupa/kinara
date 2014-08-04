@@ -37,11 +37,14 @@
 
 // Code:
 
+#include <algorithm>
+
 #include "UFLTS.hpp"
 #include "LTSUtils.hpp"
 #include "UFEFSM.hpp"
 #include "ChannelEFSM.hpp"
 #include "FrozenEFSM.hpp"
+#include "CompiledLTS.hpp"
 
 namespace ESMC {
     namespace LTS {
@@ -51,7 +54,8 @@ namespace ESMC {
         const string UnifiedMTypeName = (string)"__unified_mtype__";
 
         UFLTS::UFLTS()
-            : Mgr(new MgrType()), Frozen(false), MsgsFrozen(false)
+            : Mgr(new MgrType()), Frozen(false), MsgsFrozen(false),
+              EFSMsFrozen(false)
         {
             MessageIDType = Mgr->MakeType<Exprs::ExprRangeType>(0, MaxMessageTypes);
         }
@@ -64,6 +68,17 @@ namespace ESMC {
         MgrType* UFLTS::GetMgr() const
         {
             return Mgr;
+        }
+
+        const ExprTypeRef& UFLTS::MakeSymmetricType(const string& Name,
+                                                    u32 NumElements)
+        {
+            auto it = SymmetricTypes.find(Name);
+            if (it != SymmetricTypes.end()) {
+                throw ESMCError((string)"Type named \"" + Name + "\" has already been created");
+            }
+            SymmetricTypes[Name] = Mgr->MakeType<Exprs::ExprSymmetricType>(Name, NumElements);
+            return SymmetricTypes[Name];
         }
 
         const ExprTypeRef& UFLTS::MakeMessageType(const string& Name,
@@ -283,6 +298,12 @@ namespace ESMC {
                 throw ESMCError((string)"UFLTS::MakeEFSM() can only be called after " + 
                                 "freezing the message declarations");
             }
+
+            if (EFSMsFrozen) {
+                throw ESMCError((string)"UFLTS::MakeEFSM() cannot be called after " + 
+                                "freezing the EFSMs");
+            }
+
             for (auto const& EFSM : EFSMs) {
                 if (EFSM->GetName() == Name) {
                     throw ESMCError((string)"EFSM with name \"" + Name + "\" already created");
@@ -307,9 +328,15 @@ namespace ESMC {
                                         bool Duplicating, bool Blocking)
         {
             if (!MsgsFrozen) {
-                throw ESMCError((string)"UFLTS::MakeEFSM() can only be called after " + 
+                throw ESMCError((string)"UFLTS::MakeChannel() can only be called after " + 
                                 "freezing the message declarations");
             }
+            
+            if (EFSMsFrozen) {
+                throw ESMCError((string)"UFLTS::MakeChannel() cannot be called after " + 
+                                "freezing the EFSMs");
+            }
+
             for (auto const& EFSM : EFSMs) {
                 if (EFSM->GetName() == Name) {
                     throw ESMCError((string)"EFSM with name \"" + Name + "\" already created");
@@ -326,6 +353,135 @@ namespace ESMC {
                                            Duplicating, Blocking);
             Channels.push_back(Channel);
             return Channel;
+        }
+
+        template <typename T>
+        static inline bool IsInterEmpty(const set<T>& Set1, const set<T>& Set2)
+        {
+            auto MaxSize = Set1.size() > Set2.size() ? Set1.size() : Set2.size();
+
+            vector<T> InterSet(MaxSize);
+            set_intersection(Set1.begin(), Set1.end(), Set2.begin(), Set2.end(), InterSet.begin());
+            return (InterSet.size() == 0);
+        }
+
+        void UFLTS::FreezeEFSMs()
+        {
+            if (!MsgsFrozen) {
+                throw ESMCError((string)"Cannot freeze EFSMs before freezing messages");
+            }
+            
+            if (EFSMsFrozen) {
+                return;
+            }
+
+            EFSMsFrozen = true;
+            for (auto EFSM : EFSMs) {
+                EFSM->FreezeAll();
+                auto const& CurEFSMs = EFSM->GetFrozenEFSMs();
+                FrozenEFSMs.insert(FrozenEFSMs.end(), CurEFSMs.begin(), CurEFSMs.end());
+            }
+            for (auto Channel : Channels) {
+                Channel->FreezeAll();
+                auto const& CurChans = Channel->GetFrozenEFSMs();
+                FrozenChannels.insert(FrozenChannels.end(), CurChans.begin(),
+                                      CurChans.end());
+            }
+
+            
+            // Check for closedness
+            set<ExprTypeRef> Inputs;
+            set<ExprTypeRef> Outputs;
+
+            map<ExprTypeRef, FrozenEFSM*> Producers;
+            map<ExprTypeRef, vector<FrozenEFSM*>> Consumers;
+
+            for (auto EFSM : FrozenEFSMs) {
+                auto const& CurInputs = EFSM->GetInputs();
+                auto const& CurOutputs = EFSM->GetOutputs();
+                if (!IsInterEmpty(CurInputs, CurOutputs)) {
+                    throw ESMCError((string)"Inputs and outputs of EFSM \"" + 
+                                    EFSM->GetBaseName() + "\" are not disjoint");
+                }
+                
+                // The outputs cannot have any intersection with
+                // the outputs already seen
+                if (!IsInterEmpty(CurOutputs, Outputs)) {
+                    throw ESMCError((string)"Outputs of EFSMs are not disjoint");
+                }
+
+                Outputs.insert(CurOutputs.begin(), CurOutputs.end());
+                Inputs.insert(CurInputs.begin(), CurInputs.end());
+
+                for (auto const& Output : Outputs) {
+                    Producers[Output] = EFSM;
+                }
+                for (auto const& Input : Inputs) {
+                    auto it = Consumers.find(Input);
+                    if (it == Consumers.end()) {
+                        Consumers[Input] = vector<FrozenEFSM*>();
+                    }
+                    Consumers[Input].push_back(EFSM);
+                }
+            }
+
+
+            for (auto EFSM : FrozenChannels) {
+                auto const& CurInputs = EFSM->GetInputs();
+                auto const& CurOutputs = EFSM->GetOutputs();
+                if (!IsInterEmpty(CurInputs, CurOutputs)) {
+                    throw ESMCError((string)"Inputs and outputs of Channel \"" + 
+                                    EFSM->GetBaseName() + "\" are not disjoint");
+                }
+                
+                // The outputs cannot have any intersection with
+                // the outputs already seen
+                if (!IsInterEmpty(CurOutputs, Outputs)) {
+                    throw ESMCError((string)"Outputs of EFSMs are not disjoint");
+                }
+
+                Outputs.insert(CurOutputs.begin(), CurOutputs.end());
+                Inputs.insert(CurInputs.begin(), CurInputs.end());
+
+                for (auto const& Output : Outputs) {
+                    Producers[Output] = EFSM;
+                }
+                for (auto const& Input : Inputs) {
+                    auto it = Consumers.find(Input);
+                    if (it == Consumers.end()) {
+                        Consumers[Input] = vector<FrozenEFSM*>();
+                    }
+                    Consumers[Input].push_back(EFSM);
+                }
+            }
+
+            if (!includes(Inputs.begin(), Inputs.end(),
+                          Outputs.begin(), Outputs.end()) ||
+                !includes(Outputs.begin(), Outputs.end(),
+                          Inputs.begin(), Inputs.begin())) {
+                throw ESMCError((string)"EFSMs are not closed");
+            }
+
+            // 
+
+            // Compute the product
+            for (auto const& MsgType : Inputs) {
+                vector<vector<TransitionT>> TransVec;
+                TransVec.push_back(Producers[MsgType]->GetTransitionsOnMsg(MsgType));
+
+                for (auto const& Listener : Consumers[MsgType]) {
+                    TransVec.push_back(Listener->GetTransitionsOnMsg(MsgType));
+                }
+
+                // Compute the cross product
+                auto&& TransCP = CrossProduct<TransitionT>(TransVec.begin(),
+                                                           TransVec.end());
+
+                // TODO: 
+                // Make a guarded command for each element of the 
+                // cross product
+            }
+
         }
 
     } /* end namespace LTS */

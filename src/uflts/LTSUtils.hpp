@@ -63,7 +63,17 @@ namespace ESMC {
         typedef Exprs::Expr<UFLTSExtensionT, LTSTermSemanticizer> ExpT;
         typedef Exprs::ExprMgr<UFLTSExtensionT, LTSTermSemanticizer> MgrType;
         typedef Analyses::Assignment<UFLTSExtensionT, LTSTermSemanticizer> AsgnT;
-        typedef Transition<UFLTSExtensionT, LTSTermSemanticizer, string> TransitionT;
+        typedef Transition<UFLTSExtensionT, LTSTermSemanticizer, ExprTypeRef, string> TransitionT;
+        typedef Exprs::ExpressionVisitorBase<UFLTSExtensionT, LTSTermSemanticizer> VisitorBaseT;
+        typedef GuardedCommand<UFLTSExtensionT, LTSTermSemanticizer> GCmdT;
+
+        typedef Exprs::VarExpression<UFLTSExtensionT, LTSTermSemanticizer> VarExpT;
+        typedef Exprs::ConstExpression<UFLTSExtensionT, LTSTermSemanticizer> ConstExpT;
+        typedef Exprs::BoundVarExpression<UFLTSExtensionT, LTSTermSemanticizer> BoundVarExpT;
+        typedef Exprs::OpExpression<UFLTSExtensionT, LTSTermSemanticizer> OpExpT;
+        typedef Exprs::QuantifiedExpressionBase<UFLTSExtensionT, LTSTermSemanticizer> QExpBaseT;
+        typedef Exprs::EQuantifiedExpression<UFLTSExtensionT, LTSTermSemanticizer> EQExpT;
+        typedef Exprs::AQuantifiedExpression<UFLTSExtensionT, LTSTermSemanticizer> AQExpT;
 
         namespace Detail {
 
@@ -193,6 +203,13 @@ namespace ESMC {
                                             "assignment in an output transition");
                         }
                     }
+                }
+                
+                // Finally check type compat
+                if (!CheckAsgnCompat(Asgn.GetLHS()->GetType(),
+                                     Asgn.GetRHS()->GetType())) {
+                    throw ESMCError((string)"Incompatible types in assignment:\n" + 
+                                    Asgn.ToString());
                 }
             }
         }

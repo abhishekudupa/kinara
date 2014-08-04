@@ -43,6 +43,103 @@
 namespace ESMC {
     namespace LTS {
 
+        namespace Detail {
+
+            MsgTransformer::MsgTransformer(MgrType* Mgr, const string& MsgVarName,
+                                           const ExprTypeRef& MsgRecType)
+                : VisitorBaseT("MessageTransformer"), Mgr(Mgr),
+                  MsgVarName(MsgVarName), MsgRecType(MsgRecType)
+            {
+                // Nothing here
+            }
+
+            MsgTransformer::~MsgTransformer()
+            {
+                // Nothing here
+            }
+
+            void MsgTransformer::VisitVarExpression(const VarExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void MsgTransformer::VisitBoundVarExpression(const BoundVarExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void MsgTransformer::VisitConstExpression(const ConstExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void MsgTransformer::VisitOpExpression(const OpExpT* Exp)
+            {
+                VisitorBaseT::VisitOpExpression(Exp);
+                auto OpCode = Exp->GetOpCode();
+                auto const& Children = Exp->GetChildren();
+                const u32 NumChildren = Children.size();
+                vector<ExpT> SubstChildren(NumChildren);
+                
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    SubstChildren[NumChildren - i - 1] = ExpStack.back();
+                    ExpStack.pop_back();
+                }
+                
+                if (OpCode == LTSOps::OpField) {
+                    auto Child1AsVar = SubstChildren[0]->As<Exprs::VarExpression>();
+                    if (Child1AsVar != nullptr &&
+                        Child1AsVar->GetVarName() == MsgVarName &&
+                        Child1AsVar->GetVarType()->Is<Exprs::ExprUnionType>()) {
+
+                        auto UnionType = Child1AsVar->GetVarType()->As<Exprs::ExprUnionType>();
+                        auto const& Map = UnionType->GetMemberFieldToActFieldMap();
+                        
+                        auto Child2AsVar = SubstChildren[1]->As<Exprs::VarExpression>();
+                        auto const& FieldName = Child2AsVar->GetVarName();
+                        auto const& UFAType = Child2AsVar->GetVarType();
+                        auto const& RecType = 
+                            UFAType->As<Exprs::ExprUFAType>()->GetUnionMemberType();
+                        auto it = Map.find(RecType);
+                        assert(it != Map.end());
+                        auto it2 = it->second.find(FieldName);
+                        assert(it2 != it->second.end());
+                        auto NewFieldName = it2->second;
+                        auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
+                        ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpField,
+                                                         Mgr->MakeVar(MsgVarName, MsgRecType),
+                                                         Mgr->MakeVar(NewFieldName, FAType)));
+                    }
+                }
+            }
+
+            void MsgTransformer::VisitEQuantifiedExpression(const EQExpT* Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto SubstExp = ExpStack.back();
+                ExpStack.pop_back();
+                ExpStack.push_back(Mgr->MakeExists(Exp->GetQVarTypes(), SubstExp));
+            }
+
+            void MsgTransformer::VisitAQuantifiedExpression(const AQExpT* Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto SubstExp = ExpStack.back();
+                ExpStack.pop_back();
+                ExpStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(), SubstExp));
+            }
+
+            ExpT MsgTransformer::Do(const ExpT& Exp, MgrType* Mgr, 
+                                    const string& MsgVarName,
+                                    const ExprTypeRef& MsgRecType)
+            {
+                MsgTransformer TheTransformer(Mgr, MsgVarName, MsgRecType);
+                Exp->Accept(&TheTransformer);
+                return TheTransformer.ExpStack[0];
+            }
+
+        } /* end namespace Detail */
+
         // Frozen EFSM implementation
         FrozenEFSM::FrozenEFSM(const string& BaseName, UFLTS* TheLTS,
                                const vector<ExpT>& InstParams,
@@ -196,6 +293,16 @@ namespace ESMC {
             NewUpdates.push_back(AsgnT(Mgr->MakeVar("state", StateType),
                                        Mgr->MakeVal(FinalState, StateType)));
 
+            auto const& MsgTypeName = MessageType->As<Exprs::ExprRecordType>()->GetName();
+            // Also add the update to the outgoing message field type
+            AsgnT MTypeAsgn(Mgr->MakeExpr(LTSOps::OpField,
+                                          Mgr->MakeVar(MessageName, MessageType),
+                                          Mgr->MakeVar(MTypeFieldName, 
+                                                       Mgr->MakeType<Exprs::ExprFieldAccessType>())),
+                            Mgr->MakeVal(to_string(TheLTS->GetTypeIDForMessageType(MsgTypeName)),
+                                         TheLTS->GetMessageIDType()));
+            NewUpdates.push_back(MTypeAsgn);
+
             auto Transition = TransitionT::MakeOutputTransition(InitState,
                                                                 FinalState,
                                                                 NewGuard,
@@ -324,9 +431,121 @@ namespace ESMC {
             return TheChannel;
         }
 
+        
+        // Rebase all local variables to refer to a 
+        // field in the record expression
+        // Rebase all message expressions to be of the unified
+        // message type
+        void FrozenEFSM::Rebase(const ExpT& RecordExp, const ExprTypeRef& MsgRecType)
+        {
+            auto VarMap = SymTab.Bot()->GetDeclMap();
+            auto Mgr = TheLTS->GetMgr();
+            MgrType::SubstMapT SubstMap;
+            auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
+            for (auto const& NameDecl : VarMap) {
+                if (NameDecl.second->Is<VarDecl>()) {
+                    SubstMap[Mgr->MakeVar(NameDecl.first, NameDecl.second->GetType())] =
+                        Mgr->MakeExpr(LTSOps::OpField, RecordExp, 
+                                      Mgr->MakeVar(NameDecl.first, FAType));
+                }
+            }
+
+            // Apply the substitution to everything
+            // i.e, the Transitions
+            vector<TransitionT> NewTransitions;
+            for (auto const& Trans : TransitionVec) {
+
+                auto const& Guard = Trans.GetGuard();
+                ExpT MTransGuard;
+                if (Trans.GetKind() != TransitionKind::INTERNAL) {
+                    const string& MsgName = Trans.GetMessageName();
+                    MTransGuard = Mgr->ApplyTransform<Detail::MsgTransformer>(Guard, Mgr,
+                                                                              MsgName,
+                                                                              MsgRecType);
+                } else {
+                    MTransGuard = Guard;
+                }
+                
+                vector<AsgnT> NewUpdates;
+
+                for (auto const& Update : Trans.GetUpdates()) {
+                    auto const& LHS = Update.GetLHS();
+                    auto const& RHS = Update.GetRHS();
+                    ExpT MTransLHS, MTransRHS;
+                    if (Trans.GetKind() != TransitionKind::INTERNAL) {
+                        auto const& MsgName = Trans.GetMessageName();
+                        MTransLHS = Mgr->ApplyTransform<Detail::MsgTransformer>(LHS, Mgr, 
+                                                                                MsgName,
+                                                                                MsgRecType);
+                        MTransRHS = Mgr->ApplyTransform<Detail::MsgTransformer>(RHS, Mgr, 
+                                                                                MsgName,
+                                                                                MsgRecType);
+                    } else {
+                        MTransLHS = LHS;
+                        MTransRHS = RHS;
+                    }
+
+                    NewUpdates.push_back(AsgnT(Mgr->Substitute(SubstMap, MTransLHS),
+                                               Mgr->Substitute(SubstMap, MTransRHS)));
+                }
+                
+                TransitionT NewTrans;
+                auto SubstGuard = Mgr->Substitute(SubstMap, MTransGuard);
+                if (Trans.GetKind() == TransitionKind::INPUT) {
+                    NewTrans = TransitionT::MakeInputTransition(Trans.GetInitState(),
+                                                                Trans.GetFinalState(),
+                                                                SubstGuard,
+                                                                NewUpdates, Trans.GetMessageName(),
+                                                                Trans.GetMessageType());
+                } else if (Trans.GetKind() == TransitionKind::OUTPUT) {
+                    NewTrans = TransitionT::MakeOutputTransition(Trans.GetInitState(),
+                                                                 Trans.GetFinalState(),
+                                                                 SubstGuard,
+                                                                 NewUpdates,
+                                                                 Trans.GetMessageName(),
+                                                                 Trans.GetMessageType(),
+                                                                 Trans.GetFairnessSet());
+                } else {
+                    NewTrans = TransitionT::MakeInternalTransition(Trans.GetInitState(),
+                                                                   Trans.GetFinalState(),
+                                                                   SubstGuard,
+                                                                   NewUpdates,
+                                                                   Trans.GetFairnessSet());
+                }
+
+                NewTransitions.push_back(NewTrans);
+            }
+
+            TransitionVec = NewTransitions;
+        }
+
         const map<string, Detail::StateDescriptor>& FrozenEFSM::GetStates() const
         {
             return States;
+        }
+
+        vector<TransitionT> FrozenEFSM::GetTransitionsOnMsg(const ExprTypeRef& MsgType) const
+        {
+            vector<TransitionT> Retval;
+            for (auto const& Trans : TransitionVec) {
+                if ((Trans.GetKind() == TransitionKind::INPUT ||
+                     Trans.GetKind() == TransitionKind::OUTPUT) &&
+                    Trans.GetMessageType() == MsgType) {
+                    Retval.push_back(Trans);
+                }
+            }
+            return Retval;
+        }
+
+        vector<TransitionT> FrozenEFSM::GetInteralTransitions() const
+        {
+            vector<TransitionT> Retval;
+            for (auto const& Trans : TransitionVec) {
+                if (Trans.GetKind() == TransitionKind::INTERNAL) {
+                    Retval.push_back(Trans);
+                }
+            }
+            return Retval;
         }
 
     } /* end namespace LTS */

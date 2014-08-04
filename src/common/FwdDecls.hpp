@@ -99,6 +99,9 @@ namespace ESMC {
 
         class UFLTS;
         class UFEFSM;
+        class ChannelEFSM;
+        class FrozenEFSM;
+        class CompiledLTS;
         template <typename E> class LTSTermSemantizer;
 
         class State;
