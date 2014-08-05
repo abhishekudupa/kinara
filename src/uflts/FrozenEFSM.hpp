@@ -160,7 +160,7 @@ namespace ESMC {
             ChannelEFSM* GetChannel() const;
             // Rebase all internal variables to be field access on 
             // the given record expression
-            void Rebase(const ExpT& RecordExp, const ExprTypeRef& MsgRecType);
+            void Rebase(const ExpT& RecordExp);
             
             const map<string, Detail::StateDescriptor>& GetStates() const;
             vector<TransitionT> GetTransitionsOnMsg(const ExprTypeRef& MsgType) const;

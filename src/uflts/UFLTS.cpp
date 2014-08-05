@@ -348,6 +348,8 @@ namespace ESMC {
             map<ExprTypeRef, vector<FrozenEFSM*>> Consumers;
 
             for (auto EFSM : FrozenEFSMs) {
+                EFSM->CanonicalizeFairness();
+
                 auto const& CurInputs = EFSM->GetInputs();
                 auto const& CurOutputs = EFSM->GetOutputs();
                 if (!IsInterEmpty(CurInputs, CurOutputs)) {
@@ -378,6 +380,8 @@ namespace ESMC {
 
 
             for (auto EFSM : FrozenChannels) {
+                EFSM->CanonicalizeFairness();
+
                 auto const& CurInputs = EFSM->GetInputs();
                 auto const& CurOutputs = EFSM->GetOutputs();
                 if (!IsInterEmpty(CurInputs, CurOutputs)) {
@@ -413,7 +417,82 @@ namespace ESMC {
                 throw ESMCError((string)"EFSMs are not closed");
             }
 
-            // 
+            // We now create the variables 
+            // An array of records for each EFSM
+            map<string, ExprTypeRef> EFSMVars;
+            vector<ExpT> ChanArrayExps;
+            for (auto const& Machine : EFSMs) {
+                auto Vars = Machine->SymTab.Bot()->GetDeclMap();
+                vector<pair<string, ExprTypeRef>> RecMembers;
+                for (auto const Var : Vars) {
+                    if (Var.second->Is<VarDecl>()) {
+                        RecMembers.push_back(make_pair(Var.first, Var.second->GetType()));
+                    }
+                }
+                auto RecType = Mgr->MakeType<Exprs::ExprRecordType>(Machine->Name,
+                                                                    RecMembers);
+                auto const& Params = Machine->Params;
+                vector<ExprTypeRef> ParamTypes;
+                for (auto const& Param : Params) {
+                    ParamTypes.push_back(Param->GetType());
+                }
+                auto VarType = RecType;
+                for (auto const& ParamType : ParamTypes) {
+                    VarType = Mgr->MakeType<Exprs::ExprArrayType>(ParamType, VarType);
+                }
+                EFSMVars[Machine->Name] = VarType;
+
+                // Rebase all the FrozenEFSMs
+                const u32 NumInsts = Machine->ParamInsts.size();
+
+                for (u32 i = 0; i < NumInsts; ++i) {
+                    auto const& CurInst = Machine->ParamInsts[i];
+                    auto RecExp = Mgr->MakeVar(Machine->Name, VarType);
+                    for (auto const& InstVal : CurInst) {
+                        RecExp = Mgr->MakeExpr(LTSOps::OpIndex, RecExp, InstVal);
+                    }
+                    Machine->FrozenEFSMs[i]->Rebase(RecExp);
+                }
+            }
+
+            // Do the same for channels
+            for (auto const& Chan : Channels) {
+                vector<pair<string, ExprTypeRef>> RecMembers;
+                RecMembers.push_back(make_pair("MsgBuffer", Chan->ArrayType));
+                RecMembers.push_back(make_pair("MsgCount", Chan->CountType));
+                if (Chan->Lossy) {
+                    RecMembers.push_back(make_pair("LastMsg", Chan->ValType));
+                }
+                
+                auto RecType = Mgr->MakeType<Exprs::ExprRecordType>(Chan->Name,
+                                                                    RecMembers);
+                auto const& Params = Chan->Params;
+                vector<ExprTypeRef> ParamTypes;
+                for (auto const& Param : Params) {
+                    ParamTypes.push_back(Param->GetType());
+                }
+                auto VarType = RecType;
+                for (auto const& ParamType : ParamTypes) {
+                    VarType = Mgr->MakeType<Exprs::ExprArrayType>(ParamType, VarType);
+                }
+                EFSMVars[Chan->Name] = VarType;
+
+                // Rebase all the FrozenEFSMs
+                const u32 NumInsts = Chan->ParamInsts.size();
+
+                for (u32 i = 0; i < NumInsts; ++i) {
+                    auto const& CurInst = Chan->ParamInsts[i];
+                    auto RecExp = Mgr->MakeVar(Chan->Name, VarType);
+                    for (auto const& InstVal : CurInst) {
+                        RecExp = Mgr->MakeExpr(LTSOps::OpIndex, RecExp, InstVal);
+                    }
+                    auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
+                    ChanArrayExps.push_back(Mgr->MakeExpr(LTSOps::OpField, RecExp,
+                                                          Mgr->MakeVar("MsgBuffer", FAType)));
+
+                    Chan->FrozenEFSMs[i]->Rebase(RecExp);
+                }
+            }
 
             // Compute the product
             for (auto const& MsgType : Inputs) {

@@ -18,6 +18,7 @@ endif
 
 PROJECT_MODULES= \
 	expr \
+	hash \
 	common \
 	containers \
 	uflts \
@@ -47,6 +48,7 @@ libesmc_OBJS= \
 	ExprTypes.o \
 	FrozenEFSM.o \
 	LTSTermSemanticizer.o \
+	SpookyHash.o \
 	SymbolTable.o \
 	UFEFSM.o \
 	UFLTS.o \

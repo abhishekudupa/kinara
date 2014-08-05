@@ -460,11 +460,57 @@ namespace ESMC {
         
         // Rebase all local variables to refer to a 
         // field in the record expression
-        // Rebase all message expressions to be of the unified
-        // message type
-        void FrozenEFSM::Rebase(const ExpT& RecordExp, const ExprTypeRef& MsgRecType)
+        void FrozenEFSM::Rebase(const ExpT& RecordExp)
         {
+            auto Mgr = TheLTS->GetMgr();
+            auto const& Vars = SymTab.Bot()->GetDeclMap();
+            MgrType::SubstMapT SubstMap;
+            auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
             
+            for (auto const& Var : Vars) {
+                if (Var.second->Is<VarDecl>()) {
+                    SubstMap[Mgr->MakeVar(Var.first, Var.second->GetType())] = 
+                        Mgr->MakeExpr(LTSOps::OpField, RecordExp,
+                                      Mgr->MakeVar(Var.first, FAType));
+                }
+            }
+
+            vector<TransitionT> NewTransitions;
+            // Use the subst map to subst out transitions
+            for (auto const& Trans : TransitionVec) {
+                auto SubstGuard = Mgr->Substitute(SubstMap, Trans.GetGuard());
+                auto const& Updates = Trans.GetUpdates();
+                vector<AsgnT> NewUpdates;
+
+                for (auto const& Update : Updates) {
+                    NewUpdates.push_back(AsgnT(Mgr->Substitute(SubstMap, Update.GetLHS()),
+                                               Mgr->Substitute(SubstMap, Update.GetRHS())));
+                }
+
+                if (Trans.GetKind() == TransitionKind::INPUT) {
+                    NewTransitions.push_back(TransitionT::MakeInputTransition(Trans.GetInitState(), 
+                                                                              Trans.GetFinalState(), 
+                                                                              SubstGuard, 
+                                                                              NewUpdates, 
+                                                                              Trans.GetMessageName(), 
+                                                                              Trans.GetMessageType()));
+                } else if (Trans.GetKind() == TransitionKind::OUTPUT) {
+                    NewTransitions.push_back(TransitionT::MakeOutputTransition(Trans.GetInitState(), 
+                                                                               Trans.GetFinalState(), 
+                                                                               SubstGuard, 
+                                                                               NewUpdates, 
+                                                                               Trans.GetMessageName(), 
+                                                                               Trans.GetMessageType(), 
+                                                                               Trans.GetFairnessSet()));
+                } else {
+                    NewTransitions.push_back(TransitionT::MakeInternalTransition(Trans.GetInitState(), 
+                                                                                 Trans.GetFinalState(), 
+                                                                                 SubstGuard, NewUpdates, 
+                                                                                 Trans.GetFairnessSet()));
+                }
+            }
+
+            TransitionVec = NewTransitions;
         }
 
         const map<string, Detail::StateDescriptor>& FrozenEFSM::GetStates() const

@@ -57,6 +57,8 @@ namespace ESMC {
         // transitions as messages are added
         class ChannelEFSM
         {
+            friend class UFLTS;
+
         private:
             UFLTS* TheLTS;
             string Name;
