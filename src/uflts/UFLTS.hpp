@@ -67,16 +67,13 @@ namespace ESMC {
             bool Frozen;
             bool MsgsFrozen;
             bool EFSMsFrozen;
-            UIDGenerator MTypeUIDGen;
             map<string, ExprTypeRef> MTypes;
             map<string, ExprTypeRef> PMTypes;
             map<ExprTypeRef, ExprTypeRef> TypeToPrimed;
-            map<string, u32> MTypeIDs;
             ExprTypeRef UnifiedMType;
             u32 MessageSize;
             vector<UFEFSM*> EFSMs;
             vector<ChannelEFSM*> Channels;
-            ExprTypeRef MessageIDType;
 
             vector<FrozenEFSM*> FrozenEFSMs;
             vector<FrozenEFSM*> FrozenChannels;
@@ -114,10 +111,7 @@ namespace ESMC {
             void FreezeMessages();
             const ExprTypeRef& GetMessageType(const string& Name) const;
             const ExprTypeRef& GetPrimedType(const ExprTypeRef& Type) const;
-            i32 GetTypeIDForMessageType(const string& Name) const;
             bool CheckMessageType(const ExprTypeRef& MType);
-            u32 GetMessageSize() const;
-            const ExprTypeRef& GetMessageIDType() const;
             const ExprTypeRef& GetUnifiedMType() const;
 
             UFEFSM* MakeEFSM(const string& Name, 

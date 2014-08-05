@@ -628,8 +628,7 @@ namespace ESMC {
                 ValueType->As<ExprFuncType>() != nullptr || 
                 IndexType->As<ExprScalarType>() != nullptr ||
                 ValueType->As<ExprParametricType>() != nullptr || 
-                ValueType->As<ExprFieldAccessType>() != nullptr || 
-                ValueType->As<ExprUFAType>() != nullptr) {
+                ValueType->As<ExprFieldAccessType>() != nullptr) {
                 throw ESMCError((string)"Array indices and values cannot be functions, " + 
                                 "further, indices must be scalar and values cannot be " + 
                                 "field access tyeps or parametric types");
@@ -707,7 +706,6 @@ namespace ESMC {
             for (auto const& NTPair : Members) {
                 if (NTPair.second->As<ExprFuncType>() != nullptr ||
                     NTPair.second->As<ExprFieldAccessType>() != nullptr || 
-                    NTPair.second->As<ExprUFAType>() != nullptr || 
                     NTPair.second->As<ExprParametricType>() != nullptr) {
                     throw ESMCError((string)"Record members cannot be functions types or " + 
                                     "field access types, or parametric types");
@@ -721,6 +719,12 @@ namespace ESMC {
                 }
                 MemberMap[Member.first] = Member.second;
             }
+        }
+
+        ExprRecordType::ExprRecordType()
+            : ExprTypeBase()
+        {
+            // Nothing here
         }
 
         ExprRecordType::~ExprRecordType()
@@ -978,152 +982,213 @@ namespace ESMC {
                                 "have been called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
         }
 
-        ExprUnionType::ExprUnionType(const string& Name,
-                                     const set<ExprTypeRef>& MemberTypes)
-            : ExprTypeBase(), Name(Name), MemberTypes(MemberTypes)
+        ExprMessageType::ExprMessageType(const string& Name,
+                                         const set<ExprTypeRef>& MemberTypes,
+                                         const ExprTypeRef& TypeIDFieldType)
+            : ExprRecordType(), MemberTypes(MemberTypes),
+              TypeIDFieldType(TypeIDFieldType)
         {
-            for (auto const& Type : MemberTypes) {
-                if (!Type->Is<ExprRecordType>()) {
-                    throw ESMCError((string)"Only record types can be members of " +
-                                    "union types. The type " + Type->ToString() + 
-                                    " is not a record type, while creating union " + 
-                                    "type with name \"" + Name + "\"");
-                }
+            this->Name = Name;
+            // Sanity checks
+            if (!TypeIDFieldType->Is<ExprRangeType>()) {
+                throw ESMCError((string)"ExprMessageType must be instantiated with a " + 
+                                "subrange type for TypeIDFieldType");
             }
 
-            // We make the union record type now
-            // Count the number of instances of each type in each record type
-            map<ExprTypeRef, u32> TypeOccurences;
-            vector<ExprTypeRef> MemberTypeVec;
-            map<pair<ExprTypeRef, u32>, string> TypeOccToFieldMap;
-
-            for (auto const& Type : MemberTypes) {
-                map<ExprTypeRef, u32> CurrentTypeOccurences;
-                auto TypeAsRec = Type->template SAs<ExprRecordType>();
-                auto const& Members = TypeAsRec->GetMemberVec();
-                for (auto const& Member : Members) {
-                    if (CurrentTypeOccurences.find(Member.second) == 
-                        CurrentTypeOccurences.end()) {
-                        MemberTypeVec.push_back(Member.second);
-                        CurrentTypeOccurences[Member.second] = 1;
-                    } else {
-                        CurrentTypeOccurences[Member.second]++;
-                    }
-                }
-                
-                for (auto const& Occ : CurrentTypeOccurences) {
-                    if (TypeOccurences.find(Occ.first) == TypeOccurences.end()) {
-                        TypeOccurences[Occ.first] = Occ.second;
-                    } else {
-                        auto CurMaxOccur = TypeOccurences[Occ.first];
-                        if (Occ.second > CurMaxOccur) {
-                            TypeOccurences[Occ.first] = Occ.second;
-                        }
-                    }
-                }
+            auto TypeIDTypeAsRange = TypeIDFieldType->As<ExprRangeType>();
+            auto Low = TypeIDTypeAsRange->GetLow();
+            if (Low != 0) {
+                throw ESMCError((string)"Subrange type for ExprMessageType must have low at 0");
             }
-
-            u32 FieldID = 0;
-            // Make the field types
-            for (auto const& Type : MemberTypeVec) {
-                const u32 NumOccurences = TypeOccurences[Type];
-                for (u32 i = 1; i <= NumOccurences; ++i) {
-                    string FieldName = "Field_" + to_string(FieldID++);
-                    FieldVec.push_back(make_pair(FieldName, Type));
-                    FieldMap[FieldName] = Type;
-                    TypeOccToFieldMap[make_pair(Type, i)] = FieldName;
-                }
-            }
-
-            // Map the field names of the members to the field
-            // names of the union
             
-            for (auto const& Type : MemberTypes) {
-                map<ExprTypeRef, u32> OccMap;
-                MemberFieldToFieldMap[Type] = map<string, string>();
-
-                auto TypeAsRec = Type->template SAs<ExprRecordType>();
-                auto const& TypeMembers = TypeAsRec->GetMemberVec();
-
-                for (auto const& Member : TypeMembers) {
-                    if (OccMap.find(Member.second) == OccMap.end()) {
-                        OccMap[Member.second] = 1;
-                    } else {
-                        OccMap[Member.second]++;
+            const u32 MaxNumTypes = TypeIDTypeAsRange->GetHigh();
+            if (MaxNumTypes < MemberTypes.size()) {
+                throw ESMCError((string)"Subrange type not sufficient to accommodate all " + 
+                                "member types");
+            }
+            
+            u32 NumTypesSeen = 0;
+            // Find the maximum number of occurences of each type
+            // in each member type
+            map<ExprTypeRef, u32> MaxOccCount;
+            
+            for (auto const& MemberType : MemberTypes) {
+                auto MemberTypeAsRec = MemberType->As<ExprRecordType>();
+                if (MemberTypeAsRec == nullptr) {
+                    throw ESMCError((string)"Only record types can be members of Message types");
+                }
+                map<ExprTypeRef, u32> CurOccCount;
+                auto const& MemberVec = MemberTypeAsRec->GetMemberVec();
+                
+                for (auto const& Member : MemberVec) {
+                    if (Member.first == TypeIDFieldName) {
+                        throw ESMCError((string)"One of the record types in args to MessageType " + 
+                                        "contains a reserved field \"" + TypeIDFieldName + "\"");
                     }
-                    auto TypeOccKey = make_pair(Member.second, OccMap[Member.second]);
-                    MemberFieldToFieldMap[Type][Member.first] = 
-                        TypeOccToFieldMap[TypeOccKey];
+                    
+                    if (CurOccCount.find(Member.second) == CurOccCount.end()) {
+                        CurOccCount[Member.second] = 0;
+                    }
+
+                    CurOccCount[Member.second]++;
+                }
+
+                for (auto const TypeCount : CurOccCount) {
+                    if (MaxOccCount.find(TypeCount.first) == MaxOccCount.end()) {
+                        MaxOccCount[TypeCount.first] = 0;
+                    }
+                    if (MaxOccCount[TypeCount.first] < TypeCount.second) {
+                        MaxOccCount[TypeCount.first] = TypeCount.second;
+                    }
+                }
+
+                // Instantiate the TypeID fields as well
+                auto CurID = NumTypesSeen++;
+                MemberTypeToID[MemberType] = CurID;
+                IDToMemberType[CurID] = MemberType;
+            }
+
+            this->MemberVec.push_back(make_pair(TypeIDFieldName, TypeIDFieldType));
+            this->MemberMap[TypeIDFieldName] = TypeIDFieldType;
+
+            // We now have a list of fields we need in the message type
+            u32 FieldID = 0;
+            map<pair<ExprTypeRef, u32>, string> TypeCountToField;
+            for (auto const TypeCount : MaxOccCount) {
+                for (u32 i = 0; i < TypeCount.second; ++i) {
+                    string MemberName = ((string)"Field_" + to_string(FieldID++));
+                    this->MemberVec.push_back(make_pair(MemberName, TypeCount.first));
+                    this->MemberMap[MemberName] = TypeCount.first;
+                    TypeCountToField[make_pair(TypeCount.first, i)] = MemberName;
+                }
+            }
+
+            // Construct the mapping from record fields to my fields and vice-versa
+            for (auto const& MemberType : MemberTypes) {
+                auto MemID = MemberTypeToID[MemberType];
+                map<ExprTypeRef, u32> OccCounts;
+                auto const& MemVec = MemberType->SAs<ExprRecordType>()->GetMemberVec();
+                for (auto const& Mem : MemVec) {
+                    if (OccCounts.find(Mem.second) == OccCounts.end()) {
+                        OccCounts[Mem.second] = 0;
+                    }
+                    auto TypeCount = make_pair(Mem.second, OccCounts[Mem.second]++);
+                    MemberFieldToField[MemID][Mem.first] = TypeCountToField[TypeCount];
+                    FieldToMemberField[MemID][TypeCountToField[TypeCount]] = Mem.first;
                 }
             }
         }
 
-        ExprUnionType::~ExprUnionType()
+        ExprMessageType::~ExprMessageType()
         {
             // Nothing here
         }
 
-        const string& ExprUnionType::GetName() const
-        {
-            return Name;
-        }
-
-        const set<ExprTypeRef>& ExprUnionType::GetMemberTypes() const
+        const set<ExprTypeRef>& ExprMessageType::GetMemberTypes() const
         {
             return MemberTypes;
         }
 
-        bool ExprUnionType::IsMember(const ExprTypeRef& Type) const
+        const map<ExprTypeRef, u32>& ExprMessageType::GetMemberTypeToID() const
         {
-            return (MemberTypes.find(Type) != MemberTypes.end());
+            return MemberTypeToID;
         }
 
-        const ExprTypeRef& ExprUnionType::GetTypeForMemberField(const ExprTypeRef& MemberType, 
-                                                                const string& MemberField) const
+        const map<u32, ExprTypeRef>& ExprMessageType::GetIDToMemberType() const
         {
-            if (MemberTypes.find(MemberType) == MemberTypes.end()) {
-                return ExprTypeRef::NullPtr;
+            return IDToMemberType;
+        }
+
+        const map<u32, map<string, string>>& ExprMessageType::GetMemberFieldToField() const
+        {
+            return MemberFieldToField;
+        }
+
+        const map<u32, map<string, string>>& ExprMessageType::GetFieldToMemberField() const
+        {
+            return FieldToMemberField;
+        }
+
+        const string& ExprMessageType::GetTypeIDFieldName() const
+        {
+            return TypeIDFieldName;
+        }
+
+        const ExprTypeRef& ExprMessageType::GetTypeIDFieldType() const
+        {
+            return TypeIDFieldType;
+        }
+
+        const u32 ExprMessageType::GetTypeIDForMemberType(const ExprTypeRef& MemType) const
+        {
+            auto it = MemberTypeToID.find(MemType);
+            if (it == MemberTypeToID.end()) {
+                throw ESMCError((string)"Type \"" + MemType->ToString() + " \" does not " + 
+                                "seem to be a member of message type");
             }
-            
-            auto it1 = MemberFieldToFieldMap.find(MemberType);
-            auto const& Field2FieldMap = it1->second;
-            auto it = Field2FieldMap.find(MemberField);
-            if (it == Field2FieldMap.end()) {
-                return ExprTypeRef::NullPtr;
-            } else {
-                auto it2 = FieldMap.find(it->second);
-                return it2->second;
+            return it->second;
+        }
+
+        const ExprTypeRef& ExprMessageType::GetMemberTypeForTypeID(u32 TypeID) const
+        {
+            auto it = IDToMemberType.find(TypeID);
+            if (it == IDToMemberType.end()) {
+                throw ESMCError((string)"TypeID " + to_string(TypeID) + " not a valid type id for " + 
+                                "message type");
+            }
+            return it->second;
+        }
+
+        const string& ExprMessageType::MapFromMemberField(const ExprTypeRef& MemberType,
+                                                          const string& FieldName) const
+        {
+            auto it = MemberTypeToID.find(MemberType);
+            if (it == MemberTypeToID.end()) {
+                throw ESMCError((string)"Type \"" + MemberType->ToString() + " \" does not " + 
+                                "seem to be a member of message type");                
+            }
+            auto TypeID = it->second;
+
+            auto const& FieldMap = MemberFieldToField.find(TypeID)->second;
+            auto it2 = FieldMap.find(FieldName);
+            if (it2 == FieldMap.end()) {
+                throw ESMCError((string)"Field \"" + FieldName + "\" invalid for member type");
+            }
+            return it2->second;
+        }
+
+        const string& ExprMessageType::MapToMemberField(u32 TypeID,
+                                                        const string& FieldName) const
+        {
+            auto it = FieldToMemberField.find(TypeID);
+            if (it == FieldToMemberField.end()) {
+                throw ESMCError((string)"TypeID " + to_string(TypeID) + " not a valid type id for " + 
+                                "message type");
+            }
+            auto const& Map = it->second;
+            auto it2 = Map.find(FieldName);
+            if (it2 == Map.end()) {
+                throw ESMCError((string)"Field Name \"" + FieldName + "\" does not " + 
+                                "seem to be a member of message type");
+            }
+            return it2->second;
+        }
+
+        void ExprMessageType::ComputeHashValue() const
+        {
+            HashCode = 0;
+            boost::hash_combine(HashCode, Name);
+            for (auto const& Member : MemberTypes) {
+                boost::hash_combine(HashCode, Member->Hash());
             }
         }
 
-        const vector<pair<string, ExprTypeRef>>& ExprUnionType::GetActFields() const
+        string ExprMessageType::ToString() const
         {
-            return FieldVec;
+            return Name;
         }
 
-        const map<ExprTypeRef, map<string, string> >& 
-        ExprUnionType::GetMemberFieldToActFieldMap() const
-        {
-            return MemberFieldToFieldMap;
-        }
-
-
-        string ExprUnionType::ToString() const
-        {
-            string Retval = "(UnionType : (";
-            bool First = true;
-            for (auto const& Type : MemberTypes) {
-                if (!First) {
-                    Retval += " ";
-                }
-                First = false;
-                Retval += Type->SAs<ExprRecordType>()->GetName();
-            }
-            Retval += "))";
-            return Retval;
-        }
-
-        i32 ExprUnionType::Compare(const ExprTypeBase& Other) const
+        i32 ExprMessageType::Compare(const ExprTypeBase& Other) const
         {
             if (Other.As<ExprBoolType>() != nullptr ||
                 Other.As<ExprIntType>() != nullptr ||
@@ -1132,119 +1197,27 @@ namespace ESMC {
                 Other.As<ExprSymmetricType>() != nullptr ||
                 Other.As<ExprFuncType> () != nullptr || 
                 Other.As<ExprArrayType>() != nullptr ||
-                Other.As<ExprRecordType>() != nullptr ||
                 Other.As<ExprParametricType>() != nullptr || 
                 Other.As<ExprFieldAccessType>() != nullptr) {
                 return 1;
             }
-
-            if (Other.As<ExprUnionType>() == nullptr) {
-                return -1;
-            } else {
-                auto OtherAsUnion = Other.SAs<ExprUnionType>();
-                if (OtherAsUnion->Name < Name) {
-                    return 1;
-                } else if (OtherAsUnion->Name > Name) {
-                    return -1;
-                } else {
-                    return 0;
-                }
-            }
-        }
-
-        vector<string> ExprUnionType::GetElements() const
-        {
-            throw InternalError((string)"ExprUnionType::GetElements() should never " + 
-                                "have been called.\nAt: " + __FILE__ + ":" + 
-                                to_string(__LINE__));
-        }
-
-        u32 ExprUnionType::GetByteSize() const
-        {
-            u32 Retval = 0;
-            for (auto const& Field : FieldVec) {
-                Retval += Field.second->GetByteSize();
-            }
-            return Retval;
-        }
-
-        void ExprUnionType::ComputeHashValue() const
-        {
-            HashCode = 0;
-            for (auto const& Type : MemberTypes) {
-                boost::hash_combine(HashCode, Type->Hash());
-            }
-        }
-
-        ExprUFAType::ExprUFAType(const ExprTypeRef& UnionMemberType)
-            : ExprTypeBase(), UnionMemberType(UnionMemberType)
-        {
-            if (!UnionMemberType->Is<ExprRecordType>()) {
-                throw ESMCError((string)"Union Field Access Types must be " + 
-                                "constructed with a record type as member");
-            }
-        }
-
-        ExprUFAType::~ExprUFAType()
-        {
-            // Nothing here
-        }
-
-        const ExprTypeRef& ExprUFAType::GetUnionMemberType() const
-        {
-            return UnionMemberType;
-        }
-
-        string ExprUFAType::ToString() const
-        {
-            return ((string)"(UnionFAType : " + 
-                    UnionMemberType->SAs<ExprRecordType>()->ToString() + ")");
-        }
-
-        i32 ExprUFAType::Compare(const ExprTypeBase& Other) const
-        {
-            if (Other.As<ExprBoolType>() != nullptr ||
-                Other.As<ExprIntType>() != nullptr ||
-                Other.As<ExprRangeType>() != nullptr ||
-                Other.As<ExprEnumType> () != nullptr ||
-                Other.As<ExprSymmetricType>() != nullptr ||
-                Other.As<ExprFuncType> () != nullptr || 
-                Other.As<ExprArrayType>() != nullptr ||
-                Other.As<ExprRecordType>() != nullptr ||
-                Other.As<ExprParametricType>() != nullptr || 
-                Other.As<ExprFieldAccessType>() != nullptr || 
-                Other.As<ExprUnionType>() != nullptr) {
+            if (Other.As<ExprRecordType>() != nullptr && 
+                Other.As<ExprMessageType>() == nullptr) {
                 return 1;
             }
-
-            if (Other.As<ExprUFAType>() == nullptr) {
+            auto OtherAsMsg = Other.As<ExprMessageType>();
+            if (OtherAsMsg == nullptr) {
                 return -1;
+            }
+
+            if (Name < OtherAsMsg->Name) {
+                return -1;
+            } else if (Name > OtherAsMsg->Name) {
+                return 1;
             } else {
-                auto OtherAsUFA = Other.SAs<ExprUFAType>();
-                return UnionMemberType->Compare(*(OtherAsUFA->UnionMemberType));
+                return 0;
             }
         }
-
-        vector<string> ExprUFAType::GetElements() const
-        {
-            throw InternalError((string)"ExprUFAType::GetElements() should never " + 
-                                "have been called.\nAt: " + __FILE__ + ":" + 
-                                to_string(__LINE__));
-        }
-
-        u32 ExprUFAType::GetByteSize() const
-        {
-            throw InternalError((string)"ExprUFAType::GetByteSize() should never " + 
-                                "have been called.\nAt: " + __FILE__ + ":" + 
-                                to_string(__LINE__));
-        }
-
-        void ExprUFAType::ComputeHashValue() const
-        {
-            HashCode = 0;
-            boost::hash_combine(HashCode, "UFAType");
-            boost::hash_combine(HashCode, UnionMemberType->Hash());
-        }        
         
     } /* end namespace Exprs */
 } /* end namespace ESMC */

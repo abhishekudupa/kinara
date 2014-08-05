@@ -148,28 +148,18 @@ namespace ESMC {
                 TargetExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, CountExp);
             }
 
+
+            auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
+            auto UnifiedMType = TheLTS->GetUnifiedMType();
             auto Guard = Mgr->MakeExpr(LTSOps::OpLT, CountExp, MaxChanExp);
             vector<AsgnT> Updates;
             string InMsgName = "__inmsg__";
-            auto InMsgVar = Mgr->MakeVar(InMsgName, MType);
-
-            auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
-            auto UFAType = Mgr->MakeType<Exprs::ExprUFAType>(MType);
-
-            auto TypeAsRec = MType->As<Exprs::ExprRecordType>();
-            for (auto const& Member : TypeAsRec->GetMemberVec()) {
-                auto LHSFieldVar = Mgr->MakeVar(Member.first, UFAType);
-                auto RHSFieldVar = Mgr->MakeVar(Member.first, FAType);
-                
-                auto LHSExp = Mgr->MakeExpr(LTSOps::OpField, TargetExp, LHSFieldVar);
-                auto RHSExp = Mgr->MakeExpr(LTSOps::OpField, InMsgVar, RHSFieldVar);
-                Updates.push_back(AsgnT(LHSExp, RHSExp));
-            }
-
+            auto InMsgVar = Mgr->MakeVar(InMsgName, UnifiedMType);
+            auto IndexExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, CountExp);
+            Updates.push_back(AsgnT(IndexExp, InMsgVar));
             auto NoCountUpdates = Updates;
             Updates.push_back(AsgnT(CountExp, Mgr->MakeExpr(LTSOps::OpADD, CountExp,
                                                             OneExp)));
-
             auto TrueExp = Mgr->MakeTrue();
 
             if (!Lossy) {
@@ -219,37 +209,43 @@ namespace ESMC {
             auto Mgr = TheLTS->GetMgr();
             u32 FairnessID = FairnessUIDGen.GetUID();
 
+            auto UMType = TheLTS->GetUnifiedMType();
+            auto UMTypeAsMsg = UMType->As<Exprs::ExprMessageType>();
+            auto TypeIDFieldType = UMTypeAsMsg->GetTypeIDFieldType();
+            auto const& TypeIDFieldName = UMTypeAsMsg->GetTypeIDFieldName();
+            auto MTypeID = UMTypeAsMsg->GetTypeIDForMemberType(MType);
+            auto PrimedMType = TheLTS->GetPrimedType(MType);
+            auto PrimedMTypeID = UMTypeAsMsg->GetTypeIDForMemberType(PrimedMType);
+
             for (u32 j = 0; j < Capacity; ++j) {
                 auto ChooseExp = Mgr->MakeVal(to_string(j), IndexType);
-                auto TypeAsRec = MType->As<Exprs::ExprRecordType>();
                 auto IndexExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, ChooseExp);
                 auto CountPosExp = Mgr->MakeExpr(LTSOps::OpGT, CountExp, ZeroExp);
-                auto MTypeID = TheLTS->GetTypeIDForMessageType(TypeAsRec->GetName());
                 auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
-                auto UFAType = Mgr->MakeType<Exprs::ExprUFAType>(MType);
                 
-                auto MTypeFieldVar = Mgr->MakeVar(MTypeFieldName, UFAType);
-                auto MessageIDType = TheLTS->GetMessageIDType();
+                auto TypeIDFieldVar = Mgr->MakeVar(TypeIDFieldName, FAType);
                 
                 auto MTypeMatchExp = Mgr->MakeExpr(LTSOps::OpEQ,
                                                    Mgr->MakeExpr(LTSOps::OpField, IndexExp,
-                                                                 MTypeFieldVar),
-                                                   Mgr->MakeVal(to_string(MTypeID), MessageIDType));
+                                                                 TypeIDFieldVar),
+                                                   Mgr->MakeVal(to_string(MTypeID), TypeIDFieldType));
+
                 auto ChooseLTExp = Mgr->MakeExpr(LTSOps::OpLT, ChooseExp, CountExp);
 
                 auto Guard = Mgr->MakeExpr(LTSOps::OpAND, CountPosExp, ChooseLTExp, MTypeMatchExp);
                 vector<AsgnT> MsgUpdates;
                 vector<AsgnT> StateUpdates;
                 string MsgName = "__outmsg__";
-                auto MsgExp = Mgr->MakeVar(MsgName, MType);
+                auto MsgExp = Mgr->MakeVar(MsgName, UMType);
 
-                for (auto const& Member : TypeAsRec->GetMemberVec()) {
-                    auto LHSExp = Mgr->MakeExpr(LTSOps::OpField, IndexExp,
-                                                Mgr->MakeVar(Member.first, UFAType));
-                    auto RHSExp = Mgr->MakeExpr(LTSOps::OpField, MsgExp,
-                                                Mgr->MakeVar(Member.first, FAType));
-                    MsgUpdates.push_back(AsgnT(LHSExp, RHSExp));
-                }
+                auto LHS = MsgExp;
+                auto RHS = IndexExp;
+                
+                MsgUpdates.push_back(AsgnT(LHS, RHS));
+                MsgUpdates.push_back(AsgnT(Mgr->MakeExpr(LTSOps::OpField,
+                                                         MsgExp, TypeIDFieldVar),
+                                           Mgr->MakeVal(to_string(PrimedMTypeID),
+                                                        TypeIDFieldType)));
                 
                 for (u32 i = 0; i < Capacity - 1; ++i) {
                     auto Cond = Mgr->MakeExpr(LTSOps::OpGE,
@@ -319,7 +315,7 @@ namespace ESMC {
                 auto Type = InstantiateType(MType, SubstParams, Mgr);
 
                 FrozenEFSMs[i]->AddInputMsg(Type);
-                FrozenEFSMs[i]->AddOutputMsg(TheLTS->GetPrimedType(Type));
+                FrozenEFSMs[i]->AddOutputMsg(Type);
                 MakeInputTransition(Type, FrozenEFSMs[i], Fairness);
                 MakeOutputTransition(Type, FrozenEFSMs[i], Fairness);
             }

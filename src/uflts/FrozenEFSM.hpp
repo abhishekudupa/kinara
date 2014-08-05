@@ -48,6 +48,10 @@ namespace ESMC {
 
         namespace Detail
         {
+            // Transforms all references to a particular
+            // message type in an expression into a 
+            // unified message type reference, renaming 
+            // all field accesses appropriately
             class MsgTransformer : public VisitorBaseT
             {
             private:
@@ -55,10 +59,12 @@ namespace ESMC {
                 MgrType* Mgr;
                 string MsgVarName;
                 ExprTypeRef MsgRecType;
+                ExprTypeRef UnifiedMType;
 
             public:
                 MsgTransformer(MgrType* Mgr, const string& MsgVarName,
-                               const ExprTypeRef& MsgRecType);
+                               const ExprTypeRef& MsgRecType, 
+                               const ExprTypeRef& UnifiedMType);
                 virtual ~MsgTransformer();
 
                 virtual void VisitVarExpression(const VarExpT* Exp) override;
@@ -70,7 +76,8 @@ namespace ESMC {
                 
                 static ExpT Do(const ExpT& Exp, 
                                MgrType* Mgr, const string& MsgVarName,
-                               const ExprTypeRef& MsgRecType);
+                               const ExprTypeRef& MsgRecType,
+                               const ExprTypeRef& UnifiedMType);
             };
         } /* end namespace Detail */
 

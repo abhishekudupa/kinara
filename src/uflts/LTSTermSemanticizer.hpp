@@ -556,8 +556,7 @@ namespace ESMC {
                 case LTSOps::OpField: {
                     CheckNumArgs(2, ChildTypes.size(), "Field");
 
-                    if (!ChildTypes[0]->template Is<ExprRecordType>() &&
-                        !ChildTypes[0]->template Is<ExprUnionType>()) {
+                    if (!ChildTypes[0]->template Is<ExprRecordType>()) {
                         throw ExprTypeError("Field access only allowed on record or union types");
                     }
 
@@ -566,12 +565,6 @@ namespace ESMC {
                         throw ExprTypeError((string)"Record Field accesses must be made with " + 
                                             "variables of type FieldAccessType");
                     }
-                    if (ChildTypes[0]->template Is<ExprUnionType>() &&
-                        !ChildTypes[1]->template Is<ExprUFAType>()) {
-                        throw ExprTypeError((string)"Union Field accesses must be made with " + 
-                                            "variables of type UFAType with appropriate " + 
-                                            "member types");
-                    }
 
                     auto FieldExp = ((Exp->GetChildren())[1])->template As<VarExpression>();
                     if (FieldExp == nullptr) {
@@ -579,28 +572,14 @@ namespace ESMC {
                     }
                     
                     auto const& FieldName = FieldExp->GetVarName();
-                    if (ChildTypes[0]->Is<ExprRecordType>()) {
-                        auto RecType = ChildTypes[0]->template SAs<ExprRecordType>();
-                        auto ValType = RecType->GetTypeForMember(FieldName);
-                        if (ValType == ExprTypeRef::NullPtr) {
-                            throw ExprTypeError((string)"Field name \"" + 
-                                                FieldName + "\" is invalid for " + 
-                                                "record type \"" + RecType->GetName() + "\"");
-                        }
-                        Exp->SetType(ValType);
-                    } else {
-                        auto const& UnionType = ChildTypes[0]->template SAs<ExprUnionType>();
-                        auto const& UFAType = ChildTypes[1]->template SAs<ExprUFAType>();
-                        auto const& UMemType = UFAType->GetUnionMemberType();
-
-                        auto ValType = UnionType->GetTypeForMemberField(UMemType, FieldName);
-                        if (ValType == ExprTypeRef::NullPtr) {
-                            throw ExprTypeError((string)"Field name \"" + 
-                                                FieldName + "\" is invalid for " + 
-                                                "union type \"" + UnionType->GetName() + "\"");
-                        }
-                        Exp->SetType(ValType);
+                    auto RecType = ChildTypes[0]->template SAs<ExprRecordType>();
+                    auto ValType = RecType->GetTypeForMember(FieldName);
+                    if (ValType == ExprTypeRef::NullPtr) {
+                        throw ExprTypeError((string)"Field name \"" + 
+                                            FieldName + "\" is invalid for " + 
+                                            "record type \"" + RecType->GetName() + "\"");
                     }
+                    Exp->SetType(ValType);
                     break;
                 }
 

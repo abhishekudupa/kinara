@@ -57,7 +57,7 @@ namespace ESMC {
             : Mgr(new MgrType()), Frozen(false), MsgsFrozen(false),
               EFSMsFrozen(false)
         {
-            MessageIDType = Mgr->MakeType<Exprs::ExprRangeType>(0, MaxMessageTypes);
+            // Nothing here
         }
 
         UFLTS::~UFLTS()
@@ -104,27 +104,14 @@ namespace ESMC {
                 }
             }
 
-            auto MTypePair = make_pair(MTypeFieldName, MessageIDType);
             auto ActFields = Fields;
-            ActFields.insert(ActFields.begin(), MTypePair);
 
             auto Retval = Mgr->MakeType<Exprs::ExprRecordType>(Name, ActFields);
             MTypes[Name] = Retval;
-            auto TypeUID = MTypeUIDGen.GetUID();
-            if (TypeUID > MaxMessageTypes) {
-                throw ESMCError((string)"Exceeded maximum number of message types");
-            }
-            MTypeIDs[Name] = TypeUID;
 
             if (IncludePrimed) {
                 auto Type = Mgr->MakeType<Exprs::ExprRecordType>(Name + "'", ActFields);
                 MTypes[Name + "'"] = Type;
-                auto TypeUID = MTypeUIDGen.GetUID();
-                if (TypeUID > MaxMessageTypes) {
-                    throw ESMCError((string)"Exceeded maximum number of message types");
-                }
-
-                MTypeIDs[Name] = TypeUID;
                 TypeToPrimed[Retval] = Type;
             }
             
@@ -159,9 +146,7 @@ namespace ESMC {
                 }
             }
 
-            auto MTypePair = make_pair(MTypeFieldName, MessageIDType);
             auto ActFields = Fields;
-            ActFields.insert(ActFields.begin(), MTypePair);
 
             auto RecType = Mgr->MakeType<Exprs::ExprRecordType>(Name, ActFields);
             ExprTypeRef PrimedRecType = nullptr;
@@ -189,23 +174,12 @@ namespace ESMC {
                 auto InstType = Mgr->InstantiateType(PType, ParamVals);
                 auto const& TypeName = InstType->SAs<Exprs::ExprRecordType>()->GetName();
                 MTypes[TypeName] = InstType;
-                auto TypeUID = MTypeUIDGen.GetUID();
-                if (TypeUID > MaxMessageTypes) {
-                    throw ESMCError((string)"Exceeded maximum number of message types");
-                }
-                MTypeIDs[TypeName] = TypeUID;
 
                 if (IncludePrimed) {
                     auto PrimedInstType = Mgr->InstantiateType(PrimedPType, ParamVals);
                     auto const& PrimedTypeName = InstType->SAs<Exprs::ExprRecordType>()->GetName();
                     MTypes[PrimedTypeName] = PrimedInstType;
-                    auto TypeUID = MTypeUIDGen.GetUID();
-                    if (TypeUID > MaxMessageTypes) {
-                        throw ESMCError((string)"Exceeded maximum number of message types");
-                    }
-                    
                     TypeToPrimed[InstType] = PrimedInstType;
-                    MTypeIDs[PrimedTypeName] = TypeUID;
                 }
             }
 
@@ -238,16 +212,6 @@ namespace ESMC {
             }
         }
 
-        i32 UFLTS::GetTypeIDForMessageType(const string& Name) const
-        {
-            auto it = MTypeIDs.find(Name);
-            if (it == MTypeIDs.end()) {
-                return -1;
-            } else {
-                return it->second;
-            }
-        }
-
         bool UFLTS::CheckMessageType(const ExprTypeRef& MType)
         {
             auto TypeAsRec = MType->As<Exprs::ExprRecordType>();
@@ -266,23 +230,10 @@ namespace ESMC {
             for (auto const& MType : MTypes) {
                 UnionTypes.insert(MType.second);
             }
-            UnifiedMType = Mgr->MakeType<Exprs::ExprUnionType>(UnifiedMTypeName, UnionTypes);
-            MessageSize = UnifiedMType->GetByteSize();
+            auto TypeIDFieldType = Mgr->MakeType<Exprs::ExprRangeType>(0, MaxMessageTypes);
+            UnifiedMType = Mgr->MakeType<Exprs::ExprMessageType>(UnifiedMTypeName, UnionTypes,
+                                                                 TypeIDFieldType);
             MsgsFrozen = true;
-        }
-
-        u32 UFLTS::GetMessageSize() const
-        {
-            if (!MsgsFrozen) {
-                throw ESMCError((string)"UFLTS::GetMessageSize() can only be called after " + 
-                                "freezing the message declarations");
-            }
-            return MessageSize;
-        }
-
-        const ExprTypeRef& UFLTS::GetMessageIDType() const
-        {
-            return MessageIDType;
         }
 
         const ExprTypeRef& UFLTS::GetUnifiedMType() const

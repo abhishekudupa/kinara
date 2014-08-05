@@ -384,17 +384,20 @@ namespace ESMC {
 
         class ExprRecordType : public ExprTypeBase
         {
-        private:
+        protected:
             string Name;
             map<string, ExprTypeRef> MemberMap;
             vector<pair<string, ExprTypeRef>> MemberVec;
 
         protected:
             virtual void ComputeHashValue() const;
+            // For use in subclasses, viz the ExprMessageType
+            ExprRecordType();
 
         public:
             ExprRecordType(const string& Name,
                            const vector<pair<string, ExprTypeRef>>& RecordMembers);
+
             virtual ~ExprRecordType();
 
             const string& GetName() const;
@@ -452,57 +455,44 @@ namespace ESMC {
             virtual u32 GetByteSize() const override;
         };
 
-        // A type that is a union of two or more record types
-        class ExprUnionType : public ExprTypeBase
+        // A dedicated class for message types
+        class ExprMessageType : public ExprRecordType
         {
         private:
-            string Name;
             set<ExprTypeRef> MemberTypes;
-            map<string, ExprTypeRef> FieldMap;
-            vector<pair<string, ExprTypeRef>> FieldVec;
-            map<ExprTypeRef, map<string, string>> MemberFieldToFieldMap;
+            map<ExprTypeRef, u32> MemberTypeToID;
+            map<u32, ExprTypeRef> IDToMemberType;
+            map<u32, map<string, string>> MemberFieldToField;
+            map<u32, map<string, string>> FieldToMemberField;
+
+            const string TypeIDFieldName = "__mtype__";
+            ExprTypeRef TypeIDFieldType;
 
         protected:
             virtual void ComputeHashValue() const override;
 
         public:
-            ExprUnionType(const string& Name,
-                          const set<ExprTypeRef>& MemberTypes);
-            virtual ~ExprUnionType();
+            ExprMessageType(const string& Name,
+                            const set<ExprTypeRef>& MemberTypes,
+                            const ExprTypeRef& TypeIDFieldType);
+            virtual ~ExprMessageType();
 
-            const string& GetName() const;
             const set<ExprTypeRef>& GetMemberTypes() const;
-            bool IsMember(const ExprTypeRef& Type) const;
-            const ExprTypeRef& GetTypeForMemberField(const ExprTypeRef& MemberType,
-                                                     const string& MemberField) const;
-            const vector<pair<string, ExprTypeRef>>& GetActFields() const;
-            const map<ExprTypeRef, map<string, string>>& GetMemberFieldToActFieldMap() const;
+            const map<ExprTypeRef, u32>& GetMemberTypeToID() const;
+            const map<u32, ExprTypeRef>& GetIDToMemberType() const;
+            const map<u32, map<string, string>>& GetMemberFieldToField() const;
+            const map<u32, map<string, string>>& GetFieldToMemberField() const;
+            const string& GetTypeIDFieldName() const;
+            const ExprTypeRef& GetTypeIDFieldType() const;
+            const u32 GetTypeIDForMemberType(const ExprTypeRef& MemType) const;
+            const ExprTypeRef& GetMemberTypeForTypeID(u32 TypeID) const;
+            const string& MapFromMemberField(const ExprTypeRef& MemberType, 
+                                             const string& FieldName) const;
+            const string& MapToMemberField(u32 TypeID,
+                                           const string& FieldName) const;
 
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
-            virtual vector<string> GetElements() const override;
-            virtual u32 GetByteSize() const override;
-        };
-        
-        // Type for accessing union fields
-        class ExprUFAType : public ExprTypeBase
-        {
-        private:
-            ExprTypeRef UnionMemberType;
-
-        protected:
-            virtual void ComputeHashValue() const override;
-            
-        public:
-            ExprUFAType(const ExprTypeRef& UnionMemberType);
-            virtual ~ExprUFAType();
-
-            const ExprTypeRef& GetUnionMemberType() const;
-            
-            virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
-            virtual vector<string> GetElements() const override;
-            virtual u32 GetByteSize() const override;
         };
 
         class ExprTypePtrHasher
