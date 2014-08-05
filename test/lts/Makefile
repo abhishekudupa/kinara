@@ -28,6 +28,7 @@ CXXFLAGS+=$(OPTFLAGS)
 
 TESTS=\
 	SemTest \
+	PingPong \
 
 
 default:	all
@@ -35,6 +36,9 @@ default:	all
 all: $(TESTS)
 
 SemTest: SemTest.cpp
+	$(CXX) $(CXXFLAGS) $< -o $@ $(LINKFLAGS) 
+
+PingPong: PingPong.cpp
 	$(CXX) $(CXXFLAGS) $< -o $@ $(LINKFLAGS) 
 
 clean:

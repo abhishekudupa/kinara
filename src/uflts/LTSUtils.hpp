@@ -132,7 +132,7 @@ namespace ESMC {
                     return (TypeAsFA == nullptr);                    
                 }
             };
-            
+
         } /* end namespace Detail */
 
 

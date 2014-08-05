@@ -626,7 +626,7 @@ namespace ESMC {
         {
             if (IndexType->As<ExprFuncType>() != nullptr ||
                 ValueType->As<ExprFuncType>() != nullptr || 
-                IndexType->As<ExprScalarType>() != nullptr ||
+                IndexType->As<ExprScalarType>() == nullptr ||
                 ValueType->As<ExprParametricType>() != nullptr || 
                 ValueType->As<ExprFieldAccessType>() != nullptr) {
                 throw ESMCError((string)"Array indices and values cannot be functions, " + 

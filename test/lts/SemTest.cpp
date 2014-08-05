@@ -137,64 +137,37 @@ int main()
     cout << "Field Exp before Simplficiation: " << endl << ComplexExp << endl;
     cout << "Field Exp after Simplficiation: " << endl << Mgr->Simplify(ComplexExp) << endl;
 
-    // Test for union types
-    vector<pair<string, ExprTypeRef>> RecType1Fields = { { (string)"IntField", IntType },
-                                                         { (string)"BoolField", BoolType } };
+    // tests for message types
+    vector<pair<string, ExprTypeRef>> MType1Fields;
+    MType1Fields.push_back(make_pair("IntField1", IntType));
+    MType1Fields.push_back(make_pair("BoolField1", BoolType));
+
+    vector<pair<string, ExprTypeRef>> MType2Fields;
+    MType2Fields.push_back(make_pair("RangeField2", RangeType));
+    MType2Fields.push_back(make_pair("BoolField2", BoolType));
     
-    vector<pair<string, ExprTypeRef>> RecType2Fields = { { (string)"RangeField", RangeType },
-                                                         { (string)"BoolField", BoolType } };
-
-    auto RecType1 = Mgr->MakeType<ExprRecordType>("RecType1", RecType1Fields);
-    auto RecType2 = Mgr->MakeType<ExprRecordType>("RecType2", RecType2Fields);
-
-    set<ExprTypeRef> UnionMem = { RecType1, RecType2 };
-    auto UnionType = Mgr->MakeType<ExprUnionType>("UType", UnionMem);
+    auto MType1 = Mgr->MakeType<ExprRecordType>("MType1", MType1Fields);
+    auto MType2 = Mgr->MakeType<ExprRecordType>("MType2", MType2Fields);
     
-    auto UnionVar = Mgr->MakeVar("UnionVar", UnionType);
-    auto UFAType = Mgr->MakeType<ExprUFAType>(RecType2);
-    FieldVar = Mgr->MakeVar("RangeField", UFAType);
+    auto IDType = Mgr->MakeType<ExprRangeType>(0, 10);
+    set<ExprTypeRef> UMTypeMem;
+    UMTypeMem.insert(MType1);
+    UMTypeMem.insert(MType2);
+
+    auto UMType = Mgr->MakeType<ExprMessageType>("UMType", UMTypeMem, RangeType);
+
+    auto UMTypeVar = Mgr->MakeVar("UMTypeVar", UMType);
+    auto UMTypeAsMsg = UMType->As<ExprMessageType>();
+    auto const& ActFieldName = UMTypeAsMsg->MapFromMemberField(MType1, "IntField1");
+    auto UMTypeExp = Mgr->MakeExpr(Ops::OpField, UMTypeVar, 
+                                   Mgr->MakeVar(ActFieldName, FAType));
+    cout << UMTypeExp << endl;
+    auto const& ActFieldName2 = UMTypeAsMsg->MapFromMemberField(MType2, "BoolField2");
     
-    FieldExp = Mgr->MakeExpr(Ops::OpField, UnionVar, FieldVar);
+    auto UMTypeExp2 = Mgr->MakeExpr(Ops::OpField, UMTypeVar, 
+                                    Mgr->MakeVar(ActFieldName2, FAType));
 
-    cout << FieldExp << endl;
-
-    auto UFAType2 = Mgr->MakeType<ExprUFAType>(RecType1);
-    FieldVar = Mgr->MakeVar("IntField", UFAType2);
-    FieldExp = Mgr->MakeExpr(Ops::OpField, UnionVar, FieldVar);
-    
-    cout << FieldExp << endl;
-
-    // This should throw an error
-    FieldVar2 = Mgr->MakeVar("RangeField", UFAType2);
-    try {
-        FieldExp = Mgr->MakeExpr(Ops::OpField, UnionVar, FieldVar2);
-    } catch (const ExprTypeError& Ex) {
-        cout << "Caught exception on badly typed union field access as expected" << endl;
-        goto PastError1;
-    }
-
-    cout << "Error! Did not throw exception on badly typed union field access" << endl;
-
- PastError1:
-
-    // Test for arrays of unions of records
-    auto ArrayOfRecType = Mgr->MakeType<ExprArrayType>(RangeType, UnionType);
-    auto ArrayVar = Mgr->MakeVar("ArrayOfRecVar", ArrayOfRecType);
-    IndexExp = Mgr->MakeExpr(Ops::OpIndex, ArrayVar, Mgr->MakeVal("0", RangeType));
-    FieldExp = Mgr->MakeExpr(Ops::OpField, IndexExp, FieldVar);
-    cout << FieldExp << endl;
-
-    // This should throw an error
-    try {
-        FieldExp = Mgr->MakeExpr(Ops::OpField, IndexExp, FieldVar2);
-    } catch (const ExprTypeError& Ex) {
-        cout << "Caught exception on badly typed union field access as expected" << endl;
-        goto PastError2;
-    }
-
-    cout << "Error! Did not throw exception on badly typed union field access" << endl;
-
- PastError2:
+    cout << UMTypeExp2 << endl;
 
     Mgr->GC();
     delete Mgr;

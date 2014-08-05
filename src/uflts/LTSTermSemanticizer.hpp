@@ -252,10 +252,8 @@ namespace ESMC {
                 }
                 auto Type = Exp->GetVarType();
 
-                if (Type->template Is<ExprFuncType>() ||
-                    Type->template Is<ExprParametricType>()) {
-                    throw ExprTypeError((string)"Cannot create variables of parametric types " + 
-                                        "and function types");
+                if (Type->template Is<ExprFuncType>()) {
+                    throw ExprTypeError("Cannot create variables of function types");
                 }
                 
                 Exp->SetType(Type);
@@ -286,6 +284,7 @@ namespace ESMC {
                     if (ConstVal != "true" && ConstVal != "false") {
                         throw ExprTypeError("Unknown constant string");
                     }
+                    Exp->SetType(Exp->GetConstType());
                 } else if(ActType->template As<ExprRangeType>() != nullptr ||
                           ActType->template As<ExprIntType>() != nullptr) {
                     if (!boost::algorithm::all(ConstVal, boost::algorithm::is_digit())) {
@@ -556,12 +555,13 @@ namespace ESMC {
                 case LTSOps::OpField: {
                     CheckNumArgs(2, ChildTypes.size(), "Field");
 
-                    if (!ChildTypes[0]->template Is<ExprRecordType>()) {
-                        throw ExprTypeError("Field access only allowed on record or union types");
+                    if (!ChildTypes[0]->template Is<ExprRecordType>() &&
+                        !ChildTypes[0]->template Is<ExprParametricType>()) {
+                        throw ExprTypeError((string)"Field access only allowed on " + 
+                                            "record or parametric types");
                     }
 
-                    if (ChildTypes[0]->template Is<ExprRecordType>() &&
-                        !ChildTypes[1]->template Is<ExprFieldAccessType>()) {
+                    if (!ChildTypes[1]->template Is<ExprFieldAccessType>()) {
                         throw ExprTypeError((string)"Record Field accesses must be made with " + 
                                             "variables of type FieldAccessType");
                     }
@@ -572,13 +572,22 @@ namespace ESMC {
                     }
                     
                     auto const& FieldName = FieldExp->GetVarName();
-                    auto RecType = ChildTypes[0]->template SAs<ExprRecordType>();
+
+                    const ExprRecordType* RecType = nullptr;
+                    if (ChildTypes[0]->template Is<ExprRecordType>()) {
+                        RecType = ChildTypes[0]->template SAs<ExprRecordType>();
+                    } else {
+                        // Must be a parametric base type
+                        auto PType = ChildTypes[0]->template SAs<ExprParametricType>();
+                        RecType = PType->GetTrueBaseType()->template As<ExprRecordType>();
+                    }
                     auto ValType = RecType->GetTypeForMember(FieldName);
                     if (ValType == ExprTypeRef::NullPtr) {
                         throw ExprTypeError((string)"Field name \"" + 
                                             FieldName + "\" is invalid for " + 
                                             "record type \"" + RecType->GetName() + "\"");
                     }
+
                     Exp->SetType(ValType);
                     break;
                 }
