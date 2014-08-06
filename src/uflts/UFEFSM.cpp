@@ -213,6 +213,29 @@ namespace ESMC {
             }
         }
 
+        inline vector<AsgnT> UFEFSM::InstantiateParametricVars(const vector<AsgnT>& Updates,
+                                                               const string& VarName,
+                                                               const ExprTypeRef& ParametricType,
+                                                               const ExprTypeRef& InstantiatedType)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            vector<AsgnT> Retval;
+
+            for (auto const& Update : Updates) {
+                auto const& LHS = Update.GetLHS();
+                auto const& RHS = Update.GetRHS();
+
+                MgrType::SubstMapT SubstMap;
+                SubstMap[Mgr->MakeVar(VarName, ParametricType)] = 
+                    Mgr->MakeVar(VarName, InstantiatedType);
+                auto SubstLHS = Mgr->Substitute(SubstMap, LHS);
+                auto SubstRHS = Mgr->Substitute(SubstMap, RHS);
+                
+                Retval.push_back(AsgnT(SubstLHS, SubstRHS));
+            }
+            return Retval;
+        }
+
         void UFEFSM::AddInputMsg(const ExprTypeRef& MType, 
                                  const vector<ExpT>& MParams)
         {
@@ -321,6 +344,9 @@ namespace ESMC {
                     SubstUpdates[i] = AsgnT(Mgr->Substitute(SubstMap, Updates[j].GetLHS()),
                                             Mgr->Substitute(SubstMap, Updates[j].GetRHS()));
                 }
+
+                SubstUpdates = InstantiateParametricVars(SubstUpdates, MessageName,
+                                                         MessageType, MType);
                 
                 FrozenEFSMs[i]->AddInputTransition(InitState, FinalState, SubstGuard, SubstUpdates, 
                                                    MessageName, MType);
@@ -384,6 +410,9 @@ namespace ESMC {
                         SubstUpdates[k] = AsgnT(Mgr->Substitute(LocalSubstMap, Updates[k].GetLHS()),
                                                 Mgr->Substitute(LocalSubstMap, Updates[k].GetRHS()));
                     }
+
+                    SubstUpdates = InstantiateParametricVars(SubstUpdates, MessageName,
+                                                             MessageType, Type);
                     
                     FrozenEFSMs[i]->AddInputTransition(InitState, FinalState, SubstGuard, 
                                                        SubstUpdates, MessageName, Type);
@@ -424,6 +453,9 @@ namespace ESMC {
                     SubstUpdates[j] = AsgnT(Mgr->Substitute(SubstMap, Updates[j].GetLHS()),
                                             Mgr->Substitute(SubstMap, Updates[j].GetRHS()));
                 }
+                
+                SubstUpdates = InstantiateParametricVars(SubstUpdates, MessageName,
+                                                         MessageType, MType);
 
                 FrozenEFSMs[i]->AddOutputTransition(InitState, FinalState, SubstGuard, 
                                                     SubstUpdates, MessageName, MType, 
@@ -500,6 +532,9 @@ namespace ESMC {
                         SubstUpdates[k] = AsgnT(Mgr->Substitute(LocalSubstMap, Updates[k].GetLHS()),
                                                 Mgr->Substitute(LocalSubstMap, Updates[k].GetRHS()));
                     }
+
+                    SubstUpdates = InstantiateParametricVars(SubstUpdates, MessageName,
+                                                             MessageType, Type);
                     
                     FrozenEFSMs[i]->AddOutputTransition(InitState, FinalState, SubstGuard, 
                                                         SubstUpdates, MessageName, Type, 

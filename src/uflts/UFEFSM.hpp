@@ -84,6 +84,11 @@ namespace ESMC {
                                 const ExpT& Constraint,
                                 bool IsInput);
 
+            inline vector<AsgnT> InstantiateParametricVars(const vector<AsgnT>& Updates,
+                                                           const string& VarName,
+                                                           const ExprTypeRef& ParametricType,
+                                                           const ExprTypeRef& InstantiatedType);
+
         public:
             UFEFSM(UFLTS* TheLTS, const string& Name);
             UFEFSM(UFLTS* TheLTS, 
