@@ -125,7 +125,8 @@ namespace ESMC {
                 ExpStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
             }
 
-            ExpT MsgTransformer::Do(const ExpT& Exp, MgrType* Mgr,
+            ExpT MsgTransformer::Do(MgrType* Mgr, 
+                                    const ExpT& Exp,
                                     const string& MsgVarName,
                                     const ExprTypeRef& MsgRecType,
                                     const ExprTypeRef& UnifiedMType)
@@ -246,7 +247,7 @@ namespace ESMC {
                 auto const& LHS = Update.GetLHS();
                 auto const& RHS = Update.GetRHS();
                 
-                auto NewRHS = Mgr->ApplyTransform<Detail::MsgTransformer>(RHS, Mgr, 
+                auto NewRHS = Mgr->ApplyTransform<Detail::MsgTransformer>(RHS, 
                                                                           MessageName, 
                                                                           MessageType,
                                                                           TheLTS->GetUnifiedMType());
@@ -305,7 +306,7 @@ namespace ESMC {
                 auto const& LHS = Update.GetLHS();
                 auto const& RHS = Update.GetRHS();
                 
-                auto NewLHS = Mgr->ApplyTransform<Detail::MsgTransformer>(LHS, Mgr, MessageName,
+                auto NewLHS = Mgr->ApplyTransform<Detail::MsgTransformer>(LHS, MessageName,
                                                                           MessageType, 
                                                                           UnifiedMType);
                 NewUpdates.push_back(AsgnT(NewLHS, RHS));

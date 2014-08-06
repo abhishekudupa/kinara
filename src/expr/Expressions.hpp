@@ -638,13 +638,16 @@ namespace ESMC {
         class Substitutor : ExpressionVisitorBase<E, S>
         {
         private:
-            typedef typename ExprMgr<E, S>::ExpT ExpT;
-            typedef typename ExprMgr<E, S>::SubstMapT SubstMapT;
+            typedef ExprMgr<E, S> MgrType;
+            typedef typename MgrType::ExpT ExpT;
+            typedef typename MgrType::SubstMapT SubstMapT;
+
+            MgrType* Mgr;
             SubstMapT Subst;
             vector<typename ExprMgr<E, S>::ExpT> SubstStack;
 
         public:
-            inline Substitutor(const SubstMapT& Subst);
+            inline Substitutor(MgrType* Mgr, const SubstMapT& Subst);
             inline virtual ~Substitutor();
 
             inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
@@ -657,7 +660,9 @@ namespace ESMC {
             inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
                 override;
 
-            inline static ExpT Do(const ExpT& Exp, const SubstMapT& SubstMap);
+            inline static ExpT Do(MgrType* Mgr, 
+                                  const ExpT& Exp, 
+                                  const SubstMapT& SubstMap);
         };
 
         template <typename E, template <typename> class S>
@@ -766,8 +771,8 @@ namespace ESMC {
 
         // Substitutor implementation
         template <typename E, template <typename> class S>
-        inline Substitutor<E, S>::Substitutor(const SubstMapT& Subst)
-            : ExpressionVisitorBase<E, S>("Substitutor"), Subst(Subst)
+        inline Substitutor<E, S>::Substitutor(MgrType* Mgr, const SubstMapT& Subst)
+            : ExpressionVisitorBase<E, S>("Substitutor"), Mgr(Mgr), Subst(Subst)
         {
             // Nothing here
         }
@@ -815,8 +820,8 @@ namespace ESMC {
                 SubstChildren[NumChildren - i - 1] = SubstStack.back();
                 SubstStack.pop_back();
             }
-            SubstStack.push_back(new OpExpression<E, S>(nullptr, Exp->GetOpCode(),
-                                                        SubstChildren));
+            SubstStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(),
+                                               SubstChildren));
         }
 
         template <typename E, template <typename> class S>
@@ -826,8 +831,8 @@ namespace ESMC {
             Exp->GetQExpression()->Accept(this);
             auto SubstQExpr = SubstStack.back();
             SubstStack.pop_back();
-            SubstStack.push_back(new EQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
-                                                                 SubstQExpr));
+            SubstStack.push_back(Mgr->MakeExists(Exp->GetQVarTypes(),
+                                                 SubstQExpr));
         }
 
         template <typename E, template <typename> class S>
@@ -837,15 +842,16 @@ namespace ESMC {
             Exp->GetQExpression()->Accept(this);
             auto SubstQExpr = SubstStack.back();
             SubstStack.pop_back();
-            SubstStack.push_back(new AQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
-                                                                 SubstQExpr));
+            SubstStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(),
+                                                 SubstQExpr));
         }
 
         template <typename E, template <typename> class S>
         inline typename Substitutor<E, S>::ExpT
-        Substitutor<E, S>::Do(const ExpT& Exp, const SubstMapT& Subst)
+        Substitutor<E, S>::Do(MgrType* Mgr,
+                              const ExpT& Exp, const SubstMapT& Subst)
         {
-            Substitutor TheSubstitutor(Subst);
+            Substitutor TheSubstitutor(Mgr, Subst);
             Exp->Accept(&TheSubstitutor);
             return TheSubstitutor.SubstStack[0];
         }
@@ -2079,7 +2085,7 @@ namespace ESMC {
                                       ArgTypes&&... Args)
         {
             CheckMgr(Exp);
-            return Internalize(Sem->Canonicalize(T::Do(Exp, forward<ArgTypes>(Args)...)));
+            return T::Do(this, Exp, forward<ArgTypes>(Args)...);
         }
 
         template <typename E, template <typename> class S>
@@ -2106,7 +2112,7 @@ namespace ESMC {
         ExprMgr<E, S>::RaiseExpr(const LExpT& LExp, ArgTypes&&... Args)
         {
             auto Retval = Sem->RaiseExpr(LExp, forward<ArgTypes>(Args)...);
-            return Internalize(Retval);
+            return Retval;
         }
         
         template <typename E, template <typename> class S>
@@ -2114,7 +2120,6 @@ namespace ESMC {
         ExprMgr<E, S>::Simplify(const ExpT& Exp)
         {
             auto Retval = Sem->Simplify(Exp);
-            Internalize(Retval);
             return Retval;
         }
 
@@ -2123,7 +2128,6 @@ namespace ESMC {
         ExprMgr<E, S>::ElimQuantifiers(const ExpT& Exp)
         {
             auto Retval = Sem->ElimQuantifiers(Exp);
-            Internalize(Retval);
             return Retval;
         }
 

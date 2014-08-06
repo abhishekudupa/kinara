@@ -74,8 +74,9 @@ namespace ESMC {
                 virtual inline void VisitEQuantifiedExpression(const EQExpT* Exp) override;
                 virtual inline void VisitAQuantifiedExpression(const AQExpT* Exp) override;
                 
-                static ExpT Do(const ExpT& Exp, 
-                               MgrType* Mgr, const string& MsgVarName,
+                static ExpT Do(MgrType* Mgr,
+                               const ExpT& Exp, 
+                               const string& MsgVarName,
                                const ExprTypeRef& MsgRecType,
                                const ExprTypeRef& UnifiedMType);
             };
