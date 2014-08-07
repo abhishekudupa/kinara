@@ -1,0 +1,51 @@
+\documentclass{article}[10pt]
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{fullpage}
+\usepackage{setspace}
+
+\title{Algorithm to check Liveness with\\Transition-based Fairness Constraints}
+
+\begin{document}
+\begin{spacing}{1}
+\maketitle
+
+We are given a set of symmetric types $\mathcal{Y}$ and a set of
+parametrized transitions $T$, where each $t \in
+T$ is parametrized by by a set $p_t$ of symmetric
+parameters, where each $p \in p_t$ has a type drawn from
+$\mathcal{Y}$. Further, we are also given a set of fairness
+constraints $F$. Each fairness constraint $f \in F$ is a set of
+parametrized transitions $\{t_{f1}, t_{f2}, ... t_{fn_f}\}$. 
+We require that every transition of a fairness constraint
+$f \in F$ be parametrized by the same set of parameters $p_f$.
+
+Suppose we are given an $\omega$-automaton $A$, parametrized over a
+set of parameters $p_{\omega}$, we want to check if
+starting from some initial state $s_0$, executing the product of the
+transitions $T$ and the transitions of the automaton $A$ results in an
+accepting cycle, when each $f \in F$ is instantiated with an
+appropriate set of parameters $p_f \subseteq p_{\omega}$.
+What follows is an adaptation of Sistla's algorithm
+in this setting.
+
+\begin{itemize}
+\item
+$\overline{u}.\mathtt{dfnum}$ -- Same as in paper
+\item
+$\overline{u}.\mathtt{onstack}$ --- Same as in paper
+\item
+$\overline{u}.\mathtt{perm}$ --- The exact set of permutations that
+of the set of parameters $P$ that were applied on the path from $s_0$.
+\item
+$I^k$ stored in each state $\overline{u}$ as a component of the AQSI,
+is a $|p_{\omega}|$-tuple, with one element indicating the current
+value of each parameter.
+\item
+
+$\overline{u}.\mathtt{partition}$
+
+\end{itemize}
+
+\end{spacing}
+\end{document}
