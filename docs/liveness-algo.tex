@@ -3,6 +3,7 @@
 \usepackage{amssymb}
 \usepackage{fullpage}
 \usepackage{setspace}
+\usepackage[lined,linesnumbered,commentsnumbered,ruled,vlined]{algorithm2e}
 
 \title{Algorithm to check Liveness with\\Transition-based Fairness Constraints}
 
@@ -10,22 +11,25 @@
 \begin{spacing}{1}
 \maketitle
 
-We are given a set of symmetric types $\mathcal{Y}$ and a set of
-parametrized transitions $T$, where each $t \in
-T$ is parametrized by by a set $p_t$ of symmetric
-parameters, where each $p \in p_t$ has a type drawn from
-$\mathcal{Y}$. Further, we are also given a set of fairness
-constraints $F$. Each fairness constraint $f \in F$ is a set of
-parametrized transitions $\{t_{f1}, t_{f2}, ... t_{fn_f}\}$. 
+We are given a set of symmetric types $\mathcal{Y}$ and a set of symmetric
+variables $P$, where each variable $p \in P$ has a type drawn from
+$\mathcal{Y}$. We have a set of state variables $V$, where each $v \in V$
+has a type and is optionally parametrized by a set of parameter variables
+$P_v \in P$. $T$, is a set of transitions where each $t \in
+T$ is parametrized by by a set $P_t \subseteq P$ of symmetric
+parameters variables. Further, we are also given a set of fairness
+constraints $\mathcal{F}$. Each fairness constraint $F \in \mathcal{F}$ is
+a set of parametrized transitions $\{t_{F1}, t_{F2}, ... t_{Fn_f}\}$. 
 We require that every transition of a fairness constraint
-$f \in F$ be parametrized by the same set of parameters $p_f$.
+$F \in \mathcal{F}$ be parametrized by the same set of parameters $P_F$. We
+then say that the fairness constraint $F$ is parametrized by variables $P_F$.
 
 Suppose we are given an $\omega$-automaton $A$, parametrized over a
-set of parameters $p_{\omega}$, we want to check if
+set of parameters $P_{\omega}$, we want to check if
 starting from some initial state $s_0$, executing the product of the
 transitions $T$ and the transitions of the automaton $A$ results in an
-accepting cycle, when each $f \in F$ is instantiated with an
-appropriate set of parameters $p_f \subseteq p_{\omega}$.
+accepting cycle, when each $F \in \mathcal{F}$ is instantiated with an
+appropriate set of parameters $P_F \subseteq P_{\omega}$.
 What follows is an adaptation of Sistla's algorithm
 in this setting.
 
@@ -35,17 +39,37 @@ $\overline{u}.\mathtt{dfnum}$ -- Same as in paper
 \item
 $\overline{u}.\mathtt{onstack}$ --- Same as in paper
 \item
-$\overline{u}.\mathtt{perm}$ --- The exact set of permutations that
-of the set of parameters $P$ that were applied on the path from $s_0$.
+$\overline{u}.\mathtt{perm}$ --- The exact set of permutations
+of the set of parameters $P_{\omega}$ that were applied on the path from $s_0$.
 \item
 $I^k$ stored in each state $\overline{u}$ as a component of the AQSI,
 is a $|p_{\omega}|$-tuple, with one element indicating the current
-value of each parameter.
+value of each parameter $p \in p_{\omega}$.
 \item
-
-$\overline{u}.\mathtt{partition}$
-
+$\overline{u}.\mathtt{partition}$ is a set of sets of cardinality
+  $|P_{\omega}|$, such that $\overline{u}.\mathtt{partition}$ contains a
+  set $s$, that has cardinality $|\mathtt{type}(p)|$ for each $p \in
+  P_{\omega}$.
+\item
+$\overline{u}.\mathtt{final}$ denotes that an accepting state has been 
+  encountered in the current SCC.
 \end{itemize}
+
+\begin{algorithm}
+\IncMargin{1em}
+\SetAlgoLined
+push $\overline{u}$ on to the stack, set $\overline{u}.\mathtt{onstack}$\;
+set $\overline{u}.\mathtt{dfnum}$ and $\overline{u}.\mathtt{lowlink}$ to
+depth first counter\;
+increment depth first counter\;
+\BlankLine
+initialize $\overline{u}.\mathtt{partition}$ to be the identity partition\;
+initialize $\overline{u}.\mathtt{status}$ with information for each
+fairness set, i.e., whether a transition from the fairness set is is enabled \;
+
+\caption{DFS algorithm}
+\DecMargin{1em}
+\end{algorithm}
 
 \end{spacing}
 \end{document}
