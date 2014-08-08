@@ -411,26 +411,25 @@ namespace ESMC {
             virtual u32 GetByteSize() const override;
         };
 
-        // A parametric type RESOLVES to
+        // A parametric record type RESOLVES to
         // the BASE TYPE, when instantiated with 
         // VALUES of the appropriate types.
         class ExprParametricType : public ExprTypeBase
         {
         private:
             ExprTypeRef BaseType;
-            ExprTypeRef ParameterType;
+            vector<ExprTypeRef> ParameterTypes;
 
         protected:
             virtual void ComputeHashValue() const override;
             
         public:
             ExprParametricType(const ExprTypeRef& BaseType,
-                               const ExprTypeRef& ParameterTypes);
+                               const vector<ExprTypeRef>& ParameterTypes);
             virtual ~ExprParametricType();
 
             const ExprTypeRef& GetBaseType() const;
-            ExprTypeRef GetTrueBaseType() const;
-            const ExprTypeRef& GetParameterType() const;
+            const vector<ExprTypeRef>& GetParameterTypes() const;
             const string& GetName() const;
 
             virtual string ToString() const override;

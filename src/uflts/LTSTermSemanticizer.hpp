@@ -585,7 +585,7 @@ namespace ESMC {
                     } else {
                         // Must be a parametric base type
                         auto PType = ChildTypes[0]->template SAs<ExprParametricType>();
-                        RecType = PType->GetTrueBaseType()->template As<ExprRecordType>();
+                        RecType = PType->GetBaseType()->template As<ExprRecordType>();
                     }
                     auto ValType = RecType->GetTypeForMember(FieldName);
                     if (ValType == ExprTypeRef::NullPtr) {

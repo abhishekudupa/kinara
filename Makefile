@@ -44,14 +44,14 @@ esmc_LIB_PATHS= \
 
 PROJECT_LIBS=esmc
 libesmc_OBJS= \
-	ChannelEFSM.o \
 	ExprTypes.o \
-	FrozenEFSM.o \
+	LTSAssign.o \
+	LTSFairnessSet.o \
+	LTSState.o \
+	LTSTransitions.o \
 	LTSTermSemanticizer.o \
 	SpookyHash.o \
 	SymbolTable.o \
-	UFEFSM.o \
-	UFLTS.o \
 	UIDGenerator.o \
 
 

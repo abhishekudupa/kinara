@@ -820,19 +820,21 @@ namespace ESMC {
         }
 
         ExprParametricType::ExprParametricType(const ExprTypeRef& BaseType,
-                                              const ExprTypeRef& ParameterType)
-            : ExprTypeBase(), BaseType(BaseType), ParameterType(ParameterType)
+                                               const vector<ExprTypeRef>& ParameterTypes)
+            : ExprTypeBase(), BaseType(BaseType), ParameterTypes(ParameterTypes)
         {
-            if (!BaseType->Is<ExprRecordType>() &&
-                !BaseType->Is<ExprParametricType>()) {
-                throw ESMCError((string)"Only record types (or other parametric types) " + 
+            if (!BaseType->Is<ExprRecordType>()) {
+                throw ESMCError((string)"Only record types " + 
                                 "can currently be parametrized");
             }
-            if (ParameterType->As<ExprEnumType>() == nullptr &&
-                ParameterType->As<ExprRangeType>() == nullptr &&
-                ParameterType->As<ExprSymmetricType>() == nullptr) {
-                throw ESMCError((string)"Parameteric types must have enum, range " + 
-                                "or symmetric types as type parameters");
+
+            for (auto const& ParameterType : ParameterTypes) {
+                if (ParameterType->As<ExprEnumType>() == nullptr &&
+                    ParameterType->As<ExprRangeType>() == nullptr &&
+                    ParameterType->As<ExprSymmetricType>() == nullptr) {
+                    throw ESMCError((string)"Parameteric types must have enum, range " + 
+                                    "or symmetric types as type parameters");
+                }
             }
         }
 
@@ -846,43 +848,31 @@ namespace ESMC {
             return BaseType;
         }
 
-        const ExprTypeRef& ExprParametricType::GetParameterType() const
+        const vector<ExprTypeRef>& ExprParametricType::GetParameterTypes() const
         {
-            return ParameterType;
+            return ParameterTypes;
         }
 
         const string& ExprParametricType::GetName() const
         {
-            ExprTypeRef CurPType = this;
-            do {
-                auto CurPTypeAsParam = CurPType->SAs<ExprParametricType>();
-                CurPType = CurPTypeAsParam->GetBaseType();
-            } while (!CurPType->Is<Exprs::ExprRecordType>());
-            auto TypeAsRec = CurPType->SAs<Exprs::ExprRecordType>();
-            return TypeAsRec->GetName();
-        }
-
-        ExprTypeRef ExprParametricType::GetTrueBaseType() const
-        {
-            ExprTypeRef CurPType = this;
-            do {
-                auto CurPTypeAsParam = CurPType->SAs<ExprParametricType>();
-                CurPType = CurPTypeAsParam->GetBaseType();
-            } while (!CurPType->Is<Exprs::ExprRecordType>());
-            return CurPType;
+            return BaseType->SAs<ExprRecordType>()->GetName();
         }
 
         void ExprParametricType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, BaseType->Hash());
-            boost::hash_combine(HashCode, ParameterType->Hash());
+            for (auto const& ParameterType : ParameterTypes) {
+                boost::hash_combine(HashCode, ParameterType->Hash());
+            }
         }
 
         string ExprParametricType::ToString() const
         {
             string Retval = "(ParamType : ";
-            Retval += (ParameterType->ToString() + " -> ");
+            for (auto const& ParameterType : ParameterTypes) {
+                Retval += (ParameterType->ToString() + " -> ");
+            }
             Retval += (BaseType->ToString() + ")");
             return Retval;
         }
@@ -913,7 +903,21 @@ namespace ESMC {
                 return Cmp;
             }
 
-            return (ParameterType->Compare(*OtherAsPar->ParameterType));
+            const u32 NumParams = ParameterTypes.size();
+            const u32 OtherNumParams = OtherAsPar->ParameterTypes.size();
+            if (NumParams < OtherNumParams) {
+                return -1; 
+            } else if (NumParams > OtherNumParams) {
+                return 1;
+            } else {
+                for (u32 i = 0; i < NumParams; ++i) {
+                    auto Cmp = ParameterTypes[i]->Compare(*(OtherAsPar->ParameterTypes[i]));
+                    if (Cmp != 0) {
+                        return Cmp;
+                    }
+                }
+                return 0;
+            }
         }
 
         vector<string> ExprParametricType::GetElements() const

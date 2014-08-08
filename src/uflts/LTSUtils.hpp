@@ -45,80 +45,20 @@
 #include "../symexec/Analyses.hpp"
 #include "../utils/CombUtils.hpp"
 
+
 #include "LTSTermSemanticizer.hpp"
-#include "UFLTSExtension.hpp"
-#include "Transitions.hpp"
 #include "SymbolTable.hpp"
+#include "LTSTypes.hpp"
 
 
 namespace ESMC {
     namespace LTS {
 
-        class UFLTS;
-        class UFEFSM;
-        class FrozenEFSM;
-        class ChannelEFSM;
-
-        typedef Exprs::ExprTypeRef ExprTypeRef;
-        typedef Exprs::Expr<UFLTSExtensionT, LTSTermSemanticizer> ExpT;
-        typedef Exprs::ExprMgr<UFLTSExtensionT, LTSTermSemanticizer> MgrType;
-        typedef Analyses::Assignment<UFLTSExtensionT, LTSTermSemanticizer> AsgnT;
-        typedef Transition<UFLTSExtensionT, LTSTermSemanticizer, ExprTypeRef, string> TransitionT;
-        typedef Exprs::ExpressionVisitorBase<UFLTSExtensionT, LTSTermSemanticizer> VisitorBaseT;
-        typedef GuardedCommand<UFLTSExtensionT, LTSTermSemanticizer> GCmdT;
-
-        typedef Exprs::VarExpression<UFLTSExtensionT, LTSTermSemanticizer> VarExpT;
-        typedef Exprs::ConstExpression<UFLTSExtensionT, LTSTermSemanticizer> ConstExpT;
-        typedef Exprs::BoundVarExpression<UFLTSExtensionT, LTSTermSemanticizer> BoundVarExpT;
-        typedef Exprs::OpExpression<UFLTSExtensionT, LTSTermSemanticizer> OpExpT;
-        typedef Exprs::QuantifiedExpressionBase<UFLTSExtensionT, LTSTermSemanticizer> QExpBaseT;
-        typedef Exprs::EQuantifiedExpression<UFLTSExtensionT, LTSTermSemanticizer> EQExpT;
-        typedef Exprs::AQuantifiedExpression<UFLTSExtensionT, LTSTermSemanticizer> AQExpT;
-
         namespace Detail {
 
-            struct StateDescriptor
-            {
-                string StateName;
-                bool IsInitial;
-                bool IsFinal;
-                bool IsAccepting;
-                bool IsError;
-                bool IsDead;
-            
-                inline StateDescriptor() {}
-                inline StateDescriptor(const string& StateName,
-                                       bool IsInitial = false,
-                                       bool IsFinal = false,
-                                       bool IsAccepting = false,
-                                       bool IsError = false,
-                                       bool IsDead = false)
-                    : StateName(StateName), IsInitial(IsInitial),
-                      IsFinal(IsFinal), IsAccepting(IsAccepting),
-                      IsError(IsError), IsDead(IsDead)
-                {
-                    // Nothing here
-                }
-            
-                inline bool operator == (const StateDescriptor& Other) const
-                {
-                    return (StateName == Other.StateName &&
-                            IsInitial == Other.IsInitial &&
-                            IsFinal == Other.IsFinal &&
-                            IsAccepting == Other.IsAccepting &&
-                            IsError == Other.IsError &&
-                            IsDead == Other.IsDead);
-                }
-
-                inline bool operator != (const StateDescriptor& Other) const
-                {
-                    return (!(*this == Other));
-                }
-            };
-        
             struct VarGatherer
             {
-                typedef const Exprs::ExpressionBase<UFLTSExtensionT, LTSTermSemanticizer>* ExpCPtrT;
+                typedef const Exprs::ExpressionBase<LTSExtensionT, LTSTermSemanticizer>* ExpCPtrT;
                 
                 inline bool operator () (ExpCPtrT Exp) const
                 {
@@ -140,7 +80,7 @@ namespace ESMC {
 
         static inline void CheckExpr(const ExpT& Exp,
                                      const SymbolTable& SymTab,
-                                     MgrType* Mgr)
+                                     MgrT* Mgr)
         {
             auto Gatherer = Detail::VarGatherer();
             auto Vars = Mgr->Gather(Exp, Gatherer);
@@ -171,48 +111,48 @@ namespace ESMC {
             }
         }
 
-        static inline void CheckUpdates(const vector<AsgnT>& Updates,
-                                        const SymbolTable& SymTab,
-                                        MgrType* Mgr, bool IsInput,
-                                        const string& MsgVarName)
-        {
-            for(auto const& Asgn : Updates) {
-                CheckExpr(Asgn.GetLHS(), SymTab, Mgr);
-                if (IsInput) {
-                    auto Gatherer = Detail::VarGatherer();
-                    auto Vars = Mgr->Gather(Asgn.GetLHS(), Gatherer);
-                    for (auto const& Var : Vars) {
-                        auto const& VarExp = Var->As<Exprs::VarExpression>();
-                        auto const& VarName = VarExp->GetVarName();
-                        if (VarName == MsgVarName) {
-                            throw ESMCError((string)"Input message cannot be updated " + 
-                                            "in an input transition");
-                        }
-                    }
-                }
-                CheckLValCompat(Asgn.GetLHS(), SymTab);
-                CheckExpr(Asgn.GetRHS(), SymTab, Mgr);
-                if (!IsInput) {
-                    auto Gatherer = Detail::VarGatherer();
-                    auto Vars = Mgr->Gather(Asgn.GetRHS(), Gatherer);
-                    for (auto const& Var : Vars) {
-                        auto const& VarExp = Var->As<Exprs::VarExpression>();
-                        auto const& VarName = VarExp->GetVarName();
-                        if (VarName == MsgVarName) {
-                            throw ESMCError((string)"Output message cannot be used on RHS of " + 
-                                            "assignment in an output transition");
-                        }
-                    }
-                }
+        // static inline void CheckUpdates(const vector<AsgnT>& Updates,
+        //                                 const SymbolTable& SymTab,
+        //                                 MgrT* Mgr, bool IsInput,
+        //                                 const string& MsgVarName)
+        // {
+        //     for(auto const& Asgn : Updates) {
+        //         CheckExpr(Asgn.GetLHS(), SymTab, Mgr);
+        //         if (IsInput) {
+        //             auto Gatherer = Detail::VarGatherer();
+        //             auto Vars = Mgr->Gather(Asgn.GetLHS(), Gatherer);
+        //             for (auto const& Var : Vars) {
+        //                 auto const& VarExp = Var->As<Exprs::VarExpression>();
+        //                 auto const& VarName = VarExp->GetVarName();
+        //                 if (VarName == MsgVarName) {
+        //                     throw ESMCError((string)"Input message cannot be updated " + 
+        //                                     "in an input transition");
+        //                 }
+        //             }
+        //         }
+        //         CheckLValCompat(Asgn.GetLHS(), SymTab);
+        //         CheckExpr(Asgn.GetRHS(), SymTab, Mgr);
+        //         if (!IsInput) {
+        //             auto Gatherer = Detail::VarGatherer();
+        //             auto Vars = Mgr->Gather(Asgn.GetRHS(), Gatherer);
+        //             for (auto const& Var : Vars) {
+        //                 auto const& VarExp = Var->As<Exprs::VarExpression>();
+        //                 auto const& VarName = VarExp->GetVarName();
+        //                 if (VarName == MsgVarName) {
+        //                     throw ESMCError((string)"Output message cannot be used on RHS of " + 
+        //                                     "assignment in an output transition");
+        //                 }
+        //             }
+        //         }
                 
-                // Finally check type compat
-                if (!CheckAsgnCompat(Asgn.GetLHS()->GetType(),
-                                     Asgn.GetRHS()->GetType())) {
-                    throw ESMCError((string)"Incompatible types in assignment:\n" + 
-                                    Asgn.ToString());
-                }
-            }
-        }
+        //         // Finally check type compat
+        //         if (!CheckAsgnCompat(Asgn.GetLHS()->GetType(),
+        //                              Asgn.GetRHS()->GetType())) {
+        //             throw ESMCError((string)"Incompatible types in assignment:\n" + 
+        //                             Asgn.ToString());
+        //         }
+        //     }
+        // }
 
         static inline void CheckMsg(const ExprTypeRef& MsgType, 
                                     const set<ExprTypeRef>& MsgSet)
@@ -222,17 +162,17 @@ namespace ESMC {
             }
         }
 
-        static inline void CheckState(const string& StateName,
-                                      const map<string, Detail::StateDescriptor>& States)
-        {
-            if (States.find(StateName) == States.end()) {
-                throw ESMCError((string)"Unknown state \"" + StateName + "\"");
-            }
-        }
+        // static inline void CheckState(const string& StateName,
+        //                               const map<string, Detail::StateDescriptor>& States)
+        // {
+        //     if (States.find(StateName) == States.end()) {
+        //         throw ESMCError((string)"Unknown state \"" + StateName + "\"");
+        //     }
+        // }
 
         static inline void CheckParamPurity(const ExpT& Exp,
                                             const SymbolTable& SymTab,
-                                            MgrType* Mgr)
+                                            MgrT* Mgr)
         {
             auto Gatherer = Detail::VarGatherer();
             auto Vars = Mgr->Gather(Exp, Gatherer);
@@ -250,7 +190,7 @@ namespace ESMC {
         static inline void CheckParams(const vector<ExpT>& Params,
                                        const ExpT& Constraint,
                                        SymbolTable& SymTab,
-                                       MgrType* Mgr, 
+                                       MgrT* Mgr, 
                                        bool NoReuse = false)
         {
             for (auto const& Param : Params) {
@@ -313,7 +253,7 @@ namespace ESMC {
 
         static inline vector<ExpT>
         SubstAll(const vector<ExpT>& Params, 
-                 const MgrType::SubstMapT& SubstMap, MgrType* Mgr)
+                 const MgrT::SubstMapT& SubstMap, MgrT* Mgr)
         {
             const u32 NumParams = Params.size();
             vector<ExpT> Retval(NumParams);
@@ -326,7 +266,7 @@ namespace ESMC {
 
         static inline vector<vector<ExpT>> InstantiateParams(const vector<ExpT>& Params,
                                                              const ExpT& Constraint,
-                                                             MgrType* Mgr)
+                                                             MgrT* Mgr)
         {
             vector<vector<ExpT>> Retval;
             vector<vector<string>> CPElems;
@@ -335,10 +275,10 @@ namespace ESMC {
             }
 
             auto&& CPRes = CrossProduct<string>(CPElems.begin(), CPElems.end());
-            vector<MgrType::SubstMapT> SubstMaps;
+            vector<MgrT::SubstMapT> SubstMaps;
 
             for (auto const& Prod : CPRes) {
-                MgrType::SubstMapT SubstMap;
+                MgrT::SubstMapT SubstMap;
                 for (u32 i = 0; i < Params.size(); ++i) {
                     auto Type = Params[i]->GetType();
                     SubstMap[Params[i]] = Mgr->MakeVal(Prod[i], Type);
@@ -369,7 +309,7 @@ namespace ESMC {
 
         static inline ExprTypeRef InstantiateType(const ExprTypeRef& PType,
                                                   const vector<ExpT>& Params,
-                                                  MgrType* Mgr)
+                                                  MgrT* Mgr)
         {
             if (Params.size() == 0) {
                 return PType; 
@@ -379,8 +319,8 @@ namespace ESMC {
         }
 
         static inline vector<vector<ExpT>> InstantiatePendingParams(const vector<ExpT>& Params,
-                                                                    MgrType* Mgr,
-                                                                    const MgrType::SubstMapT& 
+                                                                    MgrT* Mgr,
+                                                                    const MgrT::SubstMapT& 
                                                                     GlobalSM,
                                                                     const ExpT& Constraint)
         {

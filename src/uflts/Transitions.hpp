@@ -53,6 +53,30 @@
 namespace ESMC {
     namespace LTS {
 
+        // Base class for assignments
+        class AssignmentBase
+        {
+        private:
+            ExpT
+        };
+
+        class ParametricAssignment
+        {
+            vector<ExpT>& Params;
+            ExpT Constraint;
+            ExpT RHS;
+            ExpT LHS;
+        };
+
+        class TransitionBase
+        {
+        private:
+            string InitState;
+            string FinalState;
+            ExpT Guard;
+            vector
+        };
+
         enum class TransitionKind { INTERNAL, INPUT, OUTPUT };
         
         template <typename E, template <typename> class S, 

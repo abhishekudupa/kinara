@@ -538,11 +538,6 @@ namespace ESMC {
             // into the set of expressions owned by this manager
             inline ExpT Internalize(const ExpT& Exp);
 
-            inline TypeT InstantiateTypeRec(const ExprParametricType* ParamType,
-                                            const vector<ExpT>& ParamValues,
-                                            u32 ParamIndex);
-
-            
         public:
             template <typename... ArgTypes>
             inline ExprMgr(ArgTypes&&... Args);
@@ -1821,48 +1816,6 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        typename ExprMgr<E, S>::TypeT
-        ExprMgr<E, S>::InstantiateTypeRec(const ExprParametricType* Type, 
-                                          const vector<typename ExprMgr<E, S>::ExpT>& Params,
-                                          u32 ParamIndex)
-        {
-            auto ExpType = Type->GetParameterType();
-            if (ExpType != Params[ParamIndex]->GetType()) {
-                throw ExprTypeError((string)"Invalid parameter value " + 
-                                    Params[ParamIndex]->ToString() + 
-                                    " in instantiation of " + 
-                                    "parametric type " + Type->ToString());
-            }
-            auto BaseType = Type->GetBaseType();
-            bool ParamsLeft = (ParamIndex < Params.size() - 1);
-
-            if (BaseType->template Is<ExprParametricType>() !=
-                ParamsLeft) {
-                throw ExprTypeError((string)"Incorrect number of parameters in " + 
-                                    "parametric type instantiation");
-            }
-            if (!ParamsLeft) {
-                if (!BaseType->template Is<ExprRecordType>()) {
-                    throw InternalError((string)"Expected a record type.\nAt: " + 
-                                        __FILE__ + ":" + to_string(__LINE__));
-                }
-                auto RecType = BaseType->template As<ExprRecordType>();
-                auto TypeName = RecType->GetName();
-                for(u32 i = 0; i < Params.size(); ++i) {
-                    TypeName += ((string)"[" + Params[i]->ToString() + "]");
-                }
-                return MakeType<ExprRecordType>(TypeName, RecType->GetMemberVec());
-            } else {
-                auto ParamType = BaseType->template As<ExprParametricType>();
-                if (ParamType == nullptr) {
-                    throw InternalError((string)"Expected a parametric type.\nAt: " + 
-                                        __FILE__ + ":" + to_string(__LINE__));
-                }
-                return InstantiateTypeRec(ParamType, Params, ParamIndex + 1);
-            }
-        }
-
-        template <typename E, template <typename> class S>
         inline typename ExprMgr<E, S>::TypeT
         ExprMgr<E, S>::InstantiateType(const TypeT& Type,
                                        const vector<ExpT>& Params)
@@ -1872,7 +1825,38 @@ namespace ESMC {
                 throw ExprTypeError((string)"Cannot instantiate non-parametric type " +
                                     Type->ToString());
             }
-            return InstantiateTypeRec(TypeAsPType, Params, 0);
+            auto const& ExpectedTypes = TypeAsPType->GetParameterTypes();
+            const u32 NumExpected = ExpectedTypes.size();
+            const u32 NumGot = Params.size();
+
+            if (NumExpected != NumGot) {
+                throw ExprTypeError((string)"Parametric type \"" + TypeAsPType->GetName() + 
+                                    "\" expects " + to_string(NumExpected) + " parameters, " + 
+                                    "but was attempted to be instantiated with " + 
+                                    to_string(NumGot) + " parameters");
+            }
+
+            for (u32 i = 0; i < NumExpected; ++i) {
+                if (!Params[i]->template Is<ConstExpression>()) {
+                    throw ExprTypeError((string)"Parameter at position " + to_string(i) + 
+                                        " is not a constant value in instantiation of type " + 
+                                        TypeAsPType->GetName());
+                }
+                if (Params[i]->GetType() != ExpectedTypes[i]) {
+                    throw ExprTypeError((string)"Parameter types don't match at position " + 
+                                        to_string(i) + " in instantiation of type " + 
+                                        TypeAsPType->GetName());
+                }
+            }
+            
+            string InstName = TypeAsPType->GetName();
+            for (u32 i = 0; i < NumExpected; ++i) {
+                InstName += ((string)"[" + 
+                             Params[i]->template SAs<ConstExpression>()->GetConstValue() + 
+                             "]");
+            }
+            auto BaseRecType = TypeAsPType->GetBaseType()->template SAs<ExprRecordType>();
+            return (MakeType<ExprRecordType>(InstName, BaseRecType->GetMemberVec()));
         }
 
         template <typename E, template <typename> class S>
