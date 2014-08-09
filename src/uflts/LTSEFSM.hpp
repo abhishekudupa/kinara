@@ -47,10 +47,6 @@
 namespace ESMC {
     namespace LTS {
         
-        enum class SplatFairnessType {
-            None, Group, Individual
-        };
-
         class AutomatonBase
         {
         protected:
@@ -62,10 +58,13 @@ namespace ESMC {
             map<string, LTSState> States;
             ExprTypeRef StateType;
             vector<vector<ExpT>> ParamInsts;
-            vector<vector<MgrT::SubstMapT>> ParamSubsts;
+            vector<MgrT::SubstMapT> ParamSubsts;
 
-            
             bool StatesFrozen;
+
+            void AssertStatesFrozen() const;
+            void AssertStatesNotFrozen() const;
+            void CheckState(const string& Name) const;
 
         public:
             AutomatonBase(LabelledTS* TheLTS, const string& Name,
@@ -82,17 +81,62 @@ namespace ESMC {
             const vector<vector<ExpT>>& GetParamInsts() const;
             const vector<MgrT::SubstMapT>& GetParamSubsts() const;
             u32 GetNumInstances() const;
+            u32 GetNumInstancesUnconstrained() const;
         };
+
 
         class EFSMBase : public virtual AutomatonBase
         {
+            friend class LabelledTS;
+
         protected:
             LTSFairnessType Fairness;
+            bool VarsFrozen;
             bool EFSMFrozen;
-            vector<LTSTransRef> Transitions;
-            map<string, LTSFairSetRef> Fairnesses;
-            set<ExprTypeRef> Inputs;
-            set<ExprTypeRef> Outputs;
+            // State variable type
+            ExprTypeRef StateVarType;
+            // SubstMap to rebase expressions
+            // to use the state var fields
+            MgrT::SubstMapT RebaseSubstMap;
+
+            // Transitions per instance
+            map<vector<ExpT>, vector<LTSTransRef>> Transitions;
+
+            // Fairness sets per instance
+            map<string, map<vector<ExpT>, LTSFairSetRef>> Fairnesses;
+
+            // Inputs and outputs per instance
+            map<vector<ExpT>, set<ExprTypeRef>> Inputs;
+            map<vector<ExpT>, set<ExprTypeRef>> Outputs;
+            
+
+            // helper methods
+
+            void AssertVarsFrozen() const;
+            void AssertVarsNotFrozen() const;
+            void AssertEFSMFrozen() const;
+            void AssertEFSMNotFrozen() const;
+            
+            void AssertInput(const vector<ExpT>& ParamInst, const ExprTypeRef& MessageType) const;
+            void AssertOutput(const vector<ExpT>& ParamInst, const ExprTypeRef& MessageType) const;
+
+            void CheckMsgType(const ExprTypeRef& Type) const;
+
+            ExprTypeRef InstantiateMessageType(const vector<ExpT>& Params,
+                                               const MgrT::SubstMapT& SubstMap,
+                                               const ExprTypeRef& MsgType);
+
+            void AddMsg(const ExprTypeRef& MsgType,
+                        const vector<ExpT>& Params,
+                        bool IsInput);
+
+            void AddMsgs(const vector<ExpT>& NewParams,
+                         const ExpT& Constraint,
+                         const ExprTypeRef& MsgType,
+                         const vector<ExpT>& Params,
+                         bool IsInput);
+
+            void CheckParametricUpdates(const vector<LTSAssignRef>& Updates);
 
         public:
             EFSMBase(LabelledTS* TheLTS, const string& Name,
@@ -101,27 +145,31 @@ namespace ESMC {
             virtual ~EFSMBase();
 
             virtual LTSFairnessType GetFairnessType() const;
-            virtual void AddFairnessSet(const string& Name, LTSFairnessType Fairness);
-            virtual const LTSFairSetRef& GetFairness(const string& FairnessName) const;
-            virtual const map<string, LTSFairSetRef>& GetFairnesses() const;
 
+            virtual void AddFairnessSet(const string& Name, FairSetFairnessType Fairness);
+            virtual const map<vector<ExpT>, LTSFairSetRef>& GetFairnessSet(const string& FairnessName) 
+                const;
+            virtual const LTSFairSetRef& GetFairnessForInst(const string& FairnessName,
+                                                            const vector<ExpT>& InstParams) const;
+            virtual const map<string, map<vector<ExpT>, LTSFairSetRef>>& GetAllFairnessSets() const;
+
+            virtual void FreezeStates() override;
+            virtual void FreezeVars();
             virtual void Freeze();
 
-            virtual void AddInputMsg(const string& MessageName,
-                                     const ExprTypeRef& MessageType,
+            virtual void AddInputMsg(const ExprTypeRef& MessageType,
                                      const vector<ExpT>& Params = vector<ExpT>());
 
             virtual void AddInputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
-                                      const string& MessageName, 
-                                      const ExprTypeRef& MessageType);
+                                      const ExprTypeRef& MessageType, 
+                                      const vector<ExpT>& MessageParams);
 
-            virtual void AddOutputMsg(const string& MessageName,
-                                      const ExprTypeRef& MessageType,
+            virtual void AddOutputMsg(const ExprTypeRef& MessageType,
                                       const vector<ExpT>& Params = vector<ExpT>());
 
             virtual void AddOutputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
-                                       const string& MessageName, 
-                                       const ExprTypeRef& MessageType);
+                                       const ExprTypeRef& MessageType,
+                                       const vector<ExpT>& MEssageParams);
 
             virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType);
 
@@ -256,10 +304,6 @@ namespace ESMC {
                                                 SplatFairnessType::None) override;
         };
 
-        enum class LossDupFairnessType {
-            None, NotAlwaysLost, NotAlwaysDup, NotAlwaysLostOrDup
-        };
-
         class ChannelEFSM : public EFSMBase
         {
         public:
@@ -273,36 +317,37 @@ namespace ESMC {
             
             virtual void FreezeStates() override;
 
-            void AddMsg(const string& MessageName,
-                        const ExprTypeRef& MessageType,
+            // virtual LTSFairnessType GetFairnessType() const override;
+            // virtual void AddFairnessSet(const string& Name, FairSetFairnessType Fairness) override;
+            // virtual const LTSFairSetRef& GetFairness(const string& FairnessName) const override;
+            // virtual const map<string, LTSFairSetRef>& GetFairnesses() const override;
+
+            void AddMsg(const ExprTypeRef& MessageType,
                         const vector<ExpT>& Params = vector<ExpT>(),
                         LTSFairnessType MessageFairness = LTSFairnessType::None,
                         LossDupFairnessType LossDupFairness = LossDupFairnessType::None);
 
             void AddMsgs(const vector<ExpT> NewParams,
                          const ExpT& Constraint,    
-                         const string& MessageName,
                          const ExprTypeRef& MessageType,
-                         const vector<ExpT>& Params = vector<ExpT>(),
+                         const vector<ExpT>& MessageParams = vector<ExpT>(),
                          LTSFairnessType MessageFairness = LTSFairnessType::None,
                          LossDupFairnessType LossDupFairness = LossDupFairnessType::None);
 
 
-            virtual void AddInputMsg(const string& MessageName,
-                                     const ExprTypeRef& MessageType,
+            virtual void AddInputMsg(const ExprTypeRef& MessageType,
                                      const vector<ExpT>& Params = vector<ExpT>()) override;
 
             virtual void AddInputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
-                                      const string& MessageName, 
-                                      const ExprTypeRef& MessageType) override;
-
-            virtual void AddOutputMsg(const string& MessageName,
                                       const ExprTypeRef& MessageType,
+                                      const vector<ExpT>& MessageParams) override;
+
+            virtual void AddOutputMsg(const ExprTypeRef& MessageType,
                                       const vector<ExpT>& Params = vector<ExpT>()) override;
 
             virtual void AddOutputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
-                                       const string& MessageName, 
-                                       const ExprTypeRef& MessageType) override;
+                                       const ExprTypeRef& MessageType,
+                                       const vector<ExpT>& MessageParams) override;
 
             virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType) override;
 
@@ -377,18 +422,19 @@ namespace ESMC {
                           const vector<ExpT>& Params, const ExpT& Constraint);
             virtual ~SafetyMonitor();
 
-            virtual LTSFairnessType GetFairnessType() const override;
-            virtual void AddFairnessSet(const string& Name, LTSFairnessType Fairness) override;
-            virtual const LTSFairSetRef& GetFairness(const string& FairnessName) const override;
-            virtual const map<string, LTSFairSetRef>& GetFairnesses() const override;
+            // virtual LTSFairnessType GetFairnessType() const override;
 
-            virtual void AddOutputMsg(const string& MessageName,
-                                      const ExprTypeRef& MessageType,
+            // virtual void AddFairnessSet(const string& Name, FairSetFairnessType Fairness) override;
+
+            // virtual const LTSFairSetRef& GetFairness(const string& FairnessName) const override;
+            // virtual const map<string, LTSFairSetRef>& GetFairnesses() const override;
+
+            virtual void AddOutputMsg(const ExprTypeRef& MessageType,
                                       const vector<ExpT>& Params = vector<ExpT>()) override;
 
             virtual void AddOutputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
-                                       const string& MessageName, 
-                                       const ExprTypeRef& MessageType) override;
+                                       const ExprTypeRef& MessageType,
+                                       const vector<ExpT>& MessageParams) override;
 
             virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType) override;
 
@@ -443,8 +489,8 @@ namespace ESMC {
                          const vector<ExpT>& Params, const ExpT& Constraint);
             virtual ~BuchiMonitor();
 
-            virtual void AddFairness(const vector<ExpT>& Params,
-                                     const LTSFairSetRef& Fairness);
+            // virtual void AddFairness(const vector<ExpT>& Params,
+            //                          const LTSFairSetRef& Fairness);
 
             virtual void AddTransition(const string& InitState, 
                                        const string& FinalState,
@@ -452,6 +498,43 @@ namespace ESMC {
 
             virtual vector<BuchiTransRef>& GetTransitions() const;
         };
+
+        namespace Detail {
+
+            // Transforms all references to a particular
+            // message type in an expression into a 
+            // unified message type reference, renaming 
+            // all field accesses appropriately
+            class MsgTransformer : public VisitorBaseT
+            {
+            private:
+                vector<ExpT> ExpStack;
+                MgrT* Mgr;
+                string MsgVarName;
+                ExprTypeRef MsgRecType;
+                ExprTypeRef UnifiedMType;
+
+            public:
+                MsgTransformer(MgrT* Mgr, const string& MsgVarName,
+                               const ExprTypeRef& MsgRecType, 
+                               const ExprTypeRef& UnifiedMType);
+                virtual ~MsgTransformer();
+
+                virtual void VisitVarExpression(const VarExpT* Exp) override;
+                virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
+                virtual void VisitConstExpression(const ConstExpT* Exp) override;
+                virtual void VisitOpExpression(const OpExpT* Exp) override;
+                virtual inline void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+                virtual inline void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+                
+                static ExpT Do(MgrT* Mgr,
+                               const ExpT& Exp, 
+                               const string& MsgVarName,
+                               const ExprTypeRef& MsgRecType,
+                               const ExprTypeRef& UnifiedMType);
+            };
+
+        } /* end namespace Detail */
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

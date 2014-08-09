@@ -98,7 +98,7 @@ namespace ESMC {
 
         EFSMBase* LTSTransitionBase::GetEFSM() const
         {
-            return static_cast<EFSMBase*>(Automaton);
+            return dynamic_cast<EFSMBase*>(Automaton);
         }
 
         const vector<LTSAssignRef>& LTSTransitionBase::GetUpdates() const

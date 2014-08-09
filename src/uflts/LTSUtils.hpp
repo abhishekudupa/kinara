@@ -49,6 +49,7 @@
 #include "LTSTermSemanticizer.hpp"
 #include "SymbolTable.hpp"
 #include "LTSTypes.hpp"
+#include "LTSAssign.hpp"
 
 
 namespace ESMC {
@@ -71,6 +72,21 @@ namespace ESMC {
                     auto TypeAsFA = Type->As<Exprs::ExprFieldAccessType>();
                     return (TypeAsFA == nullptr);                    
                 }
+            };
+
+            struct SymmConstGatherer
+            {
+                typedef const Exprs::ExpressionBase<LTSExtensionT, LTSTermSemanticizer>* ExpCPtrT;
+
+                inline bool operator () (ExpCPtrT Exp) const
+                {
+                    auto ExpAsConst = Exp->template As<Exprs::ConstExpression>();
+                    if (ExpAsConst == nullptr) {
+                        return false;
+                    }
+                    auto Type = ExpAsConst->GetConstType();
+                    return (Type->Is<Exprs::ExprSymmetricType>());
+                };
             };
 
         } /* end namespace Detail */
@@ -111,64 +127,57 @@ namespace ESMC {
             }
         }
 
-        // static inline void CheckUpdates(const vector<AsgnT>& Updates,
-        //                                 const SymbolTable& SymTab,
-        //                                 MgrT* Mgr, bool IsInput,
-        //                                 const string& MsgVarName)
-        // {
-        //     for(auto const& Asgn : Updates) {
-        //         CheckExpr(Asgn.GetLHS(), SymTab, Mgr);
-        //         if (IsInput) {
-        //             auto Gatherer = Detail::VarGatherer();
-        //             auto Vars = Mgr->Gather(Asgn.GetLHS(), Gatherer);
-        //             for (auto const& Var : Vars) {
-        //                 auto const& VarExp = Var->As<Exprs::VarExpression>();
-        //                 auto const& VarName = VarExp->GetVarName();
-        //                 if (VarName == MsgVarName) {
-        //                     throw ESMCError((string)"Input message cannot be updated " + 
-        //                                     "in an input transition");
-        //                 }
-        //             }
-        //         }
-        //         CheckLValCompat(Asgn.GetLHS(), SymTab);
-        //         CheckExpr(Asgn.GetRHS(), SymTab, Mgr);
-        //         if (!IsInput) {
-        //             auto Gatherer = Detail::VarGatherer();
-        //             auto Vars = Mgr->Gather(Asgn.GetRHS(), Gatherer);
-        //             for (auto const& Var : Vars) {
-        //                 auto const& VarExp = Var->As<Exprs::VarExpression>();
-        //                 auto const& VarName = VarExp->GetVarName();
-        //                 if (VarName == MsgVarName) {
-        //                     throw ESMCError((string)"Output message cannot be used on RHS of " + 
-        //                                     "assignment in an output transition");
-        //                 }
-        //             }
-        //         }
-                
-        //         // Finally check type compat
-        //         if (!CheckAsgnCompat(Asgn.GetLHS()->GetType(),
-        //                              Asgn.GetRHS()->GetType())) {
-        //             throw ESMCError((string)"Incompatible types in assignment:\n" + 
-        //                             Asgn.ToString());
-        //         }
-        //     }
-        // }
-
-        static inline void CheckMsg(const ExprTypeRef& MsgType, 
-                                    const set<ExprTypeRef>& MsgSet)
+        static inline void CheckUpdates(const vector<LTSAssignRef>& Updates,
+                                        const SymbolTable& SymTab,
+                                        MgrT* Mgr, bool IsInput,
+                                        const string& MsgVarName)
         {
-            if (MsgSet.find(MsgType) == MsgSet.end()) {
-                throw ESMCError((string)"Invalid message for transition");
+            for(auto const& Asgn : Updates) {
+                CheckExpr(Asgn->GetLHS(), SymTab, Mgr);
+                if (IsInput) {
+                    auto Gatherer = Detail::VarGatherer();
+                    auto Vars = Mgr->Gather(Asgn->GetLHS(), Gatherer);
+                    for (auto const& Var : Vars) {
+                        auto const& VarExp = Var->As<Exprs::VarExpression>();
+                        auto const& VarName = VarExp->GetVarName();
+                        if (VarName == MsgVarName) {
+                            throw ESMCError((string)"Input message cannot be updated " + 
+                                            "in an input transition");
+                        }
+                    }
+                }
+                CheckLValCompat(Asgn->GetLHS(), SymTab);
+                CheckExpr(Asgn->GetRHS(), SymTab, Mgr);
+                if (!IsInput) {
+                    auto Gatherer = Detail::VarGatherer();
+                    auto Vars = Mgr->Gather(Asgn->GetRHS(), Gatherer);
+                    for (auto const& Var : Vars) {
+                        auto const& VarExp = Var->As<Exprs::VarExpression>();
+                        auto const& VarName = VarExp->GetVarName();
+                        if (VarName == MsgVarName) {
+                            throw ESMCError((string)"Output message cannot be used on RHS of " + 
+                                            "assignment in an output transition");
+                        }
+                    }
+                }
+
+                // Check that no constants of symmetric types 
+                // appear in the assignment
+                auto SymmConstsLHS = Mgr->Gather(Asgn->GetLHS(), Detail::SymmConstGatherer());
+                auto SymmConstsRHS = Mgr->Gather(Asgn->GetRHS(), Detail::SymmConstGatherer());
+                if (SymmConstsLHS.size() != 0 || SymmConstsRHS.size() != 0) {
+                    throw ESMCError((string)"Assignments cannot contain symmetric constant " + 
+                                    "literal values. This breaks symmetry!");
+                }
+                
+                // Finally check type compat
+                if (!CheckAsgnCompat(Asgn->GetLHS()->GetType(),
+                                     Asgn->GetRHS()->GetType())) {
+                    throw ESMCError((string)"Incompatible types in assignment:\n" + 
+                                    Asgn->ToString());
+                }
             }
         }
-
-        // static inline void CheckState(const string& StateName,
-        //                               const map<string, Detail::StateDescriptor>& States)
-        // {
-        //     if (States.find(StateName) == States.end()) {
-        //         throw ESMCError((string)"Unknown state \"" + StateName + "\"");
-        //     }
-        // }
 
         static inline void CheckParamPurity(const ExpT& Exp,
                                             const SymbolTable& SymTab,
@@ -269,7 +278,13 @@ namespace ESMC {
                                                              MgrT* Mgr)
         {
             vector<vector<ExpT>> Retval;
+            if (Params.size() == 0) {
+                Retval.push_back(vector<ExpT>());
+                return Retval;
+            }
+
             vector<vector<string>> CPElems;
+
             for (auto const& Param : Params) {
                 CPElems.push_back(Param->GetType()->GetElements());
             }

@@ -69,7 +69,7 @@ namespace ESMC {
             }
 
             template <typename T>
-            T* As() const
+            const T* As() const
             {
                 return dynamic_cast<const T*>(this);
             }
@@ -113,9 +113,10 @@ namespace ESMC {
                            const ExpT& Constraint,
                            const ExpT& LHS, const ExpT& RHS);
             virtual ~LTSAssignParam();
+            const vector<ExpT>& GetParams() const;
+            const ExpT& GetConstraint() const;
 
             virtual string ToString() const override;
-            vector<LTSAssignRef> Instantiate(MgrT* Mgr) const;
         };
 
     } /* end namespace LTS */

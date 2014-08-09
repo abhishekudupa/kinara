@@ -47,6 +47,14 @@ namespace ESMC {
             // Nothing here
         }
 
+        LTSState::LTSState(const string& StateName, bool Initial,
+                           bool Final, bool Accepting, bool Error)
+            : StateName(StateName), Accepting(Accepting),
+              Final(Final), Error(Error), Initial(Initial)
+        {
+            // Nothing here
+        }
+
         LTSState::LTSState(const LTSState& Other)
             : StateName(Other.StateName),
               Accepting(Other.Accepting),

@@ -110,6 +110,7 @@ namespace ESMC {
             virtual i32 Compare(const ExprTypeBase& Other) const = 0;
             virtual vector<string> GetElements() const = 0;
             virtual u32 GetByteSize() const = 0;
+            virtual u32 GetCardinality() const = 0;
             
             u64 Hash() const;
             bool Equals(const ExprTypeBase& Other) const;
@@ -229,6 +230,7 @@ namespace ESMC {
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
+            virtual u32 GetCardinality() const override;
         };
 
 
@@ -247,6 +249,7 @@ namespace ESMC {
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
+            virtual u32 GetCardinality() const override;
         };
 
         class ExprRangeType : public ExprIntType
@@ -271,6 +274,7 @@ namespace ESMC {
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
+            virtual u32 GetCardinality() const override;
         };
 
         // Mainly for states and such
@@ -295,6 +299,7 @@ namespace ESMC {
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
+            virtual u32 GetCardinality() const override;
         };
 
         class ExprSymmetricType : public ExprScalarType
@@ -330,6 +335,7 @@ namespace ESMC {
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
+            virtual u32 GetCardinality() const override;
         };
 
         class ExprFuncType : public ExprTypeBase
@@ -357,6 +363,7 @@ namespace ESMC {
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
+            virtual u32 GetCardinality() const override;
         };
 
         class ExprArrayType : public ExprTypeBase
@@ -380,6 +387,7 @@ namespace ESMC {
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
+            virtual u32 GetCardinality() const override;
         };
 
         class ExprRecordType : public ExprTypeBase
@@ -409,6 +417,7 @@ namespace ESMC {
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
+            virtual u32 GetCardinality() const override;
         };
 
         // A parametric record type RESOLVES to
@@ -436,6 +445,7 @@ namespace ESMC {
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
+            virtual u32 GetCardinality() const override;
         };
 
         // A dummy type for field access terms variables
@@ -452,10 +462,11 @@ namespace ESMC {
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
+            virtual u32 GetCardinality() const override;
         };
 
         // A dedicated class for message types
-        class ExprMessageType : public ExprRecordType
+        class ExprUnionType : public ExprRecordType
         {
         private:
             set<ExprTypeRef> MemberTypes;
@@ -471,10 +482,10 @@ namespace ESMC {
             virtual void ComputeHashValue() const override;
 
         public:
-            ExprMessageType(const string& Name,
-                            const set<ExprTypeRef>& MemberTypes,
-                            const ExprTypeRef& TypeIDFieldType);
-            virtual ~ExprMessageType();
+            ExprUnionType(const string& Name,
+                          const set<ExprTypeRef>& MemberTypes,
+                          const ExprTypeRef& TypeIDFieldType);
+            virtual ~ExprUnionType();
 
             const set<ExprTypeRef>& GetMemberTypes() const;
             const map<ExprTypeRef, u32>& GetMemberTypeToID() const;

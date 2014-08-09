@@ -54,8 +54,21 @@ namespace ESMC {
 
         };
 
+        // Enum classes for fairness types
         enum class LTSFairnessType {
             None, Weak, Strong
+        };
+
+        enum class SplatFairnessType {
+            None, Group, Individual
+        };
+
+        enum class FairSetFairnessType {
+            Weak, Strong
+        };
+
+        enum class LossDupFairnessType {
+            None, NotAlwaysLost, NotAlwaysDup, NotAlwaysLostOrDup
         };
 
         class LabelledTS;
@@ -97,7 +110,9 @@ namespace ESMC {
         typedef Exprs::ExprTypeRef ExprTypeRef;
         typedef Exprs::Expr<LTSExtensionT, LTSTermSemanticizer> ExpT;
         typedef Exprs::ExprMgr<LTSExtensionT, LTSTermSemanticizer> MgrT;
-        typedef Exprs::VarExpression<LTSExtensionT, LTSTermSemanticizer>* VarExpT;
+        typedef Exprs::ExpressionVisitorBase<LTSExtensionT, LTSTermSemanticizer> VisitorBaseT;
+
+        typedef Exprs::VarExpression<LTSExtensionT, LTSTermSemanticizer> VarExpT;
         typedef Exprs::ConstExpression<LTSExtensionT, LTSTermSemanticizer> ConstExpT;
         typedef Exprs::BoundVarExpression<LTSExtensionT, LTSTermSemanticizer> BoundVarExpT;
         typedef Exprs::OpExpression<LTSExtensionT, LTSTermSemanticizer> OpExpT;
@@ -114,7 +129,7 @@ namespace ESMC {
         typedef Exprs::ExprRecordType ExprRecordType;
         typedef Exprs::ExprArrayType ExprArrayType;
         typedef Exprs::ExprParametricType ExprParametricType;
-        typedef Exprs::ExprMessageType ExprMessageType;
+        typedef Exprs::ExprUnionType ExprUnionType;
         typedef Exprs::ExprFieldAccessType ExprFieldAccessType;
 
     } /* end namespace LTS */

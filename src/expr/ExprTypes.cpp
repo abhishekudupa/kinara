@@ -156,6 +156,11 @@ namespace ESMC {
             return 1;
         }
 
+        u32 ExprBoolType::GetCardinality() const
+        {
+            return 2;
+        }
+
         ExprIntType::ExprIntType()
             : ExprScalarType()
         {
@@ -208,6 +213,11 @@ namespace ESMC {
         {
             throw InternalError((string)"ExprIntType::GetByteSize() should never have been " + 
                                 "called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
+        }
+
+        u32 ExprIntType::GetCardinality() const
+        {
+            throw ESMCError((string)"Cannot get cardinality of unbounded type IntType");
         }
 
         // Inclusive range
@@ -301,6 +311,11 @@ namespace ESMC {
             return Retval;
         }
 
+        u32 ExprRangeType::GetCardinality() const
+        {
+            return (RangeHigh - RangeLow + 1);
+        }
+
         ExprEnumType::ExprEnumType(const string& Name, 
                                  const set<string>& Members)
             : ExprScalarType(), Name(Name), Members(Members)
@@ -372,6 +387,11 @@ namespace ESMC {
         u32 ExprEnumType::GetByteSize() const
         {
             return BytesForRange(Members.size());
+        }
+
+        u32 ExprEnumType::GetCardinality() const
+        {
+            return Members.size();
         }
 
         i32 ExprEnumType::Compare(const ExprTypeBase& Other) const
@@ -466,6 +486,11 @@ namespace ESMC {
         u32 ExprSymmetricType::GetByteSize() const
         {
             return BytesForRange(Members.size());
+        }
+
+        u32 ExprSymmetricType::GetCardinality() const
+        {
+            return MemberSet.size();
         }
 
         i32 ExprSymmetricType::Compare(const ExprTypeBase& Other) const
@@ -620,6 +645,11 @@ namespace ESMC {
             return Retval;
         }
 
+        u32 ExprFuncType::GetCardinality() const
+        {
+            throw ESMCError((string)"Cannot GetCardinality() of a function type");
+        }
+
         ExprArrayType::ExprArrayType(const ExprTypeRef& IndexType,
                                    const ExprTypeRef& ValueType)
             : ExprTypeBase(), IndexType(IndexType), ValueType(ValueType)
@@ -697,6 +727,11 @@ namespace ESMC {
         {
             u32 Retval = ValueType->GetByteSize();
             return (Retval * IndexType->GetElements().size());
+        }
+
+        u32 ExprArrayType::GetCardinality() const
+        {
+            throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
         ExprRecordType::ExprRecordType(const string& Name,
@@ -798,6 +833,11 @@ namespace ESMC {
         vector<string> ExprRecordType::GetElements() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
+        }
+
+        u32 ExprRecordType::GetCardinality() const
+        {
+            throw ESMCError((string)"Cannot get cardinality of non-scalar type");
         }
 
         void ExprRecordType::ComputeHashValue() const
@@ -925,6 +965,11 @@ namespace ESMC {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
+        u32 ExprParametricType::GetCardinality() const
+        {
+            throw ESMCError((string)"Cannot get cardinality of non-scalar type");
+        }
+
         u32 ExprParametricType::GetByteSize() const
         {
             throw InternalError((string)"ExprParametricType::GetByteSize() should never " + 
@@ -974,6 +1019,10 @@ namespace ESMC {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
+        u32 ExprFieldAccessType::GetCardinality() const
+        {
+            throw ESMCError((string)"Cannot get cardinality of non-scalar type");
+        }
 
         string ExprFieldAccessType::ToString() const
         {
@@ -986,7 +1035,7 @@ namespace ESMC {
                                 "have been called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
         }
 
-        ExprMessageType::ExprMessageType(const string& Name,
+        ExprUnionType::ExprUnionType(const string& Name,
                                          const set<ExprTypeRef>& MemberTypes,
                                          const ExprTypeRef& TypeIDFieldType)
             : ExprRecordType(), MemberTypes(MemberTypes),
@@ -995,14 +1044,14 @@ namespace ESMC {
             this->Name = Name;
             // Sanity checks
             if (!TypeIDFieldType->Is<ExprRangeType>()) {
-                throw ESMCError((string)"ExprMessageType must be instantiated with a " + 
+                throw ESMCError((string)"ExprUnionType must be instantiated with a " + 
                                 "subrange type for TypeIDFieldType");
             }
 
             auto TypeIDTypeAsRange = TypeIDFieldType->As<ExprRangeType>();
             auto Low = TypeIDTypeAsRange->GetLow();
             if (Low != 0) {
-                throw ESMCError((string)"Subrange type for ExprMessageType must have low at 0");
+                throw ESMCError((string)"Subrange type for ExprUnionType must have low at 0");
             }
             
             const u32 MaxNumTypes = TypeIDTypeAsRange->GetHigh();
@@ -1083,47 +1132,47 @@ namespace ESMC {
             }
         }
 
-        ExprMessageType::~ExprMessageType()
+        ExprUnionType::~ExprUnionType()
         {
             // Nothing here
         }
 
-        const set<ExprTypeRef>& ExprMessageType::GetMemberTypes() const
+        const set<ExprTypeRef>& ExprUnionType::GetMemberTypes() const
         {
             return MemberTypes;
         }
 
-        const map<ExprTypeRef, u32>& ExprMessageType::GetMemberTypeToID() const
+        const map<ExprTypeRef, u32>& ExprUnionType::GetMemberTypeToID() const
         {
             return MemberTypeToID;
         }
 
-        const map<u32, ExprTypeRef>& ExprMessageType::GetIDToMemberType() const
+        const map<u32, ExprTypeRef>& ExprUnionType::GetIDToMemberType() const
         {
             return IDToMemberType;
         }
 
-        const map<u32, map<string, string>>& ExprMessageType::GetMemberFieldToField() const
+        const map<u32, map<string, string>>& ExprUnionType::GetMemberFieldToField() const
         {
             return MemberFieldToField;
         }
 
-        const map<u32, map<string, string>>& ExprMessageType::GetFieldToMemberField() const
+        const map<u32, map<string, string>>& ExprUnionType::GetFieldToMemberField() const
         {
             return FieldToMemberField;
         }
 
-        const string& ExprMessageType::GetTypeIDFieldName() const
+        const string& ExprUnionType::GetTypeIDFieldName() const
         {
             return TypeIDFieldName;
         }
 
-        const ExprTypeRef& ExprMessageType::GetTypeIDFieldType() const
+        const ExprTypeRef& ExprUnionType::GetTypeIDFieldType() const
         {
             return TypeIDFieldType;
         }
 
-        const u32 ExprMessageType::GetTypeIDForMemberType(const ExprTypeRef& MemType) const
+        const u32 ExprUnionType::GetTypeIDForMemberType(const ExprTypeRef& MemType) const
         {
             auto it = MemberTypeToID.find(MemType);
             if (it == MemberTypeToID.end()) {
@@ -1133,7 +1182,7 @@ namespace ESMC {
             return it->second;
         }
 
-        const ExprTypeRef& ExprMessageType::GetMemberTypeForTypeID(u32 TypeID) const
+        const ExprTypeRef& ExprUnionType::GetMemberTypeForTypeID(u32 TypeID) const
         {
             auto it = IDToMemberType.find(TypeID);
             if (it == IDToMemberType.end()) {
@@ -1143,7 +1192,7 @@ namespace ESMC {
             return it->second;
         }
 
-        const string& ExprMessageType::MapFromMemberField(const ExprTypeRef& MemberType,
+        const string& ExprUnionType::MapFromMemberField(const ExprTypeRef& MemberType,
                                                           const string& FieldName) const
         {
             auto it = MemberTypeToID.find(MemberType);
@@ -1161,7 +1210,7 @@ namespace ESMC {
             return it2->second;
         }
 
-        const string& ExprMessageType::MapToMemberField(u32 TypeID,
+        const string& ExprUnionType::MapToMemberField(u32 TypeID,
                                                         const string& FieldName) const
         {
             auto it = FieldToMemberField.find(TypeID);
@@ -1178,7 +1227,7 @@ namespace ESMC {
             return it2->second;
         }
 
-        void ExprMessageType::ComputeHashValue() const
+        void ExprUnionType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, Name);
@@ -1187,12 +1236,12 @@ namespace ESMC {
             }
         }
 
-        string ExprMessageType::ToString() const
+        string ExprUnionType::ToString() const
         {
             return Name;
         }
 
-        i32 ExprMessageType::Compare(const ExprTypeBase& Other) const
+        i32 ExprUnionType::Compare(const ExprTypeBase& Other) const
         {
             if (Other.As<ExprBoolType>() != nullptr ||
                 Other.As<ExprIntType>() != nullptr ||
@@ -1206,10 +1255,10 @@ namespace ESMC {
                 return 1;
             }
             if (Other.As<ExprRecordType>() != nullptr && 
-                Other.As<ExprMessageType>() == nullptr) {
+                Other.As<ExprUnionType>() == nullptr) {
                 return 1;
             }
-            auto OtherAsMsg = Other.As<ExprMessageType>();
+            auto OtherAsMsg = Other.As<ExprUnionType>();
             if (OtherAsMsg == nullptr) {
                 return -1;
             }

@@ -1,8 +1,8 @@
-// LTSState.hpp --- 
+// LabelledTS.hpp --- 
 // 
-// Filename: LTSState.hpp
+// Filename: LabelledTS.hpp
 // Author: Abhishek Udupa
-// Created: Fri Aug  8 13:43:46 2014 (-0400)
+// Created: Fri Aug  8 20:35:51 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,55 +37,41 @@
 
 // Code:
 
-#if !defined ESMC_LTS_STATE_HPP_
-#define ESMC_LTS_STATE_HPP_
+#if !defined ESMC_LABELLED_TS_HPP_
+#define ESMC_LABELLED_TS_HPP_
 
 #include "LTSTypes.hpp"
 
 namespace ESMC {
     namespace LTS {
 
-        class LTSState
+        class LabelledTS 
         {
-            friend class AutomatonBase;
         private:
-            string StateName;
-            bool Accepting;
-            bool Final;
-            bool Error;
-            bool Initial;
-            
-        private:
-            LTSState(const string& StateName, bool Initial,
-                     bool Final, bool Accepting, bool Error);
+            MgrT* Mgr;
+            bool Frozen;
+            bool MsgsFrozen;
+            bool AutomataFrozen;
+            map<string, ExprTypeRef> MsgTypes;
+            map<string, ExprTypeRef> ParametricMsgTypes;
+            map<ExprTypeRef, ExprTypeRef> TypeToPrimed;
+            ExprTypeRef UnifiedMsgType;
+            vector<EFSMBase*> AllEFSMs;
+            vector<EFSMBase*> ActualEFSMs;
+            vector<ChannelEFSM*> ChannelEFSMs;
+            vector<SafetyMonitor*> SafetyMonitors;
+            vector<BuchiMonitor*> BuchiMonitors;
 
         public:
-            LTSState(const LTSState& Other);
-            LTSState();
-            ~LTSState();
-
-            LTSState& operator = (const LTSState& Other);
-
-            string GetName() const;
-            bool IsAccepting() const;
-            bool IsFinal() const;
-            bool IsError() const;
-            bool IsInitial() const;
-
-            static LTSState MakeEFSMState(const string& StateName, 
-                                          bool Initial = false,
-                                          bool Final = false,
-                                          bool Error = false);
-
-            static LTSState MakeMonitorState(const string& StateName,
-                                             bool Initial = false,
-                                             bool Accepting = false);
+            
+            MgrT* GetMgr() const;
+            bool CheckMessageType(const ExprTypeRef& MsgType) const;
         };
 
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-#endif /* ESMC_LTS_STATE_HPP_ */
+#endif /* ESMC_LABELLED_TS_HPP_ */
 
 // 
-// LTSState.hpp ends here
+// LabelledTS.hpp ends here

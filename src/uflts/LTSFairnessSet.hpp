@@ -48,9 +48,6 @@
 namespace ESMC {
     namespace LTS {
 
-        enum class FairSetFairnessType {
-            Weak, Strong
-        };
 
         class LTSFairnessSet : public RefCountable
         {

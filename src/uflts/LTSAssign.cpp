@@ -109,29 +109,21 @@ namespace ESMC {
             // Nothing here
         }
 
+        const vector<ExpT>& LTSAssignParam::GetParams() const
+        {
+            return Params;
+        }
+        
+        const ExpT& LTSAssignParam::GetConstraint() const
+        {
+            return Constraint;
+        }
+
         string LTSAssignParam::ToString() const
         {
             return (LHS->ToString() + " := " + RHS->ToString());
         }
         
-        vector<LTSAssignRef> LTSAssignParam::Instantiate(MgrT* Mgr) const
-        {
-            vector<LTSAssignRef> Retval;
-            auto&& ParamInsts = InstantiateParams(Params, Constraint, Mgr);
-            const u32 NumParams = Params.size();
-            for (auto const& ParamInst : ParamInsts) {
-                MgrT::SubstMapT SubstMap;
-                
-                for (u32 i = 0; i < NumParams; ++i) {
-                    SubstMap[Params[i]] = ParamInst[i];
-                }
-
-                Retval.push_back(new LTSAssignSimple(Mgr->Substitute(SubstMap, LHS),
-                                                     Mgr->Substitute(SubstMap, RHS)));
-            }
-            return Retval;
-        }
-
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

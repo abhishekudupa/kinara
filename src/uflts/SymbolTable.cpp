@@ -109,7 +109,7 @@ namespace ESMC {
                     OtherPtr->GetType() == ParamType);
         }
 
-        MsgDecl::MsgDecl(const string& Name, const Exprs::ExprTypeRef& Type)
+        MsgDeclBase::MsgDeclBase(const string& Name, const Exprs::ExprTypeRef& Type)
             : DeclBase(Name), MsgType(Type)
         {
             if (!Type->Is<Exprs::ExprRecordType>()) {
@@ -117,33 +117,67 @@ namespace ESMC {
             }
         }
 
-        MsgDecl::~MsgDecl() 
+        MsgDeclBase::~MsgDeclBase() 
         {
             // Nothing here
         }
 
-        void MsgDecl::ComputeHashValue() const
+        void MsgDeclBase::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, "Msg");
             boost::hash_combine(HashCode, GetDeclName());
             boost::hash_combine(HashCode, MsgType->Hash());
+            boost::hash_combine(HashCode, IsInput());
+            boost::hash_combine(HashCode, IsOutput());
         }
 
-        const Exprs::ExprTypeRef& MsgDecl::GetType() const
+        const Exprs::ExprTypeRef& MsgDeclBase::GetType() const
         {
             return MsgType;
         }
 
-        bool MsgDecl::Equals(const DeclBase& Other) const
+        bool MsgDeclBase::Equals(const DeclBase& Other) const
         {
-            if (!Other.Is<MsgDecl>()) {
+            if (!Other.Is<MsgDeclBase>()) {
                 return false;
             }
 
-            auto OtherPtr = Other.As<MsgDecl>();
+            auto OtherPtr = Other.As<MsgDeclBase>();
             return (OtherPtr->GetDeclName() == GetDeclName() &&
-                    OtherPtr->GetType() == MsgType);
+                    OtherPtr->GetType() == MsgType &&
+                    OtherPtr->IsInput() == IsInput() &&
+                    OtherPtr->IsOutput() == IsOutput());
+        }
+
+        InMsgDecl::~InMsgDecl()
+        {
+            // Nothing here
+        }
+        
+        bool InMsgDecl::IsInput() const
+        {
+            return true;
+        }
+
+        bool InMsgDecl::IsOutput() const
+        {
+            return false;
+        }
+
+        OutMsgDecl::~OutMsgDecl()
+        {
+            // Nothing here
+        }
+        
+        bool OutMsgDecl::IsInput() const
+        {
+            return false;
+        }
+
+        bool OutMsgDecl::IsOutput() const
+        {
+            return true;
         }
         
         VarDecl::VarDecl(const string& Name, const Exprs::ExprTypeRef& Type)
