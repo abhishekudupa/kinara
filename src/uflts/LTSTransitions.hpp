@@ -192,6 +192,22 @@ namespace ESMC {
             
             virtual string ToString() const override;
         };
+
+        class LTSGuardedCommand : public RefCountable
+        {
+        private:
+            ExpT Guard;
+            vector<LTSAssignRef> Updates;
+
+        public:
+            LTSGuardedCommand(const ExpT& Guard,
+                              const vector<LTSAssignRef>& Updates);
+            virtual ~LTSGuardedCommand();
+
+            const ExpT& GetGuard() const;
+            const vector<LTSAssignRef>& GetUpdates() const;
+            string ToString() const;
+        };
         
     } /* end namespace LTS */
 } /* end namespace ESMC */

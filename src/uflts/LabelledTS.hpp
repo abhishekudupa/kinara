@@ -41,6 +41,7 @@
 #define ESMC_LABELLED_TS_HPP_
 
 #include "LTSTypes.hpp"
+#include "SymbolTable.hpp"
 
 namespace ESMC {
     namespace LTS {
@@ -52,6 +53,7 @@ namespace ESMC {
             bool Frozen;
             bool MsgsFrozen;
             bool AutomataFrozen;
+            map<string, ExprTypeRef> SymmTypes;
             map<string, ExprTypeRef> MsgTypes;
             map<string, ExprTypeRef> ParametricMsgTypes;
             map<ExprTypeRef, ExprTypeRef> TypeToPrimed;
@@ -61,12 +63,45 @@ namespace ESMC {
             vector<ChannelEFSM*> ChannelEFSMs;
             vector<SafetyMonitor*> SafetyMonitors;
             vector<BuchiMonitor*> BuchiMonitors;
+            
+            SymbolTable SymTab;
+
+            inline void AssertFrozen() const;
+            inline void AssertNotFrozen() const;
+            inline void AssertMsgsFrozen() const;
+            inline void AssertMsgsNotFrozen() const;
+            inline void AssertAutomataFrozen() const;
+            inline void AssertAutomataNotFrozen() const;
 
         public:
+            LabelledTS();
+            virtual ~LabelledTS();
             
+            // typestate functions
+            void FreezeMsgs();
+            void FreezeAutomata();
+            void Freeze();
+
+            // All symmetric types must be declared here
+            const ExprTypeRef& MakeSymmType(const string& Name, u32 Size);
+            // All message types must be declared here
+            const ExprTypeRef& MakeMsgType(const string& Name,
+                                           const vector<pair<string, ExprTypeRef>>& Members,
+                                           bool IncludePrimed = false);
+            // All parametric message types must be declared here
+            const ExprTypeRef& MakeMsgTypes(const vector<ExpT>& Params,
+                                            const ExpT& Constraint,
+                                            const string& Name,
+                                            const vector<pair<string, ExprTypeRef>>& Members,
+                                            bool IncludePrimed = false);
+            
+
             MgrT* GetMgr() const;
             bool CheckMessageType(const ExprTypeRef& MsgType) const;
             const ExprTypeRef& GetUnifiedMType() const;
+
+            const ExprTypeRef& GetPrimedType(const ExprTypeRef& Type) const;
+            void CheckExpr(const ExpT& Expr) const;
         };
 
     } /* end namespace LTS */

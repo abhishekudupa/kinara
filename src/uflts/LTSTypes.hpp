@@ -106,6 +106,7 @@ namespace ESMC {
         typedef CSmartPtr<LTSFairnessSet> LTSFairSetRef;
 
         class LTSGuardedCommand;
+        typedef CSmartPtr<LTSGuardedCommand> GCmdRef;
 
         typedef Exprs::ExprTypeRef ExprTypeRef;
         typedef Exprs::Expr<LTSExtensionT, LTSTermSemanticizer> ExpT;

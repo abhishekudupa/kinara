@@ -1723,7 +1723,7 @@ namespace ESMC {
                 ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
                 const u32 NumChildren = Exp->GetChildren().size();
 
-                Z3_ast LoweredChildren = new Z3_ast[NumChildren];
+                auto LoweredChildren = new Z3_ast[NumChildren];
                 vector<Z3Expr> LChildren;
 
                 for (u32 i = 0; i < NumChildren; ++i) {
@@ -1776,7 +1776,7 @@ namespace ESMC {
                     break;
 
                 case LTSOps::OpMINUS:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_unary_minux(*Ctx, LChildren[0])));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_unary_minus(*Ctx, LChildren[0])));
                     break;
 
                 case LTSOps::OpMUL:

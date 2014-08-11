@@ -148,6 +148,7 @@ namespace ESMC {
             for (auto const& Asgn : Updates) {
                 sstr << Asgn->ToString() << endl;
             }
+            sstr << "}" << endl;
             return sstr.str();
         }
 
@@ -200,6 +201,7 @@ namespace ESMC {
             for (auto const& Asgn : Updates) {
                 sstr << Asgn->ToString() << endl;
             }
+            sstr << "}" << endl;
             return sstr.str();
         }
 
@@ -238,6 +240,7 @@ namespace ESMC {
             for (auto const& Asgn : Updates) {
                 sstr << Asgn->ToString() << endl;
             }
+            sstr << "}" << endl;
             return sstr.str();
         }
 
@@ -253,6 +256,40 @@ namespace ESMC {
             sstr << "    " << InitState.GetName() << " -> " 
                  << FinalState.GetName() << endl;
             sstr << "    Guard: " << Guard->ToString() << endl;
+            return sstr.str();
+        }
+
+        LTSGuardedCommand::LTSGuardedCommand(const ExpT& Guard,
+                                             const vector<LTSAssignRef>& Updates)
+            : Guard(Guard), Updates(Updates)
+        {
+            // Nothing here
+        }
+
+        LTSGuardedCommand::~LTSGuardedCommand()
+        {
+            // Nothing here
+        }
+
+        const ExpT& LTSGuardedCommand::GetGuard() const
+        {
+            return Guard;
+        }
+
+        const vector<LTSAssignRef>& LTSGuardedCommand::GetUpdates() const
+        {
+            return Updates;
+        }
+
+        string LTSGuardedCommand::ToString() const
+        {
+            ostringstream sstr;
+            sstr << "guarded command {" << endl;
+            sstr << "    " << Guard->ToString() << " -> " << endl;
+            for (auto const& Update : Updates) {
+                sstr << "        " << Update->ToString() << endl;
+            }
+            sstr << "}" << endl;
             return sstr.str();
         }
 

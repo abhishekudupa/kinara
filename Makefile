@@ -45,6 +45,7 @@ esmc_LIB_PATHS= \
 PROJECT_LIBS=esmc
 libesmc_OBJS= \
 	ExprTypes.o \
+	LabelledTS.o \
 	LTSAssign.o \
 	LTSEFSM.o \
 	LTSFairnessSet.o \

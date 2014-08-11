@@ -135,8 +135,8 @@ namespace ESMC {
             
             virtual bool Equals(const DeclBase& Other) const override;
             virtual const Exprs::ExprTypeRef& GetType() const override;
-            virtual bool IsInput() const;
-            virtual bool IsOutput() const;
+            virtual bool IsInput() const = 0;
+            virtual bool IsOutput() const = 0;
         };
 
         class InMsgDecl : public MsgDeclBase

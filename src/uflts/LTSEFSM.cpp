@@ -298,6 +298,17 @@ namespace ESMC {
             // Nothing here
         }
 
+        void EFSMBase::AddState(const string& StateName,
+                                bool Initial, bool Final, 
+                                bool Accepting, bool Error)
+        {
+            if (Initial || Accepting) {
+                throw ESMCError((string)"EFSMs cannot have initial states or " + 
+                                "accepting states");
+            }
+            AutomatonBase::AddState(StateName, Initial, Final, Accepting, Error);
+        }
+
         void EFSMBase::AssertVarsFrozen() const
         {
             if (!VarsFrozen) {
@@ -1222,6 +1233,669 @@ namespace ESMC {
             }
         }
 
+        string EFSMBase::ToString() const
+        {
+            // TODO: implement me
+            return "";
+        }
+
+        GeneralEFSM::GeneralEFSM(LabelledTS* TheLTS, const string& Name,
+                                 const vector<ExpT>& Params, 
+                                 const ExpT& Constraint,
+                                 LTSFairnessType Fairness)
+            : AutomatonBase(TheLTS, Name, Params, Constraint),
+              EFSMBase(TheLTS, Name, Params, Constraint, Fairness)
+        {
+            // Nothing here
+        }
+
+        GeneralEFSM::~GeneralEFSM()
+        {
+            // Nothing here
+        }
+            
+        DetEFSM::DetEFSM(LabelledTS* TheLTS, const string& Name,
+                         const vector<ExpT>& Params, const ExpT& Constraint,
+                         LTSFairnessType Fairness)
+            : AutomatonBase(TheLTS, Name, Params, Constraint),
+              EFSMBase(TheLTS, Name, Params, Constraint, Fairness)
+        {
+            // Nothing here
+        }
+
+
+        DetEFSM::~DetEFSM()
+        {
+            // Nothing here
+        }
+
+        void DetEFSM::AddInputTransition(const string& InitState,
+                                         const string& FinalState,
+                                         const ExpT& Guard,
+                                         const vector<LTSAssignRef>& Updates,
+                                         const string& MessageName,
+                                         const ExprTypeRef& MessageType,
+                                         const vector<ExpT>& MessageParams)
+        {
+            // TODO: Check for determinism
+            EFSMBase::AddInputTransition(InitState, FinalState, Guard, 
+                                         Updates, MessageName, MessageType, 
+                                         MessageParams);
+        }
+
+        void DetEFSM::AddInputTransitions(const vector<ExpT>& TransParams,
+                                          const ExpT& Constraint,
+                                          const string& InitState,
+                                          const string& FinalState,
+                                          const ExpT& Guard,
+                                          const vector<LTSAssignRef>& Updates,
+                                          const string& MessageName,
+                                          const ExprTypeRef& MessageType,
+                                          const vector<ExpT>& MessageParams)
+        {
+            // TODO: Check for determinism
+            EFSMBase::AddInputTransitions(TransParams, Constraint,
+                                          InitState, FinalState, Guard,
+                                          Updates, MessageName, MessageType,
+                                          MessageParams);
+        }
+
+        void DetEFSM::AddOutputTransition(const string& InitState,
+                                          const string& FinalState,
+                                          const ExpT& Guard,
+                                          const vector<LTSAssignRef>& Updates,
+                                          const string& MessageName,
+                                          const ExprTypeRef& MessageType,
+                                          const vector<ExpT>& MessageParams,
+                                          const set<string>& AddToFairnessSets)
+        {
+            // TODO: Check for determinism
+            EFSMBase::AddOutputTransition(InitState, FinalState, Guard,
+                                          Updates, MessageName, MessageType,
+                                          MessageParams, AddToFairnessSets);
+        }
+
+        void DetEFSM::AddOutputTransitions(const vector<ExpT>& TransParams, 
+                                           const ExpT& Constraint, 
+                                           const string& InitState, 
+                                           const string& FinalState, 
+                                           const ExpT &Guard, 
+                                           const vector<LTSAssignRef>& Updates, 
+                                           const string& MessageName, 
+                                           const ExprTypeRef& MessageType, 
+                                           const vector<ExpT>& MessageParams, 
+                                           LTSFairnessType FairnessKind,
+                                           SplatFairnessType SplatFairness)
+        {
+            // TODO: Check for determinism
+            EFSMBase::AddOutputTransitions(TransParams, Constraint, InitState, 
+                                           FinalState, Guard, Updates, MessageName, 
+                                           MessageType, MessageParams, 
+                                           FairnessKind, SplatFairness);
+        }
+
+        void DetEFSM::AddInternalTransition(const string& InitState,
+                                            const string& FinalState,
+                                            const ExpT& Guard,
+                                            const vector<LTSAssignRef>& Updates,
+                                            const set<string>& AddToFairnessSets)
+        {
+            // TODO: Check for determinism
+            EFSMBase::AddInternalTransition(InitState, FinalState, Guard, 
+                                            Updates, AddToFairnessSets);
+        }
+
+        void DetEFSM::AddInternalTransitions(const vector<ExpT>& TransParams,
+                                             const ExpT& Constraint,
+                                             const string& InitState,
+                                             const string& FinalState,
+                                             const ExpT& Guard,
+                                             const vector<LTSAssignRef>& Updates,
+                                             LTSFairnessType FairnessKind,
+                                             SplatFairnessType SplatFairness)
+        {
+            // TODO: Check for determinism
+            EFSMBase::AddInternalTransitions(TransParams, Constraint, InitState, 
+                                             FinalState, Guard, Updates, 
+                                             FairnessKind, SplatFairness);
+        }
+
+        ChannelEFSM::ChannelEFSM(LabelledTS* TheLTS, const string& Name,
+                                 const vector<ExpT>& Params, const ExpT& Constraint,
+                                 u32 Capacity, bool Lossy, bool Ordered, bool Duplicating,
+                                 bool Blocking, LTSFairnessType Fairness)
+              : AutomatonBase(TheLTS, Name, Params, Constraint), 
+                EFSMBase(TheLTS, Name, Params, Constraint, Fairness),
+                Capacity(Capacity), Lossy(Lossy), Ordered(Ordered),
+                Duplicating(Duplicating), Blocking(Blocking)
+        {
+            if (Blocking && !Lossy) {
+                throw ESMCError((string)"Non lossy channels cannot be declared blocking");
+            }
+            
+            AddState("ChanInitState");
+            if (Lossy) {
+                AddState("LossDecideState");
+            }
+
+            EFSMBase::FreezeStates();
+            auto Mgr = TheLTS->GetMgr();
+            IndexType = Mgr->MakeType<ExprRangeType>(0, Capacity - 1);
+            ValType = TheLTS->GetUnifiedMType();
+            ArrayType = Mgr->MakeType<ExprArrayType>(IndexType, ValType);
+            CountType = Mgr->MakeType<ExprRangeType>(0, Capacity);
+            
+            EFSMBase::AddVariable("MsgBuffer", ArrayType);
+            EFSMBase::AddVariable("MsgCount", CountType);
+            
+            if (Lossy) {
+                EFSMBase::AddVariable("LastMsg", ValType);
+            }
+
+            EFSMBase::FreezeVars();
+
+            CountExp = Mgr->MakeVar("MsgCount", CountType);
+            ArrayExp = Mgr->MakeVar("MsgBuffer", ArrayType);
+            IndexExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, CountExp);
+            LastMsgExp = Mgr->MakeVar("LastMsg", ValType);
+            MaxChanExp = Mgr->MakeVal(to_string(Capacity), CountType);
+            OneExp = Mgr->MakeVal("1", CountType);
+            ZeroExp = Mgr->MakeVal("0", CountType);
+        }
+
+        ChannelEFSM::~ChannelEFSM()
+        {
+            // Nothing here
+        }
+
+        void ChannelEFSM::FreezeStates()
+        {
+            throw ESMCError((string)"ChannelEFSM::FreezeStates() should not be called");
+        }
+
+        void ChannelEFSM::FreezeVars()
+        {
+            throw ESMCError((string)"ChannelEFSM::FreezeVars() should not be called");
+        }
+
+        void ChannelEFSM::AddFairnessSet(const string& Name, FairSetFairnessType Fairness)
+        {
+            throw ESMCError((string)"ChannelEFSM::AddFairnessSet() should not be called");
+        }
+
+        inline void ChannelEFSM::MakeInputTransition(const ExprTypeRef& MessageType,
+                                                     const vector<ExpT>& MessageParams,
+                                                     LossDupFairnessType LossDupFairness)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto const& UMType = TheLTS->GetUnifiedMType();
+
+            auto RecType = MessageType->As<ExprRecordType>();
+            if (RecType == nullptr) {
+                RecType = 
+                    MessageType->As<ExprParametricType>()->GetBaseType()->As<ExprRecordType>();
+            }
+            
+            ExpT TargetExp = nullptr;
+            if (Lossy) {
+                TargetExp = LastMsgExp;
+            } else {
+                TargetExp = IndexExp;
+            }
+
+            auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+            vector<LTSAssignRef> Updates;
+            vector<LTSAssignRef> NoCountUpdates;
+            string InMsgName = "__inmsg__";
+            auto InMsgVar = Mgr->MakeVar(InMsgName, UMType);
+            auto TrueExp = Mgr->MakeTrue();
+            
+            auto Guard = Mgr->MakeExpr(LTSOps::OpLT, CountExp, MaxChanExp);
+            NoCountUpdates.push_back(new LTSAssignSimple(IndexExp, InMsgVar));
+            Updates = NoCountUpdates;
+            Updates.push_back(new LTSAssignSimple(CountExp, Mgr->MakeExpr(LTSOps::OpADD,
+                                                                          CountExp, OneExp)));
+            if (!Lossy) {
+                EFSMBase::AddInputTransition("ChanInitState", "ChanInitState", Guard, 
+                                             Updates, InMsgName, MessageType, MessageParams);
+            } else {
+                vector<LTSAssignRef> Step2Updates;
+                Step2Updates.push_back(new LTSAssignSimple(LastMsgExp, IndexExp));
+                Step2Updates.push_back(new LTSAssignSimple(CountExp,
+                                                           Mgr->MakeExpr(LTSOps::OpADD,
+                                                                         CountExp, OneExp)));
+                vector<LTSAssignRef> LossUpdates;
+                LossUpdates.push_back(new LTSAssignSimple(LastMsgExp, 
+                                                          Mgr->MakeVal("clear", UMType)));
+
+                ExpT Guard2 = nullptr;
+                if (Blocking) {
+                    EFSMBase::AddInputTransition("ChanInitState", "LossDecideState",
+                                                 Guard, Updates, InMsgName, MessageType,
+                                                 MessageParams);
+                    Guard2 = TrueExp;
+                } else {
+                    EFSMBase::AddInputTransition("ChanInitState", "LossDecideState",
+                                                 TrueExp, Updates, InMsgName, MessageType,
+                                                 MessageParams);
+                    Guard2 = Guard;
+                }
+
+                set<string> AddToFairnessSets;
+                if (LossDupFairness == LossDupFairnessType::NotAlwaysLost || 
+                    LossDupFairness == LossDupFairnessType::NotAlwaysLostOrDup) {
+                    auto LDFairID = LossDupFairnessUIDGen.GetUID();
+                    string FairName = "LossFairness_ " + to_string(LDFairID);
+                    EFSMBase::AddFairnessSet(FairName, FairSetFairnessType::Strong);
+                    AddToFairnessSets.insert(FairName);
+                }
+
+                // Lossy transition
+                EFSMBase::AddInternalTransition("LossDecideState", "ChanInitState", 
+                                                TrueExp, LossUpdates, set<string>());
+                // Non lossy
+                EFSMBase::AddInternalTransition("LossDecideState", "ChanInitState",
+                                                Guard2, Step2Updates, AddToFairnessSets);
+            }
+        }
+
+        void ChannelEFSM::MakeOutputTransition(const ExprTypeRef& MessageType, 
+                                               const vector<ExpT>& MessageParams, 
+                                               LTSFairnessType MessageFairness, 
+                                               ESMC::LTS::LossDupFairnessType LossDupFairness)
+        {
+            auto Mgr = TheLTS->GetMgr();
+
+            auto UMType = TheLTS->GetUnifiedMType()->As<ExprUnionType>();
+
+            vector<ExpT> ChooseExps;
+            if (!Ordered) {
+                for (u32 i = 0; i < Capacity; ++i) {
+                    ChooseExps.push_back(Mgr->MakeVal(to_string(i), IndexType));
+                }
+            } else {
+                ChooseExps.push_back(ZeroExp);
+            }
+
+            set<string> AddToFairnessSets;
+            bool AddFairnessToDup = false;
+            if (!Duplicating) {
+                if (MessageFairness != LTSFairnessType::None) {
+                    string FairnessSetName = "MessageFairness_" + 
+                        to_string(MessageFairnessUIDGen.GetUID());
+                    EFSMBase::AddFairnessSet(FairnessSetName,
+                                             MessageFairness == LTSFairnessType::Strong ? 
+                                             FairSetFairnessType::Strong : 
+                                             FairSetFairnessType::Weak);
+                    AddToFairnessSets.insert(FairnessSetName);
+                }
+            } else {
+                if (LossDupFairness == LossDupFairnessType::NotAlwaysDup ||
+                    LossDupFairness == LossDupFairnessType::NotAlwaysLostOrDup) {
+                    string FairnessSetName = "DupFairness_" + 
+                        to_string(LossDupFairnessUIDGen.GetUID());
+                    EFSMBase::AddFairnessSet(FairnessSetName,
+                                             FairSetFairnessType::Strong);
+                    AddToFairnessSets.insert(FairnessSetName);
+                } else if (MessageFairness != LTSFairnessType::None) {
+                    string FairnessSetName = "MessageFairness_" + 
+                        to_string(MessageFairnessUIDGen.GetUID());
+                    EFSMBase::AddFairnessSet(FairnessSetName,
+                                             MessageFairness == LTSFairnessType::Strong ? 
+                                             FairSetFairnessType::Strong : 
+                                             FairSetFairnessType::Weak);
+                    AddToFairnessSets.insert(FairnessSetName);
+                    AddFairnessToDup = true;
+                }
+            }
+
+            for (auto const& ChooseExp : ChooseExps) {
+                auto ChooseIndexExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, ChooseExp);
+                auto TrueExp = Mgr->MakeTrue();
+                auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+                auto FieldVar = Mgr->MakeVar(UMType->GetTypeIDFieldName(), FAType);
+                auto FieldExp = Mgr->MakeExpr(LTSOps::OpField, ChooseIndexExp, FieldVar);
+                
+                auto NonEmptyExp = Mgr->MakeExpr(LTSOps::OpGT, CountExp, ZeroExp);
+                auto TypeID = UMType->GetTypeIDForMemberType(MessageType);
+                auto MatchExp = Mgr->MakeExpr(LTSOps::OpEQ, FieldExp, 
+                                              Mgr->MakeVal(to_string(TypeID), 
+                                                           UMType->GetTypeIDFieldType()));
+                auto ChooseOkExp = Mgr->MakeExpr(LTSOps::OpLT, ChooseExp, CountExp);
+                auto Guard = Mgr->MakeExpr(LTSOps::OpAND, NonEmptyExp, ChooseOkExp, MatchExp);
+                string OutMsgName = "__outmsg__";
+                auto OutMsgExp = Mgr->MakeVar(OutMsgName, ValType);
+                auto CntSubExp = Mgr->MakeExpr(LTSOps::OpSUB, CountExp, OneExp);
+                
+                vector<LTSAssignRef> Updates;
+                Updates.push_back(new LTSAssignSimple(OutMsgExp, ChooseIndexExp));
+                vector<LTSAssignRef> MsgUpdates = Updates;
+
+                // Clear the last message
+                Updates.push_back(new LTSAssignSimple(Mgr->MakeExpr(LTSOps::OpIndex,
+                                                                    ArrayExp, CntSubExp),
+                                                      Mgr->MakeVal("clear", ValType)));
+
+                Updates.push_back(new LTSAssignSimple(CountExp, CntSubExp));
+                // Push all the elements past the chosen element back
+                for (u32 i = 0; i < Capacity - 1; ++i) {
+                    auto Cond = Mgr->MakeExpr(LTSOps::OpGE, Mgr->MakeVal(to_string(i),
+                                                                         IndexType),
+                                              ChooseExp);
+                    auto IfBranch = Mgr->MakeExpr(LTSOps::OpIndex, 
+                                                  ArrayExp, 
+                                                  Mgr->MakeVal(to_string(i+1), 
+                                                               IndexType));
+                    auto ElseBranch = Mgr->MakeExpr(LTSOps::OpIndex, 
+                                                    ArrayExp, 
+                                                    Mgr->MakeVal(to_string(i), 
+                                                                 IndexType));
+                    auto ITEExp = Mgr->MakeExpr(LTSOps::OpITE, Cond, IfBranch, ElseBranch);
+                    Updates.push_back(new LTSAssignSimple(ElseBranch, ITEExp));
+                }
+
+                EFSMBase::AddOutputTransition("ChanInitState", "ChanInitState", 
+                                              Guard, Updates, OutMsgName, 
+                                              MessageType, MessageParams, 
+                                              AddToFairnessSets);
+                if (Duplicating) {
+                    EFSMBase::AddOutputTransition("ChanInitState", "ChanInitState",
+                                                  Guard, MsgUpdates, OutMsgName,
+                                                  MessageType, MessageParams,
+                                                  AddFairnessToDup ? AddToFairnessSets : 
+                                                  set<string>());
+                }
+            }
+        }
+
+        void ChannelEFSM::AddMsg(const ExprTypeRef& MessageType,
+                                 const vector<ExpT>& Params,
+                                 LTSFairnessType MessageFairness,
+                                 LossDupFairnessType LossDupFairness)
+        {
+            auto PMessageType = TheLTS->GetPrimedType(MessageType);
+            EFSMBase::AddInputMsg(MessageType, Params);
+            EFSMBase::AddOutputMsg(PMessageType, Params);
+
+            MakeInputTransition(MessageType, Params, LossDupFairness);
+            MakeOutputTransition(PMessageType, Params, MessageFairness, LossDupFairness);
+        }
+
+        void ChannelEFSM::AddMsgs(const vector<ExpT> NewParams,
+                                  const ExpT& Constraint,    
+                                  const ExprTypeRef& MessageType,
+                                  const vector<ExpT>& MessageParams,
+                                  LTSFairnessType MessageFairness,
+                                  LossDupFairnessType LossDupFairness)
+        {
+            // We need to instantiate these ourselves 
+            // because we need more fine grained control
+            auto Mgr = TheLTS->GetMgr();
+
+            SymTab.Push();
+            CheckParams(NewParams, Constraint, SymTab, Mgr, true);
+            CheckParams(MessageParams, SymTab);
+            SymTab.Pop();
+
+            const u32 NumNewParams = NewParams.size();
+            for (auto const& SubstMap : ParamSubsts) {
+                auto SubstConstraint = Mgr->Substitute(SubstMap, Constraint);
+                auto const&& NewInsts = InstantiateParams(NewParams, SubstConstraint, Mgr);
+                for (auto const& NewInst : NewInsts) {
+                    auto LocalSubstMap = SubstMap;
+                    for (u32 i = 0; i < NumNewParams; ++i) {
+                        LocalSubstMap[NewParams[i]] = NewInst[i];
+                    }
+                    auto&& SubstParams = SubstAll(MessageParams, LocalSubstMap, Mgr);
+                    auto MType = InstantiateType(MessageType, SubstParams, Mgr);
+                    auto PMType = TheLTS->GetPrimedType(MType);
+                    EFSMBase::AddInputMsg(MType, vector<ExpT>());
+                    EFSMBase::AddOutputMsg(MType, vector<ExpT>());
+
+                    MakeInputTransition(MType, vector<ExpT>(), LossDupFairness);
+                    MakeOutputTransition(MType, vector<ExpT>(), MessageFairness, LossDupFairness);
+                }
+            }
+        }
+
+        void ChannelEFSM::AddInputMsg(const ExprTypeRef& MessageType,
+                                      const vector<ExpT>& Params)
+        {
+            throw ESMCError((string)"ChannelEFSM::AddInputMsg() should not be called");
+        }
+
+        void ChannelEFSM::AddInputMsgs(const vector<ExpT>& NewParams, 
+                                       const ExpT& Constraint,
+                                       const ExprTypeRef& MessageType,
+                                       const vector<ExpT>& MessageParams)
+        {
+            throw ESMCError((string)"ChannelEFSM::AddInputMsgs() should not be called");
+        }
+
+        void ChannelEFSM::AddOutputMsg(const ExprTypeRef& MessageType,
+                                       const vector<ExpT>& Params)
+        {
+            throw ESMCError((string)"ChannelEFSM::AddOutputMsg() should not be called");
+        }
+
+        void ChannelEFSM::AddOutputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
+                                        const ExprTypeRef& MessageType,
+                                        const vector<ExpT>& MessageParams)
+        {
+            throw ESMCError((string)"ChannelEFSM::AddOutputMsgs() should not be called");
+        }
+
+
+        void ChannelEFSM::AddVariable(const string& VarName, const ExprTypeRef& VarType)
+        {
+            throw ESMCError((string)"ChannelEFSM::AddVariable() should not be called");
+        }
+
+        void ChannelEFSM::AddInputTransition(const string& InitState,
+                                             const string& FinalState,
+                                             const ExpT& Guard,
+                                             const vector<LTSAssignRef>& Updates,
+                                             const string& MessageName,
+                                             const ExprTypeRef& MessageType,
+                                             const vector<ExpT>& MessageParams)
+        {
+            throw ESMCError((string)"ChannelEFSM::AddInputTransition() should not be called");
+        }
+
+        void ChannelEFSM::AddInputTransitions(const vector<ExpT>& TransParams,
+                                              const ExpT& Constraint,
+                                              const string& InitState,
+                                              const string& FinalState,
+                                              const ExpT& Guard,
+                                              const vector<LTSAssignRef>& Updates,
+                                              const string& MessageName,
+                                              const ExprTypeRef& MessageType,
+                                              const vector<ExpT>& MessageParams)
+        {
+            throw ESMCError((string)"ChannelEFSM::AddInputTransitions() should not be called");
+        }
+            
+        void ChannelEFSM::AddOutputTransition(const string& InitState,
+                                              const string& FinalState,
+                                              const ExpT& Guard,
+                                              const vector<LTSAssignRef>& Updates,
+                                              const string& MessageName,
+                                              const ExprTypeRef& MessageType,
+                                              const vector<ExpT>& MessageParams,
+                                              const set<string>& AddToFairnessSets)
+        {
+            throw ESMCError((string)"ChannelEFSM::AddOutputTransition() should not be called");
+        }
+
+        void ChannelEFSM::AddOutputTransitions(const vector<ExpT>& TransParams,
+                                               const ExpT& Constraint,
+                                               const string& InitState,
+                                               const string& FinalState,
+                                               const ExpT& Guard,
+                                               const vector<LTSAssignRef>& Updates,
+                                               const string& MessageName,
+                                               const ExprTypeRef& MessageType,
+                                               const vector<ExpT>& MessageParams,
+                                               LTSFairnessType MessageFairnes,
+                                               SplatFairnessType SplatFairness)
+        {
+            throw ESMCError((string)"ChannelEFSM::AddOutputTransitions() should not be called");
+        }
+
+        
+        void ChannelEFSM::AddInternalTransition(const string& InitState,
+                                                const string& FinalState,
+                                                const ExpT& Guard,
+                                                const vector<LTSAssignRef>& Updates,
+                                                const set<string>& AddToFairnessSets)
+        {
+            throw ESMCError((string)"ChannelEFSM::AddInternalTransition() should not be called");
+        }
+
+        void ChannelEFSM::AddInternalTransitions(const vector<ExpT>& TransParams,
+                                                 const ExpT& Constraint,
+                                                 const string& InitState,
+                                                 const string& FinalState,
+                                                 const ExpT& Guard,
+                                                 const vector<LTSAssignRef>& Updates,
+                                                 LTSFairnessType MessageFairness,
+                                                 SplatFairnessType SplatFairness)
+        {
+            throw ESMCError((string)"ChannelEFSM::AddInternalTransitions() should not be called");
+        }
+
+        MonitorBase::MonitorBase(LabelledTS* TheLTS, const string& Name,
+                                 const vector<ExpT>& Params, const ExpT& Constraint)
+            : AutomatonBase(TheLTS, Name, Params, Constraint)
+        {
+            // Nothing here
+        }
+
+        MonitorBase::~MonitorBase()
+        {
+            // Nothing here
+        }
+
+
+        SafetyMonitor::SafetyMonitor(LabelledTS* TheLTS, const string& Name,
+                                     const vector<ExpT>& Params, const ExpT& Constraint)
+            : AutomatonBase(TheLTS, Name, Params, Constraint),
+              MonitorBase(TheLTS, Name, Params, Constraint),
+              EFSMBase(TheLTS, Name, Params, Constraint)
+        {
+            // Nothing here
+        }
+
+        SafetyMonitor::~SafetyMonitor()
+        {
+            // Nothing here
+        }
+
+        void SafetyMonitor::AddFairnessSet(const string& Name, FairSetFairnessType Fairness)
+        {
+            throw ESMCError((string)"Cannot add fairness to monitors");
+        }
+
+        void SafetyMonitor::AddOutputMsg(const ExprTypeRef& MessageType,
+                                         const vector<ExpT>& Params)
+        {
+            throw ESMCError((string)"Cannot add output message to monitors");
+        }
+
+         void SafetyMonitor::AddOutputMsgs(const vector<ExpT>& NewParams,
+                                           const ExpT& Constraint,
+                                           const ExprTypeRef& MessageType,
+                                           const vector<ExpT>& MessageParams)
+         {
+             throw ESMCError((string)"Cannot add output messages to monitors");
+         }
+
+
+        void SafetyMonitor::AddOutputTransition(const string& InitState,
+                                                const string& FinalState,
+                                                const ExpT& Guard,
+                                                const vector<LTSAssignRef>& Updates,
+                                                const string& MessageName,
+                                                const ExprTypeRef& MessageType,
+                                                const vector<ExpT>& MessageParams,
+                                                const set<string>& AddToFairnessSets)
+        {
+            throw ESMCError((string)"Cannot add output transitions to monitors");
+        }
+
+        void SafetyMonitor::AddOutputTransitions(const vector<ExpT>& TransParams,
+                                                 const ExpT& Constraint,
+                                                 const string& InitState,
+                                                 const string& FinalState,
+                                                 const ExpT& Guard,
+                                                 const vector<LTSAssignRef>& Updates,
+                                                 const string& MessageName,
+                                                 const ExprTypeRef& MessageType,
+                                                 const vector<ExpT>& MessageParams,
+                                                 LTSFairnessType MessageFairness,
+                                                 SplatFairnessType SplatFairness)
+        {
+            throw ESMCError((string)"Cannot add output transitions to monitors");
+        }
+
+        void SafetyMonitor::AddInternalTransition(const string& InitState,
+                                           const string& FinalState,
+                                           const ExpT& Guard,
+                                           const vector<LTSAssignRef>& Updates,
+                                           const set<string>& AddToFairnessSets)
+        {
+            throw ESMCError((string)"Cannot add internal transitions to monitors");
+        }
+
+        void SafetyMonitor::AddInternalTransitions(const vector<ExpT>& TransParams,
+                                                   const ExpT& Constraint,
+                                                   const string& InitState,
+                                                   const string& FinalState,
+                                                   const ExpT& Guard,
+                                                   const vector<LTSAssignRef>& Updates,
+                                                   LTSFairnessType MessageFairness,
+                                                   SplatFairnessType SplatFairness)
+        {
+            throw ESMCError((string)"Cannot add internal transitions to monitors");
+        }
+
+        BuchiMonitor::BuchiMonitor(LabelledTS* TheLTS, const string& Name,
+                                   const vector<ExpT>& Params, const ExpT& Constraint)
+            : AutomatonBase(TheLTS, Name, Params, Constraint),
+              MonitorBase(TheLTS, Name, Params, Constraint)
+        {
+            // Nothing here
+        }
+
+        BuchiMonitor::~BuchiMonitor()
+        {
+            // Nothing here
+        }
+
+        void BuchiMonitor::AddTransition(const string& InitState,
+                                         const string& FinalState,
+                                         const ExpT& Guard)
+        {
+            CheckState(InitState);
+            CheckState(FinalState);
+            TheLTS->CheckExpr(Guard);
+            auto IS = States[InitState];
+            auto FS = States[FinalState];
+
+            Transitions.push_back(new BuchiMonitorTransition(this, IS, FS, Guard));
+        }
+
+        const vector<BuchiTransRef>& BuchiMonitor::GetTransitions() const
+        {
+            return Transitions;
+        }
+
+        string BuchiMonitor::ToString() const 
+        {
+            // TODO: implement me
+            return "";
+        }
+        
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

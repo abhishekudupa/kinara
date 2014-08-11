@@ -1235,7 +1235,11 @@ namespace ESMC {
 
         const u32 ExprUnionType::GetTypeIDForMemberType(const ExprTypeRef& MemType) const
         {
-            auto it = MemberTypeToID.find(MemType);
+            auto TypeAsRec = MemType->As<ExprRecordType>();
+            if (TypeAsRec == nullptr) {
+                TypeAsRec = MemType->As<ExprParametricType>()->GetBaseType()->As<ExprRecordType>();
+            }
+            auto it = MemberTypeToID.find(TypeAsRec);
             if (it == MemberTypeToID.end()) {
                 throw ESMCError((string)"Type \"" + MemType->ToString() + " \" does not " + 
                                 "seem to be a member of message type");
@@ -1256,7 +1260,14 @@ namespace ESMC {
         const string& ExprUnionType::MapFromMemberField(const ExprTypeRef& MemberType,
                                                           const string& FieldName) const
         {
-            auto it = MemberTypeToID.find(MemberType);
+            
+            auto TypeAsRec = MemberType->As<ExprRecordType>();
+            if (TypeAsRec == nullptr) {
+                TypeAsRec = 
+                    MemberType->As<ExprParametricType>()->GetBaseType()->As<ExprRecordType>();
+            }
+
+            auto it = MemberTypeToID.find(TypeAsRec);
             if (it == MemberTypeToID.end()) {
                 throw ESMCError((string)"Type \"" + MemberType->ToString() + " \" does not " + 
                                 "seem to be a member of message type");                
