@@ -66,6 +66,7 @@ namespace ESMC {
             
             MgrT* GetMgr() const;
             bool CheckMessageType(const ExprTypeRef& MsgType) const;
+            const ExprTypeRef& GetUnifiedMType() const;
         };
 
     } /* end namespace LTS */

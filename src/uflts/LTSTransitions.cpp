@@ -158,7 +158,7 @@ namespace ESMC {
                                                  const vector<LTSAssignRef>& Updates,
                                                  const string& MessageName,
                                                  const ExprTypeRef& MessageType,
-                                                 const unordered_set<u32>& CompOfFairnessSets)
+                                                 const set<string>& CompOfFairnessSets)
             : LTSTransitionBase(TheEFSM, InitState, FinalState, Guard, Updates),
               MessageName(MessageName), MessageType(MessageType),
               CompOfFairnessSets(CompOfFairnessSets)
@@ -181,7 +181,7 @@ namespace ESMC {
             return MessageType;
         }
 
-        const unordered_set<u32>& LTSTransitionOutput::GetCompOfFairnessSets() const
+        const set<string>& LTSTransitionOutput::GetCompOfFairnessSets() const
         {
             return CompOfFairnessSets;
         }
@@ -208,7 +208,7 @@ namespace ESMC {
                                                      const LTSState& FinalState,
                                                      const ExpT& Guard,
                                                      const vector<LTSAssignRef>& Updates,
-                                                     const unordered_set<u32>& CompOfFairnessSets)
+                                                     const set<string>& CompOfFairnessSets)
             : LTSTransitionBase(TheEFSM, InitState, FinalState, Guard, Updates),
               CompOfFairnessSets(CompOfFairnessSets)
         {
@@ -220,7 +220,7 @@ namespace ESMC {
             // Nothing here
         }
 
-        const unordered_set<u32>& LTSTransitionInternal::GetCompOfFairnessSets() const
+        const set<string>& LTSTransitionInternal::GetCompOfFairnessSets() const
         {
             return CompOfFairnessSets;
         }

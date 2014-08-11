@@ -503,6 +503,7 @@ namespace ESMC {
         public:
             typedef S<E> SemT;
             typedef typename SemT::LExpT LExpT;
+            typedef typename SemT::ExprContextT ExprCtxT;
             typedef ExprTypeRef TypeT;
             typedef Expr<E, S> ExpT;
             typedef ExprI<E, S> IExpT;
@@ -591,7 +592,7 @@ namespace ESMC {
             inline ExpT ApplyTransform(const ExpT& Exp, ArgTypes&&... Args);
 
             inline SemT* GetSemanticizer() const;
-            inline LExpT LowerExpr(const ExpT& Exp);
+            inline LExpT LowerExpr(const ExpT& Exp, ExprCtxT& ECtx);
             template <typename... ArgTypes>
             inline ExpT RaiseExpr(const LExpT& Exp, ArgTypes&&... Args);
             inline ExpT ElimQuantifiers(const ExpT& Exp);
@@ -2081,7 +2082,7 @@ namespace ESMC {
 
         template <typename E, template <typename> class S>
         inline typename ExprMgr<E, S>::LExpT
-        ExprMgr<E, S>::LowerExpr(const ExpT& Exp)
+        ExprMgr<E, S>::LowerExpr(const ExpT& Exp, ExprCtxT& ExpCtx)
         {
             if (Exp->GetMgr() != this) {
                 throw ExprTypeError("ExprMgr: I don't own this expression");

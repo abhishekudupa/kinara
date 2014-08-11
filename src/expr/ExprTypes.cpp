@@ -318,7 +318,8 @@ namespace ESMC {
 
         ExprEnumType::ExprEnumType(const string& Name, 
                                  const set<string>& Members)
-            : ExprScalarType(), Name(Name), Members(Members)
+            : ExprScalarType(), Name(Name), Members(Members),
+              MemberVec(Members.begin(), Members.end())
         {
             // Nothing here
         }
@@ -367,6 +368,44 @@ namespace ESMC {
                 }
             } else {
                 return false;
+            }
+        }
+
+        u32 ExprEnumType::GetMemberIdx(const string& MemberName) const
+        {
+            vector<string> SplitVec;
+            boost::algorithm::split(SplitVec, MemberName, 
+                                    boost::algorithm::is_any_of(":"),
+                                    boost::algorithm::token_compress_on);
+            string EnumName;
+            if (SplitVec.size() == 2) {
+                auto EnumName = boost::algorithm::trim_copy(SplitVec[0]);
+                if (EnumName != Name) {
+                    throw ESMCError((string)"Invalid Enum Member Index requested \"" + 
+                       MemberName + "\"");
+                } else {
+                    auto MemberName = boost::algorithm::trim_copy(SplitVec[1]);
+                    for (u32 i = 0; i < MemberVec.size(); ++i) {
+                        if (MemberName == MemberVec[i]) {
+                            return i;
+                        }
+                    }
+                    throw ESMCError((string)"Invalid Enum Member Index requested \"" + 
+                                    MemberName + "\"");
+                }
+            } else if (SplitVec.size() == 1) {
+                auto MemberName = boost::algorithm::trim_copy(SplitVec[0]);
+                for (u32 i = 0; i < MemberVec.size(); ++i) {
+                    if (MemberName == MemberVec[i]) {
+                        return i;
+                    }
+                }
+                throw ESMCError((string)"Invalid Enum Member Index requested \"" + 
+                                MemberName + "\"");
+                
+            } else {
+                throw ESMCError((string)"Invalid Enum Member Index requested \"" + 
+                                MemberName + "\"");
             }
         }
 
@@ -459,6 +498,17 @@ namespace ESMC {
         const bool ExprSymmetricType::IsMember(const string& Value) const
         {
             return (MemberSet.find(Value) != MemberSet.end());
+        }
+
+        u32 ExprSymmetricType::GetMemberIdx(const string& MemberName) const
+        {
+            for (u32 i = 0; i < Members.size(); ++i) {
+                if (Members[i] == MemberName) {
+                    return i;
+                }
+            }
+            throw ESMCError((string)"Invalid symmetric type member index requested \"" + 
+                            MemberName + "\"");
         }
         
         void ExprSymmetricType::SetIndex(u32 Index) const
@@ -790,6 +840,17 @@ namespace ESMC {
                 return ExprTypeRef::NullPtr;
             }
             return it->second;
+        }
+
+        u32 ExprRecordType::GetFieldIdx(const string& FieldName) const
+        {
+            for (u32 i = 0; i < MemberVec.size(); ++i) {
+                if (MemberVec[i].first == FieldName) {
+                    return i;
+                }
+            }
+            throw ESMCError((string)"Invalid field in request for field index \"" + 
+                            FieldName + "\"");
         }
 
         string ExprRecordType::ToString() const

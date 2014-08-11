@@ -283,6 +283,7 @@ namespace ESMC {
         private:
             string Name;
             set<string> Members;
+            vector<string> MemberVec;
 
         protected:
             virtual void ComputeHashValue() const;
@@ -295,6 +296,8 @@ namespace ESMC {
             const set<string>& GetMembers() const;
             
             bool IsMember(const string& MemberName) const;
+            u32 GetMemberIdx(const string& MemberName) const;
+            
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
@@ -327,6 +330,7 @@ namespace ESMC {
             const vector<string>& GetMembers() const;
             const string& GetMember(u32 Index) const;
             const bool IsMember(const string& Value) const;
+            u32 GetMemberIdx(const string& Value) const;
 
             void SetIndex(u32 Index) const;
             u32 GetIndex() const;
@@ -412,6 +416,8 @@ namespace ESMC {
             const map<string, ExprTypeRef>& GetMemberMap() const;
             const vector<pair<string, ExprTypeRef>>& GetMemberVec() const;
             const ExprTypeRef& GetTypeForMember(const string& MemberName) const;
+
+            u32 GetFieldIdx(const string& FieldName) const;
 
             virtual string ToString() const;
             virtual i32 Compare(const ExprTypeBase& Other) const override;

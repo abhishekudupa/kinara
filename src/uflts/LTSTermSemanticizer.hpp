@@ -57,6 +57,7 @@
 #include <unordered_map>
 #include <set>
 #include <vector>
+#include <z3.h>
 
 namespace ESMC {
     namespace LTS {
@@ -96,10 +97,6 @@ namespace ESMC {
             static const i64 OpTemporalU = 1021;
             static const i64 OpTemporalF = 1022;
             static const i64 OpTemporalG = 1023;
-
-            // Some special types
-            // for creating expressions for field access
-            static const i64 FieldAccType = 1000000000;
         };
 
         namespace Detail {
@@ -109,6 +106,87 @@ namespace ESMC {
             extern const ExprTypeRef InvalidType;
 
             typedef unordered_map<i64, ExprTypeRef> UFID2TypeMapT;
+
+            // A wrapper for ref counting Z3 contexts
+            class Z3CtxWrapper : public RefCountable
+            {
+            private:
+                Z3_context Ctx;
+
+            public:
+                Z3CtxWrapper(Z3_context Ctx);
+                Z3CtxWrapper();
+                virtual ~Z3CtxWrapper();
+
+                operator Z3_context () const;
+                Z3_context GetCtx() const;
+            };
+
+            typedef SmartPtr<Z3CtxWrapper> Z3Ctx;
+
+            class Z3Expr
+            {
+            protected:
+                Z3Ctx Ctx;
+
+            private:
+                Z3_ast AST;
+            
+            public:
+                Z3Expr();
+                Z3Expr(const Z3Expr& Other);
+                Z3Expr(Z3Ctx Ctx, Z3_ast AST);
+                Z3Expr(Z3Expr&& Other);
+                virtual ~Z3Expr();
+
+                Z3Expr& operator = (Z3Expr Other);
+                bool operator == (const Z3Expr& Other) const;
+            
+                string ToString() const;
+                u64 Hash() const;
+
+
+                // unsafe! use only if you know what you're doing
+                operator Z3_ast () const;
+                Z3_ast GetAST() const;
+                const Z3Ctx& GetCtx() const;
+            };
+
+            class Z3Sort
+            {
+            protected:
+                Z3Ctx Ctx;
+                
+            private:
+                Z3_sort Sort;
+                mutable unordered_map<string, Z3_func_decl> FuncDecls;
+
+            public:
+                Z3Sort();
+                Z3Sort(const Z3Sort& Other);
+                Z3Sort(Z3Ctx Ctx, Z3_sort Sort);
+                Z3Sort(Z3Sort&& Other);
+                virtual ~Z3Sort();
+
+                // Helper to add ref counted func decls
+                // as in the case for enums and records
+                void AddFuncDecl(Z3_func_decl Decl) const;
+                void AddFuncDecls(u32 NumDecls, Z3_func_decl* Decls) const;
+
+                Z3_func_decl GetFuncDecl(const string& Name) const;
+
+                Z3Sort& operator = (Z3Sort Other);
+                bool operator == (const Z3Sort& Other) const;
+
+                string ToString() const;
+                u64 Hash() const;
+
+                // unsafe! for internal use only
+                operator Z3_sort () const;
+                Z3_sort GetSort() const;
+                const Z3Ctx& GetCtx() const;
+            };
+
 
             template <typename E, template <typename> class S>
             class TypeChecker : public ExpressionVisitorBase<E, S>
@@ -230,6 +308,47 @@ namespace ESMC {
                 static inline ExpT Do(MgrType* Mgr, const ExpT& Exp, 
                                       const ExprTypeRef& BoolType,
                                       const ExprTypeRef& IntType);
+            };
+
+            // A context object for lowered expressions
+            // so we can reconstruct the types accurately
+            // when called upon to raise the expression
+
+            // All we need to remember is the mapping from 
+            // ground terms (variables) to the higher level types
+
+            typedef CSmartPtr<map<string, ExprTypeRef>> LTSTermExprCtxT;
+
+            template <typename E, template <typename> class S>
+            class Lowerer : public ExpressionVisitorBase<E, S>
+            {
+            private:
+                map<ExprTypeRef, Z3Sort> TypeToSort;
+                const UFID2TypeMapT& UFMap;
+                vector<Z3Expr> ExpStack;
+                Z3Ctx Ctx;
+                LTSTermExprCtxT& ExpCtx;
+                typedef Expr<E, S> ExpT;
+                vector<Z3Expr> Assumptions;
+
+                inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp);
+                inline const Z3Sort& LowerType(const ExprTypeRef& Type);
+
+            public:
+                Lowerer(const UFID2TypeMapT& UFMap, LTSTermExprCtxT& ExpCtx);
+                virtual ~Lowerer();
+
+                inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+                inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
+                    override;
+                inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+                inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>*
+                                                               Exp) override;
+                inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
+                                                               Exp) override;
+                
+                static inline ExpT Do(const ExpT& Exp, LTSTermExprCtxT& ExpCtx);
             };
 
             // Implementation of type checker
@@ -1397,6 +1516,310 @@ namespace ESMC {
                 return TheSimplifier.ExpStack[0];
             }
 
+
+            // Implementation of Lowerer
+            template <typename E, template <typename> class S>
+            Lowerer<E, S>::Lowerer(const UFID2TypeMapT& UFMap, LTSTermExprCtxT& ExpCtx)
+                : UFMap(UFMap), Ctx(new Z3CtxWrapper())
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            Lowerer<E, S>::~Lowerer()
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline const Z3Sort&
+            Lowerer<E, S>::LowerType(const ExprTypeRef& Type)
+            {
+                auto it = TypeToSort.find(Type);
+                if (it != TypeToSort.end()) {
+                    return it->second;
+                }
+
+                Z3Sort LoweredSort;
+                // We need to actually lower this
+                if (Type->template Is<ExprBoolType>()) {
+                    LoweredSort = Z3Sort(Ctx, Z3_mk_bool_sort(*Ctx));
+                } else if (Type->template Is<ExprRangeType>()) {
+                    LoweredSort = Z3Sort(Ctx, Z3_mk_int_sort(*Ctx));
+                } else if (Type->template Is<ExprEnumType>()) {
+
+                    auto TypeAsEnum = Type->template SAs<ExprEnumType>();
+                    auto const& Members = TypeAsEnum->GetElements();
+                    auto const& TypeName = TypeAsEnum->GetName();
+                    vector<string> QualifiedNames;
+                    for (auto const& Member : Members) {
+                        QualifiedNames.push_back(TypeName + "::" + Member);
+                    }
+                    const u32 NumConsts = QualifiedNames.size();
+                    Z3_symbol Z3TypeName = Z3_mk_string_symbol(*Ctx, TypeName.c_str());
+                    Z3_symbol* ConstNames = new Z3_symbol[NumConsts];
+                    Z3_func_decl* ConstFuncs = new Z3_func_decl[NumConsts];
+                    Z3_func_decl* ConstTests = new Z3_func_decl[NumConsts];
+
+                    auto Z3EnumSort = Z3_mk_enumeration_sort(*Ctx, Z3TypeName, NumConsts,
+                                                             ConstNames, ConstFuncs, ConstTests);
+
+                    LoweredSort = Z3Sort(*Ctx, Z3EnumSort);
+                    LoweredSort.AddFuncDecls(NumConsts, ConstFuncs);
+                    LoweredSort.AddFuncDecls(NumConsts, ConstTests);
+                    
+                    delete[] ConstNames;
+                    delete[] ConstFuncs;
+                    delete[] ConstTests;
+
+                } else if (Type->template Is<ExprSymmetricType>()) {
+                    auto TypeAsSymm = Type->template SAs<ExprEnumType>();
+                    auto const& Members = TypeAsSymm->GetElements();
+                    auto const& TypeName = TypeAsSymm->GetName();
+                    const u32 NumConsts = Members.size();
+                    Z3_symbol Z3TypeName = Z3_mk_string_symbol(*Ctx, TypeName.c_str());
+                    Z3_symbol* ConstNames = new Z3_symbol[NumConsts];
+                    Z3_func_decl* ConstFuncs = new Z3_func_decl[NumConsts];
+                    Z3_func_decl* ConstTests = new Z3_func_decl[NumConsts];
+
+                    auto Z3EnumSort = Z3_mk_enumeration_sort(*Ctx, Z3TypeName, NumConsts,
+                                                             ConstNames, ConstFuncs, ConstTests);
+
+                    LoweredSort = Z3Sort(*Ctx, Z3EnumSort);
+                    LoweredSort.AddFuncDecls(NumConsts, ConstFuncs);
+                    LoweredSort.AddFuncDecls(NumConsts, ConstTests);
+                    
+                    delete[] ConstNames;
+                    delete[] ConstFuncs;
+                    delete[] ConstTests;
+
+                } else if (Type->template Is<ExprRecordType>()) {
+                    auto TypeAsRec = Type->SAs<ExprRecordType>();
+                    auto const& Members = TypeAsRec->GetMemberVec();
+                    const u32 NumFields = Members.size();
+
+                    Z3_symbol Z3TypeName = Z3_mk_string_symbol(*Ctx, TypeAsRec->GetName().c_str());
+                    Z3_symbol* FieldNames = new Z3_symbol[NumFields];
+                    Z3_sort* FieldSorts = new Z3_sort[NumFields];
+                    Z3_func_decl* ProjFuncs = new Z3_func_decl[NumFields];
+                    Z3_func_decl Constructor;
+
+                    for (u32 i = 0; i < NumFields; ++i) {
+                        FieldSorts[i] = LowerType(Members[i].second);
+                        FieldNames[i] = Z3_mk_string_symbol(*Ctx, Members[i].first.c_str());
+                    }
+
+                    auto Z3RecSort = Z3_mk_tuple_sort(*Ctx, Z3TypeName, NumFields,
+                                                      FieldNames, FieldSorts, 
+                                                      &Constructor, ProjFuncs);
+                    
+                    LoweredSort = Z3Sort(*Ctx, Z3RecSort);
+                    LoweredSort.AddFuncDecl(Constructor);
+                    LoweredSort.AddFuncDecls(NumFields, ProjFuncs);
+
+                    delete[] FieldNames;
+                    delete[] FieldSorts;
+                    delete[] ProjFuncs;
+
+                } else if (Type->template Is<ExprArrayType>()) {
+                    
+                    auto TypeAsArr = Type->template SAs<ExprArrayType>();
+                    auto LoweredIdxSort = LowerType(TypeAsArr->GetIndexType());
+                    auto LoweredValSort = LowerType(TypeAsArr->GetValueType());
+                    auto Z3ArrSort = Z3_mk_array_sort(*Ctx, LoweredIdxSort, LoweredValSort);
+                    LoweredSort = Z3Sort(*Ctx, Z3ArrSort);
+
+                } else {
+                    throw ESMCError((string)"Cannot lower type \"" + Type->ToString() + 
+                                    "\" into a Z3 type. Perhaps it's unbounded?");
+                }
+
+                TypeToSort[Type] = LoweredSort;
+                return LoweredSort;
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            Lowerer<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+            {
+                auto const& Type = Exp->GetVarType();
+                auto const& Name = Exp->GetVarName();
+                (*ExpCtx)[Name] = Type;
+
+                auto LoweredType = LowerType(Type);
+                auto Z3Sym = Z3_mk_string_symbol(*Ctx, Name.c_str());
+                Z3Expr LoweredExpr(*Ctx, Z3_mk_const(Z3Sym, LoweredType));
+
+                if (Type->template Is<ExprRangeType>()) {
+                    auto TypeAsRange = Type->template SAs<ExprRangeType>();
+                    auto LowString = to_string(TypeAsRange->GetLow());
+                    auto HighString = to_string(TypeAsRange->GetHigh());
+                    auto LowConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, LowString.c_str(),
+                                                               Z3_mk_int_sort(*Ctx)));
+                    auto HighConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, HighString.c_str(),
+                                                                Z3_mk_int_sort(*Ctx)));
+
+                    auto LowExp = Z3Expr(Ctx, Z3_mk_ge(*Ctx, LoweredExpr, LowConst));
+                    auto HighExp = Z3Expr(Ctx, Z3_mk_le(*Ctx, LoweredExpr, HighConst));
+                    
+                    auto AndArgs = new Z3_ast[2];
+                    AndArgs[0] = LowExp;
+                    AndArgs[1] = HighExp;
+
+                    Assumptions.push_back(Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs)));
+                    delete[] AndArgs;
+                }
+
+                ExpStack.push_back(LoweredExpr);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            Lowerer<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+            {
+                auto const& Type = Exp->GetConstType();
+                auto const& Val = Exp->GetConstValue();
+
+                if (Type->template Is<ExprIntType>()) {
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_numeral(*Ctx, Val.c_str(), 
+                                                                 Z3_mk_int_sort(*Ctx))));
+                } else if (Type->template Is<ExprBoolType>()) {
+                    
+                    if (Val == "true") {
+                        ExpStack.push_back(Z3Expr(Ctx, Z3_mk_true(*Ctx)));
+                    } else {
+                        ExpStack.push_back(Z3Expr(Ctx, Z3_mk_false(*Ctx)));
+                    }
+
+                } else if (Type->template Is<ExprSymmetricType>()) {
+                    auto const& LoweredType = LowerType(Type);
+                    auto Decl = LoweredType.GetFuncDecl(Val);
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_app(*Ctx, Decl, 0, nullptr)));
+                } else if (Type->template Is<ExprEnumType>()) {
+                    // enum constants are unqualified
+                    auto const& LoweredType = LowerType(Type);
+                    auto TypeAsEnum = Type->template SAs<ExprEnumType>();
+                    string QualifiedVal = TypeAsEnum->GetName + "::" + Val;
+                    auto Decl = LoweredType.GetFuncDecl(QualifiedVal);
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_app(*Ctx, Decl, 0, nullptr)));
+                } else {
+                    throw ESMCError((string)"Unexpected constant of type \"" + Type->ToString() + 
+                                    "\". Cannot lower this kind of constant into a Z3Expr");
+                }
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            Lowerer<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+            {
+                throw UnimplementedException("LTSTermLowerer::VisitBoundVarExpression", 
+                                             __FILE__, __LINE__);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            Lowerer<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+            {
+                ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+                const u32 NumChildren = Exp->GetChildren().size();
+
+                Z3_ast LoweredChildren = new Z3_ast[NumChildren];
+                vector<Z3Expr> LChildren;
+
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    LoweredChildren[NumChildren - i - i] = 
+                        LChildren[NumChildren - i - 1] = ExpStack.back();
+                    ExpStack.pop_back();
+                }
+
+                auto OpCode = Exp->GetOpCode();
+                switch (OpCode) {
+                case LTSOps::OpEQ:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_eq(*Ctx, LChildren[0], LChildren[1])));
+                    break;
+
+                case LTSOps::OpNOT:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_not(*Ctx, LChildren[0])));
+                    break;
+
+                case LTSOps::OpITE:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_ite(*Ctx, LChildren[0],
+                                                             LChildren[1], LChildren[2])));
+                    break;
+
+                case LTSOps::OpOR:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_or(*Ctx, NumChildren, LoweredChildren)));
+                    break;
+
+                case LTSOps::OpAND:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_and(*Ctx, NumChildren, LoweredChildren)));
+                    break;
+
+                case LTSOps::OpIMPLIES:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_implies(*Ctx, LChildren[0], LChildren[1])));
+                    break;
+
+                case LTSOps::OpIFF:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_iff(*Ctx, LChildren[0], LChildren[1])));
+                    break;
+
+                case LTSOps::OpXOR:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_xor(*Ctx, LChildren[0], LChildren[1])));
+                    break;
+                    
+                case LTSOps::OpADD:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_add(*Ctx, NumChildren, LoweredChildren)));
+                    break;
+
+                case LTSOps::OpSUB:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_sub(*Ctx, NumChildren, LoweredChildren)));
+                    break;
+
+                case LTSOps::OpMINUS:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_unary_minux(*Ctx, LChildren[0])));
+                    break;
+
+                case LTSOps::OpMUL:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_mul(*Ctx, NumChildren, LoweredChildren)));
+                    break;
+                    
+                case LTSOps::OpDIV:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_div(*Ctx, LChildren[0], LChildren[1])));
+                    break;
+
+                case LTSOps::OpMOD:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_mod(*Ctx, LChildren[0], LChildren[1])));
+                    break;
+
+                case LTSOps::OpGT:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_gt(*Ctx, LChildren[0], LChildren[1])));
+                    break;
+
+                case LTSOps::OpGE:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_ge(*Ctx, LChildren[0], LChildren[1])));
+                    break;
+
+                case LTSOps::OpLT:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_lt(*Ctx, LChildren[0], LChildren[1])));
+                    break;
+
+                case LTSOps::OpLE:
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_le(*Ctx, LChildren[0], LChildren[1])));
+                    break;
+                    
+                case LTSOps::OpIndex: {
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_select(*Ctx, LChildren[0], LChildren[1])));
+                    break;
+                }
+
+                case LTSOps::OpField: {
+                    
+                }
+                    
+                }
+
+            }
+
         } /* end namespace Detail */
  
         template <typename E>
@@ -1416,7 +1839,8 @@ namespace ESMC {
         public:
             typedef LTSOps Ops;
             typedef Exprs::Expr<E, ESMC::LTS::LTSTermSemanticizer> ExpT;
-            typedef void* LExpT;
+            typedef Detail::LTSTermExprCtxT ExprContextT;
+            typedef Detail::Z3Expr LExpT;
             typedef Exprs::ExprTypeRef TypeT;
             static const TypeT InvalidType;
 
@@ -1435,7 +1859,7 @@ namespace ESMC {
 
             // Functions which DO NOT have an implementation
             inline ExpT RaiseExpr(const LExpT& LExp);
-            inline LExpT LowerExpr(const ExpT& Exp);
+            inline LExpT LowerExpr(const ExpT& Exp, ExprContextT& ExpCtx);
             inline ExpT ElimQuantifiers(const ExpT& Exp);
         };
 
@@ -1537,8 +1961,7 @@ namespace ESMC {
                 assert (Type != nullptr);
                 if (Type->GetFuncType() != RangeType) {
                     throw Exprs::ExprTypeError((string)"Redeclaration of function " + 
-                                               Name + 
-                                               " with variant return type");
+                                               Name + " with variant return type");
                 }
                 return UFID;
             }
@@ -1553,7 +1976,7 @@ namespace ESMC {
 
         template <typename E>
         inline typename LTSTermSemanticizer<E>::LExpT
-        LTSTermSemanticizer<E>::LowerExpr(const ExpT& Exp)
+        LTSTermSemanticizer<E>::LowerExpr(const ExpT& Exp, ExprContextT& ExprCtx)
         {
             throw ESMCError((string)"LowerExpr() not implemented in LTSTermSemanticizer");
         }

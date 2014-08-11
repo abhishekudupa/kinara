@@ -49,8 +49,8 @@ libesmc_OBJS= \
 	LTSEFSM.o \
 	LTSFairnessSet.o \
 	LTSState.o \
-	LTSTransitions.o \
 	LTSTermSemanticizer.o \
+	LTSTransitions.o \
 	SpookyHash.o \
 	SymbolTable.o \
 	UIDGenerator.o \

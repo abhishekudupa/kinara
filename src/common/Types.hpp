@@ -98,6 +98,36 @@ namespace ESMC {
         inline virtual const char* what() const throw() override { return ErrorMsg.c_str(); }
     };
 
+    class UnimplementedException : public exception
+    {
+    private:
+        string MethodName;
+        string FileName;
+        u32 LineNum;
+        string ErrMsg;
+
+        inline UnimplementedException(const string& MethodName,
+                                      const string& FileName,
+                                      u32 LineNum)
+            : MethodName(MethodName), FileName(FileName),
+              LineNum(LineNum)
+        {
+            ErrMsg = (string)"Unimplemented method: " + MethodName + 
+                (string)", at " + FileName + (string)":" + 
+                to_string(LineNum);
+        }
+
+        inline virtual ~UnimplementedException()
+        {
+            // Nothing here
+        }
+
+        inline virtual const char* what() const throw() override
+        {
+            return ErrMsg.c_str();
+        }
+    };
+
 } /* end namespace ESMC */
     
 #endif /* ESMC_TYPES_HPP_ */

@@ -93,92 +93,6 @@ namespace ESMC {
 
 
         // Helper functions for various classes
-
-        static inline void CheckExpr(const ExpT& Exp,
-                                     const SymbolTable& SymTab,
-                                     MgrT* Mgr)
-        {
-            auto Gatherer = Detail::VarGatherer();
-            auto Vars = Mgr->Gather(Exp, Gatherer);
-            for (auto const& Var : Vars) {
-                auto const& VarName = Var->template SAs<Exprs::VarExpression>()->GetVarName();
-                auto Lookup = SymTab.Lookup(VarName);
-                if (Lookup == DeclRef::NullPtr) {
-                    throw ESMCError((string)"Unbound variable \"" + VarName + "\"");
-                }
-            }
-        }
-
-        static inline void CheckLValCompat(const ExpT& Exp,
-                                           const SymbolTable& SymTab)
-        {
-            if (!IsLVal(Exp)) {
-                throw ESMCError((string)"Expression is not an LValue:\n" + 
-                                Exp->ToString());
-            }
-            auto ExpAsVar = Exp->As<Exprs::VarExpression>();
-            if (ExpAsVar != nullptr) {
-                // Check that this is a variable and not a parameter
-                auto const& VarName = ExpAsVar->GetVarName();
-                auto LookupRes = SymTab.Lookup(VarName);
-                if (!LookupRes->Is<VarDecl>()) {
-                    throw ESMCError((string)"Error: Parameters cannot be used as LVals");
-                }
-            }
-        }
-
-        static inline void CheckUpdates(const vector<LTSAssignRef>& Updates,
-                                        const SymbolTable& SymTab,
-                                        MgrT* Mgr, bool IsInput,
-                                        const string& MsgVarName)
-        {
-            for(auto const& Asgn : Updates) {
-                CheckExpr(Asgn->GetLHS(), SymTab, Mgr);
-                if (IsInput) {
-                    auto Gatherer = Detail::VarGatherer();
-                    auto Vars = Mgr->Gather(Asgn->GetLHS(), Gatherer);
-                    for (auto const& Var : Vars) {
-                        auto const& VarExp = Var->As<Exprs::VarExpression>();
-                        auto const& VarName = VarExp->GetVarName();
-                        if (VarName == MsgVarName) {
-                            throw ESMCError((string)"Input message cannot be updated " + 
-                                            "in an input transition");
-                        }
-                    }
-                }
-                CheckLValCompat(Asgn->GetLHS(), SymTab);
-                CheckExpr(Asgn->GetRHS(), SymTab, Mgr);
-                if (!IsInput) {
-                    auto Gatherer = Detail::VarGatherer();
-                    auto Vars = Mgr->Gather(Asgn->GetRHS(), Gatherer);
-                    for (auto const& Var : Vars) {
-                        auto const& VarExp = Var->As<Exprs::VarExpression>();
-                        auto const& VarName = VarExp->GetVarName();
-                        if (VarName == MsgVarName) {
-                            throw ESMCError((string)"Output message cannot be used on RHS of " + 
-                                            "assignment in an output transition");
-                        }
-                    }
-                }
-
-                // Check that no constants of symmetric types 
-                // appear in the assignment
-                auto SymmConstsLHS = Mgr->Gather(Asgn->GetLHS(), Detail::SymmConstGatherer());
-                auto SymmConstsRHS = Mgr->Gather(Asgn->GetRHS(), Detail::SymmConstGatherer());
-                if (SymmConstsLHS.size() != 0 || SymmConstsRHS.size() != 0) {
-                    throw ESMCError((string)"Assignments cannot contain symmetric constant " + 
-                                    "literal values. This breaks symmetry!");
-                }
-                
-                // Finally check type compat
-                if (!CheckAsgnCompat(Asgn->GetLHS()->GetType(),
-                                     Asgn->GetRHS()->GetType())) {
-                    throw ESMCError((string)"Incompatible types in assignment:\n" + 
-                                    Asgn->ToString());
-                }
-            }
-        }
-
         static inline void CheckParamPurity(const ExpT& Exp,
                                             const SymbolTable& SymTab,
                                             MgrT* Mgr)
@@ -192,6 +106,21 @@ namespace ESMC {
                 if (!Lookup->Is<ParamDecl>()) {
                     throw ESMCError((string)"Expression is not pure wrt parameters. Expression:\n" + 
                                     Exp->ToString());
+                }
+            }
+        }
+
+        static inline void CheckExpr(const ExpT& Exp,
+                                     const SymbolTable& SymTab,
+                                     MgrT* Mgr)
+        {
+            auto Gatherer = Detail::VarGatherer();
+            auto Vars = Mgr->Gather(Exp, Gatherer);
+            for (auto const& Var : Vars) {
+                auto const& VarName = Var->template SAs<Exprs::VarExpression>()->GetVarName();
+                auto Lookup = SymTab.Lookup(VarName);
+                if (Lookup == DeclRef::NullPtr) {
+                    throw ESMCError((string)"Unbound variable \"" + VarName + "\"");
                 }
             }
         }
@@ -256,6 +185,89 @@ namespace ESMC {
                 
                 if (Res == DeclRef::NullPtr) {
                     throw ESMCError((string)"Parameter \"" + VarName + "\" could not be resolved");
+                }
+            }
+        }
+
+        static inline void CheckLValCompat(const ExpT& Exp,
+                                           const SymbolTable& SymTab)
+        {
+            if (!IsLVal(Exp)) {
+                throw ESMCError((string)"Expression is not an LValue:\n" + 
+                                Exp->ToString());
+            }
+            auto ExpAsVar = Exp->As<Exprs::VarExpression>();
+            if (ExpAsVar != nullptr) {
+                // Check that this is a variable and not a parameter
+                auto const& VarName = ExpAsVar->GetVarName();
+                auto LookupRes = SymTab.Lookup(VarName);
+                if (!LookupRes->Is<VarDecl>()) {
+                    throw ESMCError((string)"Error: Parameters cannot be used as LVals");
+                }
+            }
+        }
+
+        static inline void CheckUpdates(const vector<LTSAssignRef>& Updates,
+                                        SymbolTable& SymTab,
+                                        MgrT* Mgr, bool IsInput,
+                                        const string& MsgVarName)
+        {
+            for(auto const& Asgn : Updates) {
+                auto PUpdate = Asgn->As<LTSAssignParam>();
+                if (PUpdate != nullptr) {
+                    auto const& Params = PUpdate->GetParams();
+                    auto const& Constraint = PUpdate->GetConstraint();
+
+                    SymTab.Push();
+                    CheckParams(Params, Constraint, SymTab, Mgr, true);
+                }
+
+                CheckExpr(Asgn->GetLHS(), SymTab, Mgr);
+                if (IsInput) {
+                    auto Gatherer = Detail::VarGatherer();
+                    auto Vars = Mgr->Gather(Asgn->GetLHS(), Gatherer);
+                    for (auto const& Var : Vars) {
+                        auto const& VarExp = Var->As<Exprs::VarExpression>();
+                        auto const& VarName = VarExp->GetVarName();
+                        if (VarName == MsgVarName) {
+                            throw ESMCError((string)"Input message cannot be updated " + 
+                                            "in an input transition");
+                        }
+                    }
+                }
+                CheckLValCompat(Asgn->GetLHS(), SymTab);
+                CheckExpr(Asgn->GetRHS(), SymTab, Mgr);
+                if (!IsInput) {
+                    auto Gatherer = Detail::VarGatherer();
+                    auto Vars = Mgr->Gather(Asgn->GetRHS(), Gatherer);
+                    for (auto const& Var : Vars) {
+                        auto const& VarExp = Var->As<Exprs::VarExpression>();
+                        auto const& VarName = VarExp->GetVarName();
+                        if (VarName == MsgVarName) {
+                            throw ESMCError((string)"Output message cannot be used on RHS of " + 
+                                            "assignment in an output transition");
+                        }
+                    }
+                }
+
+                // Check that no constants of symmetric types 
+                // appear in the assignment
+                auto SymmConstsLHS = Mgr->Gather(Asgn->GetLHS(), Detail::SymmConstGatherer());
+                auto SymmConstsRHS = Mgr->Gather(Asgn->GetRHS(), Detail::SymmConstGatherer());
+                if (SymmConstsLHS.size() != 0 || SymmConstsRHS.size() != 0) {
+                    throw ESMCError((string)"Assignments cannot contain symmetric constant " + 
+                                    "literal values. This breaks symmetry!");
+                }
+                
+                // Finally check type compat
+                if (!CheckAsgnCompat(Asgn->GetLHS()->GetType(),
+                                     Asgn->GetRHS()->GetType())) {
+                    throw ESMCError((string)"Incompatible types in assignment:\n" + 
+                                    Asgn->ToString());
+                }
+
+                if (PUpdate != nullptr) {
+                    SymTab.Pop();
                 }
             }
         }

@@ -147,7 +147,7 @@ namespace ESMC {
         private:
             string MessageName;
             ExprTypeRef MessageType;
-            unordered_set<u32> CompOfFairnessSets;
+            set<string> CompOfFairnessSets;
 
         public:
             LTSTransitionOutput(EFSMBase* TheEFSM,
@@ -157,12 +157,12 @@ namespace ESMC {
                                 const vector<LTSAssignRef>& Updates,
                                 const string& MessageName,
                                 const ExprTypeRef& MessageType,
-                                const unordered_set<u32>& CompOfFairnessSets);
+                                const set<string>& CompOfFairnessSets);
             virtual ~LTSTransitionOutput();
 
             const string& GetMessageName() const;
             const ExprTypeRef& GetMessageType() const;
-            const unordered_set<u32>& GetCompOfFairnessSets() const;
+            const set<string>& GetCompOfFairnessSets() const;
 
             virtual string ToString() const override;
         };
@@ -170,7 +170,7 @@ namespace ESMC {
         class LTSTransitionInternal : public LTSTransitionBase
         {
         private:
-            unordered_set<u32> CompOfFairnessSets;
+            set<string> CompOfFairnessSets;
 
         public:
             LTSTransitionInternal(EFSMBase* TheEFSM,
@@ -178,10 +178,10 @@ namespace ESMC {
                                   const LTSState& FinalState,
                                   const ExpT& Guard,
                                   const vector<LTSAssignRef>& Updates,
-                                  const unordered_set<u32>& CompOfFairnessSets);
+                                  const set<string>& CompOfFairnessSets);
             virtual ~LTSTransitionInternal();
 
-            const unordered_set<u32>& GetCompOfFairnessSets() const;
+            const set<string>& GetCompOfFairnessSets() const;
             virtual string ToString() const override;
         };
 
