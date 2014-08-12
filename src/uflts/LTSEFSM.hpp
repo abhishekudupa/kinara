@@ -146,6 +146,38 @@ namespace ESMC {
             vector<LTSAssignRef> MsgTransformUpdates(const vector<LTSAssignRef>& Updates,
                                                      const string& MessageName, 
                                                      const ExprTypeRef& MessageType);
+
+            // For internal use. e.g. in the case of channels
+            void AddInputTransForInstance(u32 InstanceID, 
+                                          const MgrT::SubstMapT& SubstMap,
+                                          const string& InitialState,
+                                          const string& FinalState, 
+                                          const ExpT& Guard,
+                                          const vector<LTSAssignRef>& Updates,
+                                          const string& MessageName, 
+                                          const ExprTypeRef& MessageType,
+                                          const ExprTypeRef& ActMType);
+
+            void AddOutputTransForInstance(u32 InstanceID, 
+                                           const MgrT::SubstMapT& SubstMap,
+                                           const string& InitState,
+                                           const string& FinalState,
+                                           const ExpT& Guard,
+                                           const vector<LTSAssignRef>& Updates,
+                                           const string& MessageName,
+                                           const ExprTypeRef& MessageType,
+                                           const ExprTypeRef& ActMType,
+                                           const set<string>& AddToFairnessSets);
+
+            void AddInternalTransForInstance(u32 InstanceID, 
+                                             const MgrT::SubstMapT& SubstMap,
+                                             const string& InitState,
+                                             const string& FinalState,
+                                             const ExpT& Guard,
+                                             const vector<LTSAssignRef>& Updates,
+                                             const set<string>& AddToFairnessSets);
+                                          
+                                          
             
         public:
             EFSMBase(LabelledTS* TheLTS, const string& Name,
@@ -355,12 +387,14 @@ namespace ESMC {
             UIDGenerator MessageFairnessUIDGen;
             UIDGenerator LossDupFairnessUIDGen;
 
-            inline void MakeInputTransition(const ExprTypeRef& MessageType,
-                                            const vector<ExpT>& MessageParams,
+            inline void MakeInputTransition(u32 InstanceID,
+                                            const MgrT::SubstMapT& SubstMap,
+                                            const ExprTypeRef& MessageType,
                                             LossDupFairnessType LossDupFairness);
 
-            inline void MakeOutputTransition(const ExprTypeRef& MessageType,
-                                             const vector<ExpT>& MessageParams,
+            inline void MakeOutputTransition(u32 InstanceID,
+                                             const MgrT::SubstMapT& SubstMap,
+                                             const ExprTypeRef& MessageType,
                                              LTSFairnessType MessageFairness,
                                              LossDupFairnessType LossDupFairness);
 
