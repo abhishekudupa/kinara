@@ -54,6 +54,16 @@ namespace ESMC {
         LabelledTS::~LabelledTS()
         {
             delete Mgr;
+            for (auto const& NameEFSM : AllEFSMs) {
+                delete NameEFSM.second;
+            }
+
+            for (auto const& NameMon : SafetyMonitors) {
+                delete NameMon.second;
+            }
+            for (auto const& BuchiMon : BuchiMonitors) {
+                delete BuchiMon.second;
+            }
         }
 
         // helpers
@@ -119,10 +129,15 @@ namespace ESMC {
             }
 
             AutomataFrozen = true;
-
+            
+            StateVectorSize = 0;
             // Create the state variables
-            for (auto const& EFSM : AllEFSMs) {
-                
+            for (auto& NameEFSM : AllEFSMs) {
+                NameEFSM.second->Freeze();
+                auto const& StateVarType = NameEFSM.second->StateVarType;
+                auto const& Name = NameEFSM.second->Name;
+                StateVector.push_back(Mgr->MakeVar(Name, StateVarType));
+                StateVectorSize += StateVarType->GetByteSize();
             }
         }
         

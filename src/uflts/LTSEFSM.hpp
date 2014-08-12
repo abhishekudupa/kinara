@@ -146,6 +146,7 @@ namespace ESMC {
             vector<LTSAssignRef> MsgTransformUpdates(const vector<LTSAssignRef>& Updates,
                                                      const string& MessageName, 
                                                      const ExprTypeRef& MessageType);
+            vector<LTSAssignRef> SimplifyUpdates(const vector<LTSAssignRef>& Updates);
 
             // For internal use. e.g. in the case of channels
             void AddInputTransForInstance(u32 InstanceID, 
@@ -185,6 +186,16 @@ namespace ESMC {
                      LTSFairnessType Fairness = LTSFairnessType::None);
             virtual ~EFSMBase();
 
+            // Methods not intended to be overridden.
+            // This helps preserve the structure of the EFSM
+            set<ExprTypeRef>& GetInputs() const;
+            set<ExprTypeRef>& GetInputsForInstance(u32 InstanceID);
+            
+            set<ExprTypeRef>& GetOutputs() const;
+            set<ExprTypeRef>& GetOutputsForInstance(u32 InstanceID);
+
+            vector<LTSTransRef>& GetTransitionsOnMsg(const ExprTypeRef& MType);
+
             virtual void AddState(const string& StateName,
                                   bool Initial = false, bool Final = false, 
                                   bool Accepting = false, bool Error = false) override;
@@ -192,7 +203,8 @@ namespace ESMC {
             virtual LTSFairnessType GetFairnessType() const;
 
             virtual void AddFairnessSet(const string& Name, FairSetFairnessType Fairness);
-            virtual const map<vector<ExpT>, LTSFairSetRef>& GetFairnessSet(const string& FairnessName) 
+            virtual const map<vector<ExpT>, LTSFairSetRef>& GetFairnessSet(const string& 
+                                                                           FairnessName) 
                 const;
             virtual const LTSFairSetRef& GetFairnessForInst(const string& FairnessName,
                                                             const vector<ExpT>& InstParams) const;

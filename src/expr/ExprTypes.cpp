@@ -730,6 +730,13 @@ namespace ESMC {
             return ValueType;
         }
 
+        u32 ExprArrayType::GetOffset(u32 ElemIdx) const
+        {
+            auto ElemSize = ValueType->GetByteSize();
+            ElemSize = Align(ElemSize, ElemSize);
+            return (ElemSize * ElemIdx);
+        }
+
         string ExprArrayType::ToString() const
         {
             return ((string)"(Array : " + IndexType->ToString() + " -> " + 
@@ -776,6 +783,7 @@ namespace ESMC {
         u32 ExprArrayType::GetByteSize() const
         {
             u32 Retval = ValueType->GetByteSize();
+            Retval = Align(Retval, Retval);
             return (Retval * IndexType->GetElements().size());
         }
 
@@ -803,6 +811,14 @@ namespace ESMC {
                                     Name + "\"");
                 }
                 MemberMap[Member.first] = Member.second;
+            }
+
+            u32 CurOffset = 0;
+            for (auto const& Member : Members) {
+                auto CurSize = Member.second->GetByteSize();
+                CurOffset = Align(CurOffset, CurSize);
+                FieldOffsets[Member.first] = CurOffset;
+                CurOffset += CurSize;
             }
         }
 
@@ -851,6 +867,16 @@ namespace ESMC {
             }
             throw ESMCError((string)"Invalid field in request for field index \"" + 
                             FieldName + "\"");
+        }
+
+        u32 ExprRecordType::GetFieldOffset(const string& FieldName) const
+        {
+            auto it = FieldOffsets.find(FieldName);
+            if (it == FieldOffsets.end()) {
+                throw ESMCError((string)"Invalid field in request for field offset \"" + 
+                                FieldName + "\"");
+            }
+            return it->second;
         }
 
         string ExprRecordType::ToString() const
@@ -910,12 +936,11 @@ namespace ESMC {
 
         u32 ExprRecordType::GetByteSize() const
         {
-            u32 Offset = 0;
             u32 Retval = 0;
             for (auto const& Member : MemberVec) {
                 auto CurSize = Member.second->GetByteSize();
-                Offset = NextMultiple(Retval, CurSize);
-                Retval += (Offset + CurSize);
+                Retval = Align(Retval, CurSize);
+                Retval += CurSize;
             }
             return Retval;
         }
@@ -1306,11 +1331,6 @@ namespace ESMC {
             for (auto const& Member : MemberTypes) {
                 boost::hash_combine(HashCode, Member->Hash());
             }
-        }
-
-        string ExprUnionType::ToString() const
-        {
-            return Name;
         }
 
         i32 ExprUnionType::Compare(const ExprTypeBase& Other) const

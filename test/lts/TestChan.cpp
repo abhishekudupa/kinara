@@ -70,12 +70,22 @@ int main()
 
     TheLTS->FreezeMsgs();
     
-    vector<ExpT> ChanParams = { Mgr->MakeVar("ChanID", ChanSymmType) };
-    auto Chan1 = TheLTS->MakeChannel("Chan1", ChanParams, TrueExp, 2, true, false, true, false, LTSFairnessType::Strong);
+    vector<ExpT> ChanParams;
+    ChanParams = { Mgr->MakeVar("ChanID", ChanSymmType) };
+
+    auto Chan1 = TheLTS->MakeChannel("Chan1", ChanParams, TrueExp, 4, true, false, true, false, LTSFairnessType::Strong);
     Chan1->AddMsgs(Params, TrueExp, MType1, Params, LTSFairnessType::Strong, LossDupFairnessType::NotAlwaysLostOrDup);
+
+    auto Chan2 = TheLTS->MakeChannel("Chan2", ChanParams, TrueExp, 3, true, true, true, false, LTSFairnessType::Strong);
+    Chan2->AddMsgs(Params, TrueExp, MType2, Params, LTSFairnessType::Strong, LossDupFairnessType::NotAlwaysLostOrDup);
     
     cout << Chan1->ToString() << endl;
+    cout << endl << endl << endl << endl;
+    cout << Chan2->ToString() << endl;
     
+    TheLTS->FreezeAutomata();
+
+    delete TheLTS;
 }
 
 // 

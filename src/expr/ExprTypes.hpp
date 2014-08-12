@@ -386,6 +386,7 @@ namespace ESMC {
 
             const ExprTypeRef& GetIndexType() const;
             const ExprTypeRef& GetValueType() const;
+            u32 GetOffset(u32 ElemIdx) const;
             
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
@@ -400,6 +401,7 @@ namespace ESMC {
             string Name;
             map<string, ExprTypeRef> MemberMap;
             vector<pair<string, ExprTypeRef>> MemberVec;
+            map<string, u32> FieldOffsets;
 
         protected:
             virtual void ComputeHashValue() const;
@@ -416,7 +418,7 @@ namespace ESMC {
             const map<string, ExprTypeRef>& GetMemberMap() const;
             const vector<pair<string, ExprTypeRef>>& GetMemberVec() const;
             const ExprTypeRef& GetTypeForMember(const string& MemberName) const;
-
+            u32 GetFieldOffset(const string& FieldName) const;
             u32 GetFieldIdx(const string& FieldName) const;
 
             virtual string ToString() const;
@@ -507,7 +509,6 @@ namespace ESMC {
             const string& MapToMemberField(u32 TypeID,
                                            const string& FieldName) const;
 
-            virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
         };
 

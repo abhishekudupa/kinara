@@ -64,6 +64,7 @@ namespace ESMC {
             map<string, SafetyMonitor*> SafetyMonitors;
             map<string, BuchiMonitor*> BuchiMonitors;
             vector<ExpT> StateVector;
+            u32 StateVectorSize;
             vector<vector<LTSAssignRef>> InitStateGenerators;
             
 
@@ -126,13 +127,3 @@ namespace ESMC {
 
 // 
 // LabelledTS.hpp ends here
-
-
-
-
-
-
-
-
-
-

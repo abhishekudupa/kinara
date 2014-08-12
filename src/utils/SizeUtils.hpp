@@ -48,7 +48,21 @@ namespace ESMC {
     static inline u32 NextMultiple(u32 Value, u32 Size)
     {
         auto Rem = Value % Size;
-        return (Rem == 0 ? Value : (Value + (Size - (Value % Rem))));
+        return (Rem == 0 ? Value : (Value + (Size - Rem)));
+    }
+
+    // Pads value by some number of bytes to get the best alignment
+    static inline u32 Align(u32 Value, u32 Size)
+    {
+        if (Size == 1) {
+            return Value;
+        } else if (Size == 2) {
+            return NextMultiple(Value, 2);
+        } else {
+            // An alignment of 4 is considered
+            // sufficient for all types
+            return NextMultiple(Value, 4);
+        }
     }
 
     static inline u32 BytesForRange(u32 RangeWidth)
