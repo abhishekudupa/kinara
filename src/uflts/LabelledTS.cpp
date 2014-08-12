@@ -345,6 +345,11 @@ namespace ESMC {
             return Retval;
         }
 
+        void LabelledTS::AddInitStates(const vector<InitStateRef>& InitStates)
+        {
+            
+        }
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

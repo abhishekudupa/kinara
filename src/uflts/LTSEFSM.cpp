@@ -508,11 +508,13 @@ namespace ESMC {
             return Retval;
         }
 
-        vector<LTSAssignRef> EFSMBase::RebaseUpdates(const vector<LTSAssignRef>& Updates)
+        vector<LTSAssignRef> EFSMBase::RebaseUpdates(const vector<ExpT>& ParamInst,
+                                                     const vector<LTSAssignRef>& Updates)
         {
             auto Mgr = TheLTS->GetMgr();
             const u32 NumUpdates = Updates.size();
             vector<LTSAssignRef> Retval(NumUpdates);
+            auto const& RebaseSubstMap = RebaseSubstMaps[ParamInst];
             
             for (u32 i = 0; i < NumUpdates; ++i) {
                 auto RebasedLHS = Mgr->Substitute(RebaseSubstMap, Updates[i]->GetLHS());
@@ -632,21 +634,27 @@ namespace ESMC {
             }
             StateVarType = ArrayType;
 
-            // Create the RebaseSubstMap
-            auto PrefixExp = Mgr->MakeVar(Name, StateVarType);
-            for (auto const& Param : Params) {
-                PrefixExp = Mgr->MakeExpr(LTSOps::OpIndex, PrefixExp, Param);
-            }
+            // Create the RebaseSubstMaps
+            const u32 NumInsts = ParamInsts.size();
+            for (u32 i = 0; i < NumInsts; ++i) {
+                auto const& ParamInst = ParamInsts[i];
+                auto const& ParamSubst = ParamSubsts[i];
+                auto PrefixExp = Mgr->MakeVar(Name, StateVarType);
+                for (auto const& Param : Params) {
+                    PrefixExp = Mgr->MakeExpr(LTSOps::OpIndex, PrefixExp, 
+                                              Mgr->Substitute(ParamSubst, Param));
+                }
 
-            auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+                auto FAType = Mgr->MakeType<ExprFieldAccessType>();
             
-            // Create a substitution for each var
-            for (auto const& Decl : DeclMap) {
-                if (Decl.second->Is<VarDecl>()) {
-                    auto From = Mgr->MakeVar(Decl.first, Decl.second->GetType());
-                    auto FieldVar = Mgr->MakeVar(Decl.first, FAType);
-                    auto To = Mgr->MakeExpr(LTSOps::OpField, PrefixExp, FieldVar);
-                    RebaseSubstMap[From] = To;
+                // Create a substitution for each var
+                for (auto const& Decl : DeclMap) {
+                    if (Decl.second->Is<VarDecl>()) {
+                        auto From = Mgr->MakeVar(Decl.first, Decl.second->GetType());
+                        auto FieldVar = Mgr->MakeVar(Decl.first, FAType);
+                        auto To = Mgr->MakeExpr(LTSOps::OpField, PrefixExp, FieldVar);
+                        RebaseSubstMaps[ParamInst][From] = To;
+                    }
                 }
             }
         }
@@ -754,7 +762,7 @@ namespace ESMC {
                 LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                            Mgr->MakeVal(FinalState, StateType)));
                 auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates);
-                auto&& RebasedUpdates = RebaseUpdates(InstUpdates);
+                auto&& RebasedUpdates = RebaseUpdates(ParamInsts[i], InstUpdates);
                 auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates,
                                                                    MessageName, 
                                                                    MessageType);
@@ -767,7 +775,8 @@ namespace ESMC {
                                   Guard);
 
                 auto SubstGuard = Mgr->Substitute(SubstMap, LocalGuard);
-                auto RebasedGuard = Mgr->Substitute(RebaseSubstMap, SubstGuard);
+                auto RebasedGuard = Mgr->Substitute(RebaseSubstMaps[ParamInsts[i]], 
+                                                    SubstGuard);
                 auto MsgTransformedGuard = 
                     Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard,
                                                                 MessageName, MessageType,
@@ -849,7 +858,7 @@ namespace ESMC {
                                                                Mgr->MakeVal(FinalState, StateType)));
 
                     auto&& InstUpdates = InstantiateUpdates(LocalSubstMap, LocalUpdates);
-                    auto&& RebasedUpdates = RebaseUpdates(InstUpdates);
+                    auto&& RebasedUpdates = RebaseUpdates(ParamInsts[i], InstUpdates);
                     auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates,
                                                                        MessageName, 
                                                                        MessageType);
@@ -862,7 +871,8 @@ namespace ESMC {
                                       Guard);
                     
                     auto SubstGuard = Mgr->Substitute(LocalSubstMap, LocalGuard);
-                    auto RebasedGuard = Mgr->Substitute(RebaseSubstMap, SubstGuard);
+                    auto RebasedGuard = Mgr->Substitute(RebaseSubstMaps[ParamInsts[i]], 
+                                                        SubstGuard);
                     auto MsgTransformedGuard = 
                         Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard,
                                                                     MessageName, MessageType,
@@ -949,7 +959,7 @@ namespace ESMC {
                                                            
 
                 auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates);
-                auto&& RebasedUpdates = RebaseUpdates(InstUpdates);
+                auto&& RebasedUpdates = RebaseUpdates(ParamInsts[i], InstUpdates);
                 auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates, 
                                                                    MessageName, 
                                                                    MessageType);
@@ -960,7 +970,8 @@ namespace ESMC {
                                                               Mgr->MakeVal(InitState, StateType)));
 
                 auto SubstGuard = Mgr->Substitute(SubstMap, LocalGuard);
-                auto RebasedGuard = Mgr->Substitute(RebaseSubstMap, SubstGuard);
+                auto RebasedGuard = Mgr->Substitute(RebaseSubstMaps[ParamInsts[i]], 
+                                                    SubstGuard);
                 auto MsgTransformedGuard = 
                     Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard, MessageName, 
                                                                 MessageType, 
@@ -1095,7 +1106,7 @@ namespace ESMC {
                                                                Mgr->MakeVal(FinalState, StateType)));
 
                     auto&& InstUpdates = InstantiateUpdates(LocalSubstMap, LocalUpdates);
-                    auto&& RebasedUpdates = RebaseUpdates(InstUpdates);
+                    auto&& RebasedUpdates = RebaseUpdates(ParamInsts[i], InstUpdates);
                     auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates,
                                                                        MessageName, 
                                                                        MessageType);
@@ -1107,7 +1118,8 @@ namespace ESMC {
                                                     Mgr->MakeVal(InitState, StateType)));
 
                     auto SubstGuard = Mgr->Substitute(LocalSubstMap, LocalGuard);
-                    auto RebasedGuard = Mgr->Substitute(RebaseSubstMap, SubstGuard);
+                    auto RebasedGuard = Mgr->Substitute(RebaseSubstMaps[ParamInsts[i]], 
+                                                        SubstGuard);
                     auto MsgTransformedGuard = 
                         Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard,
                                                                     MessageName, MessageType,
@@ -1178,7 +1190,7 @@ namespace ESMC {
                 LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                            Mgr->MakeVal(FinalState, StateType)));
                 auto&& InstUpdates = InstantiateUpdates(SubstMap, Updates);
-                auto&& RebasedUpdates = RebaseUpdates(InstUpdates);
+                auto&& RebasedUpdates = RebaseUpdates(ParamInsts[i], InstUpdates);
              
                 auto LocalGuard = 
                     Mgr->MakeExpr(LTSOps::OpAND, 
@@ -1188,7 +1200,7 @@ namespace ESMC {
                                   Guard);
 
                 auto SubstGuard = Mgr->Substitute(SubstMap, LocalGuard);
-                auto RebasedGuard = Mgr->Substitute(RebaseSubstMap, SubstGuard);
+                auto RebasedGuard = Mgr->Substitute(RebaseSubstMaps[ParamInsts[i]], SubstGuard);
 
                 auto LocalFairnessSets = AddToFairnessSets;
                 if (Fairness != LTSFairnessType::None) {
@@ -1276,7 +1288,7 @@ namespace ESMC {
                     LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                                Mgr->MakeVal(FinalState, StateType)));
                     auto&& InstUpdates = InstantiateUpdates(LocalSubstMap, LocalUpdates);
-                    auto&& RebasedUpdates = RebaseUpdates(InstUpdates);
+                    auto&& RebasedUpdates = RebaseUpdates(ParamInsts[i], InstUpdates);
 
                     auto LocalGuard = 
                         Mgr->MakeExpr(LTSOps::OpAND, Guard,
@@ -1284,7 +1296,7 @@ namespace ESMC {
                                                     Mgr->MakeVar("state", StateType),
                                                     Mgr->MakeVal(InitState, StateType)));
                     auto SubstGuard = Mgr->Substitute(LocalSubstMap, LocalGuard);
-                    auto RebasedGuard = Mgr->Substitute(RebaseSubstMap, Guard);
+                    auto RebasedGuard = Mgr->Substitute(RebaseSubstMaps[ParamInsts[i]], Guard);
 
                     set<string> LocalFairnessSets;
                     string SplatFairnessSetName;

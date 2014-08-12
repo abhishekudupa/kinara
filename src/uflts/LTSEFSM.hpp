@@ -98,7 +98,7 @@ namespace ESMC {
             ExprTypeRef StateVarType;
             // SubstMap to rebase expressions
             // to use the state var fields
-            MgrT::SubstMapT RebaseSubstMap;
+            map<vector<ExpT>, MgrT::SubstMapT> RebaseSubstMaps;
             UIDGenerator FairnessUIDGenerator;
 
             // Transitions per instance
@@ -141,7 +141,8 @@ namespace ESMC {
             
             vector<LTSAssignRef> InstantiateUpdates(const MgrT::SubstMapT& ParamSubst,
                                                     const vector<LTSAssignRef>& Updates);
-            vector<LTSAssignRef> RebaseUpdates(const vector<LTSAssignRef>& Updates);
+            vector<LTSAssignRef> RebaseUpdates(const vector<ExpT>& ParamInst,
+                                               const vector<LTSAssignRef>& Updates);
             vector<LTSAssignRef> MsgTransformUpdates(const vector<LTSAssignRef>& Updates,
                                                      const string& MessageName, 
                                                      const ExprTypeRef& MessageType);

@@ -49,6 +49,7 @@ int main()
     auto TheLTS = new LabelledTS();
     auto Mgr = TheLTS->GetMgr();
     auto SymmType = TheLTS->MakeSymmType("IDType", 2);
+    auto ChanSymmType = TheLTS->MakeSymmType("ChanIDType", 2);
     vector<ExpT> Params;
     Params.push_back(Mgr->MakeVar("ParamVar", SymmType));
     auto TrueExp = Mgr->MakeTrue();
@@ -69,7 +70,8 @@ int main()
 
     TheLTS->FreezeMsgs();
     
-    auto Chan1 = TheLTS->MakeChannel("Chan1", vector<ExpT>(), TrueExp, 2, true, false, true, false, LTSFairnessType::Strong);
+    vector<ExpT> ChanParams = { Mgr->MakeVar("ChanID", ChanSymmType) };
+    auto Chan1 = TheLTS->MakeChannel("Chan1", ChanParams, TrueExp, 2, true, false, true, false, LTSFairnessType::Strong);
     Chan1->AddMsgs(Params, TrueExp, MType1, Params, LTSFairnessType::Strong, LossDupFairnessType::NotAlwaysLostOrDup);
     
     cout << Chan1->ToString() << endl;

@@ -64,6 +64,7 @@ namespace ESMC {
             map<string, SafetyMonitor*> SafetyMonitors;
             map<string, BuchiMonitor*> BuchiMonitors;
             vector<ExpT> StateVector;
+            vector<vector<LTSAssignRef>> InitStateGenerators;
             
 
             SymbolTable SymTab;
