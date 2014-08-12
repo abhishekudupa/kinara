@@ -201,7 +201,8 @@ namespace ESMC {
                 // Check that this is a variable and not a parameter
                 auto const& VarName = ExpAsVar->GetVarName();
                 auto LookupRes = SymTab.Lookup(VarName);
-                if (!LookupRes->Is<VarDecl>()) {
+                if (!LookupRes->Is<VarDecl>() &&
+                    !LookupRes->Is<OutMsgDecl>()) {
                     throw ESMCError((string)"Error: Parameters cannot be used as LVals");
                 }
             }

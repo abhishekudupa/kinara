@@ -108,6 +108,17 @@ namespace ESMC {
             return Initial;
         }
 
+        string LTSState::ToString() const
+        {
+            ostringstream sstr;
+            sstr << StateName << " : " 
+                 << (Accepting ? "Accepting, " : "")
+                 << (Final ? "Final, " : "")
+                 << (Error ? "Error, " : "")
+                 << (Initial ? "Initial" : "");
+            return sstr.str();
+        }
+
         LTSState LTSState::MakeEFSMState(const string& StateName,
                                          bool Initial,
                                          bool Final,

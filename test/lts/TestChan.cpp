@@ -1,8 +1,8 @@
-// CompiledLTS.hpp --- 
+// TestChan.cpp --- 
 // 
-// Filename: CompiledLTS.hpp
+// Filename: TestChan.cpp
 // Author: Abhishek Udupa
-// Created: Mon Aug  4 14:29:59 2014 (-0400)
+// Created: Tue Aug 12 00:23:05 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,34 +37,60 @@
 
 // Code:
 
-#if !defined ESMC_COMPILED_LTS_HPP_
-#define ESMC_COMPILED_LTS_HPP_
+#include "../../src/uflts/LabelledTS.hpp"
+#include "../../src/uflts/LTSEFSM.hpp"
 
-#include "../common/FwdDecls.hpp"
+using namespace ESMC;
+using namespace LTS;
+using namespace Exprs;
 
-#include "LTSUtils.hpp"
+int main()
+{
+    auto TheLTS = new LabelledTS();
+    auto Mgr = TheLTS->GetMgr();
+    auto SymmType = TheLTS->MakeSymmType("IDType", 2);
+    vector<ExpT> Params;
+    Params.push_back(Mgr->MakeVar("ParamVar", SymmType));
+    auto TrueExp = Mgr->MakeTrue();
 
-namespace ESMC {
-    namespace LTS {
+    set<string> EnumMembers = { "EnumConst1", "EnumConst2", "EnumConst3" };
+    auto EnumType = Mgr->MakeType<ExprEnumType>("EnumType", EnumMembers);
 
-        class CompiledLTS
-        {
-        private:
-            map<string, ExprTypeRef> Variables;
-            set<ExpT> ChannelArraysToSort;
-            vector<GCmdT> Commands;
+    vector<pair<string, ExprTypeRef>> Rec1Fields;
+    Rec1Fields.push_back(make_pair("BoolField", Mgr->MakeType<ExprBoolType>()));
+    Rec1Fields.push_back(make_pair("RangeField", Mgr->MakeType<ExprRangeType>(0, 100)));
 
-        public:
-            CompiledLTS();
-            ~CompiledLTS();
+    vector<pair<string, ExprTypeRef>> Rec2Fields;
+    Rec2Fields.push_back(make_pair("RangeField", Mgr->MakeType<ExprRangeType>(0, 100)));
+    Rec2Fields.push_back(make_pair("EnumField", EnumType));
 
-            
-        };
+    auto MType1 = TheLTS->MakeMsgTypes(Params, TrueExp, "MType1", Rec1Fields, true);
+    auto MType2 = TheLTS->MakeMsgTypes(Params, TrueExp, "MType2", Rec2Fields, true);
 
-    } /* end namespace LTS */
-} /* end namespace ESMC */
-
-#endif /* ESMC_COMPILED_LTS_HPP_ */
+    TheLTS->FreezeMsgs();
+    
+    auto Chan1 = TheLTS->MakeChannel("Chan1", vector<ExpT>(), TrueExp, 2, true, false, true, false, LTSFairnessType::Strong);
+    Chan1->AddMsgs(Params, TrueExp, MType1, Params, LTSFairnessType::Strong, LossDupFairnessType::NotAlwaysLostOrDup);
+    
+    cout << Chan1->ToString() << endl;
+    
+}
 
 // 
-// CompiledLTS.hpp ends here
+// TestChan.cpp ends here
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -69,7 +69,7 @@ namespace ESMC {
             const LTSState& GetFinalState() const;
             const ExpT& GetGuard() const;
 
-            virtual string ToString() const = 0;
+            virtual string ToString(u32 Indent = 0) const = 0;
             
             template <typename T>
             T* As()
@@ -139,7 +139,7 @@ namespace ESMC {
             const string& GetMessageName() const;
             const ExprTypeRef& GetMessageType() const;
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Indent = 0) const override;
         };
         
         class LTSTransitionOutput : public LTSTransitionBase
@@ -164,7 +164,7 @@ namespace ESMC {
             const ExprTypeRef& GetMessageType() const;
             const set<string>& GetCompOfFairnessSets() const;
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Indent = 0) const override;
         };
 
         class LTSTransitionInternal : public LTSTransitionBase
@@ -182,15 +182,16 @@ namespace ESMC {
             virtual ~LTSTransitionInternal();
 
             const set<string>& GetCompOfFairnessSets() const;
-            virtual string ToString() const override;
+            virtual string ToString(u32 Indent = 0) const override;
         };
 
         class BuchiMonitorTransition : public AutomatonTransitionBase
         {
+        public:
             using AutomatonTransitionBase::AutomatonTransitionBase;
             virtual ~BuchiMonitorTransition();
             
-            virtual string ToString() const override;
+            virtual string ToString(u32 Indent = 0) const override;
         };
 
         class LTSGuardedCommand : public RefCountable
@@ -208,6 +209,24 @@ namespace ESMC {
             const vector<LTSAssignRef>& GetUpdates() const;
             string ToString() const;
         };
+
+        class LTSInitState : public RefCountable
+        {
+        private:
+            vector<ExpT> Params;
+            ExpT Constraint;
+            vector<LTSAssignRef> Updates;
+
+        public:
+            LTSInitState(const vector<ExpT>& Params,
+                         const ExpT& Constraint,
+                         const vector<LTSAssignRef>& Updates);
+            virtual ~LTSInitState();
+            
+            const vector<ExpT>& GetParams() const;
+            const ExpT& GetConstraint() const;
+            const vector<LTSAssignRef>& GetUpdates() const;
+        };
         
     } /* end namespace LTS */
 } /* end namespace ESMC */
@@ -216,15 +235,3 @@ namespace ESMC {
 
 // 
 // LTSTransitions.hpp ends here
-
-
-
-
-
-
-
-
-
-
-
-

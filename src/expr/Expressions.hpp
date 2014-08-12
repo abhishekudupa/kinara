@@ -1983,9 +1983,10 @@ namespace ESMC {
         {
             CheckMgr(Children);
             ExpT NewExp = new OpExpression<E, S>(this, OpCode, Children, ExtVal);
-            Sem->TypeCheck(NewExp);
             auto Retval = Sem->Canonicalize(NewExp);
-            return Internalize(Retval);
+            Retval = Internalize(Retval);
+            Sem->TypeCheck(Retval);
+            return Retval;
         }
 
         template <typename E, template <typename> class S>
@@ -2032,9 +2033,10 @@ namespace ESMC {
         {
             CheckMgr(QExpr);
             ExpT NewExp = new T<E, S>(this, QVarTypes, QExpr, ExtVal);
-            Sem->TypeCheck(NewExp);
             auto Retval = Sem->Canonicalize(NewExp);
-            return Internalize(Retval);
+            Retval = Internalize(Retval);
+            Sem->TypeCheck(Retval);
+            return Retval;
         }
 
         template <typename E, template <typename> class S>

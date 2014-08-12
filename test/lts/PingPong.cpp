@@ -44,7 +44,8 @@
 // the server and the server echoes it back
 // to the processes
 
-#include "../../src/uflts/UFLTS.hpp"
+#include "../../src/uflts/LabelledTS.hpp"
+#include "../../src/uflts/LTSEFSM.hpp"
 
 using namespace ESMC;
 using namespace LTS;
@@ -52,10 +53,10 @@ using namespace Exprs;
 
 int main()
 {
-    UFLTS* TheLTS = new UFLTS();
+    auto TheLTS = new LabelledTS();
     auto Mgr = TheLTS->GetMgr();
 
-    auto ClientIDType = TheLTS->MakeSymmetricType("ClientIDType", 2);
+    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 2);
     auto ParamExp = Mgr->MakeVar("ClientID", ClientIDType);
     vector<ExpT> Params = { ParamExp };
     auto TrueExp = Mgr->MakeTrue();
@@ -65,15 +66,15 @@ int main()
     auto RangeType = Mgr->MakeType<ExprRangeType>(0, 100);
     MsgFields.push_back(make_pair("Data", RangeType));
 
-    auto DataMsgType = TheLTS->MakeMessageType("DataMsg", MsgFields, Params, TrueExp);
-    auto AckMsgType = TheLTS->MakeMessageType("AckMsg", MsgFields, Params, TrueExp);
+    auto DataMsgType = TheLTS->MakeMsgTypes(Params, TrueExp, "DataMsg", MsgFields);
+    auto AckMsgType = TheLTS->MakeMsgTypes(Params, TrueExp, "AckMsg", MsgFields);
 
-    TheLTS->FreezeMessages();
+    TheLTS->FreezeMsgs();
 
-    auto Server = TheLTS->MakeEFSM("Server", vector<ExpT>(), Mgr->MakeTrue());
+    auto Server = TheLTS->MakeGenEFSM("Server", vector<ExpT>(), TrueExp, LTSFairnessType::Strong);
 
     auto ClientIDParam = Mgr->MakeVar("ClientID", ClientIDType);
-    auto ClientEFSM = TheLTS->MakeEFSM("Client", { ClientIDParam }, Mgr->MakeTrue());
+    auto ClientEFSM = TheLTS->MakeGenEFSM("Client", Params, TrueExp, LTSFairnessType::Strong);
 
     Server->AddState("InitState");
     Server->AddState("SendState");
@@ -81,18 +82,18 @@ int main()
 
     Server->AddVariable("LastMsg", RangeType);
 
-    Server->AddInputMsgs(Params, DataMsgType, Params, TrueExp);
-    Server->AddOutputMsgs(Params, AckMsgType, Params, TrueExp);
+    Server->AddInputMsgs(Params, TrueExp, DataMsgType, Params);
+    Server->AddOutputMsgs(Params, TrueExp, AckMsgType, Params);
 
     ClientEFSM->AddState("InitState");
     ClientEFSM->AddState("RecvState");
 
     ClientEFSM->FreezeStates();
     
-    vector<AsgnT> RecvUpdates;
-    RecvUpdates.push_back(Mgr->MakeVar("InMsg", Data
-    Server->AddInputTransitions("InitState", "RecvState", Params, TrueExp, TrueExp, , const string &MessageName, const ExprTypeRef &MessageType, const vector<ExpT> &MessageParams)
+    cout << ClientEFSM->ToString() << endl;
+    cout << Server->ToString() << endl;
 }
 
 // 
 // PingPong.cpp ends here
+

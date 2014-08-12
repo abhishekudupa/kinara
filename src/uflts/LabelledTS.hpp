@@ -58,12 +58,14 @@ namespace ESMC {
             map<string, ExprTypeRef> ParametricMsgTypes;
             map<ExprTypeRef, ExprTypeRef> TypeToPrimed;
             ExprTypeRef UnifiedMsgType;
-            vector<EFSMBase*> AllEFSMs;
-            vector<EFSMBase*> ActualEFSMs;
-            vector<ChannelEFSM*> ChannelEFSMs;
-            vector<SafetyMonitor*> SafetyMonitors;
-            vector<BuchiMonitor*> BuchiMonitors;
+            map<string, EFSMBase*> AllEFSMs;
+            map<string, EFSMBase*> ActualEFSMs;
+            map<string, ChannelEFSM*> ChannelEFSMs;
+            map<string, SafetyMonitor*> SafetyMonitors;
+            map<string, BuchiMonitor*> BuchiMonitors;
+            vector<ExpT> StateVector;
             
+
             SymbolTable SymTab;
 
             inline void AssertFrozen() const;
@@ -102,6 +104,18 @@ namespace ESMC {
 
             const ExprTypeRef& GetPrimedType(const ExprTypeRef& Type) const;
             void CheckExpr(const ExpT& Expr) const;
+
+            EFSMBase* MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
+                                  const ExpT& Constraint, LTSFairnessType Fairness);
+            EFSMBase* MakeDetEFSM(const string& Name, const vector<ExpT>& Params,
+                                  const ExpT& Constraint, LTSFairnessType Fairness);
+
+            ChannelEFSM* MakeChannel(const string& Name, const vector<ExpT>& Params,
+                                     const ExpT& Constraint, u32 Capacity, 
+                                     bool Lossy, bool Ordered, bool Duplicating, 
+                                     bool Blocking, LTSFairnessType Fairness);
+
+            void AddInitStates(const vector<InitStateRef>& InitStates);
         };
 
     } /* end namespace LTS */
@@ -111,3 +125,13 @@ namespace ESMC {
 
 // 
 // LabelledTS.hpp ends here
+
+
+
+
+
+
+
+
+
+

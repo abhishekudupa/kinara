@@ -71,6 +71,7 @@ namespace ESMC {
             bool IsFinal() const;
             bool IsError() const;
             bool IsInitial() const;
+            string ToString() const;
 
             static LTSState MakeEFSMState(const string& StateName, 
                                           bool Initial = false,

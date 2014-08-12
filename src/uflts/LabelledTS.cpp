@@ -39,6 +39,7 @@
 
 #include "LabelledTS.hpp"
 #include "LTSUtils.hpp"
+#include "LTSEFSM.hpp"
 
 namespace ESMC {
     namespace LTS {
@@ -99,7 +100,7 @@ namespace ESMC {
 
         inline void LabelledTS::AssertAutomataNotFrozen() const
         {
-            if (!AutomataFrozen) {
+            if (AutomataFrozen) {
                 throw ESMCError((string)"Operation cannot be performed after freezing " + 
                                 "the automata of the Labelled Transition System");                
             }
@@ -112,7 +113,17 @@ namespace ESMC {
 
         void LabelledTS::FreezeAutomata()
         {
-            
+            AssertMsgsFrozen();
+            if (AutomataFrozen) {
+                return;
+            }
+
+            AutomataFrozen = true;
+
+            // Create the state variables
+            for (auto const& EFSM : AllEFSMs) {
+                
+            }
         }
         
         void LabelledTS::FreezeMsgs()
@@ -256,7 +267,7 @@ namespace ESMC {
 
                 if (IncludePrimed) {
                     auto PInstType = InstantiateType(PPType, ParamInst, Mgr);
-                    MsgTypes[InstType->As<ExprRecordType>()->GetName()] = PInstType;
+                    MsgTypes[PInstType->As<ExprRecordType>()->GetName()] = PInstType;
                     TypeToPrimed[MsgTypes[InstType->As<ExprRecordType>()->GetName()]] = 
                         MsgTypes[PInstType->As<ExprRecordType>()->GetName()];
                 }
@@ -278,6 +289,60 @@ namespace ESMC {
         void LabelledTS::CheckExpr(const ExpT& Expr) const
         {
             // TODO: implement me
+        }
+
+        EFSMBase* LabelledTS::MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
+                                          const ExpT& Constraint, LTSFairnessType Fairness)
+        {
+            AssertMsgsFrozen();
+            AssertAutomataNotFrozen();
+
+            if (AllEFSMs.find(Name) != AllEFSMs.end()) {
+                throw ESMCError((string)"A machine named \"" + Name + "\" has already " + 
+                                "been created in the LTS");
+            }
+
+            auto Retval = new GeneralEFSM(this, Name, Params, Constraint, Fairness);
+            AllEFSMs[Name] = Retval;
+            ActualEFSMs[Name] = Retval;
+            return Retval;
+        }
+
+        EFSMBase* LabelledTS::MakeDetEFSM(const string& Name, const vector<ExpT>& Params,
+                                          const ExpT& Constraint, LTSFairnessType Fairness)
+        {
+            AssertMsgsFrozen();
+            AssertAutomataNotFrozen();
+
+            if (AllEFSMs.find(Name) != AllEFSMs.end()) {
+                throw ESMCError((string)"A machine named \"" + Name + "\" has already " + 
+                                "been created in the LTS");
+            }
+
+            auto Retval = new DetEFSM(this, Name, Params, Constraint, Fairness);
+            AllEFSMs[Name] = Retval;
+            ActualEFSMs[Name] = Retval;
+            return Retval;            
+        }
+
+        ChannelEFSM* LabelledTS::MakeChannel(const string& Name, const vector<ExpT> &Params, 
+                                             const ExpT& Constraint, u32 Capacity, 
+                                             bool Lossy, bool Ordered, bool Duplicating, 
+                                             bool Blocking, LTSFairnessType Fairness)
+        {
+            AssertMsgsFrozen();
+            AssertAutomataNotFrozen();
+
+            if (AllEFSMs.find(Name) != AllEFSMs.end()) {
+                throw ESMCError((string)"A machine named \"" + Name + "\" has already " + 
+                                "been created in the LTS");
+            }
+
+            auto Retval = new ChannelEFSM(this, Name, Params, Constraint, Capacity, 
+                                          Lossy, Ordered, Duplicating, Blocking, Fairness);
+            AllEFSMs[Name] = Retval;
+            ChannelEFSMs[Name] = Retval;
+            return Retval;
         }
 
     } /* end namespace LTS */

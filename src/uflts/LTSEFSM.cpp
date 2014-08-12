@@ -517,7 +517,7 @@ namespace ESMC {
             for (u32 i = 0; i < NumUpdates; ++i) {
                 auto RebasedLHS = Mgr->Substitute(RebaseSubstMap, Updates[i]->GetLHS());
                 auto RebasedRHS = Mgr->Substitute(RebaseSubstMap, Updates[i]->GetRHS());
-                Retval.push_back(new LTSAssignSimple(RebasedLHS, RebasedRHS));
+                Retval[i] = new LTSAssignSimple(RebasedLHS, RebasedRHS);
             }
             return Retval;
         }
@@ -630,10 +630,10 @@ namespace ESMC {
             for (auto const& Param : Params) {
                 ArrayType = Mgr->MakeType<ExprArrayType>(Param->GetType(), ArrayType);
             }
-            StateType = ArrayType;
+            StateVarType = ArrayType;
 
             // Create the RebaseSubstMap
-            auto PrefixExp = Mgr->MakeVar(Name, StateType);
+            auto PrefixExp = Mgr->MakeVar(Name, StateVarType);
             for (auto const& Param : Params) {
                 PrefixExp = Mgr->MakeExpr(LTSOps::OpIndex, PrefixExp, Param);
             }
@@ -748,14 +748,25 @@ namespace ESMC {
                 auto ActMType = InstantiateMessageType(MessageParams, SubstMap, MessageType);
                 CheckMsgType(ActMType);
                 AssertInput(ParamInsts[i], ActMType);
-                
-                auto&& InstUpdates = InstantiateUpdates(SubstMap, Updates);
+
+                auto LocalUpdates = Updates;
+                // Update state var
+                LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                           Mgr->MakeVal(FinalState, StateType)));
+                auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates);
                 auto&& RebasedUpdates = RebaseUpdates(InstUpdates);
                 auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates,
                                                                    MessageName, 
                                                                    MessageType);
 
-                auto SubstGuard = Mgr->Substitute(SubstMap, Guard);
+                auto LocalGuard = 
+                    Mgr->MakeExpr(LTSOps::OpAND,
+                                  Mgr->MakeExpr(LTSOps::OpEQ,
+                                                Mgr->MakeVar("state", StateType),
+                                                Mgr->MakeVal(InitState, StateType)),
+                                  Guard);
+
+                auto SubstGuard = Mgr->Substitute(SubstMap, LocalGuard);
                 auto RebasedGuard = Mgr->Substitute(RebaseSubstMap, SubstGuard);
                 auto MsgTransformedGuard = 
                     Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard,
@@ -833,13 +844,24 @@ namespace ESMC {
                     CheckMsgType(ActMType);
                     AssertInput(ParamInsts[i], ActMType);
 
-                    auto&& InstUpdates = InstantiateUpdates(LocalSubstMap, Updates);
+                    auto LocalUpdates = Updates;
+                    LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                               Mgr->MakeVal(FinalState, StateType)));
+
+                    auto&& InstUpdates = InstantiateUpdates(LocalSubstMap, LocalUpdates);
                     auto&& RebasedUpdates = RebaseUpdates(InstUpdates);
                     auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates,
                                                                        MessageName, 
                                                                        MessageType);
 
-                    auto SubstGuard = Mgr->Substitute(LocalSubstMap, Guard);
+                    auto LocalGuard = 
+                        Mgr->MakeExpr(LTSOps::OpAND, 
+                                      Mgr->MakeExpr(LTSOps::OpEQ, 
+                                                    Mgr->MakeVar("state", StateType),
+                                                    Mgr->MakeVal(InitState, StateType)),
+                                      Guard);
+                    
+                    auto SubstGuard = Mgr->Substitute(LocalSubstMap, LocalGuard);
                     auto RebasedGuard = Mgr->Substitute(RebaseSubstMap, SubstGuard);
                     auto MsgTransformedGuard = 
                         Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard,
@@ -873,6 +895,14 @@ namespace ESMC {
             CheckExpr(Guard, SymTab, Mgr);
             CheckParams(MessageParams, SymTab);
 
+            auto UMType = TheLTS->GetUnifiedMType();
+            auto UMTypeAsUnion = UMType->As<Exprs::ExprUnionType>();
+            auto const& TypeIDFieldName = UMTypeAsUnion->GetTypeIDFieldName();
+            auto const& TypeIDFieldType = UMTypeAsUnion->GetTypeIDFieldType();
+            auto FieldVar = Mgr->MakeVar(TypeIDFieldName, Mgr->MakeType<ExprFieldAccessType>());
+            auto FieldExp = Mgr->MakeExpr(LTSOps::OpField, 
+                                          Mgr->MakeVar(MessageName, UMType), FieldVar);
+
             ExprTypeRef ActMsgType = nullptr;
             
             if (MessageType->Is<ExprParametricType>()) {
@@ -883,6 +913,10 @@ namespace ESMC {
                 throw ESMCError((string)"Message type \"" + MessageType->ToString() + 
                                 "\" is not a record or parametric type");
             }
+
+            auto TypeIDExp = 
+                Mgr->MakeVal(to_string(UMTypeAsUnion->GetTypeIDForMemberType(ActMsgType)),
+                             TypeIDFieldType);
             
             SymTab.Push();
             if (SymTab.Lookup(MessageName) != DeclRef::NullPtr) {
@@ -906,13 +940,26 @@ namespace ESMC {
                 CheckMsgType(ActMType);
                 AssertOutput(ParamInsts[i], ActMType);
 
-                auto&& InstUpdates = InstantiateUpdates(SubstMap, Updates);
+                // Add the message type update 
+                auto LocalUpdates = Updates;
+                LocalUpdates.push_back(new LTSAssignSimple(FieldExp, TypeIDExp));
+                // Add the next state update
+                LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                           Mgr->MakeVal(FinalState, StateType)));
+                                                           
+
+                auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates);
                 auto&& RebasedUpdates = RebaseUpdates(InstUpdates);
                 auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates, 
                                                                    MessageName, 
                                                                    MessageType);
 
-                auto SubstGuard = Mgr->Substitute(SubstMap, Guard);
+                auto LocalGuard = Mgr->MakeExpr(LTSOps::OpAND, Guard,
+                                                Mgr->MakeExpr(LTSOps::OpEQ, 
+                                                              Mgr->MakeVar("state", StateType),
+                                                              Mgr->MakeVal(InitState, StateType)));
+
+                auto SubstGuard = Mgr->Substitute(SubstMap, LocalGuard);
                 auto RebasedGuard = Mgr->Substitute(RebaseSubstMap, SubstGuard);
                 auto MsgTransformedGuard = 
                     Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard, MessageName, 
@@ -992,6 +1039,16 @@ namespace ESMC {
                 throw ESMCError((string)"Message Name \"" + MessageName + "\" shadows " + 
                                 "earlier declaration in machine \"" + Name + "\"");
             }
+
+            auto UMType = TheLTS->GetUnifiedMType();
+            auto UMTypeAsUnion = UMType->As<Exprs::ExprUnionType>();
+            auto const& TypeIDFieldName = UMTypeAsUnion->GetTypeIDFieldName();
+            auto const& TypeIDFieldType = UMTypeAsUnion->GetTypeIDFieldType();
+            auto FieldVar = Mgr->MakeVar(TypeIDFieldName, Mgr->MakeType<ExprFieldAccessType>());
+            auto FieldExp = Mgr->MakeExpr(LTSOps::OpField, 
+                                          Mgr->MakeVar(TypeIDFieldName, 
+                                                       Mgr->MakeType<ExprFieldAccessType>()));
+
             
             SymTab.Bind(MessageName, new OutMsgDecl(MessageName, ActMsgType));
             CheckUpdates(Updates, SymTab, Mgr, false, MessageName);
@@ -1025,16 +1082,31 @@ namespace ESMC {
                     }
 
                     auto ActMType = InstantiateMessageType(MessageParams, LocalSubstMap, MessageType);
+                    auto TypeIDExp = 
+                        Mgr->MakeVal(to_string(UMTypeAsUnion->GetTypeIDForMemberType(ActMType)),
+                                     TypeIDFieldType);
+
                     CheckMsgType(ActMType);
                     AssertOutput(ParamInsts[i], ActMType);
 
-                    auto&& InstUpdates = InstantiateUpdates(LocalSubstMap, Updates);
+                    auto LocalUpdates = Updates;
+                    LocalUpdates.push_back(new LTSAssignSimple(FieldExp, TypeIDExp));
+                    LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                               Mgr->MakeVal(FinalState, StateType)));
+
+                    auto&& InstUpdates = InstantiateUpdates(LocalSubstMap, LocalUpdates);
                     auto&& RebasedUpdates = RebaseUpdates(InstUpdates);
                     auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates,
                                                                        MessageName, 
                                                                        MessageType);
 
-                    auto SubstGuard = Mgr->Substitute(LocalSubstMap, Guard);
+                    auto LocalGuard = 
+                        Mgr->MakeExpr(LTSOps::OpAND, Guard,
+                                      Mgr->MakeExpr(LTSOps::OpEQ, 
+                                                    Mgr->MakeVar("state", StateType),
+                                                    Mgr->MakeVal(InitState, StateType)));
+
+                    auto SubstGuard = Mgr->Substitute(LocalSubstMap, LocalGuard);
                     auto RebasedGuard = Mgr->Substitute(RebaseSubstMap, SubstGuard);
                     auto MsgTransformedGuard = 
                         Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard,
@@ -1083,7 +1155,7 @@ namespace ESMC {
         {
             AssertStatesFrozen();
             AssertVarsFrozen();
-            AssertEFSMFrozen();
+            AssertEFSMNotFrozen();
 
             auto Mgr = TheLTS->GetMgr();
 
@@ -1101,10 +1173,21 @@ namespace ESMC {
 
             for (u32 i = 0; i < NumInsts; ++i) {
                 auto const& SubstMap = ParamSubsts[i];
+
+                auto LocalUpdates = Updates;
+                LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                           Mgr->MakeVal(FinalState, StateType)));
                 auto&& InstUpdates = InstantiateUpdates(SubstMap, Updates);
                 auto&& RebasedUpdates = RebaseUpdates(InstUpdates);
              
-                auto SubstGuard = Mgr->Substitute(SubstMap, Guard);
+                auto LocalGuard = 
+                    Mgr->MakeExpr(LTSOps::OpAND, 
+                                  Mgr->MakeExpr(LTSOps::OpEQ,
+                                                Mgr->MakeVar("state", StateType),
+                                                Mgr->MakeVal(InitState, StateType)),
+                                  Guard);
+
+                auto SubstGuard = Mgr->Substitute(SubstMap, LocalGuard);
                 auto RebasedGuard = Mgr->Substitute(RebaseSubstMap, SubstGuard);
 
                 auto LocalFairnessSets = AddToFairnessSets;
@@ -1189,10 +1272,18 @@ namespace ESMC {
                         LocalSubstMap[TransParams[j]] = TransParamInst[j];
                     }
 
-                    auto&& InstUpdates = InstantiateUpdates(LocalSubstMap, Updates);
+                    auto LocalUpdates = Updates;
+                    LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                               Mgr->MakeVal(FinalState, StateType)));
+                    auto&& InstUpdates = InstantiateUpdates(LocalSubstMap, LocalUpdates);
                     auto&& RebasedUpdates = RebaseUpdates(InstUpdates);
 
-                    auto SubstGuard = Mgr->Substitute(LocalSubstMap, Guard);
+                    auto LocalGuard = 
+                        Mgr->MakeExpr(LTSOps::OpAND, Guard,
+                                      Mgr->MakeExpr(LTSOps::OpEQ,
+                                                    Mgr->MakeVar("state", StateType),
+                                                    Mgr->MakeVal(InitState, StateType)));
+                    auto SubstGuard = Mgr->Substitute(LocalSubstMap, LocalGuard);
                     auto RebasedGuard = Mgr->Substitute(RebaseSubstMap, Guard);
 
                     set<string> LocalFairnessSets;
@@ -1235,8 +1326,52 @@ namespace ESMC {
 
         string EFSMBase::ToString() const
         {
-            // TODO: implement me
-            return "";
+            ostringstream sstr;
+
+            for (auto const& ParamInst : ParamInsts) {
+                sstr << "efsm " << Name;
+                for (auto const& ParamVal : ParamInst) {
+                    sstr << "[" << ParamVal->ToString() << "]";
+                }
+                sstr << " {" << endl;
+
+                auto it1 = Inputs.find(ParamInst);
+                if (it1 != Inputs.end()) {
+                    sstr << "    inputs {" << endl;
+                    for (auto const& MType : it1->second) {
+                        sstr << "        " << MType->As<ExprRecordType>()->GetName() << endl;
+                    }
+                    sstr << "    }" << endl;
+                }
+
+                auto it2 = Outputs.find(ParamInst);
+                if (it2 != Outputs.end()) {
+                    sstr << "    outputs {" << endl;
+                    for (auto const& MType : it2->second) {
+                        sstr << "        " << MType->As<ExprRecordType>()->GetName() << endl;
+                    }
+                    sstr << "    }" << endl;
+                }
+                
+                sstr << "    vars {" << endl;
+                for (auto const& NameDecl : SymTab.Bot()->GetDeclMap()) {
+                    sstr << "        " << NameDecl.first << " : " 
+                         << NameDecl.second->GetType()->ToString() << endl;
+                }
+                sstr << "    }" << endl;
+
+                auto it3 = Transitions.find(ParamInst);
+                if (it3 != Transitions.end()) {
+                    sstr << "    transitions {" << endl;
+                    for (auto const& Trans : it3->second) {
+                        sstr << Trans->ToString(8) << endl;
+                    }
+                    sstr << "    }" << endl;
+                }
+                sstr << "}" << endl << endl;
+            }
+
+            return sstr.str();
         }
 
         GeneralEFSM::GeneralEFSM(LabelledTS* TheLTS, const string& Name,
@@ -1451,7 +1586,7 @@ namespace ESMC {
             auto TrueExp = Mgr->MakeTrue();
             
             auto Guard = Mgr->MakeExpr(LTSOps::OpLT, CountExp, MaxChanExp);
-            NoCountUpdates.push_back(new LTSAssignSimple(IndexExp, InMsgVar));
+            NoCountUpdates.push_back(new LTSAssignSimple(TargetExp, InMsgVar));
             Updates = NoCountUpdates;
             Updates.push_back(new LTSAssignSimple(CountExp, Mgr->MakeExpr(LTSOps::OpADD,
                                                                           CountExp, OneExp)));
@@ -1464,6 +1599,8 @@ namespace ESMC {
                 Step2Updates.push_back(new LTSAssignSimple(CountExp,
                                                            Mgr->MakeExpr(LTSOps::OpADD,
                                                                          CountExp, OneExp)));
+                Step2Updates.push_back(new LTSAssignSimple(LastMsgExp, 
+                                                           Mgr->MakeVal("clear", UMType)));
                 vector<LTSAssignRef> LossUpdates;
                 LossUpdates.push_back(new LTSAssignSimple(LastMsgExp, 
                                                           Mgr->MakeVal("clear", UMType)));
@@ -1505,7 +1642,7 @@ namespace ESMC {
                                                ESMC::LTS::LossDupFairnessType LossDupFairness)
         {
             auto Mgr = TheLTS->GetMgr();
-
+            auto PMessageType = TheLTS->GetPrimedType(MessageType);
             auto UMType = TheLTS->GetUnifiedMType()->As<ExprUnionType>();
 
             vector<ExpT> ChooseExps;
@@ -1596,12 +1733,12 @@ namespace ESMC {
 
                 EFSMBase::AddOutputTransition("ChanInitState", "ChanInitState", 
                                               Guard, Updates, OutMsgName, 
-                                              MessageType, MessageParams, 
+                                              PMessageType, MessageParams, 
                                               AddToFairnessSets);
                 if (Duplicating) {
                     EFSMBase::AddOutputTransition("ChanInitState", "ChanInitState",
                                                   Guard, MsgUpdates, OutMsgName,
-                                                  MessageType, MessageParams,
+                                                  PMessageType, MessageParams,
                                                   AddFairnessToDup ? AddToFairnessSets : 
                                                   set<string>());
                 }
@@ -1618,7 +1755,7 @@ namespace ESMC {
             EFSMBase::AddOutputMsg(PMessageType, Params);
 
             MakeInputTransition(MessageType, Params, LossDupFairness);
-            MakeOutputTransition(PMessageType, Params, MessageFairness, LossDupFairness);
+            MakeOutputTransition(MessageType, Params, MessageFairness, LossDupFairness);
         }
 
         void ChannelEFSM::AddMsgs(const vector<ExpT> NewParams,
@@ -1637,6 +1774,7 @@ namespace ESMC {
             CheckParams(MessageParams, SymTab);
             SymTab.Pop();
 
+
             const u32 NumNewParams = NewParams.size();
             for (auto const& SubstMap : ParamSubsts) {
                 auto SubstConstraint = Mgr->Substitute(SubstMap, Constraint);
@@ -1650,7 +1788,7 @@ namespace ESMC {
                     auto MType = InstantiateType(MessageType, SubstParams, Mgr);
                     auto PMType = TheLTS->GetPrimedType(MType);
                     EFSMBase::AddInputMsg(MType, vector<ExpT>());
-                    EFSMBase::AddOutputMsg(MType, vector<ExpT>());
+                    EFSMBase::AddOutputMsg(PMType, vector<ExpT>());
 
                     MakeInputTransition(MType, vector<ExpT>(), LossDupFairness);
                     MakeOutputTransition(MType, vector<ExpT>(), MessageFairness, LossDupFairness);
@@ -1864,7 +2002,12 @@ namespace ESMC {
             : AutomatonBase(TheLTS, Name, Params, Constraint),
               MonitorBase(TheLTS, Name, Params, Constraint)
         {
-            // Nothing here
+            for (auto const& Param : Params) {
+                if (!Param->GetType()->Is<ExprSymmetricType>()) {
+                    throw ESMCError((string)"Buchi monitors can only be parametrized by " + 
+                                    "symmetric types");
+                }
+            }
         }
 
         BuchiMonitor::~BuchiMonitor()
@@ -1892,8 +2035,15 @@ namespace ESMC {
 
         string BuchiMonitor::ToString() const 
         {
-            // TODO: implement me
-            return "";
+            ostringstream sstr;
+
+            sstr << "buchimonitor {" << endl;
+            for (auto const& Trans : Transitions) {
+                sstr << Trans->ToString(4) << endl;
+            }
+            sstr << "}" << endl;
+
+            return sstr.str();
         }
         
     } /* end namespace LTS */
@@ -1901,16 +2051,3 @@ namespace ESMC {
 
 // 
 // LTSEFSM.cpp ends here
-
-
-
-
-
-
-
-
-
-
-
-
-

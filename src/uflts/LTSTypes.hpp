@@ -59,6 +59,7 @@ namespace ESMC {
             None, Weak, Strong
         };
 
+        
         enum class SplatFairnessType {
             None, Group, Individual
         };
@@ -97,9 +98,11 @@ namespace ESMC {
         class LTSTransitionOutput;
         class LTSTransitionInternal;
         class BuchiMonitorTransition;
+        class LTSInitState;
 
         typedef CSmartPtr<LTSTransitionBase> LTSTransRef;
         typedef CSmartPtr<BuchiMonitorTransition> BuchiTransRef;
+        typedef CSmartPtr<LTSInitState> InitStateRef;
 
         class LTSFairnessSet;
 

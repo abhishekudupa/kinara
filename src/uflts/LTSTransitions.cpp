@@ -134,21 +134,22 @@ namespace ESMC {
             return MessageType;
         }
 
-        string LTSTransitionInput::ToString() const
+        string LTSTransitionInput::ToString(u32 Indent) const
         {
             ostringstream sstr;
+            string IndentString(Indent, ' ');
 
-            sstr << "transition {" << endl;
-            sstr << "    " << InitState.GetName() << " -> " 
+            sstr << IndentString << "transition {" << endl;
+            sstr << IndentString << "    " << InitState.GetName() << " -> " 
                  << FinalState.GetName() << endl;
-            sstr << "    on input message \"" << MessageName 
+            sstr << IndentString << "    on input message \"" << MessageName 
                  << "\" of type " << MessageType->ToString() << endl;
-            sstr << "    Guard: " << Guard->ToString() << endl;
-            sstr << "    Updates:" << endl;
+            sstr << IndentString << "    Guard: " << Guard->ToString() << endl;
+            sstr << IndentString << "    Updates:" << endl;
             for (auto const& Asgn : Updates) {
-                sstr << Asgn->ToString() << endl;
+                sstr << IndentString << "    " << Asgn->ToString() << endl;
             }
-            sstr << "}" << endl;
+            sstr << IndentString << "}" << endl;
             return sstr.str();
         }
 
@@ -187,21 +188,22 @@ namespace ESMC {
             return CompOfFairnessSets;
         }
 
-        string LTSTransitionOutput::ToString() const
+        string LTSTransitionOutput::ToString(u32 Indent) const
         {
             ostringstream sstr;
+            string IndentString(Indent, ' ');
 
-            sstr << "transition {" << endl;
-            sstr << "    " << InitState.GetName() << " -> " 
+            sstr << IndentString << "transition {" << endl;
+            sstr << IndentString << "    " << InitState.GetName() << " -> " 
                  << FinalState.GetName() << endl;
-            sstr << "    with output message \"" << MessageName 
+            sstr << IndentString << "    with output message \"" << MessageName 
                  << "\" of type " << MessageType->ToString() << endl;
-            sstr << "    Guard: " << Guard->ToString() << endl;
-            sstr << "    Updates:" << endl;
+            sstr << IndentString << "    Guard: " << Guard->ToString() << endl;
+            sstr << IndentString << "    Updates:" << endl;
             for (auto const& Asgn : Updates) {
-                sstr << Asgn->ToString() << endl;
+                sstr << IndentString << "    " << Asgn->ToString() << endl;
             }
-            sstr << "}" << endl;
+            sstr << IndentString << "}" << endl;
             return sstr.str();
         }
 
@@ -227,20 +229,21 @@ namespace ESMC {
             return CompOfFairnessSets;
         }
 
-        string LTSTransitionInternal::ToString() const
+        string LTSTransitionInternal::ToString(u32 Indent) const
         {
             ostringstream sstr;
+            string IndentString(Indent, ' ');
 
-            sstr << "transition {" << endl;
-            sstr << "    " << InitState.GetName() << " -> " 
+            sstr << IndentString << "transition {" << endl;
+            sstr << IndentString << "    " << InitState.GetName() << " -> " 
                  << FinalState.GetName() << endl;
-            sstr << "    internal" << endl;
-            sstr << "    Guard: " << Guard->ToString() << endl;
-            sstr << "    Updates:" << endl;
+            sstr << IndentString << "    internal" << endl;
+            sstr << IndentString << "    Guard: " << Guard->ToString() << endl;
+            sstr << IndentString << "    Updates:" << endl;
             for (auto const& Asgn : Updates) {
-                sstr << Asgn->ToString() << endl;
+                sstr << IndentString << "    " << Asgn->ToString() << endl;
             }
-            sstr << "}" << endl;
+            sstr << IndentString << "}" << endl;
             return sstr.str();
         }
 
@@ -249,13 +252,15 @@ namespace ESMC {
             // Nothing here
         }
 
-        string BuchiMonitorTransition::ToString() const
+        string BuchiMonitorTransition::ToString(u32 Indent) const
         {
             ostringstream sstr;
-            sstr << "buchi transition {" << endl;
-            sstr << "    " << InitState.GetName() << " -> " 
+            string IndentString(Indent, ' ');
+            sstr << IndentString << "buchi transition {" << endl;
+            sstr << IndentString << "    " << InitState.GetName() << " -> " 
                  << FinalState.GetName() << endl;
-            sstr << "    Guard: " << Guard->ToString() << endl;
+            sstr << IndentString << "    Guard: " << Guard->ToString() << endl;
+            sstr << IndentString << "}" << endl;
             return sstr.str();
         }
 
@@ -293,8 +298,46 @@ namespace ESMC {
             return sstr.str();
         }
 
+        LTSInitState::LTSInitState(const vector<ExpT>& Params,
+                                   const ExpT& Constraint,
+                                   const vector<LTSAssignRef>& Updates)
+            : Params(Params), Constraint(Constraint), Updates(Updates)
+        {
+            for (auto const& Update : Updates) {
+                if (Update->Is<LTSAssignParam>()) {
+                    throw ESMCError((string)"Parametric updates not allowed in initial state");
+                }
+            }
+        }
+
+        LTSInitState::~LTSInitState()
+        {
+            // Nothing here
+        }
+
+        const vector<ExpT>& LTSInitState::GetParams() const
+        {
+            return Params;
+        }
+
+        const ExpT& LTSInitState::GetConstraint() const
+        {
+            return Constraint;
+        }
+
+        const vector<LTSAssignRef>& LTSInitState::GetUpdates() const
+        {
+            return Updates;
+        }
+
     } /* end namespace */
 } /* end namespace */
 
 // 
 // LTSTransitions.cpp ends here
+
+
+
+
+
+
