@@ -802,7 +802,12 @@ namespace ESMC {
         inline void
         Substitutor<E, S>::VisitBoundVarExpression(const BoundVarExpression<E,S>* Exp)
         {
-            SubstStack.push_back(Exp);
+            auto it = Subst.find(Exp);
+            if (it != Subst.end()) {
+                SubstStack.push_back(it->second);
+            } else {
+                SubstStack.push_back(Exp);
+            }
         }
 
         template <typename E, template <typename> class S>

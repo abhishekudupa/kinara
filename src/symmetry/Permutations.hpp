@@ -40,7 +40,98 @@
 #if !defined ESMC_PERMUTATIONS_HPP_
 #define ESMC_PERMUTATIONS_HPP_
 
+#include <vector>
+
 #include "../common/FwdDecls.hpp"
+
+namespace ESMC {
+    namespace Symm {
+
+        class PermutationSet
+        {
+        public:
+            // definition of an iterator class
+            class iterator
+            {
+                friend class PermutationSet;
+
+            private:
+                vector<u32> StateVector;
+                PermutationSet* PermSet;
+                i64 Index;
+                bool Compact;
+
+                inline void Next();
+                inline void Prev();
+
+            public:
+                iterator();
+                iterator(PermutationSet* PermSet, bool Compact);
+                iterator(const iterator& Other);
+                iterator(iterator&& Other);
+                ~iterator();
+
+                iterator& operator ++ ();
+                iterator operator ++ (int Dummy);
+                
+                iterator& operator -- ();
+                iterator operator -- (int Dummy);
+                
+                iterator operator + (u32 Addend) const;
+                iterator operator - (u32 Addent) const;
+                
+                iterator& operator += (u32 Addend);
+                iterator& operator -= (u32 Addend);
+
+                iterator& operator = (iterator Other);
+
+                bool operator == (const iterator& Other) const;
+                bool operator != (const iterator& Other) const;
+                
+                const vector<u32>& GetPerm() const;
+                u32 GetIndex() const;
+            };
+
+            friend class iterator;
+
+        private:
+            bool Compact;
+            mutable vector<u32> CachedPerm;
+            // If we're not using compact representations
+            vector<vector<u32>> Permutations;
+            u32 NumTypes;
+            u32 PermVecSize;
+            vector<u32> Offsets;
+            iterator BeginIterator;
+            iterator EndIterator;
+            i64 MaxIndex;
+            
+        public:
+            PermutationSet();
+            PermutationSet(const vector<u32>& TypeSizes, bool Compact);
+            PermutationSet(const PermutationSet& Other);
+            PermutationSet(PermutationSet&& Other);
+            ~PermutationSet();
+
+            PermutationSet& operator = (PermutationSet Other);
+
+            const vector<u32>& GetPerm(u32 Index) const;
+            void GetPerm(u32 Index, vector<u32>& PermVec) const;
+            const vector<u32>& GetInversePerm(u32 Index) const;
+            void GetInversePerm(u32 Index, vector<u32>& OutPermVec) const;
+
+            const vector<u32>& GetInversePerm(const vector<u32>& PermVec) const;
+            void GetInversePerm(const vector<u32>& PermVec, vector<u32>& OutPermVec) const;
+
+            const iterator& Begin() const;
+            const iterator& End() const;
+            i64 GetMaxIndex() const;
+            u32 GetPermVecSize() const;
+            u32 GetOffsetForIdx(u32 Idx) const;
+        };
+
+    } /* end namespace Symm */
+} /* end namespace ESMC */
 
 #endif /* ESMC_PERMUTATIONS_HPP_ */
 

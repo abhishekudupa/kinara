@@ -28,13 +28,16 @@ CXXFLAGS+=$(OPTFLAGS)
 
 TESTS=\
 	CPTest \
-
+	PermTest \
 
 default:	all
 
 all: $(TESTS)
 
 CPTest: CPTest.cpp
+	$(CXX) $(CXXFLAGS) $< -o $@ $(LINKFLAGS) 
+
+PermTest: PermTest.cpp
 	$(CXX) $(CXXFLAGS) $< -o $@ $(LINKFLAGS) 
 
 clean:

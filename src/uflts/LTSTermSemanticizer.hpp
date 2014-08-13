@@ -743,6 +743,13 @@ namespace ESMC {
             TypeChecker<E, S>::VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
             {
                 auto const& QVarTypes = Exp->GetQVarTypes();
+                for (auto const& QVarType : QVarTypes) {
+                    if (!QVarType->template Is<ExprScalarType>()) {
+                        throw ExprTypeError((string)"Quantified variables must have scalar " + 
+                                            "types. \"" + QVarType->ToString() + "\" is not " + 
+                                            "a scalar type");
+                    }
+                }
                 ScopeStack.push_back(QVarTypes);
                 auto const& QExpr = Exp->GetQExpression();
                 SemUtils::TypeInvalidator<E, S> Inv;

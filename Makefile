@@ -17,14 +17,14 @@ CXXFLAGS+=-Wno-unused-local-typedefs
 endif
 
 PROJECT_MODULES= \
-	expr \
-	hash \
 	common \
 	containers \
-	uflts \
-	ast \
-	utils \
+	expr \
+	hash \
 	main \
+	symmetry \
+	uflts \
+	utils \
 
 
 PROJECT_EXECUTABLES=esmc
@@ -52,6 +52,7 @@ libesmc_OBJS= \
 	LTSState.o \
 	LTSTermSemanticizer.o \
 	LTSTransitions.o \
+	Permutations.o \
 	SpookyHash.o \
 	SymbolTable.o \
 	UIDGenerator.o \

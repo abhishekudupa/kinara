@@ -120,6 +120,7 @@ namespace ESMC {
         typedef Exprs::ConstExpression<LTSExtensionT, LTSTermSemanticizer> ConstExpT;
         typedef Exprs::BoundVarExpression<LTSExtensionT, LTSTermSemanticizer> BoundVarExpT;
         typedef Exprs::OpExpression<LTSExtensionT, LTSTermSemanticizer> OpExpT;
+        typedef Exprs::QuantifiedExpressionBase<LTSExtensionT, LTSTermSemanticizer> QExpT;
         typedef Exprs::EQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> EQExpT;
         typedef Exprs::AQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> AQExpT;
 
