@@ -106,6 +106,35 @@ namespace ESMC {
             return Updates;
         }
 
+
+        LTSTransitionIOBase::LTSTransitionIOBase(EFSMBase* TheEFSM,
+                                                 const LTSState& InitState,
+                                                 const LTSState& FinalState,
+                                                 const ExpT& Guard,
+                                                 const vector<LTSAssignRef>& Updates,
+                                                 const string& MessageName,
+                                                 const ExprTypeRef& MessageType)
+            : LTSTransitionBase(TheEFSM, InitState, FinalState, Guard, Updates),
+              MessageName(MessageName), MessageType(MessageType)
+        {
+            // Nothing here
+        }
+
+        LTSTransitionIOBase::~LTSTransitionIOBase()
+        {
+            // Nothing here
+        }
+
+        const string& LTSTransitionIOBase::GetMessageName() const
+        {
+            return MessageName;
+        }
+
+        const ExprTypeRef& LTSTransitionIOBase::GetMessageType() const
+        {
+            return MessageType;
+        }
+
         LTSTransitionInput::LTSTransitionInput(EFSMBase* TheEFSM,
                                                const LTSState& InitState,
                                                const LTSState& FinalState,
@@ -113,8 +142,8 @@ namespace ESMC {
                                                const vector<LTSAssignRef>& Updates,
                                                const string& MessageName,
                                                const ExprTypeRef& MessageType)
-            : LTSTransitionBase(TheEFSM, InitState, FinalState, Guard, Updates),
-              MessageName(MessageName), MessageType(MessageType)
+            : LTSTransitionIOBase(TheEFSM, InitState, FinalState, Guard, Updates, 
+                                  MessageName, MessageType)
         {
             // Nothing here
         }
@@ -122,16 +151,6 @@ namespace ESMC {
         LTSTransitionInput::~LTSTransitionInput()
         {
             // Nothing here
-        }
-
-        const string& LTSTransitionInput::GetMessageName() const
-        {
-            return MessageName;
-        }
-
-        const ExprTypeRef& LTSTransitionInput::GetMessageType() const
-        {
-            return MessageType;
         }
 
         string LTSTransitionInput::ToString(u32 Indent) const
@@ -161,8 +180,8 @@ namespace ESMC {
                                                  const string& MessageName,
                                                  const ExprTypeRef& MessageType,
                                                  const set<string>& CompOfFairnessSets)
-            : LTSTransitionBase(TheEFSM, InitState, FinalState, Guard, Updates),
-              MessageName(MessageName), MessageType(MessageType),
+            : LTSTransitionIOBase(TheEFSM, InitState, FinalState, Guard, Updates,
+                                  MessageName, MessageType),  
               CompOfFairnessSets(CompOfFairnessSets)
         {
             // Nothing here
@@ -171,16 +190,6 @@ namespace ESMC {
         LTSTransitionOutput::~LTSTransitionOutput()
         {
             // Nothing here
-        }
-
-        const string& LTSTransitionOutput::GetMessageName() const
-        {
-            return MessageName;
-        }
-
-        const ExprTypeRef& LTSTransitionOutput::GetMessageType() const
-        {
-            return MessageType;
         }
 
         const set<string>& LTSTransitionOutput::GetCompOfFairnessSets() const

@@ -120,12 +120,28 @@ namespace ESMC {
             const vector<LTSAssignRef>& GetUpdates() const;
         };
 
-        class LTSTransitionInput : public LTSTransitionBase
+        class LTSTransitionIOBase : public LTSTransitionBase
         {
-        private:
+        protected:
             string MessageName;
             ExprTypeRef MessageType;
 
+        public:
+            LTSTransitionIOBase(EFSMBase* TheEFSM,
+                                const LTSState& InitState,
+                                const LTSState& FinalState,
+                                const ExpT& Guard,
+                                const vector<LTSAssignRef>& Updates,
+                                const string& MessageName,
+                                const ExprTypeRef& MessageType);
+            virtual ~LTSTransitionIOBase();
+
+            const string& GetMessageName() const;
+            const ExprTypeRef& GetMessageType() const;
+        };
+
+        class LTSTransitionInput : public LTSTransitionIOBase
+        {
         public:
             LTSTransitionInput(EFSMBase* TheEFSM,
                                const LTSState& InitState,
@@ -136,13 +152,10 @@ namespace ESMC {
                                const ExprTypeRef& MessageType);
             virtual ~LTSTransitionInput();
 
-            const string& GetMessageName() const;
-            const ExprTypeRef& GetMessageType() const;
-
             virtual string ToString(u32 Indent = 0) const override;
         };
-        
-        class LTSTransitionOutput : public LTSTransitionBase
+
+        class LTSTransitionOutput : public LTSTransitionIOBase
         {
         private:
             string MessageName;
@@ -160,8 +173,6 @@ namespace ESMC {
                                 const set<string>& CompOfFairnessSets);
             virtual ~LTSTransitionOutput();
 
-            const string& GetMessageName() const;
-            const ExprTypeRef& GetMessageType() const;
             const set<string>& GetCompOfFairnessSets() const;
 
             virtual string ToString(u32 Indent = 0) const override;

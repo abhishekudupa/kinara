@@ -299,6 +299,64 @@ namespace ESMC {
             // Nothing here
         }
 
+        set<ExprTypeRef> EFSMBase::GetInputs() const
+        {
+            set<ExprTypeRef> Retval;
+            for (auto const& InstType : Inputs) {
+                Retval.insert(InstType.second.begin(), InstType.second.end());
+            }
+            return Retval;
+        }
+
+        set<ExprTypeRef> EFSMBase::GetOutputs() const
+        {
+            set<ExprTypeRef> Retval;
+            for (auto const& InstType : Outputs) {
+                Retval.insert(InstType.second.begin(), InstType.second.end());
+            }
+            return Retval;
+        }
+
+        set<ExprTypeRef> EFSMBase::GetInputsForInstance(u32 InstanceID) const
+        {
+            auto it = Inputs.find(ParamInsts[InstanceID]);
+            if (it == Inputs.end()) {
+                return set<ExprTypeRef>();
+            }
+            return it->second;
+        }
+
+        set<ExprTypeRef> EFSMBase::GetOutputsForInstance(u32 InstanceID) const
+        {
+            auto it = Outputs.find(ParamInsts[InstanceID]);
+            if (it == Outputs.end()) {
+                return set<ExprTypeRef>();
+            }
+            return it->second;
+        }
+
+        vector<LTSTransRef> EFSMBase::GetTransitionsOnMsg(const ExprTypeRef& MsgType) const
+        {
+            if (!MsgType->Is<ExprRecordType>()) {
+                throw ESMCError((string)"EFSMBase::GetTransitionsOnMsg() must be called " + 
+                                "on actual message types, not parametric types");
+            }
+
+            vector<LTSTransRef> Retval;
+            for (auto const& InstTrans : Transitions) {
+                for (auto const& Trans : InstTrans.second) {
+                    if (Trans->Is<LTSTransitionIOBase>()) {
+                        auto AsIO = Trans->SAs<LTSTransitionIOBase>();
+                        if (AsIO->GetMessageType() == MsgType) {
+                            Retval.push_back(Trans);
+                        }
+                    }
+                }
+            }
+
+            return Retval;
+        }
+
         void EFSMBase::AddState(const string& StateName,
                                 bool Initial, bool Final, 
                                 bool Accepting, bool Error)
@@ -1012,7 +1070,7 @@ namespace ESMC {
             for (auto const& FairnessSet : LocalFairnessSets) {
                 Fairnesses[FairnessSet][ParamInst]->AddTransition(CurTransition);
             }
-                
+
             Transitions[ParamInst].push_back(CurTransition);
         }
 
@@ -1078,7 +1136,8 @@ namespace ESMC {
                                             const ExprTypeRef& MessageType, 
                                             const vector<ExpT>& MessageParams,
                                             LTSFairnessType FairnessKind,
-                                            SplatFairnessType SplatFairness)
+                                            SplatFairnessType SplatFairness,
+                                            const string& SplatFairnessName)
         {
             AssertStatesFrozen();
             AssertVarsFrozen();
@@ -1094,8 +1153,18 @@ namespace ESMC {
                 SetFairnessType = FairnessKind == LTSFairnessType::Weak ? 
                     FairSetFairnessType::Weak : FairSetFairnessType::Strong;
 
-                SplatPrefix = ((string)"SplatFairness_" + 
-                               to_string(FairnessUIDGenerator.GetUID()));
+                if (SplatFairnessName == "") {
+                    SplatPrefix = ((string)"SplatFairness_" + 
+                                   to_string(FairnessUIDGenerator.GetUID()));
+                } else {
+                    SplatPrefix = SplatFairnessName;
+                }
+
+                if (Fairnesses.find(SplatPrefix)) {
+                    throw ESMCError((string)"Fairness set called \"" + SplatPrefix + 
+                                    "\" has already been defined, and cannot be used as " + 
+                                    "the name for a splat fairness set");
+                }
             }
 
             auto Mgr = TheLTS->GetMgr();

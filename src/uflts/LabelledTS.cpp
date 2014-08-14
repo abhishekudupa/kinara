@@ -238,13 +238,17 @@ namespace ESMC {
             StateVectorSize = 0;
             // Create the state variables
             for (auto& NameEFSM : AllEFSMs) {
-                NameEFSM.second->Freeze();
-                auto const& StateVarType = NameEFSM.second->StateVarType;
-                auto const& Name = NameEFSM.second->Name;
-                StateVector.push_back(Mgr->MakeVar(Name, StateVarType));
+                auto EFSM = NameEFSM.second;
+                EFSM->Freeze();
+                auto const& Name = EFSM->Name;
+                auto const& StateVarType = EFSM->StateVarType;
+
+                StateVectorVars[Mgr->MakeVar(Name, StateVarType)] = 
+                    set<vector<ExpT>>(EFSM->ParamInsts.begin(),
+                                      EFSM->ParamInsts.end());
+
                 StateVectorSize += StateVarType->GetByteSize();
             }
-            
         }
         
         void LabelledTS::FreezeMsgs()
@@ -468,6 +472,8 @@ namespace ESMC {
 
         void LabelledTS::AddInitStates(const vector<InitStateRef>& InitStates)
         {
+            AssertAutomataFrozen();
+
             for (auto const& InitState : InitStates) {
                 auto const& Params = InitState->GetParams();
                 auto const& Constraint = InitState->GetConstraint();

@@ -63,10 +63,13 @@ namespace ESMC {
             map<string, ChannelEFSM*> ChannelEFSMs;
             map<string, SafetyMonitor*> SafetyMonitors;
             map<string, BuchiMonitor*> BuchiMonitors;
-            vector<ExpT> StateVector;
+
+            // Map from var exp to the set of parameters that 
+            // it will accept
+            map<ExpT, set<vector<ExpT>>> StateVectorVars;
             u32 StateVectorSize;
             vector<vector<LTSAssignRef>> InitStateGenerators;
-            
+            ExprTypeRef InvariantExp;
 
             SymbolTable SymTab;
 

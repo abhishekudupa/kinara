@@ -106,6 +106,9 @@ namespace ESMC {
 
             // Fairness sets per instance
             map<string, map<vector<ExpT>, LTSFairSetRef>> Fairnesses;
+            // mapping between internal fairness sets and user 
+            // defined names for fairnesses
+            map<string, set<string>> UserToInternalFairness;
 
             // Inputs and outputs per instance
             map<vector<ExpT>, set<ExprTypeRef>> Inputs;
@@ -188,13 +191,13 @@ namespace ESMC {
 
             // Methods not intended to be overridden.
             // This helps preserve the structure of the EFSM
-            set<ExprTypeRef>& GetInputs() const;
-            set<ExprTypeRef>& GetInputsForInstance(u32 InstanceID);
+            set<ExprTypeRef> GetInputs() const;
+            set<ExprTypeRef> GetInputsForInstance(u32 InstanceID) const;
             
-            set<ExprTypeRef>& GetOutputs() const;
-            set<ExprTypeRef>& GetOutputsForInstance(u32 InstanceID);
+            set<ExprTypeRef> GetOutputs() const;
+            set<ExprTypeRef> GetOutputsForInstance(u32 InstanceID) const;
 
-            vector<LTSTransRef>& GetTransitionsOnMsg(const ExprTypeRef& MType);
+            vector<LTSTransRef> GetTransitionsOnMsg(const ExprTypeRef& MsgType) const;
 
             virtual void AddState(const string& StateName,
                                   bool Initial = false, bool Final = false, 
@@ -267,10 +270,9 @@ namespace ESMC {
                                               const string& MessageName,
                                               const ExprTypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
-                                              LTSFairnessType FairnessKind =
-                                              LTSFairnessType::None,
-                                              SplatFairnessType SplatFairness = 
-                                              SplatFairnessType::None);
+                                              LTSFairnessType FairnessKind,
+                                              SplatFairnessType SplatFairness,
+                                              const string& SplatFairnessName);
 
             virtual void AddInternalTransition(const string& InitState,
                                                const string& FinalState,
@@ -288,7 +290,8 @@ namespace ESMC {
                                                 LTSFairnessType FairnessKind = 
                                                 LTSFairnessType::None,
                                                 SplatFairnessType SplatFairness =
-                                                SplatFairnessType::None);
+                                                SplatFairnessType::None,
+                                                const string& SplatFairnessName = "");
 
             virtual string ToString() const override;
 
