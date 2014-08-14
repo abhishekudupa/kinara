@@ -120,7 +120,7 @@ namespace ESMC {
             } while (!FoundPermutation && OffsetIdx < Offsets.size());
             
             if (!FoundPermutation) {
-                Index = PermSet->MaxIndex;
+                *this = PermSet->EndIterator;
             }
         }
 
@@ -284,6 +284,7 @@ namespace ESMC {
                 PermVecSize += TypeSize;
                 for (u32 i = 0; i < TypeSize; ++i) {
                     BeginIterator.StateVector.push_back(i);
+                    EndIterator.StateVector.push_back(i);
                 }
             }
             
@@ -293,7 +294,7 @@ namespace ESMC {
                 iterator it(this, true);
                 it.StateVector = BeginIterator.StateVector;
                 BeginIterator.StateVector.clear();
-
+                EndIterator.StateVector.clear();
                 for (; it != EndIterator; ++it) {
                     Permutations.push_back(it.GetPerm());
                 }

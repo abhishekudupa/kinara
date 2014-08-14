@@ -40,21 +40,31 @@
 #if !defined ESMC_STATE_HPP_
 #define ESMC_STATE_HPP_
 
+#include <boost/pool/pool.hpp>
+
 #include "../common/FwdDecls.hpp"
 
 namespace ESMC {
     namespace LTS {
 
-        class State 
+        class StateFactory;
+
+        class StateVec 
         {
+            friend class StateFactory;
+
         private:
             u08* StateBuffer;
-            u64 Size;
-            u64 HashCode;
+            StateFactory* Factory;
+
+            inline StateVec(const StateVec* Other);
 
         public:
-            State(u64 Size);
-            ~State();
+            StateVec(StateFactory* Factory);
+            ~StateVec();
+
+            u08 ReadByte(u32 Offset) const;
+            void WriteByte(u32 Offset, u08 Value);
 
             u16 ReadShort(u32 Offset) const;
             void WriteShort(u32 Offset, u16 Value);
@@ -65,48 +75,33 @@ namespace ESMC {
             u08& operator [] (u32 Offset);
             const u08& operator [] (u32 Offset) const;
 
-            void Freeze();
-            u64 Hash() const;
+            u32 GetSize() const;
+            bool Equals(const StateVec& Other) const;
+            u32 Hash() const;
+            StateVec* Clone() const;
         };
 
         class StateFactory
         {
+            friend class StateVec;
+
         private:
-            const StateInterpretation* Interpretation;
             const u32 StateSize;
+            boost::pool<>* StateVecPool;
+            boost::pool<>* StateVecBufferPool;
+            u32 NumActiveStates;
+
+            u08* GetStateBuffer(bool Clear = true);
+            void ReleaseStateBuffer(u08* BufferPtr);
+            StateVec* MakeState(const StateVec* Other);
 
         public:
-            StateFactory(const StateInterpretation* Interpretation, u32 StateSize);
-            State* Make() const;
-        };
-
-        class InterpretationBase
-        {
-        protected:
-            u32 ObjectSize;
-            u32 ObjectOffset;
-            ExprTypeRef ObjectType;
-
-        public:
-            InterpretationBase(u32 ObjectSize, u32 ObjectOffset);
-            virtual ~InterpretationBase();
-
-            u32 GetObjectSize() const;
-            u32 GetObjectOffset() const;
-            const ExprTypeRef& GetObjectType() const;
-            virtual string ObjectToString(const State* StatePtr) const = 0;
-            virtual u32 ObjectToInt(const State* StatePtr) const = 0;
-        };
-
-        class ScalarInterpretation
-        {
-        public:
-            
-        };
-
-        class StateInterpretation
-        {
-            
+            StateFactory(u32 StateSize);
+            ~StateFactory();
+            StateVec* MakeState();
+            void TakeState(StateVec* StatePtr);
+            u32 GetSize() const;            
+            u32 GetNumActiveStates() const;
         };
 
     } /* end namespace LTS */

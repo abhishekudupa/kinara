@@ -28,7 +28,7 @@ PROJECT_MODULES= \
 
 
 PROJECT_EXECUTABLES=esmc
-esmc_SYS_LIBS=z3 rt
+esmc_SYS_LIBS=z3 rt boost_system
 esmc_DEP_LIBS=esmc
 esmc_EXT_LIBS=boost z3
 libboost_FULL_PATH=$(PROJECT_ROOT)/src/extern/boost-local/boost_install/install.ph
@@ -54,6 +54,7 @@ libesmc_OBJS= \
 	LTSTransitions.o \
 	Permutations.o \
 	SpookyHash.o \
+	StateVec.o \
 	SymbolTable.o \
 	UIDGenerator.o \
 
@@ -63,6 +64,7 @@ PROJECT_EXT_LIBS=boost z3
 libesmc_EXT_LIBS= \
 	boost \
 	z3 \
+
 
 include $(PROJECT_ROOT)/Makefile.util
 
