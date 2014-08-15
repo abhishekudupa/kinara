@@ -67,6 +67,10 @@ namespace ESMC {
             // Map from var exp to the set of parameters that 
             // it will accept
             map<ExpT, set<vector<ExpT>>> StateVectorVars;
+            // Map from automaton name to the set of valid parameter
+            // instantiations
+            map<string, set<vector<ExpT>>> ValidAutomata;
+
             u32 StateVectorSize;
             vector<vector<LTSAssignRef>> InitStateGenerators;
             ExprTypeRef InvariantExp;
@@ -80,6 +84,11 @@ namespace ESMC {
             inline void AssertAutomataFrozen() const;
             inline void AssertAutomataNotFrozen() const;
 
+            inline void MarkExpr(ExpT& Exp) const;
+            inline void MarkType(ExprTypeRef& Type) const;
+            inline void CheckExprMark(const ExpT& Exp) const;
+            inline void CheckTypeMark(const ExprTypeRef& Type) const;
+
         public:
             LabelledTS();
             virtual ~LabelledTS();
@@ -89,6 +98,19 @@ namespace ESMC {
             void FreezeAutomata();
             void Freeze();
 
+            // methods for creating expressions
+            // and types.
+            // we create all expressions VIA the LTS, 
+            // this avoids us from having to check expressions,
+            // etc.
+            ExprTypeRef MakeBoolType();
+            ExprTypeRef MakeRangeType(i64 Low, i64 High);
+            ExprTypeRef MakeRecordType(const string& Name, 
+                                       const vector<pair<string, ExprTypeRef>>& Members);
+            ExprTypeRef MakeArrayType(const ExprTypeRef& IndexType,
+                                      const ExprTypeRef& ValueType);
+            ExprTypeRef MakeEnumType(const string& Name, const vector<string>& Members);
+            ExprTypeRef MakeFieldAccessType();
             // All symmetric types must be declared here
             const ExprTypeRef& MakeSymmType(const string& Name, u32 Size);
             // All message types must be declared here
@@ -101,6 +123,25 @@ namespace ESMC {
                                             const string& Name,
                                             const vector<pair<string, ExprTypeRef>>& Members,
                                             bool IncludePrimed = false);
+
+            // Expressions
+            ExpT MakeTrue();
+            ExpT MakeFalse();
+            ExpT MakeVar(const string& Name, const ExprTypeRef& Type);
+            ExpT MakeBoundVar(i64 Idx, const ExprTypeRef& Type);
+            ExpT MakeVal(const string& Value, const ExprTypeRef& Type);
+            ExpT MakeOp(i64 OpCode, const vector<ExpT>& Operands); 
+            ExpT MakeOp(i64 OpCode, const ExpT& Operand1); 
+            ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2); 
+            ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
+                        const ExpT& Operand3);
+            ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
+                        const ExpT& Operand3, const ExpT& Operand4);
+
+            ExpT MakeExists(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body);
+            ExpT MakeForAll(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body);
+            i64 MakeUF(const string& Name, const vector<ExprTypeRef>& Domain,
+                       const ExprTypeRef& Range);
             
 
             MgrT* GetMgr() const;

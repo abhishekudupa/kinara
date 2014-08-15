@@ -353,10 +353,9 @@ namespace ESMC {
                                               const string& MessageName,
                                               const ExprTypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
-                                              LTSFairnessType FairnessKind = 
-                                              LTSFairnessType::None,
-                                              SplatFairnessType SplatFairness = 
-                                              SplatFairnessType::None) override;
+                                              LTSFairnessType FairnessKind,
+                                              SplatFairnessType SplatFairness,
+                                              const string& SplatFairnessName) override;
 
             virtual void AddInternalTransition(const string& InitState,
                                                const string& FinalState,
@@ -371,10 +370,9 @@ namespace ESMC {
                                                 const string& FinalState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
-                                                LTSFairnessType FairnessKind = 
-                                                LTSFairnessType::None,
-                                                SplatFairnessType SplatFairness =
-                                                SplatFairnessType::None) override;
+                                                LTSFairnessType FairnessKind,
+                                                SplatFairnessType SplatFairness,
+                                                const string& SplatFairnessName) override;
         };
 
         class ChannelEFSM : public EFSMBase
@@ -493,10 +491,9 @@ namespace ESMC {
                                               const string& MessageName,
                                               const ExprTypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
-                                              LTSFairnessType MessageFairness = 
-                                              LTSFairnessType::None,
-                                              SplatFairnessType SplatFairness = 
-                                              SplatFairnessType::None) override;
+                                              LTSFairnessType MessageFairness,
+                                              SplatFairnessType SplatFairness,
+                                              const string& SplatFairnessName) override;
 
             virtual void AddInternalTransition(const string& InitState,
                                                const string& FinalState,
@@ -511,10 +508,9 @@ namespace ESMC {
                                                 const string& FinalState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
-                                                LTSFairnessType MessageFairness = 
-                                                LTSFairnessType::None,
-                                                SplatFairnessType SplatFairness =
-                                                SplatFairnessType::None) override;
+                                                LTSFairnessType MessageFairness,
+                                                SplatFairnessType SplatFairness,
+                                                const string& SplatFairnessName) override;
         };
 
         class MonitorBase : public virtual AutomatonBase
@@ -561,10 +557,9 @@ namespace ESMC {
                                               const string& MessageName,
                                               const ExprTypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
-                                              LTSFairnessType MessageFairness = 
-                                              LTSFairnessType::None,
-                                              SplatFairnessType SplatFairness = 
-                                              SplatFairnessType::None) override;
+                                              LTSFairnessType MessageFairness,
+                                              SplatFairnessType SplatFairness,
+                                              const string& SplatFairnessName) override;
 
             virtual void AddInternalTransition(const string& InitState,
                                                const string& FinalState,
@@ -579,10 +574,9 @@ namespace ESMC {
                                                 const string& FinalState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
-                                                LTSFairnessType MessageFairness = 
-                                                LTSFairnessType::None,
-                                                SplatFairnessType SplatFairness =
-                                                SplatFairnessType::None) override;
+                                                LTSFairnessType MessageFairness,
+                                                SplatFairnessType SplatFairness,
+                                                const string& SplatFairnessName) override;
 
         };
 
@@ -590,7 +584,6 @@ namespace ESMC {
         {
         private:
             vector<BuchiTransRef> Transitions;
-            vector<LTSFairSetRef> Fairnesses;
 
         public:
             BuchiMonitor(LabelledTS* TheLTS, const string& Name,
@@ -600,6 +593,15 @@ namespace ESMC {
             virtual void AddTransition(const string& InitState, 
                                        const string& FinalState,
                                        const ExpT& Guard);
+
+            void AddFairnessByName(const string& AutomatonName, 
+                                   const string& FairnessName,
+                                   const vector<ExpT>& Params);
+
+            void AddFairnessesByName(const string& NewParams,
+                                     const ExpT& Constraint,
+                                     const string& AutomatonName,
+                                     const vector<ExpT> Params);
 
             virtual const vector<BuchiTransRef>& GetTransitions() const;
             virtual string ToString() const override;

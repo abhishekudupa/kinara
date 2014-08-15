@@ -151,6 +151,11 @@ namespace ESMC {
                 return (dynamic_cast<const T*>(this) != nullptr);
             }
 
+            inline void AddExtension(ExprTypeExtensionBase* Ext)
+            {
+                Extensions.push_front(Ext);
+            }
+
             template <typename T>
             inline T* GetExtension() const
             {

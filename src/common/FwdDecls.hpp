@@ -97,11 +97,13 @@ namespace ESMC {
     
     namespace LTS {
 
-        class UFLTS;
-        class UFEFSM;
+        class LabelledTS;
+        class EFSMBase;
+        class AutomatonBase;
         class ChannelEFSM;
-        class FrozenEFSM;
-        class CompiledLTS;
+        class GeneralEFSM;
+        class DetEFSM;
+
         template <typename E> class LTSTermSemantizer;
 
         class State;

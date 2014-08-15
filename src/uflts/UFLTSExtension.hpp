@@ -48,9 +48,33 @@
 namespace ESMC {
     namespace LTS {
 
-        struct UFLTSExtensionT
+        class UFLTSExtensionT
         {
+            friend class LabelledTS;
+
+        private:
+            bool CreatedViaLTS;
             
+            // Constructor
+            inline UFLTSExtensionT()
+                : CreatedViaLTS(false)
+            {
+                // Nothing here
+            }
+        };
+
+        class UFLTSTypeExtensionT : ExprTypeExtensionBase
+        {
+            friend class LabelledTS;
+
+        private:
+            bool CreateViaLTS;
+
+            inline UFLTSTypeExtensionT()
+                : CreateViaLTS(false)
+            {
+                // Nothing here
+            }
         };
 
     } /* end namespace LTS */
@@ -60,3 +84,7 @@ namespace ESMC {
 
 // 
 // UFLTSExtension.hpp ends here
+
+
+
+

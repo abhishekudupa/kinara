@@ -1159,12 +1159,6 @@ namespace ESMC {
                 } else {
                     SplatPrefix = SplatFairnessName;
                 }
-
-                if (Fairnesses.find(SplatPrefix)) {
-                    throw ESMCError((string)"Fairness set called \"" + SplatPrefix + 
-                                    "\" has already been defined, and cannot be used as " + 
-                                    "the name for a splat fairness set");
-                }
             }
 
             auto Mgr = TheLTS->GetMgr();
@@ -1204,6 +1198,7 @@ namespace ESMC {
                 if (SplatFairness == SplatFairnessType::Group) {
                     Fairnesses[SplatPrefix][ParamInsts[i]] = 
                         new LTSFairnessSet(this, SplatPrefix, SetFairnessType);
+                    UserToInternalFairness[SplatPrefix].insert(SplatPrefix);
                 }
 
                 auto const& SubstMap = ParamSubsts[i];
@@ -1235,6 +1230,9 @@ namespace ESMC {
                     if (SplatFairness == SplatFairnessType::Individual) {
                         SplatFairnessSetName = SplatPrefix + "_" + 
                             to_string(LocalFairnessUIDGenerator.GetUID());
+                        // This gets repeated as many times as there are 
+                        // instances, but that's okay!
+                        UserToInternalFairness[SplatPrefix].insert(SplatFairnessSetName);
                         LocalFairnessSets.insert(SplatFairnessSetName);
                         auto NewFairnessSet = new LTSFairnessSet(this, SplatFairnessSetName,
                                                                  SetFairnessType);
@@ -1335,7 +1333,8 @@ namespace ESMC {
                                               const ExpT& Guard, 
                                               const vector<LTSAssignRef>& Updates, 
                                               LTSFairnessType FairnessKind, 
-                                              SplatFairnessType SplatFairness)
+                                              SplatFairnessType SplatFairness,
+                                              const string& SplatFairnessName)
         {
             AssertStatesFrozen();
             AssertVarsFrozen();
@@ -1351,8 +1350,12 @@ namespace ESMC {
                 SetFairnessType = FairnessKind == LTSFairnessType::Weak ? 
                     FairSetFairnessType::Weak : FairSetFairnessType::Strong;
 
-                SplatPrefix = ((string)"SplatFairness_" + 
-                               to_string(FairnessUIDGenerator.GetUID()));
+                if (SplatFairnessName == "") {
+                    SplatPrefix = ((string)"SplatFairness_" + 
+                                   to_string(FairnessUIDGenerator.GetUID()));
+                } else {
+                    SplatPrefix = SplatFairnessName;
+                }
             }
 
             auto Mgr = TheLTS->GetMgr();
@@ -1369,9 +1372,11 @@ namespace ESMC {
             const u32 NumTransParams = TransParams.size();
 
             for (u32 i = 0; i < NumInsts; ++i) {
+
                 if (SplatFairness == SplatFairnessType::Group) {
                     Fairnesses[SplatPrefix][ParamInsts[i]] = 
                         new LTSFairnessSet(this, SplatPrefix, SetFairnessType);
+                    UserToInternalFairness[SplatPrefix].insert(SplatPrefix);
                 }
 
                 auto const& SubstMap = ParamSubsts[i];
@@ -1401,6 +1406,7 @@ namespace ESMC {
                         SplatFairnessSetName = SplatPrefix + "_" + 
                             to_string(LocalFairnessUIDGenerator.GetUID());
                         LocalFairnessSets.insert(SplatFairnessSetName);
+                        UserToInternalFairness[SplatPrefix].insert(SplatFairnessSetName);
                         auto NewFairnessSet = new LTSFairnessSet(this, SplatFairnessSetName,
                                                                  SetFairnessType);
                         Fairnesses[SplatFairnessSetName][ParamInsts[i]] = NewFairnessSet;
@@ -1549,13 +1555,15 @@ namespace ESMC {
                                            const ExprTypeRef& MessageType, 
                                            const vector<ExpT>& MessageParams, 
                                            LTSFairnessType FairnessKind,
-                                           SplatFairnessType SplatFairness)
+                                           SplatFairnessType SplatFairness,
+                                           const string& SplatFairnessName)
         {
             // TODO: Check for determinism
             EFSMBase::AddOutputTransitions(TransParams, Constraint, InitState, 
                                            FinalState, Guard, Updates, MessageName, 
                                            MessageType, MessageParams, 
-                                           FairnessKind, SplatFairness);
+                                           FairnessKind, SplatFairness, 
+                                           SplatFairnessName);
         }
 
         void DetEFSM::AddInternalTransition(const string& InitState,
@@ -1576,12 +1584,14 @@ namespace ESMC {
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              LTSFairnessType FairnessKind,
-                                             SplatFairnessType SplatFairness)
+                                             SplatFairnessType SplatFairness,
+                                             const string& SplatFairnessName)
         {
             // TODO: Check for determinism
             EFSMBase::AddInternalTransitions(TransParams, Constraint, InitState, 
                                              FinalState, Guard, Updates, 
-                                             FairnessKind, SplatFairness);
+                                             FairnessKind, SplatFairness, 
+                                             SplatFairnessName);
         }
 
         ChannelEFSM::ChannelEFSM(LabelledTS* TheLTS, const string& Name,
@@ -2021,8 +2031,9 @@ namespace ESMC {
                                                const string& MessageName,
                                                const ExprTypeRef& MessageType,
                                                const vector<ExpT>& MessageParams,
-                                               LTSFairnessType MessageFairnes,
-                                               SplatFairnessType SplatFairness)
+                                               LTSFairnessType MessageFairness,
+                                               SplatFairnessType SplatFairness,
+                                               const string& SplatFairnessName)
         {
             throw ESMCError((string)"ChannelEFSM::AddOutputTransitions() should not be called");
         }
@@ -2044,7 +2055,8 @@ namespace ESMC {
                                                  const ExpT& Guard,
                                                  const vector<LTSAssignRef>& Updates,
                                                  LTSFairnessType MessageFairness,
-                                                 SplatFairnessType SplatFairness)
+                                                 SplatFairnessType SplatFairness,
+                                                 const string& SplatFairnessName)
         {
             throw ESMCError((string)"ChannelEFSM::AddInternalTransitions() should not be called");
         }
@@ -2118,7 +2130,8 @@ namespace ESMC {
                                                  const ExprTypeRef& MessageType,
                                                  const vector<ExpT>& MessageParams,
                                                  LTSFairnessType MessageFairness,
-                                                 SplatFairnessType SplatFairness)
+                                                 SplatFairnessType SplatFairness,
+                                                 const string& SplatFairnessName)
         {
             throw ESMCError((string)"Cannot add output transitions to monitors");
         }
@@ -2139,7 +2152,8 @@ namespace ESMC {
                                                    const ExpT& Guard,
                                                    const vector<LTSAssignRef>& Updates,
                                                    LTSFairnessType MessageFairness,
-                                                   SplatFairnessType SplatFairness)
+                                                   SplatFairnessType SplatFairness,
+                                                   const string& SplatFairnessName)
         {
             throw ESMCError((string)"Cannot add internal transitions to monitors");
         }
@@ -2173,6 +2187,21 @@ namespace ESMC {
             auto FS = States[FinalState];
 
             Transitions.push_back(new BuchiMonitorTransition(this, IS, FS, Guard));
+        }
+
+        void BuchiMonitor::AddFairnessByName(const string& AutomatonName, 
+                                             const string& FairnessName, 
+                                             const vector<ExpT>& Params)
+        {
+            // TODO: Implement me
+        }
+
+        void BuchiMonitor::AddFairnessesByName(const string& NewParams, 
+                                               const ExpT& Constraint, 
+                                               const string& AutomatonName, 
+                                               const vector<ExpT> Params)
+        {
+            // TODO: Implement me
         }
 
         const vector<BuchiTransRef>& BuchiMonitor::GetTransitions() const

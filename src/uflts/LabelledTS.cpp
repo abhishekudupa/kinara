@@ -221,6 +221,16 @@ namespace ESMC {
             }
         }
 
+        inline void LabelledTS::MarkExpr(ExpT& Exp) const
+        {
+            ExpT->ExtensionData.CreatedViaLTS = true;
+        }
+
+        inline void LabelledTS::MarkType(ExprTypeRef& Type) const
+        {
+            Type->AddExtension(new UFLTSTypeExtensionT());
+        }
+
         void LabelledTS::Freeze()
         {
             // TODO: implement me
@@ -248,6 +258,9 @@ namespace ESMC {
                                       EFSM->ParamInsts.end());
 
                 StateVectorSize += StateVarType->GetByteSize();
+                ValidAutomata[EFSM->Name] = 
+                    set<vector<ExpT>>(EFSM->ParamInsts.begin(),
+                                      EFSM->ParamInsts.end());
             }
         }
         
@@ -269,6 +282,12 @@ namespace ESMC {
             UnifiedMsgType = Mgr->MakeType<ExprUnionType>("UnifiedMsgType",
                                                           UnionMembers, 
                                                           TypeIDFieldType);
+        }
+
+        // Expression and type creation in LTS
+        ExprTypeRef LabelledTS::MakeBoolType()
+        {
+            Ret
         }
 
         MgrT* LabelledTS::GetMgr() const
@@ -413,7 +432,7 @@ namespace ESMC {
 
         void LabelledTS::CheckExpr(const ExpT& Expr) const
         {
-            // TODO: implement me
+            
         }
 
         EFSMBase* LabelledTS::MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
