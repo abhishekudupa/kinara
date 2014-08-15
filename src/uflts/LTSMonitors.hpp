@@ -1,8 +1,8 @@
-// LTSEFSM.hpp --- 
+// LTSMonitors.hpp --- 
 // 
-// Filename: LTSEFSM.hpp
+// Filename: LTSMonitors.hpp
 // Author: Abhishek Udupa
-// Created: Fri Aug  8 13:43:28 2014 (-0400)
+// Created: Fri Aug 15 12:12:39 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,54 +37,42 @@
 
 // Code:
 
-#if !defined ESMC_LTS_EFSM_HPP_
-#define ESMC_LTS_EFSM_HPP_
+#if !defined ESMC_LTS_MONITORS_HPP_
+#define ESMC_LTS_MONITORS_HPP_
 
 #include "LTSTypes.hpp"
 #include "LTSState.hpp"
 #include "SymbolTable.hpp"
 
+#include "LTSAutomaton.hpp"
 #include "LTSEFSMBase.hpp"
 
 namespace ESMC {
     namespace LTS {
-        
-        class GeneralEFSM : public EFSMBase
+        class MonitorBase : public virtual AutomatonBase
         {
         public:
-            GeneralEFSM(LabelledTS* TheLTS, const string& Name,
-                        const vector<ExpT>& Params, const ExpT& Constraint,
-                        LTSFairnessType Fairness = LTSFairnessType::None);
-            virtual ~GeneralEFSM();
-            // Nothing needs to be overridden here
+            MonitorBase(LabelledTS* TheLTS, const string& Name,
+                        const vector<ExpT>& Params, const ExpT& Constraint);
+            virtual ~MonitorBase();
+
         };
 
-        class DetEFSM : public EFSMBase
+        class SafetyMonitor : public MonitorBase, public EFSMBase
         {
         public:
-            DetEFSM(LabelledTS* TheLTS, const string& Name,
-                    const vector<ExpT>& Params, const ExpT& Constraint,
-                    LTSFairnessType Fairness = LTSFairnessType::None);
+            SafetyMonitor(LabelledTS* TheLTS, const string& Name,
+                          const vector<ExpT>& Params, const ExpT& Constraint);
+            virtual ~SafetyMonitor();
 
-            virtual ~DetEFSM();
+            virtual void AddFairnessSet(const string& Name, FairSetFairnessType Fairness) override;
 
-            virtual void AddInputTransition(const string& InitState,
-                                            const string& FinalState,
-                                            const ExpT& Guard,
-                                            const vector<LTSAssignRef>& Updates,
-                                            const string& MessageName,
-                                            const ExprTypeRef& MessageType,
-                                            const vector<ExpT>& MessageParams) override;
+            virtual void AddOutputMsg(const ExprTypeRef& MessageType,
+                                      const vector<ExpT>& Params = vector<ExpT>()) override;
 
-            virtual void AddInputTransitions(const vector<ExpT>& TransParams,
-                                             const ExpT& Constraint,
-                                             const string& InitState,
-                                             const string& FinalState,
-                                             const ExpT& Guard,
-                                             const vector<LTSAssignRef>& Updates,
-                                             const string& MessageName,
-                                             const ExprTypeRef& MessageType,
-                                             const vector<ExpT>& MessageParams) override;
+            virtual void AddOutputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
+                                       const ExprTypeRef& MessageType,
+                                       const vector<ExpT>& MessageParams) override;
 
             virtual void AddOutputTransition(const string& InitState,
                                              const string& FinalState,
@@ -105,7 +93,7 @@ namespace ESMC {
                                               const string& MessageName,
                                               const ExprTypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
-                                              LTSFairnessType FairnessKind,
+                                              LTSFairnessType MessageFairness,
                                               SplatFairnessType SplatFairness,
                                               const string& SplatFairnessName) override;
 
@@ -122,15 +110,43 @@ namespace ESMC {
                                                 const string& FinalState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
-                                                LTSFairnessType FairnessKind,
+                                                LTSFairnessType MessageFairness,
                                                 SplatFairnessType SplatFairness,
                                                 const string& SplatFairnessName) override;
+
+        };
+
+        class BuchiMonitor : public MonitorBase
+        {
+        private:
+            vector<BuchiTransRef> Transitions;
+
+        public:
+            BuchiMonitor(LabelledTS* TheLTS, const string& Name,
+                         const vector<ExpT>& Params, const ExpT& Constraint);
+            virtual ~BuchiMonitor();
+
+            virtual void AddTransition(const string& InitState, 
+                                       const string& FinalState,
+                                       const ExpT& Guard);
+
+            void AddFairnessByName(const string& AutomatonName, 
+                                   const string& FairnessName,
+                                   const vector<ExpT>& Params);
+
+            void AddFairnessesByName(const string& NewParams,
+                                     const ExpT& Constraint,
+                                     const string& AutomatonName,
+                                     const vector<ExpT> Params);
+
+            virtual const vector<BuchiTransRef>& GetTransitions() const;
+            virtual string ToString() const override;
         };
 
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-#endif /* ESMC_LTS_EFSM_HPP_ */
+#endif /* ESMC_LTS_MONITORS_HPP_ */
 
 // 
-// LTSEFSM.hpp ends here
+// LTSMonitors.hpp ends here

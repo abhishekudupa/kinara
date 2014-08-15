@@ -1,6 +1,6 @@
-// UFLTSExtension.hpp --- 
+// LTSExtensions.hpp --- 
 // 
-// Filename: UFLTSExtension.hpp
+// Filename: LTSExtensions.hpp
 // Author: Abhishek Udupa
 // Created: Tue Jul 29 08:53:58 2014 (-0400)
 // 
@@ -37,16 +37,19 @@
 
 // Code:
 
-#if !defined ESMC_UFLTS_EXTENSION_HPP_
-#define ESMC_UFLTS_EXTENSION_HPP_
+#if !defined ESMC_LTS_EXTENSIONS_HPP_
+#define ESMC_LTS_EXTENSIONS_HPP_
 
 #include "../common/FwdDecls.hpp"
+#include "../expr/ExprTypes.hpp"
 
 // moved this single definition into a separate
 // header file to eliminate circular deps.
 
 namespace ESMC {
     namespace LTS {
+
+        using ESMC::Exprs::ExprTypeExtensionBase;
 
         class UFLTSExtensionT
         {
@@ -63,7 +66,7 @@ namespace ESMC {
             }
         };
 
-        class UFLTSTypeExtensionT : ExprTypeExtensionBase
+        class UFLTSTypeExtensionT : public ExprTypeExtensionBase
         {
             friend class LabelledTS;
 
@@ -80,11 +83,7 @@ namespace ESMC {
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-#endif /* ESMC_UFLTS_EXTENSION_HPP_ */
+#endif /* ESMC_LTS_EXTENSIONS_HPP_ */
 
 // 
-// UFLTSExtension.hpp ends here
-
-
-
-
+// LTSExtensions.hpp ends here

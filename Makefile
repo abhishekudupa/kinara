@@ -47,11 +47,16 @@ libesmc_OBJS= \
 	ExprTypes.o \
 	LabelledTS.o \
 	LTSAssign.o \
+	LTSAutomaton.o \
+	LTSChannelEFSM.o \
 	LTSEFSM.o \
+	LTSEFSMBase.o \
 	LTSFairnessSet.o \
+	LTSMonitors.o \
 	LTSState.o \
 	LTSTermSemanticizer.o \
 	LTSTransitions.o \
+	LTSUtils.o \
 	Permutations.o \
 	SpookyHash.o \
 	StateVec.o \

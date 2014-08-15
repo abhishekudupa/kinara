@@ -42,8 +42,10 @@
 #include "LabelledTS.hpp"
 #include "LTSUtils.hpp"
 #include "LTSEFSM.hpp"
+#include "LTSChannelEFSM.hpp"
+#include "LTSMonitors.hpp"
 #include "LTSTransitions.hpp"
-
+#include "LTSExtensions.hpp"
 
 namespace ESMC {
     namespace LTS {
@@ -221,16 +223,6 @@ namespace ESMC {
             }
         }
 
-        inline void LabelledTS::MarkExpr(ExpT& Exp) const
-        {
-            ExpT->ExtensionData.CreatedViaLTS = true;
-        }
-
-        inline void LabelledTS::MarkType(ExprTypeRef& Type) const
-        {
-            Type->AddExtension(new UFLTSTypeExtensionT());
-        }
-
         void LabelledTS::Freeze()
         {
             // TODO: implement me
@@ -282,12 +274,6 @@ namespace ESMC {
             UnifiedMsgType = Mgr->MakeType<ExprUnionType>("UnifiedMsgType",
                                                           UnionMembers, 
                                                           TypeIDFieldType);
-        }
-
-        // Expression and type creation in LTS
-        ExprTypeRef LabelledTS::MakeBoolType()
-        {
-            Ret
         }
 
         MgrT* LabelledTS::GetMgr() const

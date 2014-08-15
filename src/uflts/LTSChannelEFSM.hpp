@@ -1,8 +1,8 @@
-// LTSEFSM.hpp --- 
+// LTSChannelEFSM.hpp --- 
 // 
-// Filename: LTSEFSM.hpp
+// Filename: LTSChannelEFSM.hpp
 // Author: Abhishek Udupa
-// Created: Fri Aug  8 13:43:28 2014 (-0400)
+// Created: Fri Aug 15 12:05:23 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,8 +37,8 @@
 
 // Code:
 
-#if !defined ESMC_LTS_EFSM_HPP_
-#define ESMC_LTS_EFSM_HPP_
+#if !defined ESMC_LTS_CHANNEL_EFSM_HPP_
+#define ESMC_LTS_CHANNEL_EFSM_HPP_
 
 #include "LTSTypes.hpp"
 #include "LTSState.hpp"
@@ -48,25 +48,85 @@
 
 namespace ESMC {
     namespace LTS {
-        
-        class GeneralEFSM : public EFSMBase
+
+        class ChannelEFSM : public EFSMBase
         {
+        private:
+            u32 Capacity;
+            bool Lossy;
+            bool Ordered;
+            bool Duplicating;
+            bool Blocking;
+
+            ExprTypeRef ArrayType;
+            ExprTypeRef ValType;
+            ExprTypeRef IndexType;
+            ExprTypeRef CountType;
+
+            ExpT ArrayExp;
+            ExpT IndexExp;
+            ExpT OneExp;
+            ExpT ZeroExp;
+            ExpT MaxChanExp;
+            ExpT LastMsgExp;
+            ExpT CountExp;
+
+            UIDGenerator MessageFairnessUIDGen;
+            UIDGenerator LossDupFairnessUIDGen;
+
+            inline void MakeInputTransition(u32 InstanceID,
+                                            const MgrT::SubstMapT& SubstMap,
+                                            const ExprTypeRef& MessageType,
+                                            LossDupFairnessType LossDupFairness);
+
+            inline void MakeOutputTransition(u32 InstanceID,
+                                             const MgrT::SubstMapT& SubstMap,
+                                             const ExprTypeRef& MessageType,
+                                             LTSFairnessType MessageFairness,
+                                             LossDupFairnessType LossDupFairness);
+
         public:
-            GeneralEFSM(LabelledTS* TheLTS, const string& Name,
+            ChannelEFSM(LabelledTS* TheLTS, const string& Name,
                         const vector<ExpT>& Params, const ExpT& Constraint,
-                        LTSFairnessType Fairness = LTSFairnessType::None);
-            virtual ~GeneralEFSM();
-            // Nothing needs to be overridden here
-        };
+                        u32 Capacity, bool Lossy = false, bool Ordered = true, 
+                        bool Duplicating = false,
+                        bool Blocking = false, LTSFairnessType 
+                        Fairness = LTSFairnessType::None);
+            
+            virtual ~ChannelEFSM();
+            
+            virtual void FreezeStates() override;
+            virtual void FreezeVars() override;
+            virtual void AddFairnessSet(const string& Name, FairSetFairnessType Fairness) override;
 
-        class DetEFSM : public EFSMBase
-        {
-        public:
-            DetEFSM(LabelledTS* TheLTS, const string& Name,
-                    const vector<ExpT>& Params, const ExpT& Constraint,
-                    LTSFairnessType Fairness = LTSFairnessType::None);
+            void AddMsg(const ExprTypeRef& MessageType,
+                        const vector<ExpT>& Params = vector<ExpT>(),
+                        LTSFairnessType MessageFairness = LTSFairnessType::None,
+                        LossDupFairnessType LossDupFairness = LossDupFairnessType::None);
 
-            virtual ~DetEFSM();
+            void AddMsgs(const vector<ExpT> NewParams,
+                         const ExpT& Constraint,    
+                         const ExprTypeRef& MessageType,
+                         const vector<ExpT>& MessageParams = vector<ExpT>(),
+                         LTSFairnessType MessageFairness = LTSFairnessType::None,
+                         LossDupFairnessType LossDupFairness = LossDupFairnessType::None);
+
+
+            virtual void AddInputMsg(const ExprTypeRef& MessageType,
+                                     const vector<ExpT>& Params = vector<ExpT>()) override;
+
+            virtual void AddInputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
+                                      const ExprTypeRef& MessageType,
+                                      const vector<ExpT>& MessageParams) override;
+
+            virtual void AddOutputMsg(const ExprTypeRef& MessageType,
+                                      const vector<ExpT>& Params = vector<ExpT>()) override;
+
+            virtual void AddOutputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
+                                       const ExprTypeRef& MessageType,
+                                       const vector<ExpT>& MessageParams) override;
+
+            virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType) override;
 
             virtual void AddInputTransition(const string& InitState,
                                             const string& FinalState,
@@ -105,7 +165,7 @@ namespace ESMC {
                                               const string& MessageName,
                                               const ExprTypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
-                                              LTSFairnessType FairnessKind,
+                                              LTSFairnessType MessageFairness,
                                               SplatFairnessType SplatFairness,
                                               const string& SplatFairnessName) override;
 
@@ -122,15 +182,14 @@ namespace ESMC {
                                                 const string& FinalState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
-                                                LTSFairnessType FairnessKind,
+                                                LTSFairnessType MessageFairness,
                                                 SplatFairnessType SplatFairness,
                                                 const string& SplatFairnessName) override;
         };
-
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-#endif /* ESMC_LTS_EFSM_HPP_ */
+#endif /* ESMC_LTS_CHANNEL_EFSM_HPP_ */
 
 // 
-// LTSEFSM.hpp ends here
+// LTSChannelEFSM.hpp ends here
