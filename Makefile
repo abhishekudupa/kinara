@@ -52,7 +52,6 @@ libesmc_OBJS= \
 	LTSEFSM.o \
 	LTSEFSMBase.o \
 	LTSFairnessSet.o \
-	LTSMonitors.o \
 	LTSState.o \
 	LTSTermSemanticizer.o \
 	LTSTransitions.o \

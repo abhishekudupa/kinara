@@ -392,6 +392,8 @@ namespace ESMC {
             const ExprTypeRef& GetIndexType() const;
             const ExprTypeRef& GetValueType() const;
             u32 GetOffset(u32 ElemIdx) const;
+            ExprTypeRef GetBaseValueType() const;
+            u32 GetLevelsOfIndex() const;
             
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;

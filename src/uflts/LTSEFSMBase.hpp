@@ -77,8 +77,10 @@ namespace ESMC {
             // Inputs and outputs per instance
             map<vector<ExpT>, set<ExprTypeRef>> Inputs;
             map<vector<ExpT>, set<ExprTypeRef>> Outputs;
-            
 
+            ExpT ErrorCondition;
+            ExpT FinalCondition;
+            
             // helper methods
 
             void AssertVarsFrozen() const;
@@ -162,6 +164,7 @@ namespace ESMC {
             set<ExprTypeRef> GetOutputsForInstance(u32 InstanceID) const;
 
             vector<LTSTransRef> GetTransitionsOnMsg(const ExprTypeRef& MsgType) const;
+            vector<LTSTransRef> GetInternalTransitions() const;
 
             virtual void AddState(const string& StateName,
                                   bool Initial = false, bool Final = false, 

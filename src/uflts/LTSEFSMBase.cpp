@@ -114,6 +114,7 @@ namespace ESMC {
             }
 
             vector<LTSTransRef> Retval;
+
             for (auto const& InstTrans : Transitions) {
                 for (auto const& Trans : InstTrans.second) {
                     if (Trans->Is<LTSTransitionIOBase>()) {
@@ -125,6 +126,20 @@ namespace ESMC {
                 }
             }
 
+            return Retval;
+        }
+
+        vector<LTSTransRef> EFSMBase::GetInternalTransitions() const
+        {
+            vector <LTSTransRef> Retval;
+
+            for (auto const& InstTrans : Transitions) {
+                for (auto const& Trans : InstTrans.second) {
+                    if (Trans->Is<LTSTransitionInternal>()) {
+                        Retval.push_back(Trans);
+                    }
+                }
+            }
             return Retval;
         }
 
@@ -542,6 +557,51 @@ namespace ESMC {
                         RebaseSubstMaps[ParamInst][From] = To;
                     }
                 }
+            }
+
+            // Make the error and final conditions on states
+            auto ErrorConditionOne = Mgr->MakeFalse();
+            auto FinalConditionOne = Mgr->MakeFalse();
+            
+            for (auto const& StateDesc : States) {
+                auto const& Desc = StateDesc.second;
+                if (Desc.IsError()) {
+                    auto ValExp = Mgr->MakeVal(Desc.GetName(), StateType);
+                    auto ErrPred = Mgr->MakeExpr(LTSOps::OpEQ, Mgr->MakeVar("state", StateType),
+                                                 ValExp);
+                    ErrorConditionOne = Mgr->MakeExpr(LTSOps::OpOR, ErrorConditionOne, ErrPred);
+                }
+                if (Desc.IsFinal()) {
+                    auto ValExp = Mgr->MakeVal(Desc.GetName(), StateType);
+                    auto ErrPred = Mgr->MakeExpr(LTSOps::OpEQ, Mgr->MakeVar("state", StateType),
+                                                 ValExp);
+                    FinalConditionOne = Mgr->MakeExpr(LTSOps::OpOR, FinalConditionOne, ErrPred);
+                }
+            }
+
+            vector<ExpT> ErrorConditions;
+            vector<ExpT> FinalConditions;
+            for (auto const& ParamInst : ParamInsts) {
+                ErrorConditions.push_back(Mgr->Substitute(RebaseSubstMaps[ParamInst], 
+                                                          ErrorConditionOne));
+                FinalConditions.push_back(Mgr->Substitute(RebaseSubstMaps[ParamInst],
+                                                          FinalConditionOne));
+            }
+
+            if (ErrorConditions.size() == 0) {
+                ErrorCondition = Mgr->MakeFalse();
+            } else if (ErrorConditions.size() == 1) {
+                ErrorCondition = ErrorConditions[1];
+            } else {
+                ErrorCondition = Mgr->MakeExpr(LTSOps::OpOR, ErrorConditions);
+            }
+
+            if (FinalConditions.size() == 0) {
+                FinalCondition = Mgr->MakeFalse();
+            } else if (FinalConditions.size() == 1) {
+                FinalCondition = FinalConditions[0];
+            } else {
+                FinalCondition = Mgr->MakeExpr(LTSOps::OpAND, FinalConditions);
             }
         }
 

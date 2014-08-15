@@ -49,10 +49,16 @@ namespace ESMC {
         class LabelledTS 
         {
         private:
+            friend class ChannelEFSM;
+            friend class AutomatonBase;
+            friend class EFSMBase;
+
             MgrT* Mgr;
             bool Frozen;
             bool MsgsFrozen;
             bool AutomataFrozen;
+
+            unordered_map<string, ExprTypeRef> NamedTypes;
             map<string, ExprTypeRef> SymmTypes;
             map<string, ExprTypeRef> MsgTypes;
             map<string, ExprTypeRef> ParametricMsgTypes;
@@ -61,8 +67,7 @@ namespace ESMC {
             map<string, EFSMBase*> AllEFSMs;
             map<string, EFSMBase*> ActualEFSMs;
             map<string, ChannelEFSM*> ChannelEFSMs;
-            map<string, SafetyMonitor*> SafetyMonitors;
-            map<string, BuchiMonitor*> BuchiMonitors;
+            set<ExprTypeRef> UsedSymmTypes;
 
             // Map from var exp to the set of parameters that 
             // it will accept
@@ -73,7 +78,7 @@ namespace ESMC {
 
             u32 StateVectorSize;
             vector<vector<LTSAssignRef>> InitStateGenerators;
-            ExprTypeRef InvariantExp;
+            vector<GCmdRef> GuardedCommands;
 
             SymbolTable SymTab;
 
@@ -84,10 +89,12 @@ namespace ESMC {
             inline void AssertAutomataFrozen() const;
             inline void AssertAutomataNotFrozen() const;
 
-            inline void MarkExpr(ExpT& Exp) const;
-            inline void MarkType(ExprTypeRef& Type) const;
-            inline void CheckExprMark(const ExpT& Exp) const;
-            inline void CheckTypeMark(const ExprTypeRef& Type) const;
+            inline void CheckTypeName(const string& Name) const;
+
+            inline void CheckConsistency() const;
+
+            // Interface only for friends
+            MgrT* GetMgr() const;
 
         public:
             LabelledTS();
@@ -109,7 +116,7 @@ namespace ESMC {
                                        const vector<pair<string, ExprTypeRef>>& Members);
             ExprTypeRef MakeArrayType(const ExprTypeRef& IndexType,
                                       const ExprTypeRef& ValueType);
-            ExprTypeRef MakeEnumType(const string& Name, const vector<string>& Members);
+            ExprTypeRef MakeEnumType(const string& Name, const set<string>& Members);
             ExprTypeRef MakeFieldAccessType();
             // All symmetric types must be declared here
             const ExprTypeRef& MakeSymmType(const string& Name, u32 Size);
@@ -123,6 +130,7 @@ namespace ESMC {
                                             const string& Name,
                                             const vector<pair<string, ExprTypeRef>>& Members,
                                             bool IncludePrimed = false);
+            const ExprTypeRef& GetNamedType(const string& TypeName) const;
 
             // Expressions
             ExpT MakeTrue();
@@ -144,12 +152,10 @@ namespace ESMC {
                        const ExprTypeRef& Range);
             
 
-            MgrT* GetMgr() const;
             bool CheckMessageType(const ExprTypeRef& MsgType) const;
             const ExprTypeRef& GetUnifiedMType() const;
 
             const ExprTypeRef& GetPrimedType(const ExprTypeRef& Type) const;
-            void CheckExpr(const ExpT& Expr) const;
 
             EFSMBase* MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
                                   const ExpT& Constraint, LTSFairnessType Fairness);
@@ -162,34 +168,7 @@ namespace ESMC {
                                      bool Blocking, LTSFairnessType Fairness);
 
             void AddInitStates(const vector<InitStateRef>& InitStates);
-            void AddInvariant(const ExpT& Exp);
         };
-
-        namespace Detail {
-
-            class QuantifierUnroller : public VisitorBaseT
-            {
-            private:
-                vector<ExpT> ExpStack;
-                MgrT* Mgr;
-
-                inline vector<ExpT> UnrollQuantifier(const QExpT* Exp);
-                
-            public:
-                QuantifierUnroller(MgrT* Mgr);
-                virtual ~QuantifierUnroller();
-
-                virtual void VisitVarExpression(const VarExpT* Exp) override;
-                virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
-                virtual void VisitConstExpression(const ConstExpT* Exp) override;
-                virtual void VisitOpExpression(const OpExpT* Exp) override;
-                virtual inline void VisitEQuantifiedExpression(const EQExpT* Exp) override;
-                virtual inline void VisitAQuantifiedExpression(const AQExpT* Exp) override;
-                
-                static ExpT Do(MgrT* Mgr, const ExpT& Exp);
-            };
-
-        } /* end namespace Detail */
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

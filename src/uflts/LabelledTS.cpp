@@ -37,120 +37,22 @@
 
 // Code:
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include "../utils/CombUtils.hpp"
 
 #include "LabelledTS.hpp"
 #include "LTSUtils.hpp"
 #include "LTSEFSM.hpp"
 #include "LTSChannelEFSM.hpp"
-#include "LTSMonitors.hpp"
 #include "LTSTransitions.hpp"
 #include "LTSExtensions.hpp"
 
 namespace ESMC {
     namespace LTS {
 
-        namespace Detail {
-            
-            QuantifierUnroller::QuantifierUnroller(MgrT* Mgr)
-                : VisitorBaseT("QuantifierUnroller"), Mgr(Mgr)
-            {
-                // Nothing here
-            }
-
-            QuantifierUnroller::~QuantifierUnroller()
-            {
-                // Nothing here
-            }
-
-            void QuantifierUnroller::VisitVarExpression(const VarExpT* Exp) 
-            {
-                ExpStack.push_back(Exp);
-            }
-
-            void QuantifierUnroller::VisitBoundVarExpression(const BoundVarExpT* Exp)
-            {
-                ExpStack.push_back(Exp);
-            }
-
-            void QuantifierUnroller::VisitConstExpression(const ConstExpT* Exp) 
-            {
-                ExpStack.push_back(Exp);
-            }
-
-            void QuantifierUnroller::VisitOpExpression(const OpExpT* Exp)
-            {
-                VisitorBaseT::VisitOpExpression(Exp);
-                auto const& Children = Exp->GetChildren();
-                const u32 NumChildren = Children.size();
-
-                vector<ExpT> NewChildren(NumChildren);
-                for (u32 i = 0; i < NumChildren; --i) {
-                    NewChildren[NumChildren - i - 1] = ExpStack.back();
-                    ExpStack.pop_back();
-                }
-                
-                ExpStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
-            }
-
-            inline vector<ExpT>
-            QuantifierUnroller::UnrollQuantifier(const QExpT* Exp)
-            {
-                vector<ExpT> Retval;
-                auto const& QVarTypes = Exp->GetQVarTypes();
-                auto const& QBody = Exp->GetQExpression();
-                const u32 NumQVars = QVarTypes.size();
-
-                vector<vector<string>> QVarElems;
-                for (auto const& QVarType : QVarTypes) {
-                    QVarElems.push_back(QVarType->GetElements());
-                }
-                auto&& CP = CrossProduct<string>(QVarElems.begin(), 
-                                                  QVarElems.end());
-                for (auto const& CPElem : CP) {
-                    MgrT::SubstMapT SubstMap;
-                    for (u32 i = 0; i < NumQVars; ++i) {
-                        auto const& BoundVarExp = Mgr->MakeBoundVar(QVarTypes[i], i);
-                        auto const& ValExp = Mgr->MakeVal(CPElem[i], QVarTypes[i]);
-                        SubstMap[BoundVarExp] = ValExp;
-                    }
-
-                    Retval.push_back(Mgr->Substitute(SubstMap, QBody));
-                }
-                return Retval;
-            }
-
-            void QuantifierUnroller::VisitEQuantifiedExpression(const EQExpT* Exp)
-            {
-                Exp->GetQExpression()->Accept(this);
-                auto const& NewExp = ExpStack.back();
-                ExpStack.pop_back();
-                auto NewQExp = Mgr->MakeExists(Exp->GetQVarTypes(), NewExp);
-                auto&& UnrolledExps = 
-                    UnrollQuantifier(NewQExp->SAs<Exprs::QuantifiedExpressionBase>());
-                ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpOR, UnrolledExps));
-            }
-
-            void QuantifierUnroller::VisitAQuantifiedExpression(const AQExpT* Exp)
-            {
-                Exp->GetQExpression()->Accept(this);
-                auto const& NewExp = ExpStack.back();
-                ExpStack.pop_back();
-                auto NewQExp = Mgr->MakeForAll(Exp->GetQVarTypes(), NewExp);
-                auto&& UnrolledExps = 
-                    UnrollQuantifier(NewQExp->SAs<Exprs::QuantifiedExpressionBase>());
-                ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpAND, UnrolledExps));
-            }
-
-            ExpT QuantifierUnroller::Do(MgrT* Mgr, const ExpT& Exp)
-            {
-                QuantifierUnroller Unroller(Mgr);
-                Exp->Accept(&Unroller);
-                return Unroller.ExpStack[0];
-            }
-
-        } /* end namespace Detail */
-
+        using Detail::QuantifierUnroller;
+        
         LabelledTS::LabelledTS()
             : Mgr(new MgrT()),
               Frozen(false), MsgsFrozen(false), AutomataFrozen(false)
@@ -163,13 +65,6 @@ namespace ESMC {
             delete Mgr;
             for (auto const& NameEFSM : AllEFSMs) {
                 delete NameEFSM.second;
-            }
-
-            for (auto const& NameMon : SafetyMonitors) {
-                delete NameMon.second;
-            }
-            for (auto const& BuchiMon : BuchiMonitors) {
-                delete BuchiMon.second;
             }
         }
 
@@ -223,9 +118,112 @@ namespace ESMC {
             }
         }
 
+        inline void LabelledTS::CheckConsistency() const
+        {
+            set<ExprTypeRef> Inputs;
+            set<ExprTypeRef> Outputs;
+            for (auto const& NameEFSM : AllEFSMs) {
+                auto EFSM = NameEFSM.second;
+                auto const& ParamInsts = EFSM->GetParamInsts();
+                for (auto const& ParamInst : ParamInsts) {
+                    auto const& InpSet = EFSM->Inputs[ParamInst];
+                    auto const& OutSet = EFSM->Outputs[ParamInst];
+
+                    for (auto const& Output : OutSet) {
+                        if (Outputs.find(Output) != Outputs.end()) {
+                            throw ESMCError((string)"Multiple EFSMs have message type \"" + 
+                                            Output->SAs<ExprRecordType>()->GetName() + 
+                                            "\" defined as an output");
+                        }
+                        Outputs.insert(Output);
+                    }
+
+                    Inputs.insert(InpSet.begin(), InpSet.end());
+                }
+            }
+
+            if ((!includes(Inputs.begin(), Inputs.end(),
+                           Outputs.begin(), Outputs.end())) ||
+                (!includes(Outputs.begin(), Outputs.end(),
+                           Inputs.begin(), Inputs.end()))) {
+
+                ostringstream sstr;
+                sstr << "The LTS is not closed." << endl;
+                vector<ExprTypeRef> InputsMinusOutputs(max(Inputs.size(), Outputs.size()));
+                vector<ExprTypeRef> OutputsMinusInputs(max(Inputs.size(), Outputs.size()));
+                set_difference(Inputs.begin(), Inputs.end(), 
+                               Outputs.begin(), Outputs.end(), 
+                               InputsMinusOutputs.begin());
+                set_difference(Outputs.begin(), Outputs.end(),
+                               Inputs.begin(), Inputs.end(),
+                               OutputsMinusInputs.begin());
+                if (InputsMinusOutputs.size() > 0) {
+                    sstr << "The following types are the output of no EFSM:" << endl;
+                    for (auto const& Type : InputsMinusOutputs) {
+                        sstr << Type->SAs<ExprRecordType>()->GetName() << endl;
+                    }
+                }
+
+                if (OutputsMinusInputs.size() > 0) {
+                    sstr << "The following types are the input of no EFSM:" << endl;
+                    for (auto const& Type : OutputsMinusInputs) {
+                        sstr << Type->SAs<ExprRecordType>()->GetName() << endl;
+                    }
+                }
+
+                throw ESMCError(sstr.str());
+            }
+
+            return;
+        }
+
         void LabelledTS::Freeze()
         {
-            // TODO: implement me
+            AssertAutomataFrozen();
+            if (Frozen) {
+                return;
+            }
+            Frozen = true;
+            
+            // We now compute the product
+            // which will be represented as a 
+            // list of guarded commands
+
+            // First check consistency of EFSMs
+            CheckConsistency();
+
+            // for each message type, get the transitions 
+            // on the message type from each efsm
+
+            // TODO: add info on fairnesses
+            for (auto const& NameType : MsgTypes) {
+                vector<vector<LTSTransRef>> TransForCP;
+
+                auto const& MTypeName = NameType.first;
+                auto const& MType = NameType.second;
+
+                for (auto const& NameEFSM : AllEFSMs) {
+                    auto EFSM = NameEFSM.second;
+                    auto&& CurTrans = EFSM->GetTransitionsOnMsg(MType);
+                    if (CurTrans.size() > 0) {
+                        TransForCP.push_back(CurTrans);
+                    }
+                }
+
+                auto&& CPTrans = CrossProduct<LTSTransRef>(TransForCP.begin(), TransForCP.end());
+                for (auto const& CPElem : CPTrans) {
+                    vector<ExpT> GuardComps;
+                    vector<LTSAssignRef> UpdateComps;
+                    for (auto const& CPComp : CPElem) {
+                        GuardComps.push_back(CPComp->GetGuard());
+                        auto const& Updates = CPComp->GetUpdates();
+                        UpdateComps.insert(UpdateComps.end(), Updates.begin(), Updates.end());
+                    }
+                    
+                    auto Guard = Mgr->MakeExpr(LTSOps::OpAND, GuardComps);
+                    GuardedCommands.push_back(new LTSGuardedCommand(Guard, UpdateComps));
+                }
+            }
         }
 
         void LabelledTS::FreezeAutomata()
@@ -253,6 +251,16 @@ namespace ESMC {
                 ValidAutomata[EFSM->Name] = 
                     set<vector<ExpT>>(EFSM->ParamInsts.begin(),
                                       EFSM->ParamInsts.end());
+
+                SymTab.Bind(Name, new VarDecl(Name, StateVarType));
+
+                // Add any symmetric parameters to the list of 
+                // symmetric types marked as used
+                
+                auto const& EFSMParams = EFSM->Params;
+                for (auto const& Param : EFSMParams) {
+                    UsedSymmTypes.insert(Param->GetType());
+                }
             }
         }
         
@@ -274,6 +282,65 @@ namespace ESMC {
             UnifiedMsgType = Mgr->MakeType<ExprUnionType>("UnifiedMsgType",
                                                           UnionMembers, 
                                                           TypeIDFieldType);
+        }
+
+        inline void LabelledTS::CheckTypeName(const string& Name) const
+        {
+            if (boost::algorithm::contains(Name, "]") ||
+                boost::algorithm::contains(Name, "[")) {
+                throw ESMCError((string)"Type names cannot contain '[' or ']' characters");
+            }
+            if (boost::algorithm::ends_with(Name, "StateT")) {
+                throw ESMCError((string)"Type names cannot end with \"StateT\"");
+            }
+            if (Name == "UnifiedMsgType") {
+                throw ESMCError((string)"Type name \"UnifiedMsgType\" is reserved");
+            }
+            if (NamedTypes.find(Name) != NamedTypes.end()) {
+                throw ESMCError((string)"A type named \"" + Name + "\" already exists. " + 
+                                "Use GetNamedType() to retrieve it");
+            }
+        }
+
+        ExprTypeRef LabelledTS::MakeBoolType() 
+        {
+            return Mgr->MakeType<ExprBoolType>();
+        }
+
+        ExprTypeRef LabelledTS::MakeRangeType(i64 Low, i64 High)
+        {
+            return Mgr->MakeType<ExprRangeType>(Low, High);
+        }
+
+        ExprTypeRef LabelledTS::MakeArrayType(const ExprTypeRef& IndexType,
+                                              const ExprTypeRef& ValueType)
+        {
+            return Mgr->MakeType<ExprArrayType>(IndexType, ValueType);
+        }
+
+        ExprTypeRef LabelledTS::MakeEnumType(const string& Name,
+                                             const set<string>& Members)
+        {
+            AssertNotFrozen();
+            CheckTypeName(Name);
+            auto Retval = Mgr->MakeType<ExprEnumType>(Name, Members);
+            NamedTypes[Name] = Retval;
+            return Retval;
+        }
+
+        ExprTypeRef LabelledTS::MakeRecordType(const string& Name,
+                                               const vector<pair<string, ExprTypeRef>>& Members)
+        {
+            AssertNotFrozen();
+            CheckTypeName(Name);
+            auto Retval = Mgr->MakeType<ExprRecordType>(Name, Members);
+            NamedTypes[Name] = Retval;
+            return Retval;
+        }
+
+        ExprTypeRef LabelledTS::MakeFieldAccessType()
+        {
+            return Mgr->MakeType<ExprFieldAccessType>();
         }
 
         MgrT* LabelledTS::GetMgr() const
@@ -316,12 +383,11 @@ namespace ESMC {
         const ExprTypeRef& LabelledTS::MakeSymmType(const string& Name,
                                                     u32 Size)
         {
-            if (SymmTypes.find(Name) != SymmTypes.end()) {
-                throw ESMCError((string)"Symmetric type name \"" + Name + "\" has already " + 
-                                "been created");
-            }
-
-            SymmTypes[Name] = Mgr->MakeType<ExprSymmetricType>(Name, Size);
+            AssertNotFrozen();
+            CheckTypeName(Name);
+            NamedTypes[Name] = SymmTypes[Name] = 
+                Mgr->MakeType<ExprSymmetricType>(Name, Size);
+            
             return SymmTypes[Name];
         }
 
@@ -330,6 +396,7 @@ namespace ESMC {
                                                    bool IncludePrimed)
         {
             AssertMsgsNotFrozen();
+            CheckTypeName(Name);
 
             if (MsgTypes.find(Name) != MsgTypes.end() || 
                 ParametricMsgTypes.find(Name) != ParametricMsgTypes.end()) {
@@ -337,10 +404,11 @@ namespace ESMC {
                                 "created");
             }
 
-            MsgTypes[Name] = Mgr->MakeType<ExprRecordType>(Name, Members);
+            NamedTypes[Name] = MsgTypes[Name] = Mgr->MakeType<ExprRecordType>(Name, Members);
             if (IncludePrimed) {
                 auto PrimedName = Name + "'";
-                MsgTypes[PrimedName] = Mgr->MakeType<ExprRecordType>(Name, Members);
+                NamedTypes[PrimedName] = MsgTypes[PrimedName] = 
+                    Mgr->MakeType<ExprRecordType>(Name, Members);
                 TypeToPrimed[MsgTypes[Name]] = MsgTypes[PrimedName];
             }
 
@@ -354,6 +422,7 @@ namespace ESMC {
                                                     bool IncludePrimed)
         {
             AssertMsgsNotFrozen();
+            CheckTypeName(Name);
 
             SymTab.Push();
             CheckParams(Params, Constraint, SymTab, Mgr, true);
@@ -378,7 +447,7 @@ namespace ESMC {
             }
 
             auto PType = Mgr->MakeType<ExprParametricType>(BaseRecType, ParamTypes);
-            ParametricMsgTypes[Name] = PType;
+            NamedTypes[Name] = ParametricMsgTypes[Name] = PType;
 
             ExprTypeRef PBaseRecType;
             ExprTypeRef PPType = nullptr;
@@ -387,23 +456,34 @@ namespace ESMC {
                 PName = Name + "'";
                 PBaseRecType = Mgr->MakeType<ExprRecordType>(PName, Members);
                 PPType = Mgr->MakeType<ExprParametricType>(PBaseRecType, ParamTypes);
-                ParametricMsgTypes[PName] = PPType;
+                NamedTypes[PName] = ParametricMsgTypes[PName] = PPType;
                 TypeToPrimed[ParametricMsgTypes[Name]] = ParametricMsgTypes[PName];
             }
 
             for (auto const& ParamInst : ParamInsts) {
                 auto InstType = InstantiateType(PType, ParamInst, Mgr);
-                MsgTypes[InstType->As<ExprRecordType>()->GetName()] = InstType;
+                auto const& InstName = InstType->As<ExprRecordType>()->GetName();
+                MsgTypes[InstName] = NamedTypes[InstName] = InstType;
 
                 if (IncludePrimed) {
                     auto PInstType = InstantiateType(PPType, ParamInst, Mgr);
-                    MsgTypes[PInstType->As<ExprRecordType>()->GetName()] = PInstType;
+                    auto const& PInstName = PInstType->As<ExprRecordType>()->GetName();
+                    NamedTypes[PInstName] = MsgTypes[PInstName] = PInstType;
                     TypeToPrimed[MsgTypes[InstType->As<ExprRecordType>()->GetName()]] = 
                         MsgTypes[PInstType->As<ExprRecordType>()->GetName()];
                 }
             }
 
             return ParametricMsgTypes[Name];
+        }
+
+        const ExprTypeRef& LabelledTS::GetNamedType(const string& TypeName) const
+        {
+            auto it = NamedTypes.find(TypeName);
+            if (it == NamedTypes.end()) {
+                return ExprTypeRef::NullPtr;
+            }
+            return it->second;
         }
 
         const ExprTypeRef& LabelledTS::GetPrimedType(const ExprTypeRef& Type) const
@@ -416,9 +496,96 @@ namespace ESMC {
             return it->second;
         }
 
-        void LabelledTS::CheckExpr(const ExpT& Expr) const
+        // Expression creation
+        ExpT LabelledTS::MakeTrue() 
         {
-            
+            return Mgr->MakeTrue();
+        }
+
+        ExpT LabelledTS::MakeFalse()
+        {
+            return Mgr->MakeFalse();
+        }
+
+        ExpT LabelledTS::MakeVar(const string& Name, const ExprTypeRef& Type)
+        {
+            return Mgr->MakeVar(Name, Type);
+        }
+
+        ExpT LabelledTS::MakeBoundVar(i64 Idx, const ExprTypeRef& Type)
+        {
+            return Mgr->MakeBoundVar(Type, Idx);
+        }
+
+        ExpT LabelledTS::MakeVal(const string& ValString, const ExprTypeRef& Type)
+        {
+            if (!Type->Is<ExprEnumType>() &&
+                !Type->Is<ExprRangeType>()) {
+                throw ESMCError((string)"Cannot create constant of type \"" + 
+                                Type->ToString() + "\" only boolean, numeric and enumerated " + 
+                                " type constants are allowed to be created");
+            }
+            return Mgr->MakeVal(ValString, Type);
+        }
+
+        ExpT LabelledTS::MakeOp(i64 OpCode, const vector<ExpT>& Operands) 
+        {
+            if (OpCode == LTSOps::OpEQ) {
+                if (!Operands[0]->GetType()->Is<ExprScalarType>() ||
+                    !Operands[1]->GetType()->Is<ExprScalarType>()) {
+                    throw ESMCError((string)"Equality allowed only between scalar types");
+                }
+            }
+            return Mgr->MakeExpr(OpCode, Operands);
+        }
+
+        ExpT LabelledTS::MakeOp(i64 OpCode, const ExpT& Operand1) 
+        {
+            vector<ExpT> Operands = { Operand1 };
+            return Mgr->MakeExpr(OpCode, Operands);
+        }
+
+        ExpT LabelledTS::MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2) 
+        {
+            vector<ExpT> Operands = { Operand1, Operand2 };
+            if (OpCode == LTSOps::OpEQ) {
+                if (!Operand1->GetType()->Is<ExprScalarType>() ||
+                    !Operand2->GetType()->Is<ExprScalarType>()) {
+                    throw ESMCError((string)"Equality allowed only between scalar types");
+                }
+            }
+
+            return Mgr->MakeExpr(OpCode, Operands);
+        }
+
+        ExpT LabelledTS::MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
+                                const ExpT& Operand3) 
+        {
+            vector<ExpT> Operands = { Operand1, Operand2, Operand3 };
+            return Mgr->MakeExpr(OpCode, Operands);
+        }
+
+        ExpT LabelledTS::MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
+                                const ExpT& Operand3, const ExpT& Operand4) 
+        {
+            vector<ExpT> Operands = { Operand1, Operand2, Operand3, Operand4 };
+            return Mgr->MakeExpr(OpCode, Operands);
+        }
+
+        ExpT LabelledTS::MakeExists(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body)
+        {
+            return Mgr->MakeExists(QVarTypes, Body);
+        }
+
+        ExpT LabelledTS::MakeForAll(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body)
+        {
+            return Mgr->MakeForAll(QVarTypes, Body);
+        }
+        
+        i64 LabelledTS::MakeUF(const string& Name, const vector<ExprTypeRef>& Domain,
+                               const ExprTypeRef& Range)
+        {
+            return Mgr->MakeUninterpretedFunction(Name, Domain, Range);
         }
 
         EFSMBase* LabelledTS::MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
@@ -478,12 +645,36 @@ namespace ESMC {
         void LabelledTS::AddInitStates(const vector<InitStateRef>& InitStates)
         {
             AssertAutomataFrozen();
+            AssertNotFrozen();
 
             for (auto const& InitState : InitStates) {
+                InitStateGenerators.push_back(vector<LTSAssignRef>());
+
                 auto const& Params = InitState->GetParams();
                 auto const& Constraint = InitState->GetConstraint();
+                auto const& Updates = InitState->GetUpdates();
                 
+                SymTab.Push();
+                CheckParams(Params, Constraint, SymTab, Mgr, true);
+                CheckUpdates(Updates, SymTab, Mgr, false, "");
+                SymTab.Pop();
                 
+                auto&& ParamInsts = InstantiateParams(Params, Constraint, Mgr);
+                const u32 NumParams = Params.size();
+                for (auto const& ParamInst : ParamInsts) {
+                    
+                    MgrT::SubstMapT SubstMap;
+                    for (u32 i = 0; i < NumParams; ++i) {
+                        SubstMap[Params[i]] = ParamInst[i];
+                    }
+
+                    for (auto const& Update : Updates) {
+                        auto SubstLHS = Mgr->Substitute(SubstMap, Update->GetLHS());
+                        auto SubstRHS = Mgr->Substitute(SubstMap, Update->GetRHS());
+                        auto NewAsgn = new LTSAssignSimple(SubstLHS, SubstRHS);
+                        InitStateGenerators.back().push_back(NewAsgn);
+                    }
+                }
             }
         }
 
@@ -492,14 +683,3 @@ namespace ESMC {
 
 // 
 // LabelledTS.cpp ends here
-
-
-
-
-
-
-
-
-
-
-

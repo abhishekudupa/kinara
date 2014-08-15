@@ -737,6 +737,26 @@ namespace ESMC {
             return (ElemSize * ElemIdx);
         }
 
+        ExprTypeRef ExprArrayType::GetBaseValueType() const
+        {
+            auto Retval = ValueType;
+            while (Retval->Is<ExprArrayType>()) {
+                Retval = Retval->SAs<ExprArrayType>()->GetValueType();
+            }
+            return Retval;
+        }
+
+        u32 ExprArrayType::GetLevelsOfIndex() const
+        {
+            u32 Retval = 1;
+            auto ValType = ValueType;
+            while (ValType->Is<ExprArrayType>()) {
+                Retval++;
+                ValType = ValType->SAs<ExprArrayType>()->GetValueType();
+            }
+            return Retval;
+        }
+
         string ExprArrayType::ToString() const
         {
             return ((string)"(Array : " + IndexType->ToString() + " -> " + 

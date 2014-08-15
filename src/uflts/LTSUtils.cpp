@@ -147,7 +147,102 @@ namespace ESMC {
                 return TheTransformer.ExpStack[0];
             }
 
+            QuantifierUnroller::QuantifierUnroller(MgrT* Mgr)
+                : VisitorBaseT("QuantifierUnroller"), Mgr(Mgr)
+            {
+                // Nothing here
+            }
 
+            QuantifierUnroller::~QuantifierUnroller()
+            {
+                // Nothing here
+            }
+
+            void QuantifierUnroller::VisitVarExpression(const VarExpT* Exp) 
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void QuantifierUnroller::VisitBoundVarExpression(const BoundVarExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void QuantifierUnroller::VisitConstExpression(const ConstExpT* Exp) 
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void QuantifierUnroller::VisitOpExpression(const OpExpT* Exp)
+            {
+                VisitorBaseT::VisitOpExpression(Exp);
+                auto const& Children = Exp->GetChildren();
+                const u32 NumChildren = Children.size();
+
+                vector<ExpT> NewChildren(NumChildren);
+                for (u32 i = 0; i < NumChildren; --i) {
+                    NewChildren[NumChildren - i - 1] = ExpStack.back();
+                    ExpStack.pop_back();
+                }
+                
+                ExpStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
+            }
+
+            inline vector<ExpT>
+            QuantifierUnroller::UnrollQuantifier(const QExpT* Exp)
+            {
+                vector<ExpT> Retval;
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const& QBody = Exp->GetQExpression();
+                const u32 NumQVars = QVarTypes.size();
+
+                vector<vector<string>> QVarElems;
+                for (auto const& QVarType : QVarTypes) {
+                    QVarElems.push_back(QVarType->GetElements());
+                }
+                auto&& CP = CrossProduct<string>(QVarElems.begin(), 
+                                                  QVarElems.end());
+                for (auto const& CPElem : CP) {
+                    MgrT::SubstMapT SubstMap;
+                    for (u32 i = 0; i < NumQVars; ++i) {
+                        auto const& BoundVarExp = Mgr->MakeBoundVar(QVarTypes[i], i);
+                        auto const& ValExp = Mgr->MakeVal(CPElem[i], QVarTypes[i]);
+                        SubstMap[BoundVarExp] = ValExp;
+                    }
+
+                    Retval.push_back(Mgr->Substitute(SubstMap, QBody));
+                }
+                return Retval;
+            }
+
+            void QuantifierUnroller::VisitEQuantifiedExpression(const EQExpT* Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto const& NewExp = ExpStack.back();
+                ExpStack.pop_back();
+                auto NewQExp = Mgr->MakeExists(Exp->GetQVarTypes(), NewExp);
+                auto&& UnrolledExps = 
+                    UnrollQuantifier(NewQExp->SAs<Exprs::QuantifiedExpressionBase>());
+                ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpOR, UnrolledExps));
+            }
+
+            void QuantifierUnroller::VisitAQuantifiedExpression(const AQExpT* Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto const& NewExp = ExpStack.back();
+                ExpStack.pop_back();
+                auto NewQExp = Mgr->MakeForAll(Exp->GetQVarTypes(), NewExp);
+                auto&& UnrolledExps = 
+                    UnrollQuantifier(NewQExp->SAs<Exprs::QuantifiedExpressionBase>());
+                ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpAND, UnrolledExps));
+            }
+
+            ExpT QuantifierUnroller::Do(MgrT* Mgr, const ExpT& Exp)
+            {
+                QuantifierUnroller Unroller(Mgr);
+                Exp->Accept(&Unroller);
+                return Unroller.ExpStack[0];
+            }
         } /* end namespace Detail */
     } /* end namespace LTS */
 } /* end namespace ESMC */
