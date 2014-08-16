@@ -109,7 +109,11 @@ namespace ESMC {
                          bool IsInput);
             
             vector<LTSAssignRef> InstantiateUpdates(const MgrT::SubstMapT& ParamSubst,
-                                                    const vector<LTSAssignRef>& Updates);
+                                                    const vector<LTSAssignRef>& Updates,
+                                                    const string& MessageName,
+                                                    const ExprTypeRef& MessageType,
+                                                    const ExprTypeRef& ActMType);
+
             vector<LTSAssignRef> RebaseUpdates(const vector<ExpT>& ParamInst,
                                                const vector<LTSAssignRef>& Updates);
             vector<LTSAssignRef> MsgTransformUpdates(const vector<LTSAssignRef>& Updates,

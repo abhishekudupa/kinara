@@ -350,16 +350,24 @@ namespace ESMC {
         }
 
         vector<LTSAssignRef> EFSMBase::InstantiateUpdates(const MgrT::SubstMapT& ParamSubst,
-                                                          const vector<LTSAssignRef>& Updates)
+                                                          const vector<LTSAssignRef>& Updates,
+                                                          const string& MessageName,
+                                                          const ExprTypeRef& MessageType,
+                                                          const ExprTypeRef& ActMType)
         {
             auto Mgr = TheLTS->GetMgr();
             auto const& SubstMap = ParamSubst;
+            
             vector<LTSAssignRef> Retval;
 
             for (auto const& Update : Updates) {
                 auto PUpdate = Update->As<LTSAssignParam>();
                 if (PUpdate == nullptr) {
-                    Retval.push_back(Update);
+                    // No need to instantiate, just subst out
+                    auto LHS = Mgr->Substitute(ParamSubst, Update->GetLHS());
+                    auto RHS = Mgr->Substitute(ParamSubst, Update->GetRHS());
+                    Retval.push_back(new LTSAssignSimple(LHS, RHS));
+                    // That's all folks!
                     continue;
                 }
 
@@ -383,7 +391,24 @@ namespace ESMC {
                     Retval.push_back(NewAsgn);
                 }
             }
-            return Retval;
+
+            if (MessageName == "") {
+                return Retval;
+            } else {
+                // Need to subst out message types
+                vector<LTSAssignRef> Retval2;
+                MgrT::SubstMapT LocalSubstMap;
+                LocalSubstMap[Mgr->MakeVar(MessageName, MessageType)] = 
+                    Mgr->MakeVar(MessageName, ActMType);
+
+                for (auto const& Update : Retval) {
+                    
+                    auto LHS = Mgr->Substitute(LocalSubstMap, Update->GetLHS());
+                    auto RHS = Mgr->Substitute(LocalSubstMap, Update->GetRHS());
+                    Retval2.push_back(new LTSAssignSimple(LHS, RHS));
+                }
+                return Retval2;
+            }
         }
 
         vector<LTSAssignRef> EFSMBase::RebaseUpdates(const vector<ExpT>& ParamInst,
@@ -683,11 +708,12 @@ namespace ESMC {
             // Update state var
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
-            auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates);
+            auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates, MessageName,
+                                                    MessageType, ActMType);
             auto&& RebasedUpdates = RebaseUpdates(ParamInst, InstUpdates);
             auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates,
                                                                MessageName, 
-                                                               MessageType);
+                                                               ActMType);
             auto&& SimpUpdates = SimplifyUpdates(MsgTransformedUpdates);
             
             auto LocalGuard = 
@@ -867,11 +893,12 @@ namespace ESMC {
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
                                                            
-            auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates);
+            auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates,
+                                                    MessageName, MessageType, ActMType);
             auto&& RebasedUpdates = RebaseUpdates(ParamInst, InstUpdates);
             auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates, 
                                                                MessageName, 
-                                                               MessageType);
+                                                               ActMType);
             auto&& SimpUpdates = SimplifyUpdates(MsgTransformedUpdates);
 
             auto LocalGuard = Mgr->MakeExpr(LTSOps::OpAND, Guard,
@@ -1103,7 +1130,8 @@ namespace ESMC {
             auto LocalUpdates = Updates;
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
-            auto&& InstUpdates = InstantiateUpdates(SubstMap, Updates);
+            auto&& InstUpdates = InstantiateUpdates(SubstMap, Updates,
+                                                    "", ExprTypeRef::NullPtr, ExprTypeRef::NullPtr);
             auto&& RebasedUpdates = RebaseUpdates(ParamInst, InstUpdates);
             auto&& SimpUpdates = SimplifyUpdates(RebasedUpdates);
              
@@ -1281,8 +1309,10 @@ namespace ESMC {
                 
                 sstr << "    vars {" << endl;
                 for (auto const& NameDecl : SymTab.Bot()->GetDeclMap()) {
-                    sstr << "        " << NameDecl.first << " : " 
-                         << NameDecl.second->GetType()->ToString() << endl;
+                    if (NameDecl.second->Is<VarDecl>()) {
+                        sstr << "        " << NameDecl.first << " : " 
+                             << NameDecl.second->GetType()->ToString() << endl;
+                    }
                 }
                 sstr << "    }" << endl;
 

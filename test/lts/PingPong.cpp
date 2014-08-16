@@ -46,6 +46,7 @@
 
 #include "../../src/uflts/LabelledTS.hpp"
 #include "../../src/uflts/LTSEFSM.hpp"
+#include "../../src/uflts/LTSAssign.hpp"
 
 using namespace ESMC;
 using namespace LTS;
@@ -54,16 +55,15 @@ using namespace Exprs;
 int main()
 {
     auto TheLTS = new LabelledTS();
-    auto Mgr = TheLTS->GetMgr();
 
     auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 2);
-    auto ParamExp = Mgr->MakeVar("ClientID", ClientIDType);
+    auto ParamExp = TheLTS->MakeVar("ClientID", ClientIDType);
     vector<ExpT> Params = { ParamExp };
-    auto TrueExp = Mgr->MakeTrue();
+    auto TrueExp = TheLTS->MakeTrue();
 
     // Add the message types
     vector<pair<string, ExprTypeRef>> MsgFields;
-    auto RangeType = Mgr->MakeType<ExprRangeType>(0, 100);
+    auto RangeType = TheLTS->MakeRangeType(0, 99);
     MsgFields.push_back(make_pair("Data", RangeType));
 
     auto DataMsgType = TheLTS->MakeMsgTypes(Params, TrueExp, "DataMsg", MsgFields);
@@ -73,23 +73,100 @@ int main()
 
     auto Server = TheLTS->MakeGenEFSM("Server", vector<ExpT>(), TrueExp, LTSFairnessType::Strong);
 
-    auto ClientIDParam = Mgr->MakeVar("ClientID", ClientIDType);
+    auto ClientIDParam = TheLTS->MakeVar("ClientID", ClientIDType);
     auto ClientEFSM = TheLTS->MakeGenEFSM("Client", Params, TrueExp, LTSFairnessType::Strong);
 
+    // Server structure
     Server->AddState("InitState");
     Server->AddState("SendState");
     Server->FreezeStates();
 
     Server->AddVariable("LastMsg", RangeType);
+    Server->AddVariable("LastReq", ClientIDType);
 
     Server->AddInputMsgs(Params, TrueExp, DataMsgType, Params);
     Server->AddOutputMsgs(Params, TrueExp, AckMsgType, Params);
 
+    Server->FreezeVars();
+
+    vector<LTSAssignRef> ServerInputUpdates;
+    auto LastMsgExp = TheLTS->MakeVar("LastMsg", RangeType);
+    auto LastReqExp = TheLTS->MakeVar("LastReq", ClientIDType);
+
+    auto DataMsgExp = TheLTS->MakeVar("InMsg", DataMsgType);
+    auto FAType = TheLTS->MakeFieldAccessType();
+    auto DataAccFieldExp = TheLTS->MakeVar("Data", FAType);
+    auto DataAccExp = TheLTS->MakeOp(LTSOps::OpField, DataMsgExp, DataAccFieldExp);
+    ServerInputUpdates.push_back(new LTSAssignSimple(LastMsgExp, DataAccExp));
+    ServerInputUpdates.push_back(new LTSAssignSimple(LastReqExp, ParamExp));
+    
+
+    Server->AddInputTransitions(Params, TrueExp, "InitState", "SendState", 
+                                TrueExp, ServerInputUpdates, "InMsg", 
+                                DataMsgType, Params);
+
+    vector<LTSAssignRef> ServerOutputUpdates;
+    auto AckMsgExp = TheLTS->MakeVar("OutMsg", AckMsgType);
+    auto AckAccFieldExp = TheLTS->MakeVar("Data", FAType);
+    auto AckAccExp = TheLTS->MakeOp(LTSOps::OpField, AckMsgExp, AckAccFieldExp);
+    ServerOutputUpdates.push_back(new LTSAssignSimple(AckAccExp, LastMsgExp));
+    ServerOutputUpdates.push_back(new LTSAssignSimple(LastMsgExp, TheLTS->MakeVal("clear", RangeType)));
+    auto ServerGuard = TheLTS->MakeOp(LTSOps::OpEQ, LastReqExp, ParamExp);
+    
+    Server->AddOutputTransitions(Params, TrueExp, "SendState", "InitState", ServerGuard, 
+                                 ServerOutputUpdates, "OutMsg", AckMsgType, Params, 
+                                 LTSFairnessType::Strong, SplatFairnessType::Individual, 
+                                 "RspFairness");
+
+    // Client structure
     ClientEFSM->AddState("InitState");
     ClientEFSM->AddState("RecvState");
+    ClientEFSM->AddState("DecideState");
+    ClientEFSM->AddState("ErrorState");
 
     ClientEFSM->FreezeStates();
+
+    ClientEFSM->AddVariable("Count", RangeType);
+    ClientEFSM->AddVariable("LastMsg", RangeType);
+    ClientEFSM->AddOutputMsg(DataMsgType, Params);
+    ClientEFSM->AddInputMsg(AckMsgType, Params);
+
+    ClientEFSM->FreezeVars();
+
+    vector<LTSAssignRef> ClientOutputUpdates;
+    auto CountExp = TheLTS->MakeVar("Count", RangeType);
+    auto ZeroExp = TheLTS->MakeVal("0", RangeType);
+    auto OneExp = TheLTS->MakeVal("1", RangeType);
+    auto MaxExp = TheLTS->MakeVal("99", RangeType);
+    auto CountIncExp = TheLTS->MakeOp(LTSOps::OpITE, 
+                                      TheLTS->MakeOp(LTSOps::OpEQ, CountExp, MaxExp),
+                                      ZeroExp,
+                                      TheLTS->MakeOp(LTSOps::OpADD, CountExp, OneExp));
+
+    DataMsgExp = TheLTS->MakeVar("OutMsg", DataMsgType);
+    DataAccFieldExp = TheLTS->MakeVar("Data", FAType);
+    DataAccExp = TheLTS->MakeOp(LTSOps::OpField, DataMsgExp, DataAccFieldExp);
+
+    ClientOutputUpdates.push_back(new LTSAssignSimple(DataAccExp, CountExp));    
+    ClientEFSM->AddOutputTransition("InitState", "RecvState", TrueExp, ClientOutputUpdates, "OutMsg", DataMsgType, Params);
+
+    auto RecvMsgExp = TheLTS->MakeVar("InMsg", AckMsgType);
+    auto RecvMsgAccFieldExp = TheLTS->MakeVar("Data", FAType);
+    auto RecvMsgAccExp = TheLTS->MakeOp(LTSOps::OpField, RecvMsgExp, RecvMsgAccFieldExp);
+
+    vector<LTSAssignRef> ClientInputUpdates;
+    ClientInputUpdates.push_back(new LTSAssignSimple(LastMsgExp, RecvMsgAccExp));
+    ClientEFSM->AddInputTransition("RecvState", "DecideState", TrueExp, ClientInputUpdates, "InMsg", AckMsgType, Params);
     
+    vector<LTSAssignRef> ClientDecideUpdates;
+    ClientDecideUpdates.push_back(new LTSAssignSimple(CountExp, CountIncExp));
+    ClientDecideUpdates.push_back(new LTSAssignSimple(LastMsgExp, TheLTS->MakeVal("clear", RangeType)));
+    auto DecideGuard = TheLTS->MakeOp(LTSOps::OpEQ, LastMsgExp, CountExp);
+    ClientEFSM->AddInternalTransition("DecideState", "InitState", DecideGuard, ClientDecideUpdates);
+
+    auto ErrorGuard = TheLTS->MakeOp(LTSOps::OpNOT, DecideGuard);
+    ClientEFSM->AddInternalTransition("DecideState", "ErrorState", ErrorGuard, vector<LTSAssignRef>());
+
     cout << ClientEFSM->ToString() << endl;
     cout << Server->ToString() << endl;
 }

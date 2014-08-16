@@ -158,8 +158,6 @@ namespace ESMC {
         class LTSTransitionOutput : public LTSTransitionIOBase
         {
         private:
-            string MessageName;
-            ExprTypeRef MessageType;
             set<string> CompOfFairnessSets;
 
         public:
@@ -210,14 +208,17 @@ namespace ESMC {
         private:
             ExpT Guard;
             vector<LTSAssignRef> Updates;
+            ExprTypeRef MsgType;
 
         public:
             LTSGuardedCommand(const ExpT& Guard,
-                              const vector<LTSAssignRef>& Updates);
+                              const vector<LTSAssignRef>& Updates,
+                              const ExprTypeRef& MsgType = ExprTypeRef::NullPtr);
             virtual ~LTSGuardedCommand();
 
             const ExpT& GetGuard() const;
             const vector<LTSAssignRef>& GetUpdates() const;
+            const ExprTypeRef& GetMsgType() const;
             string ToString() const;
         };
 

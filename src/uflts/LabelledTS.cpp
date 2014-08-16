@@ -224,6 +224,17 @@ namespace ESMC {
                     GuardedCommands.push_back(new LTSGuardedCommand(Guard, UpdateComps));
                 }
             }
+
+            // Push the internal transitions as well
+            for (auto const& NameEFSM : AllEFSMs) {
+                auto EFSM = NameEFSM.second;
+                auto&& CurTrans = EFSM->GetInternalTransitions();
+                for (auto const& Trans : CurTrans) {
+                    auto CurGCmd = new LTSGuardedCommand(Trans->GetGuard(),
+                                                         Trans->GetUpdates());
+                    GuardedCommands.push_back(CurGCmd);
+                }
+            }
         }
 
         void LabelledTS::FreezeAutomata()
@@ -282,6 +293,17 @@ namespace ESMC {
             UnifiedMsgType = Mgr->MakeType<ExprUnionType>("UnifiedMsgType",
                                                           UnionMembers, 
                                                           TypeIDFieldType);
+        }
+
+        const vector<vector<LTSAssignRef>>& 
+        LabelledTS::GetInitStateGenerators() const
+        {
+            return InitStateGenerators;
+        }
+
+        const vector<GCmdRef>& LabelledTS::GetGuardedCmds() const
+        {
+            return GuardedCommands;
         }
 
         inline void LabelledTS::CheckTypeName(const string& Name) const

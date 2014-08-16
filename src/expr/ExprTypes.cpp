@@ -411,7 +411,18 @@ namespace ESMC {
 
         string ExprEnumType::ToString() const
         {
-            return (string)"(Enum " + Name + ")";
+            ostringstream sstr;
+            sstr << "(Enum " << Name << " (";
+            bool First = true;
+            for (auto const& Member : MemberVec) {
+                if (!First) {
+                    sstr << " ";
+                }
+                First = false;
+                sstr << Member;
+            }
+            sstr << "))";
+            return sstr.str();
         }
 
         void ExprEnumType::ComputeHashValue() const
@@ -523,7 +534,8 @@ namespace ESMC {
 
         string ExprSymmetricType::ToString() const
         {
-            return (string)"(SymType " + Name + ")";
+            return (string)"(SymType " + Name + " " + 
+                to_string(Size) + ")";
         }
 
         void ExprSymmetricType::ComputeHashValue() const
@@ -633,7 +645,7 @@ namespace ESMC {
 
         string ExprFuncType::ToString() const
         {
-            string Retval = (string)"(Func " + Name + " : ";
+            string Retval = (string)"(Func " + Name + " ";
             for (auto const& Arg : ArgTypes) {
                 Retval += Arg->ToString() + " -> ";
             }
@@ -759,7 +771,7 @@ namespace ESMC {
 
         string ExprArrayType::ToString() const
         {
-            return ((string)"(Array : " + IndexType->ToString() + " -> " + 
+            return ((string)"(Array " + IndexType->ToString() + " -> " + 
                     ValueType->ToString() + ")");
         }
 
@@ -814,7 +826,8 @@ namespace ESMC {
 
         ExprRecordType::ExprRecordType(const string& Name,
                                        const vector<pair<string, ExprTypeRef>>& Members)
-            : ExprTypeBase(), Name(Name), MemberVec(Members)
+            : ExprTypeBase(), Name(Name), MemberVec(Members), 
+              ContainsUnboundedType(false)
         {
             for (auto const& NTPair : Members) {
                 if (NTPair.second->As<ExprFuncType>() != nullptr ||
@@ -822,6 +835,10 @@ namespace ESMC {
                     NTPair.second->As<ExprParametricType>() != nullptr) {
                     throw ESMCError((string)"Record members cannot be functions types or " + 
                                     "field access types, or parametric types");
+                }
+                if (NTPair.second->As<ExprIntType>() != nullptr &&
+                    NTPair.second->As<ExprRangeType>() == nullptr) {
+                    ContainsUnboundedType = true;
                 }
             }
             for (auto const& Member : Members) {
@@ -833,12 +850,14 @@ namespace ESMC {
                 MemberMap[Member.first] = Member.second;
             }
 
-            u32 CurOffset = 0;
-            for (auto const& Member : Members) {
-                auto CurSize = Member.second->GetByteSize();
-                CurOffset = Align(CurOffset, CurSize);
-                FieldOffsets[Member.first] = CurOffset;
-                CurOffset += CurSize;
+            if (!ContainsUnboundedType) {
+                u32 CurOffset = 0;
+                for (auto const& Member : Members) {
+                    auto CurSize = Member.second->GetByteSize();
+                    CurOffset = Align(CurOffset, CurSize);
+                    FieldOffsets[Member.first] = CurOffset;
+                    CurOffset += CurSize;
+                }
             }
         }
 
@@ -891,6 +910,11 @@ namespace ESMC {
 
         u32 ExprRecordType::GetFieldOffset(const string& FieldName) const
         {
+            if (ContainsUnboundedType) {
+                throw ESMCError((string)"Record type \"" + Name + "\" contains " + 
+                                "one or more unbounded types. Field offsets " + 
+                                "can therefore not be computed");
+            }
             auto it = FieldOffsets.find(FieldName);
             if (it == FieldOffsets.end()) {
                 throw ESMCError((string)"Invalid field in request for field offset \"" + 
@@ -902,9 +926,14 @@ namespace ESMC {
         string ExprRecordType::ToString() const
         {
             string Retval;
-            Retval += "(Rec " + Name + " :";
+            Retval += "(Rec " + Name + "(";
+            bool First = true;
             for (auto const& NTPair : MemberVec) {
-                Retval += (" (" + NTPair.first + " : " + NTPair.second->ToString() + ")");
+                if (!First) {
+                    Retval += " ";
+                }
+                First = false;
+                Retval += ("(" + NTPair.first + " : " + NTPair.second->ToString() + ")");
             }
             Retval += ")";
             return Retval;
@@ -1015,7 +1044,7 @@ namespace ESMC {
 
         string ExprParametricType::ToString() const
         {
-            string Retval = "(ParamType : ";
+            string Retval = "(ParamType ";
             for (auto const& ParameterType : ParameterTypes) {
                 Retval += (ParameterType->ToString() + " -> ");
             }

@@ -108,7 +108,7 @@ namespace ESMC {
                     }
 
                     auto MTypeAsUnion = UnifiedMType->As<ExprUnionType>();
-                    auto FieldVarExp = OldChildren[0]->As<VarExpression>();
+                    auto FieldVarExp = OldChildren[1]->As<VarExpression>();
                     auto const& OldFieldName = FieldVarExp->GetVarName();
                     auto const& NewFieldName = MTypeAsUnion->MapFromMemberField(ActMsgRecType, 
                                                                                 OldFieldName);

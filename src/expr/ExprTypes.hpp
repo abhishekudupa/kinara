@@ -409,6 +409,7 @@ namespace ESMC {
             map<string, ExprTypeRef> MemberMap;
             vector<pair<string, ExprTypeRef>> MemberVec;
             map<string, u32> FieldOffsets;
+            bool ContainsUnboundedType;
 
         protected:
             virtual void ComputeHashValue() const;

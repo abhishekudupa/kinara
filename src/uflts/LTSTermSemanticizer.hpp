@@ -560,13 +560,6 @@ namespace ESMC {
                     if (!CheckTypeCompat(ChildTypes[1], ChildTypes[0])) {
                         throw ExprTypeError("All types to = op must be the same");
                     }
-                    if (ChildTypes[0]->template Is<ExprSymmetricType>()) {
-                        if (!Children[0]->template Is<ConstExpression>() ||
-                            !Children[1]->template Is<ConstExpression>()) {
-                            throw ExprTypeError((string)"Only constant values of symmetric " + 
-                                                "types can be compared");
-                        }
-                    }
                     Exp->SetType(BoolType);
                     break;
                 }
@@ -1232,6 +1225,7 @@ namespace ESMC {
                         auto Result = (Val == "true" ? "false" : "true");
                         ExpStack.push_back(Mgr->MakeVal(Result, BoolType));
                     }
+                    break;
 
                 case LTSOps::OpITE:
                     if (SimpChildren[1]->Equals(SimpChildren[2])) {

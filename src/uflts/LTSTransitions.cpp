@@ -274,8 +274,9 @@ namespace ESMC {
         }
 
         LTSGuardedCommand::LTSGuardedCommand(const ExpT& Guard,
-                                             const vector<LTSAssignRef>& Updates)
-            : Guard(Guard), Updates(Updates)
+                                             const vector<LTSAssignRef>& Updates,
+                                             const ExprTypeRef& MsgType)
+            : Guard(Guard), Updates(Updates), MsgType(MsgType)
         {
             // Nothing here
         }
@@ -295,10 +296,20 @@ namespace ESMC {
             return Updates;
         }
 
+        const ExprTypeRef& LTSGuardedCommand::GetMsgType() const
+        {
+            return MsgType;
+        }
+
         string LTSGuardedCommand::ToString() const
         {
             ostringstream sstr;
             sstr << "guarded command {" << endl;
+            if (MsgType != ExprTypeRef::NullPtr) {
+                sstr << "    label: " << MsgType->As<ExprRecordType>()->GetName() << endl;
+            } else {
+                sstr << "    label: none (internal transition)" << endl;
+            }
             sstr << "    " << Guard->ToString() << " -> " << endl;
             for (auto const& Update : Updates) {
                 sstr << "        " << Update->ToString() << endl;

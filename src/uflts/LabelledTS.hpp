@@ -99,11 +99,15 @@ namespace ESMC {
         public:
             LabelledTS();
             virtual ~LabelledTS();
-            
+
             // typestate functions
             void FreezeMsgs();
             void FreezeAutomata();
             void Freeze();
+
+            // Accessors
+            const vector<vector<LTSAssignRef>>& GetInitStateGenerators() const;
+            const vector<GCmdRef>& GetGuardedCmds() const;
 
             // methods for creating expressions
             // and types.

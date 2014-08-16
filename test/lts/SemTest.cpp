@@ -109,7 +109,8 @@ int main()
     RecMemVec.push_back(make_pair((string)"IntField", IntType));
 
     auto RecType = Mgr->MakeType<ExprRecordType>("RecType", RecMemVec);
-    auto ParamType = Mgr->MakeType<ExprParametricType>(RecType, SymmType);
+    vector<ExprTypeRef> ParamArgTypes = { SymmType };
+    auto ParamType = Mgr->MakeType<ExprParametricType>(RecType, ParamArgTypes);
     
     cout << "ParamType: " << endl << ParamType->ToString() << endl;
     
@@ -154,10 +155,10 @@ int main()
     UMTypeMem.insert(MType1);
     UMTypeMem.insert(MType2);
 
-    auto UMType = Mgr->MakeType<ExprMessageType>("UMType", UMTypeMem, RangeType);
+    auto UMType = Mgr->MakeType<ExprUnionType>("UMType", UMTypeMem, RangeType);
 
     auto UMTypeVar = Mgr->MakeVar("UMTypeVar", UMType);
-    auto UMTypeAsMsg = UMType->As<ExprMessageType>();
+    auto UMTypeAsMsg = UMType->As<ExprUnionType>();
     auto const& ActFieldName = UMTypeAsMsg->MapFromMemberField(MType1, "IntField1");
     auto UMTypeExp = Mgr->MakeExpr(Ops::OpField, UMTypeVar, 
                                    Mgr->MakeVar(ActFieldName, FAType));
