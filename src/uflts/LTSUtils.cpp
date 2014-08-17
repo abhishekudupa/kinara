@@ -180,7 +180,7 @@ namespace ESMC {
                 const u32 NumChildren = Children.size();
 
                 vector<ExpT> NewChildren(NumChildren);
-                for (u32 i = 0; i < NumChildren; --i) {
+                for (u32 i = 0; i < NumChildren; ++i) {
                     NewChildren[NumChildren - i - 1] = ExpStack.back();
                     ExpStack.pop_back();
                 }
@@ -218,23 +218,31 @@ namespace ESMC {
             void QuantifierUnroller::VisitEQuantifiedExpression(const EQExpT* Exp)
             {
                 Exp->GetQExpression()->Accept(this);
-                auto const& NewExp = ExpStack.back();
+                auto NewExp = ExpStack.back();
                 ExpStack.pop_back();
                 auto NewQExp = Mgr->MakeExists(Exp->GetQVarTypes(), NewExp);
                 auto&& UnrolledExps = 
                     UnrollQuantifier(NewQExp->SAs<Exprs::QuantifiedExpressionBase>());
-                ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpOR, UnrolledExps));
+                if (UnrolledExps.size() == 1) {
+                    ExpStack.push_back(UnrolledExps[0]);
+                } else {
+                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpOR, UnrolledExps));
+                }
             }
 
             void QuantifierUnroller::VisitAQuantifiedExpression(const AQExpT* Exp)
             {
                 Exp->GetQExpression()->Accept(this);
-                auto const& NewExp = ExpStack.back();
+                auto NewExp = ExpStack.back();
                 ExpStack.pop_back();
                 auto NewQExp = Mgr->MakeForAll(Exp->GetQVarTypes(), NewExp);
                 auto&& UnrolledExps = 
                     UnrollQuantifier(NewQExp->SAs<Exprs::QuantifiedExpressionBase>());
-                ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpAND, UnrolledExps));
+                if (UnrolledExps.size() == 1) {
+                    ExpStack.push_back(UnrolledExps[0]);
+                } else {
+                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpAND, UnrolledExps));
+                }
             }
 
             ExpT QuantifierUnroller::Do(MgrT* Mgr, const ExpT& Exp)

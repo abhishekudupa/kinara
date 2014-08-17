@@ -51,11 +51,12 @@
 namespace ESMC {
     namespace LTS {
 
-        using Detail::QuantifierUnroller;
+        const string LabelledTS::ProductMsgName = "__trans_msg__";
         
         LabelledTS::LabelledTS()
             : Mgr(new MgrT()),
-              Frozen(false), MsgsFrozen(false), AutomataFrozen(false)
+              Frozen(false), MsgsFrozen(false), AutomataFrozen(false),
+              InvariantExp(Mgr->MakeTrue()), FinalCondExp(Mgr->MakeTrue())
         {
             // Nothing here
         }
@@ -66,6 +67,11 @@ namespace ESMC {
             for (auto const& NameEFSM : AllEFSMs) {
                 delete NameEFSM.second;
             }
+        }
+
+        const string& LabelledTS::GetProductMsgName() const
+        {
+            return ProductMsgName;
         }
 
         // helpers
@@ -177,6 +183,58 @@ namespace ESMC {
             return;
         }
 
+        inline GCmdRef 
+        LabelledTS::MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const
+        {
+            vector<ExpT> GuardComps;
+            vector<LTSAssignRef> UpdateComps;
+            ExprTypeRef MsgType = ExprTypeRef::NullPtr;
+
+            for (auto const& Trans : ProductTrans) {
+                if (!Trans->Is<LTSTransitionIOBase>()) {
+                    throw InternalError((string)"Expected transition to be an IO " + 
+                                        "transition.\nAt: " + __FILE__ + ":" + 
+                                        to_string(__LINE__));
+                }
+                auto TransAsIO = Trans->SAs<LTSTransitionIOBase>();
+                auto const& MsgName = TransAsIO->GetMessageName();
+                if (MsgType == ExprTypeRef::NullPtr) {
+                    MsgType = TransAsIO->GetMessageType();
+                } else {
+                    if (MsgType != TransAsIO->GetMessageType()) {
+                        throw InternalError((string)"Error in cross product construction. " + 
+                                            "Expected all product transitions to be on the " + 
+                                            "same message type.\nAt: " + __FILE__ + ":" + 
+                                            to_string(__LINE__));
+                    }
+                }
+
+                MgrT::SubstMapT SubstMap;
+                SubstMap[Mgr->MakeVar(MsgName, UnifiedMsgType)] = 
+                    Mgr->MakeVar(ProductMsgName, UnifiedMsgType);
+                
+                GuardComps.push_back(Mgr->Substitute(SubstMap, TransAsIO->GetGuard()));
+                auto const& OldUpdates = TransAsIO->GetUpdates();
+
+                for (auto const& Update : OldUpdates) {
+                    auto SubstLHS = Mgr->Substitute(SubstMap, Update->GetLHS());
+                    auto SubstRHS = Mgr->Substitute(SubstMap, Update->GetRHS());
+                    UpdateComps.push_back(new LTSAssignSimple(SubstLHS, SubstRHS));
+                }
+            }
+            
+            ExpT Guard;
+            if (GuardComps.size() == 0) {
+                Guard = Mgr->MakeTrue();
+            } else if (GuardComps.size() == 1) {
+                Guard = GuardComps[0];
+            } else {
+                Guard = Mgr->MakeExpr(LTSOps::OpAND, GuardComps);
+            }
+
+            return (new LTSGuardedCommand(Guard, UpdateComps, MsgType));
+        }
+
         void LabelledTS::Freeze()
         {
             AssertAutomataFrozen();
@@ -199,29 +257,32 @@ namespace ESMC {
             for (auto const& NameType : MsgTypes) {
                 vector<vector<LTSTransRef>> TransForCP;
 
-                auto const& MTypeName = NameType.first;
                 auto const& MType = NameType.second;
-
+                
+                // Get the output transitions first
                 for (auto const& NameEFSM : AllEFSMs) {
                     auto EFSM = NameEFSM.second;
-                    auto&& CurTrans = EFSM->GetTransitionsOnMsg(MType);
-                    if (CurTrans.size() > 0) {
-                        TransForCP.push_back(CurTrans);
+                    
+                    auto&& OutputTrans = EFSM->GetOutputTransitionsOnMsg(MType);
+                    if (OutputTrans.size() > 0) {
+                        TransForCP.push_back(OutputTrans);
+                        break;
+                    }
+                }
+
+                // Now get the input transitions on all EFSMs
+                for (auto const& NameEFSM : AllEFSMs) {
+                    auto EFSM = NameEFSM.second;
+                    auto&& InputTrans = EFSM->GetInputTransitionsOnMsg(MType);
+                    if (InputTrans.size() > 0) {
+                        TransForCP.insert(TransForCP.end(), InputTrans.begin(),
+                                          InputTrans.end());
                     }
                 }
 
                 auto&& CPTrans = CrossProduct<LTSTransRef>(TransForCP.begin(), TransForCP.end());
                 for (auto const& CPElem : CPTrans) {
-                    vector<ExpT> GuardComps;
-                    vector<LTSAssignRef> UpdateComps;
-                    for (auto const& CPComp : CPElem) {
-                        GuardComps.push_back(CPComp->GetGuard());
-                        auto const& Updates = CPComp->GetUpdates();
-                        UpdateComps.insert(UpdateComps.end(), Updates.begin(), Updates.end());
-                    }
-                    
-                    auto Guard = Mgr->MakeExpr(LTSOps::OpAND, GuardComps);
-                    GuardedCommands.push_back(new LTSGuardedCommand(Guard, UpdateComps));
+                    GuardedCommands.push_back(MakeGuardedCommand(CPElem));
                 }
             }
 
@@ -235,6 +296,29 @@ namespace ESMC {
                     GuardedCommands.push_back(CurGCmd);
                 }
             }
+
+            // Build the invariant and final condition
+            for (auto const& NameEFSM : AllEFSMs) {
+                auto EFSM = NameEFSM.second;
+                InvariantExp = Mgr->MakeExpr(LTSOps::OpAND, InvariantExp, 
+                                             Mgr->MakeExpr(LTSOps::OpNOT, 
+                                                           EFSM->ErrorCondition));
+                FinalCondExp = Mgr->MakeExpr(LTSOps::OpAND, FinalCondExp,
+                                             EFSM->FinalCondition);
+            }
+
+            InvariantExp = Mgr->Simplify(InvariantExp);
+            FinalCondExp = Mgr->Simplify(FinalCondExp);
+        }
+
+        const ExpT& LabelledTS::GetInvariant() const
+        {
+            return InvariantExp;
+        }
+
+        const ExpT& LabelledTS::GetFinalCond() const
+        {
+            return FinalCondExp;
         }
 
         void LabelledTS::FreezeAutomata()
@@ -508,6 +592,15 @@ namespace ESMC {
             return it->second;
         }
 
+        const ExprTypeRef& LabelledTS::GetEFSMType(const string& EFSMName) const
+        {
+            auto it = AllEFSMs.find(EFSMName);
+            if (it == AllEFSMs.end()) {
+                throw ESMCError((string)"Could not find EFSM named \"" + EFSMName + "\"");
+            }
+            return it->second->StateVarType;
+        }
+
         const ExprTypeRef& LabelledTS::GetPrimedType(const ExprTypeRef& Type) const
         {
             auto it = TypeToPrimed.find(Type);
@@ -670,7 +763,6 @@ namespace ESMC {
             AssertNotFrozen();
 
             for (auto const& InitState : InitStates) {
-                InitStateGenerators.push_back(vector<LTSAssignRef>());
 
                 auto const& Params = InitState->GetParams();
                 auto const& Constraint = InitState->GetConstraint();
@@ -684,6 +776,7 @@ namespace ESMC {
                 auto&& ParamInsts = InstantiateParams(Params, Constraint, Mgr);
                 const u32 NumParams = Params.size();
                 for (auto const& ParamInst : ParamInsts) {
+                    InitStateGenerators.push_back(vector<LTSAssignRef>());
                     
                     MgrT::SubstMapT SubstMap;
                     for (u32 i = 0; i < NumParams; ++i) {
@@ -698,6 +791,16 @@ namespace ESMC {
                     }
                 }
             }
+        }
+
+        void LabelledTS::AddInvariant(const ExpT& Invariant)
+        {
+            AssertAutomataFrozen();
+            AssertNotFrozen();
+            auto ElimExp = Mgr->ApplyTransform<Detail::QuantifierUnroller>(Invariant);
+            CheckExpr(ElimExp, SymTab, Mgr);
+            InvariantExp = Mgr->MakeExpr(LTSOps::OpAND, InvariantExp, ElimExp);
+            InvariantExp = Mgr->Simplify(InvariantExp);
         }
 
     } /* end namespace LTS */

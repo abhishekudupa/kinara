@@ -167,7 +167,8 @@ namespace ESMC {
             set<ExprTypeRef> GetOutputs() const;
             set<ExprTypeRef> GetOutputsForInstance(u32 InstanceID) const;
 
-            vector<LTSTransRef> GetTransitionsOnMsg(const ExprTypeRef& MsgType) const;
+            vector<LTSTransRef> GetOutputTransitionsOnMsg(const ExprTypeRef& MsgType) const;
+            vector<vector<LTSTransRef>> GetInputTransitionsOnMsg(const ExprTypeRef& MsgType) const;
             vector<LTSTransRef> GetInternalTransitions() const;
 
             virtual void AddState(const string& StateName,

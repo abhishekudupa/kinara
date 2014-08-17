@@ -53,6 +53,8 @@ namespace ESMC {
             friend class AutomatonBase;
             friend class EFSMBase;
 
+            static const string ProductMsgName;
+
             MgrT* Mgr;
             bool Frozen;
             bool MsgsFrozen;
@@ -92,6 +94,10 @@ namespace ESMC {
             inline void CheckTypeName(const string& Name) const;
 
             inline void CheckConsistency() const;
+            inline GCmdRef MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const;
+
+            ExpT InvariantExp;
+            ExpT FinalCondExp;
 
             // Interface only for friends
             MgrT* GetMgr() const;
@@ -104,6 +110,8 @@ namespace ESMC {
             void FreezeMsgs();
             void FreezeAutomata();
             void Freeze();
+
+            const string& GetProductMsgName() const;
 
             // Accessors
             const vector<vector<LTSAssignRef>>& GetInitStateGenerators() const;
@@ -135,6 +143,9 @@ namespace ESMC {
                                             const vector<pair<string, ExprTypeRef>>& Members,
                                             bool IncludePrimed = false);
             const ExprTypeRef& GetNamedType(const string& TypeName) const;
+
+            // Get state var type for a named EFSM
+            const ExprTypeRef& GetEFSMType(const string& EFSMName) const;
 
             // Expressions
             ExpT MakeTrue();
@@ -172,6 +183,10 @@ namespace ESMC {
                                      bool Blocking, LTSFairnessType Fairness);
 
             void AddInitStates(const vector<InitStateRef>& InitStates);
+            void AddInvariant(const ExpT& Invariant);
+
+            const ExpT& GetInvariant() const;
+            const ExpT& GetFinalCond() const;
         };
 
     } /* end namespace LTS */

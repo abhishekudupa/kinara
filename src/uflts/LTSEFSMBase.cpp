@@ -106,28 +106,84 @@ namespace ESMC {
             return it->second;
         }
 
-        vector<LTSTransRef> EFSMBase::GetTransitionsOnMsg(const ExprTypeRef& MsgType) const
+        vector<LTSTransRef> 
+        EFSMBase::GetOutputTransitionsOnMsg(const ExprTypeRef& MsgType) const
         {
-            if (!MsgType->Is<ExprRecordType>()) {
-                throw ESMCError((string)"EFSMBase::GetTransitionsOnMsg() must be called " + 
-                                "on actual message types, not parametric types");
-            }
-
             vector<LTSTransRef> Retval;
 
-            for (auto const& InstTrans : Transitions) {
-                for (auto const& Trans : InstTrans.second) {
-                    if (Trans->Is<LTSTransitionIOBase>()) {
-                        auto AsIO = Trans->SAs<LTSTransitionIOBase>();
-                        if (AsIO->GetMessageType() == MsgType) {
+            for (auto const& ParamInst : ParamInsts) {
+                auto it = Outputs.find(ParamInst);
+                if (it == Outputs.end()) {
+                    continue;
+                }
+                auto const& OutputSet = it->second;
+                auto it2 = OutputSet.find(MsgType);
+                if (it2 == OutputSet.end()) {
+                    continue;
+                }
+
+                auto it3 = Transitions.find(ParamInst);
+                if (it3 == Transitions.end()) {
+                    continue;
+                }
+                
+                auto const& TransVec = it3->second;
+                for (auto const& Trans : TransVec) {
+                    if (Trans->Is<LTSTransitionOutput>()) {
+                        auto TransAsOut = Trans->SAs<LTSTransitionOutput>();
+                        auto const& TMsgType = TransAsOut->GetMessageType();
+                        if (TMsgType == MsgType) {
                             Retval.push_back(Trans);
                         }
                     }
                 }
             }
-
             return Retval;
         }
+
+        vector<vector<LTSTransRef>> 
+        EFSMBase::GetInputTransitionsOnMsg(const ExprTypeRef& MsgType) const
+        {
+            vector<vector<LTSTransRef>> Retval;
+            
+            for (auto const& ParamInst : ParamInsts) {
+
+                vector<LTSTransRef> RetvalComp;
+
+                auto it = Inputs.find(ParamInst);
+                if (it == Inputs.end()) {
+                    continue;
+                }
+                auto const& InputSet = it->second;
+                auto it2 = InputSet.find(MsgType);
+                if (it2 == InputSet.end()) {
+                    continue;
+                }
+                auto it3 = Transitions.find(ParamInst);
+                if (it3 == Transitions.end()) {
+                    continue;
+                }
+
+                auto const& TransVec = it3->second;
+                
+                for (auto const& Trans : TransVec) {
+                    if (Trans->Is<LTSTransitionInput>()) {
+                        auto TransAsIn = Trans->SAs<LTSTransitionInput>();
+                        auto const& TMsgType = TransAsIn->GetMessageType();
+                        if (TMsgType == MsgType) {
+                            RetvalComp.push_back(Trans);
+                        }
+                    }
+                }
+
+                if (RetvalComp.size() > 0) {
+                    Retval.push_back(RetvalComp);
+                }
+            }
+            
+            return Retval;
+        }
+
 
         vector<LTSTransRef> EFSMBase::GetInternalTransitions() const
         {
@@ -616,7 +672,7 @@ namespace ESMC {
             if (ErrorConditions.size() == 0) {
                 ErrorCondition = Mgr->MakeFalse();
             } else if (ErrorConditions.size() == 1) {
-                ErrorCondition = ErrorConditions[1];
+                ErrorCondition = ErrorConditions[0];
             } else {
                 ErrorCondition = Mgr->MakeExpr(LTSOps::OpOR, ErrorConditions);
             }
@@ -730,7 +786,12 @@ namespace ESMC {
                 Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard,
                                                             MessageName, MessageType,
                                                             TheLTS->GetUnifiedMType());
-            auto SimpGuard = Mgr->Simplify(MsgTransformedGuard);
+
+            // Finally, unroll quantifiers 
+            auto ElimGuard = 
+                Mgr->ApplyTransform<Detail::QuantifierUnroller>(MsgTransformedGuard);
+
+            auto SimpGuard = Mgr->Simplify(ElimGuard);
 
             auto CurTransition = new LTSTransitionInput(this, IS, FS, SimpGuard,
                                                         SimpUpdates, MessageName, 
@@ -913,7 +974,10 @@ namespace ESMC {
                 Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard, MessageName, 
                                                             MessageType, 
                                                             TheLTS->GetUnifiedMType());
-            auto SimpGuard = Mgr->Simplify(MsgTransformedGuard);
+            auto ElimGuard = 
+                Mgr->ApplyTransform<Detail::QuantifierUnroller>(MsgTransformedGuard);
+
+            auto SimpGuard = Mgr->Simplify(ElimGuard);
 
             // Add to appropriate fairness set if process fairness is set
             auto LocalFairnessSets = AddToFairnessSets;
@@ -1130,7 +1194,7 @@ namespace ESMC {
             auto LocalUpdates = Updates;
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
-            auto&& InstUpdates = InstantiateUpdates(SubstMap, Updates,
+            auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates,
                                                     "", ExprTypeRef::NullPtr, ExprTypeRef::NullPtr);
             auto&& RebasedUpdates = RebaseUpdates(ParamInst, InstUpdates);
             auto&& SimpUpdates = SimplifyUpdates(RebasedUpdates);
@@ -1144,7 +1208,8 @@ namespace ESMC {
 
             auto SubstGuard = Mgr->Substitute(SubstMap, LocalGuard);
             auto RebasedGuard = Mgr->Substitute(RebaseSubstMaps[ParamInst], SubstGuard);
-            auto SimpGuard = Mgr->Simplify(RebasedGuard);
+            auto ElimGuard = Mgr->ApplyTransform<Detail::QuantifierUnroller>(RebasedGuard);
+            auto SimpGuard = Mgr->Simplify(ElimGuard);
 
             auto LocalFairnessSets = AddToFairnessSets;
             if (Fairness != LTSFairnessType::None) {

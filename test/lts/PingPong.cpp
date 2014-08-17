@@ -47,6 +47,7 @@
 #include "../../src/uflts/LabelledTS.hpp"
 #include "../../src/uflts/LTSEFSM.hpp"
 #include "../../src/uflts/LTSAssign.hpp"
+#include "../../src/uflts/LTSTransitions.hpp"
 
 using namespace ESMC;
 using namespace LTS;
@@ -122,7 +123,7 @@ int main()
     ClientEFSM->AddState("InitState");
     ClientEFSM->AddState("RecvState");
     ClientEFSM->AddState("DecideState");
-    ClientEFSM->AddState("ErrorState");
+    ClientEFSM->AddState("ErrorState", false, false, false, true);
 
     ClientEFSM->FreezeStates();
 
@@ -169,8 +170,99 @@ int main()
 
     cout << ClientEFSM->ToString() << endl;
     cout << Server->ToString() << endl;
+
+    TheLTS->FreezeAutomata();
+    
+    vector<InitStateRef> InitStates;
+    vector<LTSAssignRef> InitUpdates;
+
+    auto ClientType = TheLTS->GetEFSMType("Client");
+    auto ServerType = TheLTS->GetEFSMType("Server");
+
+    auto ClientStateVar = TheLTS->MakeOp(LTSOps::OpIndex, 
+                                         TheLTS->MakeVar("Client", ClientType),
+                                         ParamExp);
+    auto ServerStateVar = TheLTS->MakeVar("Server", ServerType);
+    auto ServerDotState = TheLTS->MakeOp(LTSOps::OpField, ServerStateVar,
+                                         TheLTS->MakeVar("state", FAType));
+    auto ServerDotLast = TheLTS->MakeOp(LTSOps::OpField, ServerStateVar,
+                                         TheLTS->MakeVar("LastMsg", FAType));
+    auto ServerDotReq = TheLTS->MakeOp(LTSOps::OpField, ServerStateVar,
+                                       TheLTS->MakeVar("LastReq", FAType));
+    InitUpdates.push_back(new LTSAssignSimple(ServerDotState, TheLTS->MakeVal("InitState", ServerDotState->GetType())));
+    InitUpdates.push_back(new LTSAssignSimple(ServerDotLast, TheLTS->MakeVal("clear", ServerDotLast->GetType())));
+    InitUpdates.push_back(new LTSAssignSimple(ServerDotReq, ParamExp));
+
+    auto ClientDotState = TheLTS->MakeOp(LTSOps::OpField, ClientStateVar,
+                                         TheLTS->MakeVar("state", FAType));
+    auto ClientDotLast = TheLTS->MakeOp(LTSOps::OpField, ClientStateVar,
+                                         TheLTS->MakeVar("LastMsg", FAType));
+    auto ClientDotCount = TheLTS->MakeOp(LTSOps::OpField, ClientStateVar,
+                                         TheLTS->MakeVar("Count", FAType));
+
+    InitUpdates.push_back(new LTSAssignSimple(ClientDotState, TheLTS->MakeVal("InitState", ClientDotState->GetType())));
+    InitUpdates.push_back(new LTSAssignSimple(ClientDotLast, TheLTS->MakeVal("0", ClientDotLast->GetType())));
+    InitUpdates.push_back(new LTSAssignSimple(ClientDotCount, TheLTS->MakeVal("0", ClientDotCount->GetType())));
+
+    InitStates.push_back(new LTSInitState(Params, TrueExp, InitUpdates));
+    TheLTS->AddInitStates(InitStates);
+
+    auto BoundVarExp = TheLTS->MakeBoundVar(0, ClientIDType);
+    auto ClientExp = TheLTS->MakeOp(LTSOps::OpIndex, 
+                                    TheLTS->MakeVar("Client", ClientType),
+                                    BoundVarExp);
+    ClientDotCount = TheLTS->MakeOp(LTSOps::OpField, ClientExp,
+                                    TheLTS->MakeVar("Count", FAType));
+
+    auto BodyExp = TheLTS->MakeOp(LTSOps::OpAND, 
+                                  TheLTS->MakeOp(LTSOps::OpGE, 
+                                                 ClientDotCount,
+                                                 ZeroExp),
+                                  TheLTS->MakeOp(LTSOps::OpLE,
+                                                 ClientDotCount,
+                                                 MaxExp));
+    
+    auto QExp = TheLTS->MakeForAll({ ClientIDType }, BodyExp);
+    TheLTS->AddInvariant(QExp);
+
+    TheLTS->Freeze();
+
+    cout << "Guarded Commands:" << endl;
+    auto const& GCmds = TheLTS->GetGuardedCmds();
+    for (auto const& GCmd : GCmds) {
+        cout << GCmd->ToString() << endl;
+    }
+
+    cout << "Initial State Generators:" << endl;
+    auto const& InitStateGens = TheLTS->GetInitStateGenerators();
+    for (auto const& InitStateGen : InitStateGens) {
+        cout << "InitState {" << endl;
+        for (auto const& Update : InitStateGen) {
+            cout << "    " << Update->ToString() << endl;
+        }
+        cout << "}" << endl;
+    }
+
+    cout << "Invariant:" << endl;
+    cout << TheLTS->GetInvariant() << endl;
+
+    delete TheLTS;
 }
 
 // 
 // PingPong.cpp ends here
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
