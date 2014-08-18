@@ -1,8 +1,8 @@
-// LTSExtensions.hpp --- 
+// LTSExtensions.cpp --- 
 // 
-// Filename: LTSExtensions.hpp
+// Filename: LTSExtensions.cpp
 // Author: Abhishek Udupa
-// Created: Tue Jul 29 08:53:58 2014 (-0400)
+// Created: Mon Aug 18 12:09:02 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,51 +37,37 @@
 
 // Code:
 
-#if !defined ESMC_LTS_EXTENSIONS_HPP_
-#define ESMC_LTS_EXTENSIONS_HPP_
+#include "../mc/Compiler.hpp"
 
-#include "../common/FwdDecls.hpp"
-#include "../expr/ExprTypes.hpp"
-
-// moved this single definition into a separate
-// header file to eliminate circular deps.
+#include "LTSExtensions.hpp"
 
 namespace ESMC {
     namespace LTS {
 
-        using ESMC::Exprs::ExprTypeExtensionBase;
-        using ESMC::MC::RValueInterpreter;
-        using ESMC::MC::LValueInterpreter;
-
-        class LTSExtensionT
+        LTSExtensionT::LTSExtensionT()
+            : Offset(-1)
         {
-        public:
-            i32 Offset;
-            union {
-                RValueInterpreter* RValInterp;
-                LValueInterpreter* LValInterp;
-            } Interps;
+            Interps.RValInterp = nullptr;
+        }
 
-            LTSExtensionT();
-            virtual ~LTSExtensionT();
-        };
-
-        class LTSTypeExtensionT : public ExprTypeExtensionBase
+        LTSExtensionT::~LTSExtensionT()
         {
-        public:
-            // Offset in the permutation vector
-            i32 TypeOffset;
-            // ID of the type
-            i32 TypeID;
+            // Nothing here
+        }
 
-            LTSTypeExtensionT();
-            virtual ~LTSTypeExtensionT();
-        };
+        LTSTypeExtensionT::LTSTypeExtensionT()
+            : TypeOffset(-1), TypeID(-1)
+        {
+            // Nothing here
+        }
 
+        LTSTypeExtensionT::~LTSTypeExtensionT()
+        {
+            // Nothing here
+        }
+        
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-#endif /* ESMC_LTS_EXTENSIONS_HPP_ */
-
 // 
-// LTSExtensions.hpp ends here
+// LTSExtensions.cpp ends here

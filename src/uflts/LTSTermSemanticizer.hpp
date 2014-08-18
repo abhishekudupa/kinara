@@ -616,7 +616,6 @@ namespace ESMC {
                                 { return CheckTypeCompat(i, IntType); })) {
                         throw ExprTypeError((string)"add/sub/mul ops need integer arguments");
                     }                    
-                    // Assumption: Int type ALWAYS has ID 2
                     Exp->SetType(IntType);
                     break;
                 }

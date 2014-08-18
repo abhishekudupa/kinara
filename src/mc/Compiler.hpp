@@ -43,31 +43,93 @@
 #include "../common/FwdDecls.hpp"
 #include "../uflts/LTSTypes.hpp"
 
+
 namespace ESMC {
     namespace MC {
 
         using namespace ESMC::LTS;
-        
-        class OffsetComputer : public VisitorBaseT
-        {
-        public:
-            OffsetComputer();
-            virtual ~OffsetComputer();
 
-            virtual void VisitVarExpression(const VarExpT* Exp) override;
-            virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
-            virtual void VisitConstExpression(const ConstExpT* Exp) override;
-            virtual void VisitOpExpression(const OpExpT* Exp) override;
-            virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
-            virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+        class LValueInterpreter;
+
+        class RValueInterpreter
+        {
+        protected:
+            ExprTypeRef Type;
+            u32 Size;
+            bool IsScalar;
             
-            static void Do(ExpT& Exp);
+        public:
+            RValueInterpreter(const ExprTypeRef& Type);
+            virtual ~RValueInterpreter();
+            
+            virtual i64 GetScalarValue(const StateVec* StateVector) const = 0;
+            virtual string GetScalarString(const StateVec* StateVector) const = 0;
+            virtual const u08* GetPtrValue(const StateVec* StateVector) const = 0;
+            virtual void WriteToLValue(const StateVec* InStateVector,
+                                       StateVec* OutStateVector,
+                                       const LValueInterpreter* LValInterp) const = 0;
+
+            static void MakeInterpreter(const ExpT& Exp, const LabelledTS* TheLTS);
+
+            template <typename T> 
+            inline T* As()
+            {
+                return dynamic_cast<T*>(this);
+            }
+
+            template <typename T>
+            inline const T* As() const
+            {
+                return dynamic_cast<const T*>(this);
+            }
+            
+            template <typename T>
+            inline bool Is() const
+            {
+                return (dynamic_cast<const T*>(this) != nullptr);
+            }
         };
 
-        // An interpreter 
-        class InterpreterBase
+        class LValueInterpreter : public RValueInterpreter
         {
-            
+            friend class RValueInterpreter;
+
+        protected:
+            bool IsMsg;
+            i32 FixedOffset;
+
+        public:
+            LValueInterpreter(const ExprTypeRef& Type, bool IsMsg, i32 FixedOffset = -1);
+            virtual ~LValueInterpreter();
+
+            virtual void Write(StateVec* StateVector, u08* SrcPtr) const = 0;
+        };
+
+        class ConstantInterpreter : public RValueInterpreter
+        {
+        private:
+            i64 ScalarValue;
+            u08* PtrValue;
+
+        public:
+            ConstantInterpreter(const ExpT& Exp);
+            virtual ~ConstantInterpreter();
+
+            virtual i64 GetScalarValue(const StateVec* StateVector) const override;
+            virtual string GetScalarString(const StateVec* StateVector) const override;
+            virtual const u08* GetPtrValue(const StateVec* StateVector) const override;
+            virtual void WriteToLValue(const StateVec* InStateVector,
+                                       StateVec* OutStateVector,
+                                       const LValueInterpreter* LValInterp) const override;
+        };
+
+        class OpInterpreter : public RValueInterpreter
+        {
+        protected:
+            vector<RValueInterpreter*> SubInterps;
+
+        public:
+
         };
 
     } /* end namespace MC */
@@ -77,13 +139,3 @@ namespace ESMC {
 
 // 
 // Compiler.hpp ends here
-
-
-
-
-
-
-
-
-
-

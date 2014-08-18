@@ -45,6 +45,7 @@ esmc_LIB_PATHS= \
 
 PROJECT_LIBS=esmc
 libesmc_OBJS= \
+	Compiler.o \
 	ExprTypes.o \
 	LabelledTS.o \
 	LTSAssign.o \
@@ -52,6 +53,7 @@ libesmc_OBJS= \
 	LTSChannelEFSM.o \
 	LTSEFSM.o \
 	LTSEFSMBase.o \
+	LTSExtensions.o \
 	LTSFairnessSet.o \
 	LTSState.o \
 	LTSTermSemanticizer.o \

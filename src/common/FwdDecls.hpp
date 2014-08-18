@@ -122,6 +122,10 @@ namespace ESMC {
         class StateFactory;
         class LTSChecker;
         class Compiler;
+
+        class RValueInterpreter;
+        class LValueInterpreter;
+        
     } /* end namespace MC */
 
     namespace Symm {
