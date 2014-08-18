@@ -51,30 +51,39 @@ namespace ESMC {
 
         using ESMC::Exprs::ExprTypeExtensionBase;
 
-        class UFLTSExtensionT
+        class LTSExtensionT
         {
-            friend class LabelledTS;
+        public:
+            // Offset in the state vector
+            u32 Offset;
 
-        private:
-            bool CreatedViaLTS;
-            
-            // Constructor
-            inline UFLTSExtensionT()
-                : CreatedViaLTS(false)
+            LTSExtensionT()
+                : Offset(0)
+            {
+                // Nothing here
+            }
+
+            ~LTSExtensionT()
             {
                 // Nothing here
             }
         };
 
-        class UFLTSTypeExtensionT : public ExprTypeExtensionBase
+        class LTSTypeExtensionT : public ExprTypeExtensionBase
         {
-            friend class LabelledTS;
+        public:
+            // Offset in the permutation vector
+            i32 TypeOffset;
+            // ID of the type
+            i32 TypeID;
 
-        private:
-            bool CreateViaLTS;
+            LTSTypeExtensionT()
+                : TypeOffset(-1), TypeID(-1)
+            {
+                // Nothing here
+            }
 
-            inline UFLTSTypeExtensionT()
-                : CreateViaLTS(false)
+            virtual ~LTSTypeExtensionT()
             {
                 // Nothing here
             }

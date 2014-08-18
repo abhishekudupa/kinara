@@ -106,11 +106,36 @@ namespace ESMC {
 
         template <typename E> class LTSTermSemantizer;
 
-        class State;
-        class StateInterpretation;
-        class StateFactory;
+        class LTSAssignBase;
+        class LTSAssignSimple;
+        class LTSAssignParam;
+
+        typedef CSmartPtr<LTSAssignBase> LTSAssignRef;
+
+        class LTSGuardedCommand;        
+        typedef CSmartPtr<LTSGuardedCommand> GCmdRef;
 
     } /* end namespace LTS */
+
+    namespace MC {
+        class StateVec;
+        class StateFactory;
+        class LTSChecker;
+        class Compiler;
+    } /* end namespace MC */
+
+    namespace Symm {
+        class PermutationSet;
+
+        class Canonicalizer;
+
+        class PermuterBase;
+        class ArrayPermuter;
+        class RecordPermuter;
+        class SymmTypePermuter;
+        class NoOpPermuter;
+
+    } /* end namespace Symm */
 
     // UID Generators
     class UIDGenerator;
@@ -121,3 +146,11 @@ namespace ESMC {
 
 // 
 // FwdDecls.hpp ends here
+
+
+
+
+
+
+
+

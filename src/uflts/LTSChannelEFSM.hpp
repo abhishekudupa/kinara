@@ -51,6 +51,8 @@ namespace ESMC {
 
         class ChannelEFSM : public EFSMBase
         {
+            friend class LabelledTS;
+
         private:
             u32 Capacity;
             bool Lossy;

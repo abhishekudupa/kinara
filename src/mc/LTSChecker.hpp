@@ -1,8 +1,8 @@
-// SizeUtils.hpp --- 
+// LTSChecker.hpp --- 
 // 
-// Filename: SizeUtils.hpp
+// Filename: LTSChecker.hpp
 // Author: Abhishek Udupa
-// Created: Fri Aug  1 16:35:59 2014 (-0400)
+// Created: Sun Aug 17 17:32:54 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,53 +37,31 @@
 
 // Code:
 
-#if !defined ESMC_SIZE_UTILS_HPP_
-#define ESMC_SIZE_UTILS_HPP_
+#if !defined ESMC_LTS_CHECKER_HPP_
+#define ESMC_LTS_CHECKER_HPP_
 
 #include "../common/FwdDecls.hpp"
-#include <math.h>
 
 namespace ESMC {
+    namespace MC {
 
-    static inline u32 NextMultiple(u32 Value, u32 Size)
-    {
-        auto Rem = Value % Size;
-        return (Rem == 0 ? Value : (Value + (Size - Rem)));
-    }
+        class LTSChecker
+        {
+        private:
+            const LabelledTS* TheLTS;
 
-    // Pads value by some number of bytes to get the best alignment
-    static inline u32 Align(u32 Value, u32 Size)
-    {
-        if (Size == 1) {
-            return Value;
-        } else if (Size == 2) {
-            return NextMultiple(Value, 2);
-        } else {
-            // An alignment of 4 is considered
-            // sufficient for all types
-            return NextMultiple(Value, 4);
-        }
-    }
+        public:
+            LTSChecker(const LabelledTS* TheLTS);
+            virtual ~LTSChecker();
 
-    static inline u32 BytesForRange(u32 RangeWidth)
-    {
-        auto LogVal = (u32)ceil(log((double)RangeWidth) / log(2.0));
-        if (LogVal <= 8) {
-            return 1;
-        } else if (LogVal <= 16) {
-            return 2;
-        } else if (LogVal <= 32) {
-            return 4;
-        } else {
-            throw ESMCError((string)"Domain of variable too large");
-        }
-    }
 
-    
+        };
 
+    } /* end namespace MC */
 } /* end namespace ESMC */
 
-#endif /* ESMC_SIZE_UTILS_HPP_ */
+
+#endif /* ESMC_LTS_CHECKER_HPP_ */
 
 // 
-// SizeUtils.hpp ends here
+// LTSChecker.hpp ends here

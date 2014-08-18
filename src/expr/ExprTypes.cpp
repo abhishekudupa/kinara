@@ -51,6 +51,16 @@ namespace ESMC {
 
         UIDGenerator ExprTypeBase::ExprTypeUIDGen(1);
 
+        ExprTypeExtensionBase::ExprTypeExtensionBase()
+        {
+            // Nothing here
+        }
+
+        ExprTypeExtensionBase::~ExprTypeExtensionBase()
+        {
+            // Nothing here
+        }
+
         ExprTypeBase::ExprTypeBase()
             : TypeID(-1), HashValid(false), LastExtension(nullptr)
         {
@@ -723,7 +733,7 @@ namespace ESMC {
                 ValueType->As<ExprFieldAccessType>() != nullptr) {
                 throw ESMCError((string)"Array indices and values cannot be functions, " + 
                                 "further, indices must be scalar and values cannot be " + 
-                                "field access tyeps or parametric types");
+                                "field access types or parametric types");
             }
         }
 
@@ -991,7 +1001,8 @@ namespace ESMC {
                 Retval = Align(Retval, CurSize);
                 Retval += CurSize;
             }
-            return Retval;
+            // Records are always padded up to 4 bytes
+            return Align(Retval, 4);
         }
 
         ExprParametricType::ExprParametricType(const ExprTypeRef& BaseType,

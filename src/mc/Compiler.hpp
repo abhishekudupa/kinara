@@ -1,8 +1,8 @@
-// State.hpp --- 
+// Compiler.hpp --- 
 // 
-// Filename: State.hpp
+// Filename: Compiler.hpp
 // Author: Abhishek Udupa
-// Created: Mon Jul 28 08:34:10 2014 (-0400)
+// Created: Mon Aug 18 01:53:54 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,77 +37,53 @@
 
 // Code:
 
-#if !defined ESMC_STATE_HPP_
-#define ESMC_STATE_HPP_
-
-#include <boost/pool/pool.hpp>
+#if !defined ESMC_COMPILER_HPP_
+#define ESMC_COMPILER_HPP_
 
 #include "../common/FwdDecls.hpp"
+#include "../uflts/LTSTypes.hpp"
 
 namespace ESMC {
-    namespace LTS {
+    namespace MC {
 
-        class StateFactory;
-
-        class StateVec 
+        using namespace ESMC::LTS;
+        
+        class OffsetComputer : public VisitorBaseT
         {
-            friend class StateFactory;
-
-        private:
-            u08* StateBuffer;
-            StateFactory* Factory;
-
-            inline StateVec(const StateVec* Other);
-
         public:
-            StateVec(StateFactory* Factory);
-            ~StateVec();
+            OffsetComputer();
+            virtual ~OffsetComputer();
 
-            u08 ReadByte(u32 Offset) const;
-            void WriteByte(u32 Offset, u08 Value);
-
-            u16 ReadShort(u32 Offset) const;
-            void WriteShort(u32 Offset, u16 Value);
+            virtual void VisitVarExpression(const VarExpT* Exp) override;
+            virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
+            virtual void VisitConstExpression(const ConstExpT* Exp) override;
+            virtual void VisitOpExpression(const OpExpT* Exp) override;
+            virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+            virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
             
-            u32 ReadWord(u32 Offset) const;
-            void WriteWord(u32 Offset, u32 Value);
-
-            u08& operator [] (u32 Offset);
-            const u08& operator [] (u32 Offset) const;
-
-            u32 GetSize() const;
-            bool Equals(const StateVec& Other) const;
-            u32 Hash() const;
-            StateVec* Clone() const;
+            static void Do(ExpT& Exp);
         };
 
-        class StateFactory
+        // An interpreter 
+        class InterpreterBase
         {
-            friend class StateVec;
-
-        private:
-            const u32 StateSize;
-            boost::pool<>* StateVecPool;
-            boost::pool<>* StateVecBufferPool;
-            u32 NumActiveStates;
-
-            u08* GetStateBuffer(bool Clear = true);
-            void ReleaseStateBuffer(u08* BufferPtr);
-            StateVec* MakeState(const StateVec* Other);
-
-        public:
-            StateFactory(u32 StateSize);
-            ~StateFactory();
-            StateVec* MakeState();
-            void TakeState(StateVec* StatePtr);
-            u32 GetSize() const;            
-            u32 GetNumActiveStates() const;
+            
         };
 
-    } /* end namespace LTS */
+    } /* end namespace MC */
 } /* end namespace ESMC */
 
-#endif /* ESMC_STATE_HPP_ */
+#endif /* ESMC_COMPILER_HPP_ */
 
 // 
-// State.hpp ends here
+// Compiler.hpp ends here
+
+
+
+
+
+
+
+
+
+

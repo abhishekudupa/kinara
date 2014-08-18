@@ -22,6 +22,7 @@ PROJECT_MODULES= \
 	expr \
 	hash \
 	main \
+	mc \
 	symmetry \
 	uflts \
 	utils \
@@ -60,6 +61,7 @@ libesmc_OBJS= \
 	SpookyHash.o \
 	StateVec.o \
 	SymbolTable.o \
+	SymmCanonicalizer.o \
 	UIDGenerator.o \
 
 

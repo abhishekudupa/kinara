@@ -27,8 +27,9 @@ LINKFLAGS+=-lesmc -lz3 -lboost_system
 CXXFLAGS+=$(OPTFLAGS)
 
 TESTS=\
-	SemTest \
 	PingPong \
+	PingPongChan \
+	SemTest \
 	TestChan \
 
 default:	all
@@ -39,6 +40,9 @@ SemTest: SemTest.cpp
 	$(CXX) $(CXXFLAGS) $< -o $@ $(LINKFLAGS) 
 
 PingPong: PingPong.cpp
+	$(CXX) $(CXXFLAGS) $< -o $@ $(LINKFLAGS) 
+
+PingPongChan: PingPongChan.cpp
 	$(CXX) $(CXXFLAGS) $< -o $@ $(LINKFLAGS) 
 
 TestChan: TestChan.cpp

@@ -251,6 +251,7 @@ namespace ESMC {
                 Exp->Accept(&Unroller);
                 return Unroller.ExpStack[0];
             }
+
         } /* end namespace Detail */
     } /* end namespace LTS */
 } /* end namespace ESMC */

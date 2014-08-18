@@ -321,6 +321,11 @@ namespace ESMC {
             return FinalCondExp;
         }
 
+        const set<ExprTypeRef>& LabelledTS::GetUsedSymmTypes() const
+        {
+            return UsedSymmTypes;
+        }
+
         void LabelledTS::FreezeAutomata()
         {
             AssertMsgsFrozen();
@@ -337,8 +342,12 @@ namespace ESMC {
                 EFSM->Freeze();
                 auto const& Name = EFSM->Name;
                 auto const& StateVarType = EFSM->StateVarType;
+                auto CurStateVar = Mgr->MakeVar(Name, StateVarType);
+                // Not strictly our job, but it's easiest to 
+                // add the extension data right here
+                CurStateVar->ExtensionData.Offset = StateVectorSize;
 
-                StateVectorVars[Mgr->MakeVar(Name, StateVarType)] = 
+                StateVectorVars[CurStateVar] = 
                     set<vector<ExpT>>(EFSM->ParamInsts.begin(),
                                       EFSM->ParamInsts.end());
 
@@ -349,12 +358,52 @@ namespace ESMC {
 
                 SymTab.Bind(Name, new VarDecl(Name, StateVarType));
 
+
                 // Add any symmetric parameters to the list of 
                 // symmetric types marked as used
                 
                 auto const& EFSMParams = EFSM->Params;
                 for (auto const& Param : EFSMParams) {
                     UsedSymmTypes.insert(Param->GetType());
+                }
+                auto const& Decls = EFSM->SymTab.Bot()->GetDeclMap();
+                for (auto const& Decl : Decls) {
+                    if (Decl.second->Is<VarDecl>() &&
+                        Decl.second->GetType()->Is<ExprSymmetricType>()) {
+                        UsedSymmTypes.insert(Decl.second->GetType());
+                    }
+                }
+            }
+
+            // Again, not strictly our job, but it makes it 
+            // easier to add the extension data to the types
+            // right here as well
+            u32 TypeIDCounter = 0;
+            u32 TypeOffsetCounter = 0;
+            for (auto const& SymmType : UsedSymmTypes) {
+                auto Extension = SymmType->GetExtension<LTSTypeExtensionT>();
+                Extension->TypeID = TypeIDCounter++;
+                Extension->TypeOffset = TypeOffsetCounter;
+                TypeOffsetCounter += SymmType->As<ExprSymmetricType>()->GetCardinality();
+            }
+
+            // Make a list of channel buffers that require
+            // to be sorted
+            for (auto& ChanEFSM : ChannelEFSMs) {
+                auto Chan = ChanEFSM.second;
+                if (!Chan->Ordered) {
+                    auto const& Name = Chan->Name;
+                    for (auto const& ParamInst : Chan->ParamInsts) {
+                        auto VarExp = Mgr->MakeVar(Name, Chan->StateVarType);
+                        for (auto const& Param : ParamInst) {
+                            VarExp = Mgr->MakeExpr(LTSOps::OpIndex, VarExp, Param);
+                        }
+                        auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
+                        auto BufferExp = Mgr->MakeExpr(LTSOps::OpField, VarExp,
+                                                       Mgr->MakeVar("MsgBuffer", FAType));
+
+                        ChanBuffersToSort.push_back(BufferExp);
+                    }
                 }
             }
         }
@@ -388,6 +437,20 @@ namespace ESMC {
         const vector<GCmdRef>& LabelledTS::GetGuardedCmds() const
         {
             return GuardedCommands;
+        }
+
+        const vector<ExpT>& LabelledTS::GetChanBuffersToSort() const
+        {
+            return ChanBuffersToSort;
+        }
+
+        vector<ExpT> LabelledTS::GetStateVectorVars() const
+        {
+            vector<ExpT> Retval;
+            for (auto const& StateVectorVar : StateVectorVars) {
+                Retval.push_back(StateVectorVar.first);
+            }
+            return Retval;
         }
 
         inline void LabelledTS::CheckTypeName(const string& Name) const

@@ -43,7 +43,7 @@
 #include "../hash/SpookyHash.hpp"
 
 namespace ESMC {
-    namespace LTS {
+    namespace MC {
 
         inline StateVec::StateVec(const StateVec* Other)
             : StateBuffer(Other->Factory->GetStateBuffer(false)),
@@ -119,6 +119,16 @@ namespace ESMC {
                     (memcmp(StateBuffer, Other.StateBuffer, GetSize()) == 0));
         }
 
+        i32 StateVec::Compare(const StateVec& Other) const
+        {
+            return (memcmp(StateBuffer, Other.StateBuffer, GetSize()));
+        }
+
+        void StateVec::Set(const StateVec& Other) 
+        {
+            memcpy(StateBuffer, Other.StateBuffer, GetSize());
+        }
+
         u32 StateVec::Hash() const
         {
             return SpookyHash::SpookyHash::Hash32(StateBuffer, GetSize(), 
@@ -128,6 +138,21 @@ namespace ESMC {
         StateVec* StateVec::Clone() const
         {
             return Factory->MakeState(this);
+        }
+
+        u08* StateVec::GetStateBuffer()
+        {
+            return StateBuffer;
+        }
+
+        const u08* StateVec::GetStateBuffer() const
+        {
+            return StateBuffer;
+        }
+
+        StateFactory* StateVec::GetFactory() const
+        {
+            return Factory;
         }
 
         StateFactory::StateFactory(u32 StateSize)
@@ -152,10 +177,10 @@ namespace ESMC {
             return Retval;
         }
 
-        void StateFactory::TakeState(StateVec* StatePtr)
+        void StateFactory::TakeState(const StateVec* StatePtr)
         {
             StatePtr->~StateVec();
-            StateVecPool->free(StatePtr);
+            StateVecPool->free((void*)StatePtr);
             NumActiveStates--;
         }
 
@@ -191,21 +216,8 @@ namespace ESMC {
             return NumActiveStates;
         }
 
-    } /* end namespace LTS */
+    } /* end namespace MC */
 } /* end namespace ESMC */
 
 // 
 // StateVec.cpp ends here
-
-
-
-
-
-
-
-
-
-
-
-
-

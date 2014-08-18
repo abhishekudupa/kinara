@@ -44,15 +44,10 @@
 #include "../expr/Expressions.hpp"
 
 #include "LTSTermSemanticizer.hpp"
+#include "LTSExtensions.hpp"
 
 namespace ESMC {
     namespace LTS {
-
-        // The extension type for LTS expressions
-        struct LTSExtensionT
-        {
-
-        };
 
         // Enum classes for fairness types
         enum class LTSFairnessType {
