@@ -45,6 +45,7 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/functional/hash.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace ESMC {
     namespace Exprs {
@@ -69,7 +70,7 @@ namespace ESMC {
 
         ExprTypeBase::~ExprTypeBase()
         {
-            // Nothing here
+            PurgeAllExtensions();
         }
 
         u64 ExprTypeBase::Hash() const
@@ -171,6 +172,15 @@ namespace ESMC {
             return 2;
         }
 
+        i64 ExprBoolType::ConstToVal(const string& ConstVal) const
+        {
+            if (ConstVal == "true") {
+                return 1;
+            } else {
+                return 0;
+            }
+        }
+
         ExprIntType::ExprIntType()
             : ExprScalarType()
         {
@@ -228,6 +238,11 @@ namespace ESMC {
         u32 ExprIntType::GetCardinality() const
         {
             throw ESMCError((string)"Cannot get cardinality of unbounded type IntType");
+        }
+
+        i64 ExprIntType::ConstToVal(const string& ConstVal) const
+        {
+            return boost::lexical_cast<i64>(ConstVal);
         }
 
         // Inclusive range
@@ -324,6 +339,11 @@ namespace ESMC {
         u32 ExprRangeType::GetCardinality() const
         {
             return (RangeHigh - RangeLow + 1);
+        }
+
+        i64 ExprRangeType::ConstToVal(const string& ConstVal) const
+        {
+            return boost::lexical_cast<i64>(ConstVal);
         }
 
         ExprEnumType::ExprEnumType(const string& Name, 
@@ -481,6 +501,11 @@ namespace ESMC {
             return (vector<string>(Members.begin(), Members.end()));
         }
 
+        i64 ExprEnumType::ConstToVal(const string& ConstVal) const
+        {
+            return GetMemberIdx(ConstVal);
+        }
+
         ExprSymmetricType::ExprSymmetricType(const string& Name, u32 Size)
             : ExprScalarType(), Name(Name), Size(Size), Members(Size)
         {
@@ -589,6 +614,11 @@ namespace ESMC {
         vector<string> ExprSymmetricType::GetElements() const
         {
             return (vector<string>(MemberSet.begin(), MemberSet.end()));
+        }
+
+        i64 ExprSymmetricType::ConstToVal(const string& ConstVal) const
+        {
+            return GetMemberIdx(ConstVal);
         }
 
         static inline string MangleName(const string& Name, 
@@ -837,7 +867,7 @@ namespace ESMC {
         ExprRecordType::ExprRecordType(const string& Name,
                                        const vector<pair<string, ExprTypeRef>>& Members)
             : ExprTypeBase(), Name(Name), MemberVec(Members), 
-              ContainsUnboundedType(false)
+              ContainsUnboundedType(false), FieldOffsetsComputed(false)
         {
             for (auto const& NTPair : Members) {
                 if (NTPair.second->As<ExprFuncType>() != nullptr ||
@@ -859,20 +889,31 @@ namespace ESMC {
                 }
                 MemberMap[Member.first] = Member.second;
             }
+        }
 
+        void ExprRecordType::ComputeFieldOffsets() const
+        {
+            for (auto const& NTPair : MemberVec) {
+                if (NTPair.second->As<ExprIntType>() != nullptr &&
+                    NTPair.second->As<ExprRangeType>() == nullptr) {
+                    ContainsUnboundedType = true;
+                }                
+            }
             if (!ContainsUnboundedType) {
                 u32 CurOffset = 0;
-                for (auto const& Member : Members) {
+                for (auto const& Member : MemberVec) {
                     auto CurSize = Member.second->GetByteSize();
                     CurOffset = Align(CurOffset, CurSize);
                     FieldOffsets[Member.first] = CurOffset;
                     CurOffset += CurSize;
                 }
             }
+            FieldOffsetsComputed = true;
         }
 
         ExprRecordType::ExprRecordType()
-            : ExprTypeBase()
+            : ExprTypeBase(), ContainsUnboundedType(false),
+              FieldOffsetsComputed(false)
         {
             // Nothing here
         }
@@ -924,6 +965,9 @@ namespace ESMC {
                 throw ESMCError((string)"Record type \"" + Name + "\" contains " + 
                                 "one or more unbounded types. Field offsets " + 
                                 "can therefore not be computed");
+            }
+            if (!FieldOffsetsComputed) {
+                ComputeFieldOffsets();
             }
             auto it = FieldOffsets.find(FieldName);
             if (it == FieldOffsets.end()) {

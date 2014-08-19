@@ -1,8 +1,8 @@
-// LTSChecker.hpp --- 
+// ZeroPage.cpp --- 
 // 
-// Filename: LTSChecker.hpp
+// Filename: ZeroPage.cpp
 // Author: Abhishek Udupa
-// Created: Sun Aug 17 17:32:54 2014 (-0400)
+// Created: Mon Aug 18 23:12:58 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,33 +37,51 @@
 
 // Code:
 
-#if !defined ESMC_LTS_CHECKER_HPP_
-#define ESMC_LTS_CHECKER_HPP_
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdlib.h>
 
-#include "../common/FwdDecls.hpp"
+#include "ZeroPage.hpp"
 
 namespace ESMC {
     namespace MC {
 
-        using ESMC::LTS::LabelledTS;
+        u08* ZeroPage::ThePage = nullptr;
+        const u32 ZeroPage::PageSize = (1 << 20);
 
-        class LTSChecker
+        ZeroPage::ZeroPage()
         {
-        private:
-            LabelledTS* TheLTS;
+            // Nothing here
+        }
 
-        public:
-            LTSChecker(LabelledTS* TheLTS);
-            virtual ~LTSChecker();
+        ZeroPage& ZeroPage::operator = (const ZeroPage& Other)
+        {
+            return *this;
+        }
 
+        u08* ZeroPage::Get()
+        {
+            if (ThePage != nullptr) {
+                return ThePage;
+            }
+            int fd = open("/dev/zero", O_RDONLY);
+            ThePage = (u08*)mmap(nullptr, PageSize, PROT_READ, MAP_PRIVATE, fd, 0);
+            close(fd);
+            atexit(ZeroPage::Fin);
+            return ThePage;
+        }
 
-        };
+        void ZeroPage::Fin()
+        {
+            if (ThePage != nullptr) {
+                munmap(ThePage, PageSize);
+            }
+        }
 
-    } /* end namespace MC */
+    } /* end namespace LTS */
 } /* end namespace ESMC */
 
-
-#endif /* ESMC_LTS_CHECKER_HPP_ */
-
 // 
-// LTSChecker.hpp ends here
+// ZeroPage.cpp ends here

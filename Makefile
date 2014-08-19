@@ -51,6 +51,7 @@ libesmc_OBJS= \
 	LTSAssign.o \
 	LTSAutomaton.o \
 	LTSChannelEFSM.o \
+	LTSChecker.o \
 	LTSEFSM.o \
 	LTSEFSMBase.o \
 	LTSExtensions.o \
@@ -65,6 +66,7 @@ libesmc_OBJS= \
 	SymbolTable.o \
 	SymmCanonicalizer.o \
 	UIDGenerator.o \
+	ZeroPage.o \
 
 
 PROJECT_EXT_LIBS=boost z3

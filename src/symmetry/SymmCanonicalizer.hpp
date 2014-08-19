@@ -53,6 +53,7 @@ namespace ESMC {
         using ESMC::MC::StateVec;
         using ESMC::Exprs::ExprTypeRef;
         using ESMC::LTS::LabelledTS;
+        using ESMC::LTS::ExpT;
 
         extern const u32 MaxExplicitSize;
 
@@ -147,10 +148,11 @@ namespace ESMC {
         private:
             u32 Offset;
             u32 ElemSize;
-            u32 NumElems;
+            ExpT CountExp;
 
         public:
-            ChanBufferSorter(u32 Offset, const ExprTypeRef& ChanBufferType);
+            ChanBufferSorter(u32 Offset, const ExprTypeRef& ChanBufferType,
+                             const ExpT& CountExp);
             ~ChanBufferSorter();
 
             void Sort(StateVec* OutStateVector);

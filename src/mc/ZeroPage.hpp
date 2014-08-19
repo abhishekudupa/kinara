@@ -1,8 +1,8 @@
-// LTSChecker.hpp --- 
+// ZeroPage.hpp --- 
 // 
-// Filename: LTSChecker.hpp
+// Filename: ZeroPage.hpp
 // Author: Abhishek Udupa
-// Created: Sun Aug 17 17:32:54 2014 (-0400)
+// Created: Mon Aug 18 23:00:19 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,33 +37,33 @@
 
 // Code:
 
-#if !defined ESMC_LTS_CHECKER_HPP_
-#define ESMC_LTS_CHECKER_HPP_
+#if !defined ESMC_ZERO_PAGE_HPP_
+#define ESMC_ZERO_PAGE_HPP_
 
 #include "../common/FwdDecls.hpp"
 
 namespace ESMC {
     namespace MC {
 
-        using ESMC::LTS::LabelledTS;
-
-        class LTSChecker
+        // Singleton class for a zeropage
+        class ZeroPage
         {
         private:
-            LabelledTS* TheLTS;
+            ZeroPage();
+            ZeroPage& operator = (const ZeroPage& Other);
+            static u08* ThePage;
+            static const u32 PageSize;
 
         public:
-            LTSChecker(LabelledTS* TheLTS);
-            virtual ~LTSChecker();
-
-
+            ~ZeroPage();
+            static u08* Get();
+            static void Fin();
         };
 
     } /* end namespace MC */
 } /* end namespace ESMC */
 
-
-#endif /* ESMC_LTS_CHECKER_HPP_ */
+#endif /* ESMC_ZERO_PAGE_HPP_ */
 
 // 
-// LTSChecker.hpp ends here
+// ZeroPage.hpp ends here

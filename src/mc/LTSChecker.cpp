@@ -1,8 +1,8 @@
-// LTSChecker.hpp --- 
+// LTSChecker.cpp --- 
 // 
-// Filename: LTSChecker.hpp
+// Filename: LTSChecker.cpp
 // Author: Abhishek Udupa
-// Created: Sun Aug 17 17:32:54 2014 (-0400)
+// Created: Tue Aug 19 04:03:22 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,33 +37,30 @@
 
 // Code:
 
-#if !defined ESMC_LTS_CHECKER_HPP_
-#define ESMC_LTS_CHECKER_HPP_
+#include "../uflts/LabelledTS.hpp"
 
-#include "../common/FwdDecls.hpp"
+#include "LTSChecker.hpp"
+#include "Compiler.hpp"
 
 namespace ESMC {
     namespace MC {
 
         using ESMC::LTS::LabelledTS;
 
-        class LTSChecker
+        LTSChecker::LTSChecker(LabelledTS* TheLTS)
+            : TheLTS(TheLTS)
         {
-        private:
-            LabelledTS* TheLTS;
+            // Compile the LTS first and foremost
+            LTSCompiler::Do(TheLTS);
+        }
 
-        public:
-            LTSChecker(LabelledTS* TheLTS);
-            virtual ~LTSChecker();
-
-
-        };
+        LTSChecker::~LTSChecker()
+        {
+            delete TheLTS;
+        }
 
     } /* end namespace MC */
 } /* end namespace ESMC */
 
-
-#endif /* ESMC_LTS_CHECKER_HPP_ */
-
 // 
-// LTSChecker.hpp ends here
+// LTSChecker.cpp ends here

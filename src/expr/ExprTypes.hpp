@@ -43,6 +43,7 @@
 #include "../common/FwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
+
 #include <set>
 #include <map>
 #include <vector>
@@ -87,6 +88,7 @@ namespace ESMC {
                 return (dynamic_cast<const T*>(this) != nullptr);
             }
         };
+
 
         class ExprTypeBase : public RefCountable
         {
@@ -151,7 +153,7 @@ namespace ESMC {
                 return (dynamic_cast<const T*>(this) != nullptr);
             }
 
-            inline void AddExtension(ExprTypeExtensionBase* Ext)
+            inline void AddExtension(ExprTypeExtensionBase* Ext) const
             {
                 Extensions.push_front(Ext);
             }
@@ -205,7 +207,7 @@ namespace ESMC {
                 }
             }
 
-            void PurgeAllExtension() const
+            void PurgeAllExtensions() const
             {
                 for (auto const& Ext : Extensions) {
                     delete Ext;
@@ -220,6 +222,8 @@ namespace ESMC {
         public:
             ExprScalarType();
             virtual ~ExprScalarType();
+
+            virtual i64 ConstToVal(const string& ConstVal) const = 0;
         };
 
         class ExprBoolType : public ExprScalarType
@@ -236,6 +240,8 @@ namespace ESMC {
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+
+            virtual i64 ConstToVal(const string& ConstVal) const override;
         };
 
 
@@ -255,6 +261,8 @@ namespace ESMC {
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+
+            virtual i64 ConstToVal(const string& ConstVal) const override;
         };
 
         class ExprRangeType : public ExprIntType
@@ -280,6 +288,8 @@ namespace ESMC {
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+
+            virtual i64 ConstToVal(const string& ConstVal) const override;
         };
 
         // Mainly for states and such
@@ -308,6 +318,8 @@ namespace ESMC {
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+
+            virtual i64 ConstToVal(const string& ConstVal) const override;
         };
 
         class ExprSymmetricType : public ExprScalarType
@@ -345,6 +357,8 @@ namespace ESMC {
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+
+            virtual i64 ConstToVal(const string& ConstVal) const override;
         };
 
         class ExprFuncType : public ExprTypeBase
@@ -408,13 +422,17 @@ namespace ESMC {
             string Name;
             map<string, ExprTypeRef> MemberMap;
             vector<pair<string, ExprTypeRef>> MemberVec;
-            map<string, u32> FieldOffsets;
-            bool ContainsUnboundedType;
+            mutable map<string, u32> FieldOffsets;
+            mutable bool ContainsUnboundedType;
+            mutable bool FieldOffsetsComputed;
 
         protected:
             virtual void ComputeHashValue() const;
             // For use in subclasses, viz the ExprMessageType
             ExprRecordType();
+
+        private:
+            void ComputeFieldOffsets() const;
 
         public:
             ExprRecordType(const string& Name,

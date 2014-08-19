@@ -53,7 +53,7 @@ namespace ESMC {
             friend class AutomatonBase;
             friend class EFSMBase;
             friend class MC::LTSChecker;
-            friend class MC::Compiler;
+            friend class MC::LTSCompiler;
 
             static const string ProductMsgName;
 
@@ -73,16 +73,14 @@ namespace ESMC {
             map<string, ChannelEFSM*> ChannelEFSMs;
             set<ExprTypeRef> UsedSymmTypes;
 
-            // Map from var exp to the set of parameters that 
-            // it will accept
-            map<ExpT, set<vector<ExpT>>> StateVectorVars;
+            vector<ExpT> StateVectorVars;
             // Map from automaton name to the set of valid parameter
             // instantiations
             map<string, set<vector<ExpT>>> ValidAutomata;
             
             // Channel buffers that need to be sorted
             // on every transition
-            vector<ExpT> ChanBuffersToSort;
+            vector<pair<ExpT, ExpT>> ChanBuffersToSort;
 
             u32 StateVectorSize;
             vector<vector<LTSAssignRef>> InitStateGenerators;
@@ -122,7 +120,7 @@ namespace ESMC {
             // Accessors
             const vector<vector<LTSAssignRef>>& GetInitStateGenerators() const;
             const vector<GCmdRef>& GetGuardedCmds() const;
-            vector<ExpT> GetStateVectorVars() const;
+            const vector<ExpT>& GetStateVectorVars() const;
             const set<ExprTypeRef>& GetUsedSymmTypes() const;
 
             // methods for creating expressions
@@ -195,7 +193,7 @@ namespace ESMC {
 
             const ExpT& GetInvariant() const;
             const ExpT& GetFinalCond() const;
-            const vector<ExpT>& GetChanBuffersToSort() const;
+            const vector<pair<ExpT, ExpT>>& GetChanBuffersToSort() const;
         };
 
     } /* end namespace LTS */

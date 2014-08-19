@@ -44,11 +44,14 @@
 #include "../uflts/LTSExtensions.hpp"
 #include "../utils/SizeUtils.hpp"
 #include "../mc/StateVec.hpp"
+#include "../mc/Compiler.hpp"
 
 #include "SymmCanonicalizer.hpp"
 
 namespace ESMC {
     namespace Symm {
+
+        using ESMC::LTS::ExpT;
         
         using ESMC::MC::StateVec;
         using ESMC::Exprs::ExprArrayType;
@@ -268,8 +271,9 @@ namespace ESMC {
             // Nothing here
         }
 
-        ChanBufferSorter::ChanBufferSorter(u32 Offset, const ExprTypeRef& ChanBufferType)
-            : Offset(Offset)
+        ChanBufferSorter::ChanBufferSorter(u32 Offset, const ExprTypeRef& ChanBufferType,
+                                           const ExpT& CountExp)
+            : Offset(Offset), CountExp(CountExp)
         {
             auto TypeAsArray = ChanBufferType->As<ExprArrayType>();
             if (TypeAsArray == nullptr) {
@@ -280,7 +284,6 @@ namespace ESMC {
             auto ValueType = TypeAsArray->GetValueType();
             ElemSize = ValueType->GetByteSize();
             ElemSize = Align(ElemSize, ElemSize);
-            NumElems = IndexType->GetCardinality();
         }
 
         ChanBufferSorter::~ChanBufferSorter()
@@ -293,6 +296,7 @@ namespace ESMC {
             // O(n^2) sorting, I know, but we don't expect these 
             // channels to have more than 10 or so elements
             u08* BasePtr = OutStateVector->GetStateBuffer();
+            auto NumElems = CountExp->ExtensionData.Interp->EvaluateScalar(OutStateVector);
 
             for (u32 i = 0; i < NumElems - 1; ++i) {
                 u32 MinIndex = i;
@@ -326,7 +330,7 @@ namespace ESMC {
 
         Canonicalizer::Canonicalizer(const LabelledTS* TheLTS)
         {
-            auto&& StateVectorVars = TheLTS->GetStateVectorVars();
+            auto const& StateVectorVars = TheLTS->GetStateVectorVars();
 
             u32 Offset = 0;
             for (auto const& StateVectorVar : StateVectorVars) {
@@ -339,9 +343,12 @@ namespace ESMC {
             // Assumption: All expressions have been 
             // compiled and therefore have offsets attached
             auto const& ChansToSort = TheLTS->GetChanBuffersToSort();
-            for (auto const& ChanVar : ChansToSort) {
+            for (auto const& ChanVarCount : ChansToSort) {
+                auto const& ChanVar = ChanVarCount.first;
+                auto const& CountExp = ChanVarCount.second;
                 u32 Offset = ChanVar->ExtensionData.Offset;
-                Sorters.push_back(new ChanBufferSorter(Offset, ChanVar->GetType()));
+                Sorters.push_back(new ChanBufferSorter(Offset, ChanVar->GetType(),
+                                                       CountExp));
             }
 
             // Create the permutation set
@@ -403,16 +410,3 @@ namespace ESMC {
 
 // 
 // SymmCanonicalizer.cpp ends here
-
-
-
-
-
-
-
-
-
-
-
-
-

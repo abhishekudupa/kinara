@@ -49,10 +49,12 @@
 #include "../../src/uflts/LTSChannelEFSM.hpp"
 #include "../../src/uflts/LTSAssign.hpp"
 #include "../../src/uflts/LTSTransitions.hpp"
+#include "../../src/mc/LTSChecker.hpp"
 
 using namespace ESMC;
 using namespace LTS;
 using namespace Exprs;
+using namespace MC;
 
 int main()
 {
@@ -261,25 +263,13 @@ int main()
 
     cout << "Channel Buffer variables to sort:" << endl;
     for (auto const& BufferExp : TheLTS->GetChanBuffersToSort()) {
-        cout << BufferExp->ToString() << endl;
+        cout << BufferExp.first->ToString() << endl;
+        cout << BufferExp.second->ToString() << endl;
     }
-    delete TheLTS;
+
+    auto Checker = new LTSChecker(TheLTS);
+    delete Checker;
 }
 
 // 
 // PingPong.cpp ends here
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

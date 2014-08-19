@@ -105,7 +105,7 @@ namespace ESMC {
         string FileName;
         u32 LineNum;
         string ErrMsg;
-
+    public:
         inline UnimplementedException(const string& MethodName,
                                       const string& FileName,
                                       u32 LineNum)

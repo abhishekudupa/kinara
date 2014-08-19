@@ -347,10 +347,7 @@ namespace ESMC {
                 // add the extension data right here
                 CurStateVar->ExtensionData.Offset = StateVectorSize;
 
-                StateVectorVars[CurStateVar] = 
-                    set<vector<ExpT>>(EFSM->ParamInsts.begin(),
-                                      EFSM->ParamInsts.end());
-
+                StateVectorVars.push_back(CurStateVar);
                 StateVectorSize += StateVarType->GetByteSize();
                 ValidAutomata[EFSM->Name] = 
                     set<vector<ExpT>>(EFSM->ParamInsts.begin(),
@@ -381,6 +378,7 @@ namespace ESMC {
             u32 TypeIDCounter = 0;
             u32 TypeOffsetCounter = 0;
             for (auto const& SymmType : UsedSymmTypes) {
+                SymmType->AddExtension(new LTSTypeExtensionT());
                 auto Extension = SymmType->GetExtension<LTSTypeExtensionT>();
                 Extension->TypeID = TypeIDCounter++;
                 Extension->TypeOffset = TypeOffsetCounter;
@@ -401,8 +399,10 @@ namespace ESMC {
                         auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
                         auto BufferExp = Mgr->MakeExpr(LTSOps::OpField, VarExp,
                                                        Mgr->MakeVar("MsgBuffer", FAType));
+                        auto CountExp = Mgr->MakeExpr(LTSOps::OpField, VarExp,
+                                                      Mgr->MakeVar("MsgCount", FAType));
 
-                        ChanBuffersToSort.push_back(BufferExp);
+                        ChanBuffersToSort.push_back(make_pair(BufferExp, CountExp));
                     }
                 }
             }
@@ -439,18 +439,14 @@ namespace ESMC {
             return GuardedCommands;
         }
 
-        const vector<ExpT>& LabelledTS::GetChanBuffersToSort() const
+        const vector<pair<ExpT, ExpT>>& LabelledTS::GetChanBuffersToSort() const
         {
             return ChanBuffersToSort;
         }
 
-        vector<ExpT> LabelledTS::GetStateVectorVars() const
+        const vector<ExpT>& LabelledTS::GetStateVectorVars() const
         {
-            vector<ExpT> Retval;
-            for (auto const& StateVectorVar : StateVectorVars) {
-                Retval.push_back(StateVectorVar.first);
-            }
-            return Retval;
+            return StateVectorVars;
         }
 
         inline void LabelledTS::CheckTypeName(const string& Name) const
@@ -850,6 +846,10 @@ namespace ESMC {
                         auto SubstLHS = Mgr->Substitute(SubstMap, Update->GetLHS());
                         auto SubstRHS = Mgr->Substitute(SubstMap, Update->GetRHS());
                         auto NewAsgn = new LTSAssignSimple(SubstLHS, SubstRHS);
+                        auto&& Vars = Mgr->Gather(SubstRHS, Detail::VarGatherer());
+                        if (Vars.size() > 0) {
+                            throw ESMCError((string)"Init state updates cannot refer to variables");
+                        }
                         InitStateGenerators.back().push_back(NewAsgn);
                     }
                 }

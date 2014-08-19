@@ -44,15 +44,25 @@
 namespace ESMC {
     namespace LTS {
 
+        const u32 ZeroPageSize = 4096;
+
         LTSExtensionT::LTSExtensionT()
-            : Offset(-1)
+            : IsMsg(false), Offset(-1), 
+              ConstCompiled(false), 
+              ConstVal(0), 
+              ClearConstant(false),
+              FieldOffset(0),
+              Interp(nullptr)
         {
-            Interps.RValInterp = nullptr;
+            // Nothing here
         }
 
         LTSExtensionT::~LTSExtensionT()
         {
-            // Nothing here
+            if (Interp != nullptr) {
+                delete Interp;
+                Interp = nullptr;
+            }
         }
 
         LTSTypeExtensionT::LTSTypeExtensionT()
