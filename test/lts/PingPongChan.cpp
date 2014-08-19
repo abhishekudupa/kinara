@@ -268,6 +268,7 @@ int main()
     }
 
     auto Checker = new LTSChecker(TheLTS);
+    Checker->BuildAQS();
     delete Checker;
 }
 

@@ -130,9 +130,7 @@ namespace ESMC {
 
     namespace Symm {
         class PermutationSet;
-
         class Canonicalizer;
-
         class PermuterBase;
         class ArrayPermuter;
         class RecordPermuter;

@@ -397,7 +397,9 @@ namespace ESMC {
             swap(PermVecSize, Other.PermVecSize);
             swap(Offsets, Other.Offsets);
             swap(BeginIterator, Other.BeginIterator);
+            BeginIterator.PermSet = this;
             swap(EndIterator, Other.EndIterator);
+            EndIterator.PermSet = this;
             swap(MaxIndex, Other.MaxIndex);
             return *this;
         }

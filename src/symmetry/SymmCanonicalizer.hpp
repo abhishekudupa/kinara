@@ -169,7 +169,9 @@ namespace ESMC {
             Canonicalizer(const LabelledTS* TheLTS);
             ~Canonicalizer();
             
-            StateVec* Canonicalize(const StateVec* InputVector, u32& PermID);
+            StateVec* Canonicalize(const StateVec* InputVector, u32& PermID) const;
+            StateVec* ApplyPermutation(const StateVec* InputVector, u32 PermID) const;
+            StateVec* ApplyInvPermutation(const StateVec* InputVector, u32 PermID) const;
         };
         
     } /* end namespace Symm */
@@ -177,16 +179,5 @@ namespace ESMC {
 
 #endif /* ESMC_SYMM_CANONICALIZER_HPP_ */
 
-
 // 
 // SymmCanonicalizer.hpp ends here
-
-
-
-
-
-
-
-
-
-

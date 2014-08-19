@@ -363,7 +363,7 @@ namespace ESMC {
 
                 PermutationSize *= Factorial(CurTypeSize);
             }
-            PermSet = PermutationSet(TypeSizes, (PermutationSize <= MaxExplicitSize));
+            PermSet = PermutationSet(TypeSizes, (PermutationSize > MaxExplicitSize));
         }
 
         Canonicalizer::~Canonicalizer()
@@ -377,7 +377,7 @@ namespace ESMC {
         }
 
         StateVec* Canonicalizer::Canonicalize(const StateVec* InputVector,
-                                              u32& PermID)
+                                              u32& PermID) const
         {
             auto Factory = InputVector->GetFactory();
             StateVec* BestStateVec = InputVector->Clone();
@@ -403,6 +403,26 @@ namespace ESMC {
             Factory->TakeState(InputVector);
 
             return BestStateVec;
+        }
+
+        StateVec* Canonicalizer::ApplyPermutation(const StateVec* InputVector, u32 PermID) const
+        {
+            auto Retval = InputVector->Clone();
+            auto const& Perm = PermSet.GetPerm(PermID);
+            for (auto Permuter : Permuters) {
+                Permuter->Permute(InputVector, Retval, Perm);
+            }
+            return Retval;
+        }
+
+        StateVec* Canonicalizer::ApplyInvPermutation(const StateVec* InputVector, u32 PermID) const
+        {
+            auto Retval = InputVector->Clone();
+            auto const& Perm = PermSet.GetInversePerm(PermID);
+            for (auto Permuter : Permuters) {
+                Permuter->Permute(InputVector, Retval, Perm);
+            }
+            return Retval;
         }
 
     } /* end namespace Symm */

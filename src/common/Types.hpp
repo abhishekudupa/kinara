@@ -52,6 +52,10 @@
 #include <inttypes.h>
 #include <exception>
 
+#ifndef BOOST_SYSTEM_NO_DEPRECATED
+#define BOOST_SYSTEM_NO_DEPRECATED 1
+#endif
+
 using namespace std;
 
 namespace ESMC {

@@ -45,18 +45,54 @@
 namespace ESMC {
     namespace MC {
 
-        using ESMC::LTS::LabelledTS;
+        using namespace ESMC::LTS;
+        using ESMC::Symm::Canonicalizer;
+
+        namespace Detail {
+            
+            class DFSStackEntry
+            {
+            private:
+                StateVec* State;
+                u32 LastFired;
+
+            public:
+                DFSStackEntry();
+                DFSStackEntry(StateVec* State);
+                DFSStackEntry(StateVec* State, u32 LastFired);
+                DFSStackEntry(const DFSStackEntry& Other);
+                ~DFSStackEntry();
+
+                DFSStackEntry& operator = (const DFSStackEntry& Other);
+                bool operator == (const DFSStackEntry& Other) const;
+
+                u32& GetLastFired();
+                u32 GetLastFired() const;
+                const StateVec* GetState() const;
+                StateVec* GetState();
+                
+                void SetLastFired(u32 NewLastFired);
+            };
+
+        } /* end namespace Detail */
 
         class LTSChecker
         {
         private:
             LabelledTS* TheLTS;
+            StateFactory* Factory;
+            Canonicalizer* TheCanonicalizer;
+            StateVec* ZeroState;
+
+            inline void ApplyUpdates(const vector<LTSAssignRef>& Updates,
+                                     const StateVec* InputState,
+                                     StateVec* OutputState) const;
 
         public:
             LTSChecker(LabelledTS* TheLTS);
             virtual ~LTSChecker();
 
-
+            void BuildAQS();
         };
 
     } /* end namespace MC */

@@ -45,6 +45,7 @@ esmc_LIB_PATHS= \
 
 PROJECT_LIBS=esmc
 libesmc_OBJS= \
+	AQStructure.o \
 	Compiler.o \
 	ExprTypes.o \
 	LabelledTS.o \

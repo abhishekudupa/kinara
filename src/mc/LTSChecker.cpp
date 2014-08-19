@@ -38,25 +38,138 @@
 // Code:
 
 #include "../uflts/LabelledTS.hpp"
+#include "../symmetry/SymmCanonicalizer.hpp"
+#include "../uflts/LTSAssign.hpp"
+
 
 #include "LTSChecker.hpp"
 #include "Compiler.hpp"
+#include "StateVec.hpp"
 
 namespace ESMC {
     namespace MC {
 
-        using ESMC::LTS::LabelledTS;
+        using namespace ESMC::LTS;
+        using ESMC::Symm::Canonicalizer;
+
+        namespace Detail {
+
+            DFSStackEntry::DFSStackEntry()
+                : State(nullptr), LastFired(0)
+            {
+                // Nothing here
+            }
+
+            DFSStackEntry::DFSStackEntry(StateVec* State)
+                : State(State), LastFired(0)
+            {
+                // Nothing here
+            }
+
+            DFSStackEntry::DFSStackEntry(StateVec* State, u32 LastFired)
+                : State(State), LastFired(LastFired)
+            {
+                // Nothing here
+            }
+
+            DFSStackEntry::DFSStackEntry(const DFSStackEntry& Other)
+                : State(Other.State), LastFired(Other.LastFired)
+            {
+                // Nothing here
+            }
+
+            DFSStackEntry::~DFSStackEntry()
+            {
+                // Nothing here
+            }
+
+            DFSStackEntry& DFSStackEntry::operator = (const DFSStackEntry& Other)
+            {
+                if (&Other == this) {
+                    return *this;
+                }
+                State = Other.State;
+                LastFired = Other.LastFired;
+                return *this;
+            }
+
+            bool DFSStackEntry::operator == (const DFSStackEntry& Other) const
+            {
+                return (State == Other.State && LastFired == Other.LastFired);
+            }
+
+            u32& DFSStackEntry::GetLastFired() 
+            {
+                return LastFired;
+            }
+
+            u32 DFSStackEntry::GetLastFired() const
+            {
+                return LastFired;
+            }
+
+            const StateVec* DFSStackEntry::GetState() const
+            {
+                return State;
+            }
+
+            StateVec* DFSStackEntry::GetState()
+            {
+                return State;
+            }
+
+            void DFSStackEntry::SetLastFired(u32 NewLastFired)
+            {
+                LastFired = NewLastFired;
+            }
+
+        } /* end namespace Detail */
 
         LTSChecker::LTSChecker(LabelledTS* TheLTS)
             : TheLTS(TheLTS)
         {
             // Compile the LTS first and foremost
             LTSCompiler::Do(TheLTS);
+            Factory = new StateFactory(TheLTS->StateVectorSize,
+                                       TheLTS->GetUnifiedMType()->GetByteSize());
+            TheCanonicalizer = new Canonicalizer(TheLTS);
+            ZeroState = Factory->MakeState();
         }
 
         LTSChecker::~LTSChecker()
         {
             delete TheLTS;
+        }
+
+        inline void LTSChecker::ApplyUpdates(const vector<LTSAssignRef>& Updates, 
+                                             const StateVec* InputState, 
+                                             StateVec *OutputState) const
+        {
+            for (auto const& Update : Updates) {
+                auto const& LHS = Update->GetLHS();
+                auto const& RHS = Update->GetRHS();
+                auto const& LHSInterp = LHS->ExtensionData.Interp->SAs<LValueInterpreter>();
+                auto const& RHSInterp = RHS->ExtensionData.Interp;
+                if (LHSInterp->IsScalar()) {
+                    LHSInterp->WriteScalar(RHSInterp->EvaluateScalar(InputState),
+                                           OutputState);
+                } else {
+                    LHSInterp->Write(RHSInterp->Evaluate(InputState),
+                                     OutputState);
+                }
+            }
+            return;
+        }
+
+        void LTSChecker::BuildAQS()
+        {
+            auto const& ISGens = TheLTS->GetInitStateGenerators();
+            for (auto const& ISGen : ISGens) {
+                auto CurState = Factory->MakeState();
+                ApplyUpdates(ISGen, ZeroState, CurState);
+                u32 CanonPerm = 0;
+                auto CanonState = TheCanonicalizer->Canonicalize(CurState, CanonPerm);
+            }
         }
 
     } /* end namespace MC */

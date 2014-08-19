@@ -98,6 +98,18 @@ namespace ESMC {
             }
 
             template <typename T>
+            inline T* SAs()
+            {
+                return static_cast<T*>(this);
+            }
+            
+            template <typename T>
+            inline const T* SAs() const
+            {
+                return static_cast<const T*>(this);
+            }
+
+            template <typename T>
             inline bool Is() const
             {
                 return (dynamic_cast<const T*>(this) != nullptr);
@@ -115,7 +127,7 @@ namespace ESMC {
 
         public:
             LValueInterpreter(u32 Size, bool Msg, bool IsScalar, 
-                              i64 Low = 0, i64 High = INT64_MAX);
+                              i64 Low, i64 High);
             virtual ~LValueInterpreter();
 
             i64 GetLow() const;
@@ -148,8 +160,8 @@ namespace ESMC {
             
         public:
             CompiledLValueInterpreter(u32 Size, bool Msg, bool Scalar, 
-                                      u32 Offset, i64 Low = 0, 
-                                      i64 High = INT64_MAX);
+                                      u32 Offset, i64 Low, 
+                                      i64 High);
             virtual ~CompiledLValueInterpreter();
 
             u32 GetOffset() const;
@@ -364,7 +376,7 @@ namespace ESMC {
             IndexInterpreter(u32 Size, bool Msg, bool IsScalar,
                              LValueInterpreter* ArrayInterp,
                              RValueInterpreter* IndexInterp,
-                             i64 Low = 0, i64 High = INT64_MAX);
+                             i64 Low, i64 High);
             virtual ~IndexInterpreter();
 
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
@@ -384,7 +396,7 @@ namespace ESMC {
             FieldInterpreter(u32 Size, bool Msg, bool IsScalar,
                              LValueInterpreter* RecInterp,
                              u32 FieldOffset,
-                             i64 Low = 0, i64 High = INT64_MAX);
+                             i64 Low, i64 High);
             virtual ~FieldInterpreter();
 
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;

@@ -101,11 +101,23 @@ namespace ESMC {
             auto const& ConstVal = Exp->GetConstValue();
 
             if (ConstVal == "clear") {
-                Exp->ExtensionData.ClearConstant = true;
-                Exp->ExtensionData.ConstCompiled = true;
-                return;
+                if (!Type->Is<ExprScalarType>()) {
+                    Exp->ExtensionData.ClearConstant = true;
+                    Exp->ExtensionData.ConstCompiled = true;
+                    return;
+                } else {
+                    Exp->ExtensionData.ConstCompiled = true;
+                    auto TypeAsRange = Type->As<ExprRangeType>();
+                    if (TypeAsRange != nullptr) {
+                        Exp->ExtensionData.ConstVal = TypeAsRange->GetLow();
+                    } else {
+                        Exp->ExtensionData.ConstVal = 0;
+                    }
+                    return;
+                }
             }
             
+
             auto Val = Type->As<ExprScalarType>()->ConstToVal(ConstVal);
             Exp->ExtensionData.ConstVal = Val;
             Exp->ExtensionData.ConstCompiled = true;
@@ -220,10 +232,17 @@ namespace ESMC {
                 if (TypeAsRange != nullptr) {
                     Low = TypeAsRange->GetLow();
                     High = TypeAsRange->GetHigh();
+                } 
+                auto TypeAsScalar = Type->As<Exprs::ExprScalarType>();
+                if (TypeAsScalar != nullptr) {
+                    Low = 0;
+                    High = TypeAsScalar->GetCardinality() - 1;
                 }
 
                 Ext.Interp = new CompiledLValueInterpreter(Type->GetByteSize(),
-                                                           Ext.IsMsg, Type->Is<Exprs::ExprScalarType>(),
+                                                           Ext.IsMsg, 
+                                                           Type->Is<Exprs::ExprScalarType>(),
+                                                           Ext.Offset,
                                                            Low, High);
                 return;
             }
@@ -335,10 +354,14 @@ namespace ESMC {
                     Low = TypeAsRange->GetLow();
                     High = TypeAsRange->GetHigh();
                 }
+                if (Type->Is<Exprs::ExprScalarType>()) {
+                    Low = 0;
+                    High = Type->GetCardinality() - 1;
+                }
                 if (!SubInterps[0]->Is<LValueInterpreter>()) {
                     throw InternalError((string)"Expected an LValueInterpreter.\nAt: " +
                                         __FILE__ + ":" + to_string(__LINE__));
-                }                
+                } 
                 Ext.Interp = new FieldInterpreter(Type->GetByteSize(),
                                                   Ext.IsMsg, Type->Is<Exprs::ExprScalarType>(),
                                                   SubInterps[0]->As<LValueInterpreter>(), 
@@ -1108,6 +1131,13 @@ namespace ESMC {
             for (auto const& ChanExpPair : TheLTS->ChanBuffersToSort) {
                 CompileExp(ChanExpPair.first, TheLTS);
                 CompileExp(ChanExpPair.second, TheLTS);
+            }
+
+            for (auto const& InitStateGen : TheLTS->InitStateGenerators) {
+                for (auto const& Update : InitStateGen) {
+                    CompileExp(Update->GetLHS(), TheLTS);
+                    CompileExp(Update->GetRHS(), TheLTS);
+                }
             }
         }
         
