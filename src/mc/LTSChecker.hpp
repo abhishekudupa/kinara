@@ -83,6 +83,7 @@ namespace ESMC {
             StateFactory* Factory;
             Canonicalizer* TheCanonicalizer;
             StateVec* ZeroState;
+            StateVecPrinter* Printer;
 
             inline void ApplyUpdates(const vector<LTSAssignRef>& Updates,
                                      const StateVec* InputState,

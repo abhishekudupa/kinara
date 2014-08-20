@@ -67,7 +67,7 @@ namespace ESMC {
             static void Do(const ExpT& Exp, const LabelledTS* TheLTS);
         };
 
-        class RValueInterpreter
+        class RValueInterpreter : public RefCountable
         {
         protected:
             bool Scalar;
@@ -191,7 +191,7 @@ namespace ESMC {
             virtual ~EQInterpreter();
 
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
-            virtual const u08* Evaluate(const StateVec* StateVector) const override;            
+            virtual const u08* Evaluate(const StateVec* StateVector) const override;
         };
 
         class NOTInterpreter : public OpInterpreter
@@ -201,7 +201,7 @@ namespace ESMC {
             virtual ~NOTInterpreter();
 
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
-            virtual const u08* Evaluate(const StateVec* StateVector) const override;            
+            virtual const u08* Evaluate(const StateVec* StateVector) const override;
         };
 
         class ITEInterpreter : public OpInterpreter
@@ -211,7 +211,7 @@ namespace ESMC {
             virtual ~ITEInterpreter();
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
-            virtual const u08* Evaluate(const StateVec* StateVector) const override;            
+            virtual const u08* Evaluate(const StateVec* StateVector) const override;
         };
 
         class ORInterpreter : public OpInterpreter

@@ -38,6 +38,7 @@
 // Code:
 
 #include "../mc/Compiler.hpp"
+#include "../containers/SmartPtr.hpp"
 
 #include "LTSExtensions.hpp"
 
@@ -59,10 +60,7 @@ namespace ESMC {
 
         LTSExtensionT::~LTSExtensionT()
         {
-            if (Interp != nullptr) {
-                delete Interp;
-                Interp = nullptr;
-            }
+            // Nothing here
         }
 
         LTSTypeExtensionT::LTSTypeExtensionT()

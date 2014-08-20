@@ -45,6 +45,7 @@
 #include "LTSChecker.hpp"
 #include "Compiler.hpp"
 #include "StateVec.hpp"
+#include "StateVecPrinter.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -134,6 +135,7 @@ namespace ESMC {
                                        TheLTS->GetUnifiedMType()->GetByteSize());
             TheCanonicalizer = new Canonicalizer(TheLTS);
             ZeroState = Factory->MakeState();
+            Printer = new StateVecPrinter(TheLTS);
         }
 
         LTSChecker::~LTSChecker()
@@ -167,8 +169,22 @@ namespace ESMC {
             for (auto const& ISGen : ISGens) {
                 auto CurState = Factory->MakeState();
                 ApplyUpdates(ISGen, ZeroState, CurState);
+                auto&& PrintLines = Printer->PrintState(CurState);
+
+                cout << "Initial State:" << endl;
+                for (auto const& PrintLine : PrintLines) {
+                    cout << PrintLine << endl;
+                }
+
                 u32 CanonPerm = 0;
                 auto CanonState = TheCanonicalizer->Canonicalize(CurState, CanonPerm);
+                auto&& CanonPrintLines = Printer->PrintState(CanonState);
+
+                cout << "Canonicalized Initial State:" << endl;
+                for (auto const& PrintLine : CanonPrintLines) {
+                    cout << PrintLine << endl;
+                }
+                
             }
         }
 

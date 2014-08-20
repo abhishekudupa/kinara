@@ -435,6 +435,7 @@ namespace ESMC {
             }
         }
 
+
         CompiledLValueInterpreter::CompiledLValueInterpreter(u32 Size, bool Msg, 
                                                              bool Scalar, u32 Offset, 
                                                              i64 Low, i64 High)
@@ -527,6 +528,7 @@ namespace ESMC {
             memcpy(DstPtr, Ptr, Size);
         }
 
+
         u32 CompiledLValueInterpreter::GetOffset() const
         {
             return Offset;
@@ -571,6 +573,7 @@ namespace ESMC {
         {
             throw InternalError((string)"Evaluate() called on scalar type");
         }
+
 
         NOTInterpreter::NOTInterpreter(const vector<RValueInterpreter*>& SubInterps)
             : OpInterpreter(true, 1, SubInterps)
@@ -1004,7 +1007,9 @@ namespace ESMC {
                 throw ESMCError((string)"EvaluateScalar() called on non-scalar type");
             }
             u32 Offset = IndexInterp->EvaluateScalar(StateVector);
-            const u08* DstPtr = ArrayInterp->Evaluate(StateVector) + Offset;
+            const u08* DstPtr = ArrayInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + 
+                Offset;
+
             if (Size == 1) {
                 return (*DstPtr) + Low;
             } else if (Size == 2) {
@@ -1031,7 +1036,9 @@ namespace ESMC {
             }
 
             u32 Offset = IndexInterp->EvaluateScalar(StateVector);
-            u08* DstPtr = const_cast<u08*>(ArrayInterp->Evaluate(StateVector) + Offset);
+            u08* DstPtr = 
+                const_cast<u08*>(ArrayInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + 
+                                 Offset);
 
             if (Size == 1) {
                 *((u08*)(DstPtr)) = (u08)(Value - Low);
@@ -1045,7 +1052,10 @@ namespace ESMC {
         void IndexInterpreter::Write(const u08* Ptr, StateVec* StateVector) const
         {
             u32 Offset = IndexInterp->EvaluateScalar(StateVector);
-            u08* DstPtr = const_cast<u08*>(ArrayInterp->Evaluate(StateVector) + Offset);
+            u08* DstPtr = 
+                const_cast<u08*>(ArrayInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + 
+                                 Offset);
+
             memcpy(DstPtr, Ptr, Size);
         }
 
@@ -1070,7 +1080,9 @@ namespace ESMC {
                 throw ESMCError((string)"EvaluateScalar() called on non-scalar type");
             }
 
-            const u08* DstPtr = RecInterp->Evaluate(StateVector) + FieldOffset;
+            const u08* DstPtr = 
+                RecInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + FieldOffset;
+
             if (Size == 1) {
                 return (*DstPtr) + Low;
             } else if (Size == 2) {
@@ -1085,7 +1097,7 @@ namespace ESMC {
             if (Scalar) {
                 throw ESMCError((string)"Evaluate() called on scalar type");
             }
-            return (RecInterp->Evaluate(StateVector) + FieldOffset);
+            return (RecInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + FieldOffset);
         }
 
         void FieldInterpreter::WriteScalar(i64 Value, StateVec* StateVector) const
@@ -1094,7 +1106,10 @@ namespace ESMC {
                 throw ESMCError((string)"WriteScalar() called on non-scalar type");
             }
             
-            u08* DstPtr = const_cast<u08*>(RecInterp->Evaluate(StateVector) + FieldOffset);
+            u08* DstPtr = 
+                const_cast<u08*>(RecInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + 
+                                 FieldOffset);
+
             if (Size == 1) {
                 *((u08*)(DstPtr)) = (u08)(Value - Low);
             } else if (Size == 2) {
@@ -1106,7 +1121,9 @@ namespace ESMC {
 
         void FieldInterpreter::Write(const u08* Ptr, StateVec* StateVector) const
         {
-            u08* DstPtr = const_cast<u08*>(RecInterp->Evaluate(StateVector) + FieldOffset);
+            u08* DstPtr = 
+                const_cast<u08*>(RecInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + 
+                                 FieldOffset);
             memcpy(DstPtr, Ptr, Size);
         }
 
