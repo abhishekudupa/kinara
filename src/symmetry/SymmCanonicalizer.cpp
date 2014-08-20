@@ -89,25 +89,27 @@ namespace ESMC {
             return PermSize;
         }
 
-        PermuterBase* PermuterBase::MakePermuter(u32 Offset, const ExprTypeRef &Type)
+        PermuterBase* PermuterBase::MakePermuter(u32 Offset, const ExprTypeRef &Type,
+                                                 const LabelledTS* TheLTS)
         {
             auto TypeAsArr = Type->As<ExprArrayType>();
             if (TypeAsArr != nullptr) {
-                return new ArrayPermuter(Offset, Type);
+                return new ArrayPermuter(Offset, Type, TheLTS);
             }
             auto TypeAsRec = Type->As<ExprRecordType>();
             if (TypeAsRec != nullptr) {
-                return new RecordPermuter(Offset, Type);
+                return new RecordPermuter(Offset, Type, TheLTS);
             }
             auto TypeAsSym = Type->As<ExprSymmetricType>();
             if (TypeAsSym != nullptr) {
-                return new SymmTypePermuter(Offset, Type);
+                return new SymmTypePermuter(Offset, Type, TheLTS);
             }
             // This does not need any permutation
             return new NoOpPermuter();
         }
 
-        ArrayPermuter::ArrayPermuter(u32 Offset, const ExprTypeRef& ArrayType)
+        ArrayPermuter::ArrayPermuter(u32 Offset, const ExprTypeRef& ArrayType, 
+                                     const LabelledTS* TheLTS)
             : PermuterBase(Offset, 0, 0)
         {
             auto TypeAsArr = ArrayType->As<ExprArrayType>();
@@ -129,7 +131,8 @@ namespace ESMC {
                 
                 for (u32 i = 0; i < PermSize; ++i) {
                     u32 CurOffset = Offset + (i * ElemSize);
-                    auto SubPermuter = PermuterBase::MakePermuter(CurOffset, ValueType);
+                    auto SubPermuter = 
+                        PermuterBase::MakePermuter(CurOffset, ValueType, TheLTS);
                     ElemPermuters.push_back(SubPermuter);
                 }
             }
@@ -159,16 +162,22 @@ namespace ESMC {
 
         void ArrayPermuter::Permute(const StateVec* InStateVector, 
                                     StateVec* OutStateVector,
-                                    const vector<u32>& Permutation)
+                                    const PermutationSet::iterator& CurPerm)
         {
+            auto const& Permutation = CurPerm.GetPerm();
             // Apply the permutation on the elements first
             for (auto ElemPermuter : ElemPermuters) {
-                ElemPermuter->Permute(InStateVector, OutStateVector, Permutation);
+                ElemPermuter->Permute(InStateVector, OutStateVector, CurPerm);
             }
 
             // Now apply my own permutation
+            // But instead of using the input state vector
+            // use a clone of the output state vector computed 
+            // so far
+            auto NewOutStateVector = OutStateVector->Clone();
+
             for (u32 i = TypeOffset; i < TypeOffset + PermSize; ++i) {
-                const u08* SrcBasePtr = InStateVector->GetStateBuffer();
+                const u08* SrcBasePtr = NewOutStateVector->GetStateBuffer();
                 u08* DstBasePtr = OutStateVector->GetStateBuffer();
 
                 u32 CurGetPos = Permutation[i];
@@ -176,18 +185,30 @@ namespace ESMC {
                 u08* DstPtr = (DstBasePtr + Offset + (ElemSize * i));
                 memcpy(DstPtr, SrcPtr, ElemSize);
             }
+            
+            NewOutStateVector->GetFactory()->TakeState(NewOutStateVector);
         }
 
-        RecordPermuter::RecordPermuter(u32 Offset, const ExprTypeRef& RecordType)
+        RecordPermuter::RecordPermuter(u32 Offset, const ExprTypeRef& RecordType,
+                                       const LabelledTS* TheLTS)
             : PermuterBase(Offset, 0, 0)
         {
-            auto TypeAsRec = RecordType->As<ExprRecordType>();
+            auto UMType = TheLTS->GetUnifiedMType()->As<Exprs::ExprUnionType>();
+            bool IsUMType = (RecordType == TheLTS->GetUnifiedMType());
+            auto TypeAsRec = RecordType->As<Exprs::ExprRecordType>();
             auto const& MemberVec = TypeAsRec->GetMemberVec();
 
             for (auto const& Member : MemberVec) {
                 auto const& FieldType = Member.second;
+                auto const& FieldName = Member.first;
                 auto FieldOffset = Offset + TypeAsRec->GetFieldOffset(Member.first);
-                ElemPermuters.push_back(PermuterBase::MakePermuter(FieldOffset, FieldType));
+
+                if (IsUMType && FieldName == UMType->GetTypeIDFieldName()) {
+                    ElemPermuters.push_back(new MTypePermuter(FieldOffset, FieldType, TheLTS));
+                } else {
+                    ElemPermuters.push_back(PermuterBase::MakePermuter(FieldOffset, FieldType,
+                                                                       TheLTS));
+                }
             }
 
             TypeOffset = 0;
@@ -203,11 +224,11 @@ namespace ESMC {
 
         void RecordPermuter::Permute(const StateVec* InStateVector, 
                                      StateVec* OutStateVector, 
-                                     const vector<u32>& Permutation)
+                                     const PermutationSet::iterator& CurPerm)
         {
             // Just apply the permutation to all the members
             for (auto ElemPermuter : ElemPermuters) {
-                ElemPermuter->Permute(InStateVector, OutStateVector, Permutation);
+                ElemPermuter->Permute(InStateVector, OutStateVector, CurPerm);
             }
         }
 
@@ -216,9 +237,45 @@ namespace ESMC {
             return ElemPermuters;
         }
 
+        MTypePermuter::MTypePermuter(u32 Offset, const ExprTypeRef& Type,
+                                     const LabelledTS* TheLTS)
+            : PermuterBase(Offset, 0, 0),
+              MsgCanonMap(TheLTS->GetMsgCanonMap()), 
+              TypeSize(Type->GetByteSize())
+        {
+            // Nothing here
+        }
 
+        MTypePermuter::~MTypePermuter()
+        {
+            // Nothing here
+        }
 
-        SymmTypePermuter::SymmTypePermuter(u32 Offset, const ExprTypeRef& SymmType)
+        void MTypePermuter::Permute(const StateVec* InStateVector,
+                                    StateVec* OutStateVector,
+                                    const PermutationSet::iterator& CurPerm) 
+        {
+            auto PermIdx = CurPerm.GetIndex();
+            u32 ActVal;
+            if (TypeSize == 1) {
+                ActVal = InStateVector->ReadByte(Offset);
+            } else if (TypeSize == 2) {
+                ActVal = InStateVector->ReadShort(Offset);
+            } else {
+                ActVal = InStateVector->ReadWord(Offset);
+            }
+            u32 PermVal = MsgCanonMap[ActVal][PermIdx];
+            if (TypeSize == 1) {
+                OutStateVector->WriteByte(Offset, (u08)PermVal);
+            } else if (TypeSize == 2) {
+                OutStateVector->WriteWord(Offset, (u16)PermVal);
+            } else {
+                OutStateVector->WriteWord(Offset, PermVal);
+            }
+        }
+
+        SymmTypePermuter::SymmTypePermuter(u32 Offset, const ExprTypeRef& SymmType,
+                                           const LabelledTS* TheLTS)
             : PermuterBase(Offset, 0, 0)
         {
             auto TypeExt = SymmType->GetExtension<LTSTypeExtensionT>();
@@ -233,8 +290,9 @@ namespace ESMC {
 
         void SymmTypePermuter::Permute(const StateVec* InStateVector, 
                                      StateVec* OutStateVector, 
-                                     const vector<u32>& Permutation)
+                                     const PermutationSet::iterator& CurPerm)
         {
+            auto const& Permutation = CurPerm.GetPerm();
             u32 ActVal;
             if (PermSize <= 256) {
                 ActVal = InStateVector->ReadByte(Offset);
@@ -266,7 +324,7 @@ namespace ESMC {
 
         void NoOpPermuter::Permute(const StateVec* InStateVector, 
                                    StateVec* OutStateVector, 
-                                   const vector<u32>& Permutation)
+                                   const PermutationSet::iterator& CurPerm)
         {
             // Nothing here
         }
@@ -296,6 +354,9 @@ namespace ESMC {
             // O(n^2) sorting, I know, but we don't expect these 
             // channels to have more than 10 or so elements
             u08* BasePtr = OutStateVector->GetStateBuffer();
+            auto WorkingVec = OutStateVector->Clone();
+            u08* WorkBasePtr = WorkingVec->GetStateBuffer();
+
             auto NumElems = CountExp->ExtensionData.Interp->EvaluateScalar(OutStateVector);
 
             for (u32 i = 0; i < NumElems - 1; ++i) {
@@ -312,10 +373,13 @@ namespace ESMC {
                 }
                 if (MinIndex != i) {
                     u32 IOffset = Offset + (ElemSize * i);
+                    memcpy(WorkBasePtr + IOffset, BasePtr + IOffset, ElemSize);
                     memcpy(BasePtr + IOffset, BasePtr + MinOffset, ElemSize);
+                    memcpy(BasePtr + MinOffset, WorkBasePtr + IOffset, ElemSize);
                 }
             }
-            
+
+            WorkingVec->GetFactory()->TakeState(WorkingVec);
             return;
         }
 
@@ -335,7 +399,8 @@ namespace ESMC {
             u32 Offset = 0;
             for (auto const& StateVectorVar : StateVectorVars) {
                 auto CurPermuter = PermuterBase::MakePermuter(Offset, 
-                                                              StateVectorVar->GetType());
+                                                              StateVectorVar->GetType(),
+                                                              TheLTS);
                 Permuters.push_back(CurPermuter);
                 Offset += StateVectorVar->GetType()->GetByteSize();
             }
@@ -386,9 +451,8 @@ namespace ESMC {
             for (auto it = PermSet.Begin(); it != PermSet.End(); ++it) {
                 WorkingStateVec->Set(*InputVector);
 
-                auto const& Permutation = it.GetPerm();
                 for (auto Permuter : Permuters) {
-                    Permuter->Permute(InputVector, WorkingStateVec, Permutation);
+                    Permuter->Permute(InputVector, WorkingStateVec, it);
                 }
                 for (auto Sorter : Sorters) {
                     Sorter->Sort(WorkingStateVec);
@@ -408,7 +472,7 @@ namespace ESMC {
         StateVec* Canonicalizer::ApplyPermutation(const StateVec* InputVector, u32 PermID) const
         {
             auto Retval = InputVector->Clone();
-            auto const& Perm = PermSet.GetPerm(PermID);
+            auto const& Perm = PermSet.GetIterator(PermID);
             for (auto Permuter : Permuters) {
                 Permuter->Permute(InputVector, Retval, Perm);
             }
@@ -418,7 +482,7 @@ namespace ESMC {
         StateVec* Canonicalizer::ApplyInvPermutation(const StateVec* InputVector, u32 PermID) const
         {
             auto Retval = InputVector->Clone();
-            auto const& Perm = PermSet.GetInversePerm(PermID);
+            auto const& Perm = PermSet.GetIteratorForInv(PermID);
             for (auto Permuter : Permuters) {
                 Permuter->Permute(InputVector, Retval, Perm);
             }

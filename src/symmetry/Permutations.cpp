@@ -388,6 +388,32 @@ namespace ESMC {
             }
         }
 
+        PermutationSet::iterator PermutationSet::GetIterator(u32 Index) const
+        {
+            if (Compact) {
+                auto Retval = BeginIterator;
+                while (Retval.Index != Index) {
+                    ++Retval;
+                }
+                return Retval;
+            } else {
+                auto Retval = BeginIterator;
+                Retval.Index = Index;
+                return Retval;
+            }
+        }
+
+        PermutationSet::iterator PermutationSet::GetIteratorForInv(u32 Index) const
+        {
+            vector<u32> InvPerm;
+            GetInversePerm(Index, InvPerm);
+            auto Retval = BeginIterator;
+            while (Retval.StateVector != InvPerm) {
+                ++Retval;
+            }
+            return Retval;
+        }
+
         PermutationSet& PermutationSet::operator = (PermutationSet Other)
         {
             swap(Compact, Other.Compact);

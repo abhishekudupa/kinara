@@ -120,6 +120,9 @@ namespace ESMC {
             const vector<u32>& GetInversePerm(u32 Index) const;
             void GetInversePerm(u32 Index, vector<u32>& OutPermVec) const;
 
+            iterator GetIterator(u32 Index) const;
+            iterator GetIteratorForInv(u32 Index) const;
+
             const vector<u32>& GetInversePerm(const vector<u32>& PermVec) const;
             void GetInversePerm(const vector<u32>& PermVec, vector<u32>& OutPermVec) const;
 

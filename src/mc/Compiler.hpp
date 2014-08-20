@@ -408,9 +408,8 @@ namespace ESMC {
 
         class LTSCompiler
         {
-        private:
-            static void CompileExp(const ExpT& Exp, LabelledTS* TheLTS);
         public:
+            static void CompileExp(const ExpT& Exp, LabelledTS* TheLTS);
             static void Do(LabelledTS* TheLTS);
         };
         

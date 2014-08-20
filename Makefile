@@ -8,7 +8,7 @@ BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
 CXX=g++
 
-CXXFLAGS=-std=c++11 -Wall -pedantic -fopenmp
+CXXFLAGS=-std=c++11 -Wall -pedantic -fopenmp -pipe
 CXXFLAGS+=-I $(PROJECT_ROOT)/src/extern/z3-4.3.1/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/src/extern/boost-local/boost_install/include
 
@@ -44,6 +44,7 @@ esmc_LIB_PATHS= \
 
 
 PROJECT_LIBS=esmc
+
 libesmc_OBJS= \
 	AQStructure.o \
 	Compiler.o \
@@ -64,6 +65,7 @@ libesmc_OBJS= \
 	Permutations.o \
 	SpookyHash.o \
 	StateVec.o \
+	StateVecPrinter.o \
 	SymbolTable.o \
 	SymmCanonicalizer.o \
 	UIDGenerator.o \

@@ -54,6 +54,7 @@ namespace ESMC {
             friend class EFSMBase;
             friend class MC::LTSChecker;
             friend class MC::LTSCompiler;
+            friend class MC::StateVecPrinter;
 
             static const string ProductMsgName;
 
@@ -72,6 +73,14 @@ namespace ESMC {
             map<string, EFSMBase*> ActualEFSMs;
             map<string, ChannelEFSM*> ChannelEFSMs;
             set<ExprTypeRef> UsedSymmTypes;
+
+            map<ExprTypeRef, vector<ExprTypeRef>> ParamTypeInsts;
+            map<ExprTypeRef, vector<ExpT>> PInstToParams;
+            map<ExprTypeRef, ExprTypeRef> PInstToParamType;
+            // MsgID -> Permutation -> MsgID
+            vector<vector<u32>> MsgCanonMap;
+            // MsgID -> TypeName
+            vector<string> MsgTypeMap;
 
             vector<ExpT> StateVectorVars;
             // Map from automaton name to the set of valid parameter
@@ -99,6 +108,9 @@ namespace ESMC {
 
             inline void CheckConsistency() const;
             inline GCmdRef MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const;
+            inline MgrT::SubstMapT ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
+                                             const vector<u32>& Perm);
+            inline void MakeMsgCanonMap();
 
             ExpT InvariantExp;
             ExpT FinalCondExp;
@@ -116,6 +128,8 @@ namespace ESMC {
             void Freeze();
 
             const string& GetProductMsgName() const;
+            const vector<vector<u32>>& GetMsgCanonMap() const;
+            const vector<string>& GetMsgTypeMap() const;
 
             // Accessors
             const vector<vector<LTSAssignRef>>& GetInitStateGenerators() const;

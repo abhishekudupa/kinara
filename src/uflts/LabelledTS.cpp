@@ -40,6 +40,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 
 #include "../utils/CombUtils.hpp"
+#include "../symmetry/Permutations.hpp"
 
 #include "LabelledTS.hpp"
 #include "LTSUtils.hpp"
@@ -52,6 +53,7 @@ namespace ESMC {
     namespace LTS {
 
         const string LabelledTS::ProductMsgName = "__trans_msg__";
+        using ESMC::Symm::PermutationSet;
         
         LabelledTS::LabelledTS()
             : Mgr(new MgrT()),
@@ -72,6 +74,16 @@ namespace ESMC {
         const string& LabelledTS::GetProductMsgName() const
         {
             return ProductMsgName;
+        }
+
+        const vector<vector<u32>>& LabelledTS::GetMsgCanonMap() const
+        {
+            return MsgCanonMap;
+        }
+
+        const vector<string>& LabelledTS::GetMsgTypeMap() const
+        {
+            return MsgTypeMap;
         }
 
         // helpers
@@ -326,6 +338,88 @@ namespace ESMC {
             return UsedSymmTypes;
         }
 
+
+        inline MgrT::SubstMapT LabelledTS::ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
+                                                     const vector<u32>& Perm)
+        {
+            MgrT::SubstMapT Retval;
+            for (auto const& ParamElemVec : ParamElems) {
+                auto const& ParamType = ParamElemVec[0]->GetType();
+                auto Extension = ParamType->GetExtension<LTSTypeExtensionT>();
+                const u32 Offset = Extension->TypeOffset;
+                for (u32 i = 0; i < ParamElemVec.size(); ++i) {
+                    Retval[ParamElemVec[i]] = ParamElemVec[Perm[Offset + i]];
+                }
+            }
+            return Retval;
+        }
+
+        inline void LabelledTS::MakeMsgCanonMap()
+        {
+            auto UMType = UnifiedMsgType->As<ExprUnionType>();
+            const u32 NumMsgTypes = UMType->GetMemberTypes().size();
+            MsgCanonMap = vector<vector<u32>>(NumMsgTypes);
+            
+            vector<u32> TypeSizes;
+            for (auto const& Type : UsedSymmTypes) {
+                TypeSizes.push_back(Type->GetCardinality());
+            }
+            
+            PermutationSet PermSet(TypeSizes, true);
+            const u32 NumPerms = PermSet.GetMaxIndex();
+            for (u32 i = 0; i < NumMsgTypes; ++i) {
+                MsgCanonMap[i] = vector<u32>(NumPerms);
+            }
+            
+            vector<vector<ExpT>> ParamElems;
+            for (auto const& Type : UsedSymmTypes) {
+                ParamElems.push_back(vector<ExpT>());
+                auto&& Elems = Type->GetElements();
+                for (auto const Elem : Elems) {
+                    ParamElems.back().push_back(Mgr->MakeVal(Elem, Type));
+                }
+            }
+
+            for (auto const& NameType : MsgTypes) {
+                auto const& CurMType = NameType.second;
+                const u32 CurMTypeID = UMType->GetTypeIDForMemberType(CurMType);
+                auto it1 = PInstToParams.find(CurMType);
+                if (it1 == PInstToParams.end()) {
+                    for (u32 j = 0; j < NumPerms; ++j) {
+                        MsgCanonMap[CurMTypeID][j] = CurMTypeID;
+                    }
+                } else {
+                    auto const& InstParams = it1->second;
+                    auto const& ParamType = PInstToParamType[CurMType];
+                    for (auto it2 = PermSet.Begin(); it2 != PermSet.End(); ++it2) {
+                        const u32 CurPermIndex = it2.GetIndex();
+                        const vector<u32>& CurPerm = it2.GetPerm();
+                    
+                        auto SubstMap = ApplyPerm(ParamElems, CurPerm);
+                        
+                        vector<ExpT> PermParams;
+                        for (auto const& InstParam : InstParams) {
+                            PermParams.push_back(SubstMap[InstParam]);
+                        }
+
+                        auto PermType = Mgr->InstantiateType(ParamType, PermParams);
+                        u32 PermTypeID = UMType->GetTypeIDForMemberType(PermType);
+                        MsgCanonMap[CurMTypeID][CurPermIndex] = PermTypeID;
+                    }
+                }
+            }
+
+            // We also populate the msg type map
+            MsgTypeMap = vector<string>(NumMsgTypes);
+            for (auto const& NameType : MsgTypes) {
+                auto const& Type = NameType.second;
+                auto const& Name = NameType.first;
+                
+                const u32 TypeID = UMType->GetTypeIDForMemberType(Type);
+                MsgTypeMap[TypeID] = Name;
+            }
+        }
+
         void LabelledTS::FreezeAutomata()
         {
             AssertMsgsFrozen();
@@ -406,6 +500,8 @@ namespace ESMC {
                     }
                 }
             }
+
+            MakeMsgCanonMap();
         }
         
         void LabelledTS::FreezeMsgs()
@@ -629,6 +725,9 @@ namespace ESMC {
                 auto InstType = InstantiateType(PType, ParamInst, Mgr);
                 auto const& InstName = InstType->As<ExprRecordType>()->GetName();
                 MsgTypes[InstName] = NamedTypes[InstName] = InstType;
+                ParamTypeInsts[PType].push_back(InstType);
+                PInstToParams[InstType] = ParamInst;
+                PInstToParamType[InstType] = PType;
 
                 if (IncludePrimed) {
                     auto PInstType = InstantiateType(PPType, ParamInst, Mgr);
@@ -636,6 +735,9 @@ namespace ESMC {
                     NamedTypes[PInstName] = MsgTypes[PInstName] = PInstType;
                     TypeToPrimed[MsgTypes[InstType->As<ExprRecordType>()->GetName()]] = 
                         MsgTypes[PInstType->As<ExprRecordType>()->GetName()];
+                    ParamTypeInsts[PPType].push_back(PInstType);
+                    PInstToParams[PInstType] = ParamInst;
+                    PInstToParamType[PInstType] = PPType;
                 }
             }
 

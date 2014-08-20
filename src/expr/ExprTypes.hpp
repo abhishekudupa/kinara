@@ -224,6 +224,7 @@ namespace ESMC {
             virtual ~ExprScalarType();
 
             virtual i64 ConstToVal(const string& ConstVal) const = 0;
+            virtual string ValToConst(i64 Val) const = 0;
         };
 
         class ExprBoolType : public ExprScalarType
@@ -242,6 +243,7 @@ namespace ESMC {
             virtual u32 GetCardinality() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
+            virtual string ValToConst(i64 Val) const override;
         };
 
 
@@ -263,6 +265,7 @@ namespace ESMC {
             virtual u32 GetCardinality() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
+            virtual string ValToConst(i64 Val) const override;
         };
 
         class ExprRangeType : public ExprIntType
@@ -290,6 +293,7 @@ namespace ESMC {
             virtual u32 GetCardinality() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
+            virtual string ValToConst(i64 Val) const override;
         };
 
         // Mainly for states and such
@@ -320,6 +324,7 @@ namespace ESMC {
             virtual u32 GetCardinality() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
+            virtual string ValToConst(i64 Val) const override;
         };
 
         class ExprSymmetricType : public ExprScalarType
@@ -359,6 +364,7 @@ namespace ESMC {
             virtual u32 GetCardinality() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
+            virtual string ValToConst(i64 Val) const override;
         };
 
         class ExprFuncType : public ExprTypeBase

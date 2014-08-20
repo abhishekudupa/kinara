@@ -181,6 +181,15 @@ namespace ESMC {
             }
         }
 
+        string ExprBoolType::ValToConst(i64 Val) const
+        {
+            if (Val == 0) {
+                return "false";
+            } else {
+                return "true";
+            }
+        }
+
         ExprIntType::ExprIntType()
             : ExprScalarType()
         {
@@ -243,6 +252,11 @@ namespace ESMC {
         i64 ExprIntType::ConstToVal(const string& ConstVal) const
         {
             return boost::lexical_cast<i64>(ConstVal);
+        }
+
+        string ExprIntType::ValToConst(i64 Val) const
+        {
+            return to_string(Val);
         }
 
         // Inclusive range
@@ -344,6 +358,11 @@ namespace ESMC {
         i64 ExprRangeType::ConstToVal(const string& ConstVal) const
         {
             return boost::lexical_cast<i64>(ConstVal);
+        }
+
+        string ExprRangeType::ValToConst(i64 Val) const
+        {
+            return to_string(Val);
         }
 
         ExprEnumType::ExprEnumType(const string& Name, 
@@ -506,6 +525,11 @@ namespace ESMC {
             return GetMemberIdx(ConstVal);
         }
 
+        string ExprEnumType::ValToConst(i64 Val) const
+        {
+            return MemberVec[Val];
+        }
+
         ExprSymmetricType::ExprSymmetricType(const string& Name, u32 Size)
             : ExprScalarType(), Name(Name), Size(Size), Members(Size)
         {
@@ -619,6 +643,11 @@ namespace ESMC {
         i64 ExprSymmetricType::ConstToVal(const string& ConstVal) const
         {
             return GetMemberIdx(ConstVal);
+        }
+
+        string ExprSymmetricType::ValToConst(i64 Val) const
+        {
+            return Members[Val];
         }
 
         static inline string MangleName(const string& Name, 

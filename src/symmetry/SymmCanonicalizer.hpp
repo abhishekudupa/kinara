@@ -76,13 +76,14 @@ namespace ESMC {
 
             virtual void Permute(const StateVec* InStateVector,
                                  StateVec* OutStateVector,
-                                 const vector<u32>& Permutation) = 0;
+                                 const PermutationSet::iterator& PermIter) = 0;
 
             u32 GetOffset() const;
             u32 GetTypeOffset() const;
             u32 GetPermSize() const;
 
-            static PermuterBase* MakePermuter(u32 Offset, const ExprTypeRef& Type);
+            static PermuterBase* MakePermuter(u32 Offset, const ExprTypeRef& Type,
+                                              const LabelledTS* TheLTS);
         };
 
         class ArrayPermuter : public PermuterBase
@@ -93,7 +94,8 @@ namespace ESMC {
             vector<PermuterBase*> ElemPermuters;
 
         public:
-            ArrayPermuter(u32 Offset, const ExprTypeRef& ArrayType);
+            ArrayPermuter(u32 Offset, const ExprTypeRef& ArrayType,
+                          const LabelledTS* TheLTS);
             virtual ~ArrayPermuter();
 
             u32 GetElemSize() const;
@@ -102,7 +104,7 @@ namespace ESMC {
 
             virtual void Permute(const StateVec* InStateVector,
                                  StateVec* OutStateVector,
-                                 const vector<u32>& Permutation) override;
+                                 const PermutationSet::iterator& CurPerm) override;
         };
 
         class RecordPermuter : public PermuterBase
@@ -111,24 +113,42 @@ namespace ESMC {
             vector<PermuterBase*> ElemPermuters;
 
         public:
-            RecordPermuter(u32 Offset, const ExprTypeRef& RecordType);
+            RecordPermuter(u32 Offset, const ExprTypeRef& RecordType,
+                           const LabelledTS* TheLTS);
             virtual ~RecordPermuter();
 
             const vector<PermuterBase*>& GetElemPermuters() const;
             virtual void Permute(const StateVec* InStateVector,
                                  StateVec* OutStateVector,
-                                 const vector<u32>& Permutation) override;
+                                 const PermutationSet::iterator& CurPerm) override;
+        };
+
+        class MTypePermuter : public PermuterBase
+        {
+        private:
+            vector<vector<u32>> MsgCanonMap;
+            u32 TypeSize;
+
+        public:
+            MTypePermuter(u32 Offset, const ExprTypeRef& Type, 
+                          const LabelledTS* TheLTS);
+
+            virtual ~MTypePermuter();
+            virtual void Permute(const StateVec* InStateVector,
+                                 StateVec* OutStateVector,
+                                 const PermutationSet::iterator& CurPerm) override;
         };
 
         class SymmTypePermuter : public PermuterBase
         {
         public:
-            SymmTypePermuter(u32 Offset, const ExprTypeRef& Type);
+            SymmTypePermuter(u32 Offset, const ExprTypeRef& Type,
+                             const LabelledTS* TheLTS);
             virtual ~SymmTypePermuter();
 
             virtual void Permute(const StateVec* InStateVector,
                                  StateVec* OutStateVector,
-                                 const vector<u32>& Permutation) override;
+                                 const PermutationSet::iterator& CurPerm) override;
         };
 
         class NoOpPermuter : public PermuterBase
@@ -139,7 +159,7 @@ namespace ESMC {
             
             virtual void Permute(const StateVec* InStateVector,
                                  StateVec* OutStateVector,
-                                 const vector<u32>& Permutation) override;
+                                 const PermutationSet::iterator& CurPerm) override;
         };
 
         // Sort a channel buffer (for unordered channels)
