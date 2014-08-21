@@ -428,7 +428,7 @@ namespace ESMC {
 
                 PermutationSize *= Factorial(CurTypeSize);
             }
-            PermSet = PermutationSet(TypeSizes, (PermutationSize > MaxExplicitSize));
+            PermSet = new PermutationSet(TypeSizes, (PermutationSize > MaxExplicitSize));
         }
 
         Canonicalizer::~Canonicalizer()
@@ -439,6 +439,7 @@ namespace ESMC {
             for (auto Sorter : Sorters) {
                 delete Sorter;
             }
+            delete PermSet;
         }
 
         StateVec* Canonicalizer::Canonicalize(const StateVec* InputVector,
@@ -448,7 +449,7 @@ namespace ESMC {
             StateVec* BestStateVec = InputVector->Clone();
             auto WorkingStateVec = InputVector->Clone();
 
-            for (auto it = PermSet.Begin(); it != PermSet.End(); ++it) {
+            for (auto it = PermSet->Begin(); it != PermSet->End(); ++it) {
                 WorkingStateVec->Set(*InputVector);
 
                 for (auto Permuter : Permuters) {
@@ -472,7 +473,7 @@ namespace ESMC {
         StateVec* Canonicalizer::ApplyPermutation(const StateVec* InputVector, u32 PermID) const
         {
             auto Retval = InputVector->Clone();
-            auto const& Perm = PermSet.GetIterator(PermID);
+            auto const& Perm = PermSet->GetIterator(PermID);
             for (auto Permuter : Permuters) {
                 Permuter->Permute(InputVector, Retval, Perm);
             }
@@ -482,7 +483,7 @@ namespace ESMC {
         StateVec* Canonicalizer::ApplyInvPermutation(const StateVec* InputVector, u32 PermID) const
         {
             auto Retval = InputVector->Clone();
-            auto const& Perm = PermSet.GetIteratorForInv(PermID);
+            auto const& Perm = PermSet->GetIteratorForInv(PermID);
             for (auto Permuter : Permuters) {
                 Permuter->Permute(InputVector, Retval, Perm);
             }

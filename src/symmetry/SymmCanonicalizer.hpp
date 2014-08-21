@@ -183,7 +183,7 @@ namespace ESMC {
         private:
             vector<PermuterBase*> Permuters;
             vector<ChanBufferSorter*> Sorters;
-            PermutationSet PermSet;
+            PermutationSet* PermSet;
 
         public:
             Canonicalizer(const LabelledTS* TheLTS);

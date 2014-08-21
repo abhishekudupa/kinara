@@ -37,214 +37,292 @@
 
 // Code:
 
-#include "Permutations.hpp"
 #include <algorithm>
+
+#include "../utils/CombUtils.hpp"
+
+#include "Permutations.hpp"
 
 namespace ESMC {
     namespace Symm {
+        
+        // Allow use of explicit representation for permutations
+        // upto size 8. This will require less than 1MB of
+        // memory for explicit representation. Beyond this 
+        // size, the memory usage will be too high and we 
+        // use a more compact representation that trades off 
+        // CPU time for memory usage.
+        const u32 DomainPermuter::MaxExplicitSize = 8;
 
-        PermutationSet::iterator::iterator()
-            : PermSet(nullptr), Index(-1), Compact(false)
+        inline u32 DomainPermuter::GetLehmerCodeForPerm(const vector<u08>& Perm) const
         {
-            // Nothing here
+            u32 Retval = 0;
+            u32 Multiplier = DomMinusOneFactorial;
+            // Assumes that the perm has domain size
+            for (u32 i = 0; i < DomainSize; ++i) {
+                auto FirstElem = Perm[i];
+                u32 Pos = count_if(Perm.begin() + i, Perm.end(), 
+                                   [=] (u32 Elem) -> bool 
+                                   { return (Elem < FirstElem); });
+                Retval += (Pos * Multiplier);
+                if (i + 1 != DomainSize) {
+                    Multiplier /= (DomainSize - i - 1);
+                }
+            }
+            return Retval;
         }
 
-        PermutationSet::iterator::iterator(PermutationSet* PermSet, bool Compact)
-            : PermSet(PermSet), Index(0), Compact(Compact)
+        inline void DomainPermuter::GetPermForLehmerCode(u32 Code, 
+                                                         vector<u08>& OutPerm) const
         {
-            auto const& Offsets = PermSet->Offsets;
-
-            if (!Compact) {
-                for (auto Offset : Offsets) {
-                    for (u32 i = 0; i < Offset; ++i) {
-                        StateVector.push_back(i);
-                    }
+            u32 Multiplier = DomMinusOneFactorial;
+            u32 LeftCode = Code;
+            u32 j = 0;
+            OutPerm = IdentityPerm;
+            for (u32 i = 0; i < DomainSize; ++i) {
+                u32 Digit = LeftCode / Multiplier;
+                rotate(OutPerm.begin() + j, OutPerm.begin() + Digit + j, 
+                       OutPerm.begin() + Digit + 1 + j);
+                LeftCode = LeftCode % Multiplier;
+                ++j;
+                if (i + 1 != DomainSize) {
+                    Multiplier /= (DomainSize - i - 1);
                 }
             }
         }
 
-        PermutationSet::iterator::iterator(const iterator& Other)
-            : StateVector(Other.StateVector),
-              PermSet(Other.PermSet), Index(Other.Index),
-              Compact(Other.Compact)
+        inline void DomainPermuter::InvertPerm(const vector<u08>& Perm, 
+                                                   vector<u08>& OutPerm) const
+        {
+            for (u32 i = 0; i < DomainSize; ++i) {
+                OutPerm[Perm[i]] = i;
+            }
+        }
+        
+        DomainPermuter::DomainPermuter(u32 DomainSize, u32 Offset,
+                                               bool Compact)
+            : DomainSize(DomainSize), PermSize((u32)Factorial(DomainSize)), 
+              Offset(Offset), Compact(Compact || DomainSize > MaxExplicitSize),
+              DomMinusOneFactorial(Factorial(DomainSize - 1))
+        {
+            for (u32 i = 0; i < DomainSize; ++i) {
+                IdentityPerm.push_back(i);
+                CachedPerm.push_back(0);
+                CachedInvPerm.push_back(0);
+            }
+
+            if (!Compact) {
+                PermIdxToInvPermIdx.insert(PermIdxToInvPermIdx.end(), PermSize, 0);
+                
+                for (u32 i = 0; i < PermSize; ++i) {
+                    GetPermForLehmerCode(i, CachedPerm);
+                    InvertPerm(CachedPerm, CachedInvPerm);
+                    u32 InvIdx = GetLehmerCodeForPerm(CachedInvPerm);
+                    PermIdxToInvPermIdx[i] = InvIdx;
+                    Permutations.push_back(CachedPerm);
+                    PermToIdxMap[CachedPerm] = i;
+                }
+            }
+        }
+
+        DomainPermuter::~DomainPermuter()
         {
             // Nothing here
         }
 
-        PermutationSet::iterator::iterator(iterator&& Other)
-            : iterator()
+        u32 DomainPermuter::GetDomainSize() const
         {
-            swap(StateVector, Other.StateVector);
-            swap(PermSet, Other.PermSet);
-            swap(Index, Other.Index);
-            swap(Compact, Other.Compact);
+            return DomainSize;
+        }
+
+        u32 DomainPermuter::GetOffset() const
+        {
+            return Offset;
+        }
+
+        const vector<u08>& DomainPermuter::GetIdentityPerm() const
+        {
+            return IdentityPerm;
+        }
+
+        u32 DomainPermuter::GetPermSize() const
+        {
+            return PermSize;
+        }
+
+        const vector<u08>& DomainPermuter::GetPerm(u32 Idx) const
+        {
+            if (!Compact) {
+                return Permutations[Idx];
+            } else {
+                GetPermForLehmerCode(Idx, CachedPerm);
+                return CachedPerm;
+            }
+        }
+
+        const vector<u08>& DomainPermuter::GetInvPerm(u32 Idx) const
+        {
+            if (!Compact) {
+                return Permutations[PermIdxToInvPermIdx[Idx]];
+            } else {
+                GetPermForLehmerCode(Idx, CachedPerm);
+                InvertPerm(CachedPerm, CachedInvPerm);
+                u32 InvIdx = GetLehmerCodeForPerm(CachedInvPerm);
+                GetPermForLehmerCode(InvIdx, CachedPerm);
+                return CachedPerm;
+            }
+        }
+
+        const vector<u08>& DomainPermuter::GetInvPerm(const vector<u08>& Perm) const
+        {
+            InvertPerm(Perm, CachedInvPerm);
+            return CachedInvPerm;
+        }
+
+        void DomainPermuter::GetInvPerm(const vector<u08>& Perm, vector<u08>& OutPerm) const
+        {
+            InvertPerm(Perm, OutPerm);
+        }
+
+        void DomainPermuter::GetPerm(u32 Idx, vector<u08>& OutPerm) const
+        {
+            if (!Compact) {
+                OutPerm = Permutations[Idx];
+            } else {
+                GetPermForLehmerCode(Idx, OutPerm);
+            }
+        }
+
+        void DomainPermuter::GetInvPerm(u32 Idx, vector<u08>& OutPerm) const
+        {
+            if (!Compact) {
+                OutPerm = Permutations[PermIdxToInvPermIdx[Idx]];
+            } else {
+                GetPermForLehmerCode(Idx, CachedPerm);
+                GetInvPerm(CachedPerm, OutPerm);
+            }
+        }
+
+        u32 DomainPermuter::GetPermIdx(const vector<u08>& Perm) const
+        {
+            if (!Compact) {
+                auto it = PermToIdxMap.find(Perm);
+                return it->second;
+            } else {
+                return GetLehmerCodeForPerm(Perm);
+            }
+        }
+
+        u32 DomainPermuter::GetInvPermIdx(u32 Idx) const
+        {
+            if (!Compact) {
+                return PermIdxToInvPermIdx[Idx];
+            } else {
+                GetPermForLehmerCode(Idx, CachedPerm);
+                InvertPerm(CachedPerm, CachedInvPerm);
+                return GetLehmerCodeForPerm(CachedInvPerm);
+            }
+        }
+
+        u32 DomainPermuter::GetInvPermIdx(const vector<u08>& Perm) const
+        {
+            if (!Compact) {
+                auto it = PermToIdxMap.find(Perm);
+                return PermIdxToInvPermIdx[it->second];
+            } else {
+                InvertPerm(Perm, CachedPerm);
+                return GetLehmerCodeForPerm(CachedPerm);
+            }
+        }
+
+        PermutationSet::iterator::iterator()
+            : PermSet(nullptr), Index(UINT32_MAX)
+        {
+            // Nothing here
+        }
+
+        PermutationSet::iterator::iterator(const iterator& Other)
+            : PermSet(Other.PermSet), Index(Other.Index)
+        {
+            // Nothing here
+        }
+
+        PermutationSet::iterator::iterator(u32 Index, PermutationSet* PermSet)
+            : PermSet(PermSet), Index(Index)
+        {
+            // Nothing here
         }
 
         PermutationSet::iterator::~iterator()
         {
-            // Nothing here
-        }
-
-        inline void PermutationSet::iterator::Next()
-        {
-            if (*this == PermSet->EndIterator) {
-                return;
-            }
-
-            if (!Compact) {
-                Index++;
-                return;
-            }
-
-            auto const& Offsets = PermSet->Offsets;
-
-            auto PrevIterator = StateVector.begin();
-            u32 OffsetIdx = 0;
-            
-            bool FoundPermutation = false;
-            do {
-                auto CurIterator = StateVector.begin() + Offsets[OffsetIdx];
-                FoundPermutation = next_permutation(PrevIterator, CurIterator);
-
-                // set to lexicographically lowest permutation
-                u32 i = 0;
-                if (!FoundPermutation) {
-                    for (auto it = PrevIterator; it != CurIterator; ++it, ++i) {
-                        *it = i;
-                    }
-                } else {
-                    Index++;
-                }
-                PrevIterator = CurIterator;
-                OffsetIdx++;
-            } while (!FoundPermutation && OffsetIdx < Offsets.size());
-            
-            if (!FoundPermutation) {
-                *this = PermSet->EndIterator;
-            }
-        }
-
-        inline void PermutationSet::iterator::Prev()
-        {
-            if (*this == PermSet->BeginIterator) {
-                return;
-            }
-
-            if (!Compact) {
-                Index--;
-                return;
-            }
-
-            auto const& Offsets = PermSet->Offsets;
-
-            auto PrevIterator = StateVector.begin();
-            u32 OffsetIdx = 0;
-            bool FoundPermutation = false;
-
-            do {
-                auto CurIterator = StateVector.begin() + Offsets[OffsetIdx];
-                FoundPermutation = prev_permutation(PrevIterator, CurIterator);
-
-                // set to lexicographically highest permutation
-                u32 i = Offsets[OffsetIdx] - 1;
-                if (!FoundPermutation) {
-                    for (auto it = PrevIterator; it != CurIterator; ++it, --i) {
-                        *it = i;
-                    }
-                } else {
-                    Index--;
-                }
-                PrevIterator = CurIterator;
-                OffsetIdx++;
-            } while (!FoundPermutation && OffsetIdx < Offsets.size());
+            PermSet = nullptr;
+            Index = UINT32_MAX;
         }
 
         PermutationSet::iterator& PermutationSet::iterator::operator ++ ()
         {
-            Next();
+            if (Index < PermSet->Size) {
+                ++Index;
+            }
             return *this;
         }
 
         PermutationSet::iterator PermutationSet::iterator::operator ++ (int Dummy)
         {
             auto Retval = *this;
-            Next();
+            if (Index < PermSet->Size) {
+                ++Index;
+            }
             return Retval;
         }
 
         PermutationSet::iterator& PermutationSet::iterator::operator -- ()
         {
-            Prev();
+            if (Index > 0) {
+                --Index;
+            }
             return *this;
         }
 
         PermutationSet::iterator PermutationSet::iterator::operator -- (int Dummy)
         {
             auto Retval = *this;
-            Prev();
-            return Retval;
-        }
-
-        PermutationSet::iterator PermutationSet::iterator::operator + (u32 Addend) const
-        {
-            auto Retval = *this;
-            for (u32 i = 0; i < Addend; ++i) {
-                Retval.Next();
-            }
-            return Retval;
-        }
-
-        PermutationSet::iterator PermutationSet::iterator::operator - (u32 Addend) const
-        {
-            auto Retval = *this;
-            for (u32 i = 0; i < Addend; --i) {
-                Retval.Prev();
+            if (Index < PermSet->Size) {
+                ++Index;
             }
             return Retval;
         }
 
         PermutationSet::iterator& PermutationSet::iterator::operator += (u32 Addend)
         {
-            for (u32 i = 0; i < Addend; ++i) {
-                Next();
-            }
+            Index = min(Index + Addend, PermSet->Size);
             return *this;
         }
 
         PermutationSet::iterator& PermutationSet::iterator::operator -= (u32 Addend)
         {
-            for (u32 i = 0; i < Addend; ++i) {
-                Prev();
-            }
-            return *this;
-        }
-
-        PermutationSet::iterator& PermutationSet::iterator::operator = (iterator Other)
-        {
-            swap(StateVector, Other.StateVector);
-            swap(PermSet, Other.PermSet);
-            swap(Index, Other.Index);
-            swap(Compact, Other.Compact);
-            return *this;
-        }
-
-        bool PermutationSet::iterator::operator == (const iterator& Other) const
-        {
-            return (PermSet == Other.PermSet && Index == Other.Index);
-        }
-
-        bool PermutationSet::iterator::operator != (const iterator& Other) const
-        {
-            return (!(this->operator==(Other)));
-        }
-
-        const vector<u32>& PermutationSet::iterator::GetPerm() const
-        {
-            if (Compact) {
-                return StateVector;
+            if (Addend > Index) {
+                Index = 0;
             } else {
-                return PermSet->Permutations[Index];
+                Index -= Addend;
             }
+            return *this;
+        }
+
+        PermutationSet::iterator PermutationSet::iterator::operator + (u32 Addend) const
+        {
+            return iterator(min(PermSet->Size, Index + Addend), PermSet);
+        }
+
+        PermutationSet::iterator PermutationSet::iterator::operator - (u32 Addend) const
+        {
+            return iterator(Addend > Index ? 0 : Index - Addend, PermSet);
+        }
+
+        const vector<u08>& PermutationSet::iterator::GetPerm() const
+        {
+            PermSet->GetPermForIndex(Index);
+            return PermSet->CachedPerm;
         }
 
         u32 PermutationSet::iterator::GetIndex() const
@@ -252,184 +330,94 @@ namespace ESMC {
             return Index;
         }
 
-        static inline i64 Factorial(u32 Num)
+        bool PermutationSet::iterator::operator == (const PermutationSet::iterator& Other) const
         {
-            i64 Retval = 1;
-            for (u32 i = 1; i <= Num; ++i) {
-                Retval *= i;
-            }
-            return Retval;
+            return (PermSet == Other.PermSet && Index == Other.Index);
         }
 
-        // Implementation of permutation set
-        PermutationSet::PermutationSet()
-            : Compact(false), NumTypes(0),
-              BeginIterator(this, false), EndIterator(this, false)
+        bool PermutationSet::iterator::operator != (const PermutationSet::iterator& Other) const
         {
-            // Nothing here
+            return (!(this->operator==(Other)));
         }
 
-        PermutationSet::PermutationSet(const vector<u32>& TypeSizes, bool Compact)
-            : Compact(Compact), NumTypes(TypeSizes.size()),
-              BeginIterator(this, Compact), EndIterator(this, Compact)
+        PermutationSet::iterator& 
+        PermutationSet::iterator::operator = (const PermutationSet::iterator& Other) 
         {
-            BeginIterator.Index = 0;
-            EndIterator.Index = 1;
-            auto CumulativeOffset = 0;
+            if (&Other == this) {
+                return *this;
+            } 
+            Index = Other.Index;
+            PermSet = Other.PermSet;
+            return *this;
+        }
+
+
+        PermutationSet::PermutationSet(const vector<u32>& DomainSizes, bool Compact)
+            : DomainSizes(DomainSizes), NumDomains(DomainSizes.size()), 
+              BeginIterator(0, this), EndIterator(0, this)
+        {
+            u32 Offset = 0;
+            u32 TotalSize = 1;
             PermVecSize = 0;
-            for (auto const& TypeSize : TypeSizes) {
-                CumulativeOffset += TypeSize;
-                Offsets.push_back(CumulativeOffset);
-                EndIterator.Index *= Factorial(TypeSize);
-                PermVecSize += TypeSize;
-                for (u32 i = 0; i < TypeSize; ++i) {
-                    BeginIterator.StateVector.push_back(i);
-                    EndIterator.StateVector.push_back(i);
-                }
+            for (auto const& DomainSize : DomainSizes) {
+                DomPermuters.push_back(new DomainPermuter(DomainSize, Offset, Compact));
+                Offset += DomainSize;
+                Multipliers.push_back(Factorial(DomainSize));
+                TotalSize *= Factorial(DomainSize);
+                PermVecSize += DomainSize;
+                CachedPerm.insert(CachedPerm.end(), DomainSize, 0);
             }
-            
-            MaxIndex = EndIterator.Index;
-
-            if (!Compact) {
-                iterator it(this, true);
-                it.StateVector = BeginIterator.StateVector;
-                BeginIterator.StateVector.clear();
-                EndIterator.StateVector.clear();
-                for (; it != EndIterator; ++it) {
-                    Permutations.push_back(it.GetPerm());
-                }
+            EndIterator.Index = TotalSize;
+            Size = TotalSize;
+            CachedIdx = UINT32_MAX;
+            for (u32 i = 0; i < NumDomains; ++i) {
+                CachedIndices.push_back(UINT32_MAX);
             }
         }
 
-        PermutationSet::PermutationSet(const PermutationSet& Other) 
-            : Compact(Other.Compact), CachedPerm(Other.CachedPerm),
-              Permutations(Other.Permutations), NumTypes(Other.NumTypes),
-              PermVecSize(Other.PermVecSize), Offsets(Other.Offsets), 
-              BeginIterator(Other.BeginIterator), EndIterator(Other.EndIterator), 
-              MaxIndex(Other.MaxIndex)
+        inline void PermutationSet::GetPermForIndex(u32 Index)
         {
-            // Nothing here
-        }
-
-        PermutationSet::PermutationSet(PermutationSet&& Other)
-            : PermutationSet()
-        {
-            swap(Compact, Other.Compact);
-            swap(CachedPerm, Other.CachedPerm);
-            swap(Permutations, Other.Permutations);
-            swap(NumTypes, Other.NumTypes);
-            swap(PermVecSize, Other.PermVecSize);
-            swap(Offsets, Other.Offsets);
-            swap(BeginIterator, Other.BeginIterator);
-            swap(EndIterator, Other.EndIterator);
-            swap(MaxIndex, Other.MaxIndex);
+            if (Index == CachedIdx) {
+                return;
+            }
+            // Extract components
+            u32 LeftIndex = Index;
+            for (u32 i = NumDomains; i > 0; --i) {
+                auto CurIndex = LeftIndex % Multipliers[i-1];
+                LeftIndex = LeftIndex / Multipliers[i-1];
+                if (CachedIndices[i-1] == CurIndex) {
+                    continue;
+                }
+                auto DomPerm = DomPermuters[i-1];
+                auto const& CurPerm = DomPerm->GetPerm(CurIndex);
+                u32 BeginOffset = DomPerm->GetOffset();
+                u32 EndOffset = BeginOffset + DomainSizes[i-1];
+                for (u32 i = BeginOffset; i < EndOffset; ++i) {
+                    CachedPerm[i] = CurPerm[i-BeginOffset];
+                }
+                CachedIndices[i-1] = CurIndex;
+            }
+            CachedIdx = Index;
+            return;
         }
 
         PermutationSet::~PermutationSet()
         {
-            // Nothing here
-        }
-
-        const vector<u32>& PermutationSet::GetPerm(u32 Index) const
-        {
-            GetPerm(Index, CachedPerm);
-            return CachedPerm;
-        }
-
-        void PermutationSet::GetPerm(u32 Index, vector<u32>& PermVec) const
-        {
-            if (Index > MaxIndex) {
-                PermVec = vector<u32>(PermVecSize, 0);
-                return;
-            }
-            if (Compact) {
-                auto it = BeginIterator;
-                it += Index;
-                PermVec = it.GetPerm();
-                return;
-            } else {
-                PermVec = Permutations[Index];
-                return;
+            for (auto DomPermuter : DomPermuters) {
+                delete DomPermuter;
             }
         }
 
-        const vector<u32>& PermutationSet::GetInversePerm(u32 Index) const
+        u32 PermutationSet::GetSize() const
         {
-            vector<u32> PermVec;
-            GetPerm(Index, PermVec);
-            GetInversePerm(PermVec, CachedPerm);
-            return CachedPerm;
-        }
-        
-        void PermutationSet::GetInversePerm(u32 Index, vector<u32>& OutPermVec) const
-        {
-            vector<u32> PermVec;
-            GetPerm(Index, PermVec);
-            GetInversePerm(PermVec, OutPermVec);
+            return Size;
         }
 
-        const vector<u32>& PermutationSet::GetInversePerm(const vector<u32>& PermVec) const
+        u32 PermutationSet::GetPermVecSize() const
         {
-            GetInversePerm(PermVec, CachedPerm);
-            return CachedPerm;
+            return PermVecSize;
         }
 
-        void PermutationSet::GetInversePerm(const vector<u32> &PermVec, 
-                                            vector<u32>& OutPermVec) const
-        {
-            u32 CurIdx = 0;
-            OutPermVec = vector<u32>(PermVecSize, 0);
-
-            for (auto Offset : Offsets) {
-                for (u32 i = 0; i + CurIdx < Offset; ++i) {
-                    OutPermVec[PermVec[i + CurIdx]] = i;
-                }
-                CurIdx = Offset;
-            }
-        }
-
-        PermutationSet::iterator PermutationSet::GetIterator(u32 Index) const
-        {
-            if (Compact) {
-                auto Retval = BeginIterator;
-                while (Retval.Index != Index) {
-                    ++Retval;
-                }
-                return Retval;
-            } else {
-                auto Retval = BeginIterator;
-                Retval.Index = Index;
-                return Retval;
-            }
-        }
-
-        PermutationSet::iterator PermutationSet::GetIteratorForInv(u32 Index) const
-        {
-            vector<u32> InvPerm;
-            GetInversePerm(Index, InvPerm);
-            auto Retval = BeginIterator;
-            while (Retval.StateVector != InvPerm) {
-                ++Retval;
-            }
-            return Retval;
-        }
-
-        PermutationSet& PermutationSet::operator = (PermutationSet Other)
-        {
-            swap(Compact, Other.Compact);
-            swap(CachedPerm, Other.CachedPerm);
-            swap(Permutations, Other.Permutations);
-            swap(NumTypes, Other.NumTypes);
-            swap(PermVecSize, Other.PermVecSize);
-            swap(Offsets, Other.Offsets);
-            swap(BeginIterator, Other.BeginIterator);
-            BeginIterator.PermSet = this;
-            swap(EndIterator, Other.EndIterator);
-            EndIterator.PermSet = this;
-            swap(MaxIndex, Other.MaxIndex);
-            return *this;
-        }
-        
         const PermutationSet::iterator& PermutationSet::Begin() const
         {
             return BeginIterator;
@@ -440,19 +428,26 @@ namespace ESMC {
             return EndIterator;
         }
 
-        i64 PermutationSet::GetMaxIndex() const
+        PermutationSet::iterator PermutationSet::GetIterator(u32 Idx) const
         {
-            return MaxIndex;
+            return iterator(Idx, const_cast<PermutationSet*>(this));
         }
 
-        u32 PermutationSet::GetPermVecSize() const
+        PermutationSet::iterator PermutationSet::GetIteratorForInv(u32 Idx) const
         {
-            return PermVecSize;
-        }
+            u32 Retval = 0;
+            u32 LeftIndex = Idx;
+            vector<u32> InvIndices(NumDomains);
+            for (u32 i = NumDomains; i > 0; --i) {
+                auto CurIdx = LeftIndex % Multipliers[i-1];
+                LeftIndex = LeftIndex / Multipliers[i-1];
+                InvIndices[i-1] = DomPermuters[i-1]->GetInvPermIdx(CurIdx);
+            }
 
-        u32 PermutationSet::GetOffsetForIdx(u32 Idx) const
-        {
-            return Offsets[Idx];
+            for (u32 i = 0; i < NumDomains; ++i) {
+                Retval = (Retval * Multipliers[i]) + InvIndices[i];
+            }
+            return iterator(Retval, const_cast<PermutationSet*>(this));
         }
 
     } /* end namespace Symm */

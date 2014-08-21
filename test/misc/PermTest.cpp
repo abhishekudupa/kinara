@@ -44,16 +44,36 @@ using namespace std;
 using namespace ESMC;
 using namespace Symm;
 
-#define NUMTYPES 3
-#define NUMELEMS 3
+#define NUMTYPES 2
+#define NUMELEMS 4
 
-template<typename T>
-static inline void PrintVec(const vector<T>& Vec)
+static inline void PrintVec(const vector<u08>& Vec)
 {
-    for (auto const& Elem : Vec) {
-        cout << Elem << ", ";
+    for (u32 i = 0; i < NUMTYPES; ++i) {
+        cout << "{ ";
+        for (u32 j = 0; j < NUMELEMS; ++j) {
+            cout << (u32)Vec[i * NUMELEMS + j] << " ";
+        }
+        cout << "} ";
     }
     cout << endl;
+}
+
+static inline void CheckInverse(const vector<u08>& Perm,
+                                const vector<u08>& Inv)
+{
+    if (Perm.size() != Inv.size()) {
+        cout << "Error: Size of inverse doesn't match!" << endl;
+        exit(1);
+    }
+    for (unsigned int i = 0; i < NUMTYPES; ++i) {
+        for (unsigned int j = 0; j < NUMELEMS; ++j) {
+            if (Perm[i*NUMELEMS + Inv[i*NUMELEMS + j]] != j) {
+                cout << "Error: Inverse check failed!" << endl;
+                exit(1);
+            }
+        }
+    }
 }
 
 int main()
@@ -63,17 +83,46 @@ int main()
         TypeSizes.push_back(NUMELEMS);
     }
 
+    cout << "Testing compact permutation sets... " << endl << endl;
     // test for compact permutation sets
     auto Compact = new PermutationSet(TypeSizes, true);
     for (auto it = Compact->Begin(); it != Compact->End(); ++it) {
+        cout << "Permutation:" << endl;
         PrintVec(it.GetPerm());
+        auto it2 = Compact->GetIterator(it.GetIndex());
+        auto Copy1 = it2.GetPerm();
+        auto Copy2 = it.GetPerm();
+        if (Copy1 != Copy2) {
+            cout << "Error in iterator!" << endl;
+            exit(1);
+        }
+        auto it3 = Compact->GetIteratorForInv(it.GetIndex());
+        cout << "Got inverse:" << endl;
+        PrintVec(it3.GetPerm());
+        auto invperm = it3.GetPerm();
+        CheckInverse(it.GetPerm(), invperm);
     }
 
     delete Compact;
 
+    cout << endl << "Testing full permutation sets... " << endl << endl;
+
     auto Full = new PermutationSet(TypeSizes, false);
     for (auto it = Full->Begin(); it != Full->End(); ++it) {
+        cout << "Permutation:" << endl;
         PrintVec(it.GetPerm());
+        auto it2 = Full->GetIterator(it.GetIndex());
+        auto Copy1 = it2.GetPerm();
+        auto Copy2 = it.GetPerm();
+        if (Copy1 != Copy2) {
+            cout << "Error in iterator!" << endl;
+            exit(1);
+        }
+        auto it3 = Full->GetIteratorForInv(it.GetIndex());
+        cout << "Got inverse:" << endl;
+        PrintVec(it3.GetPerm());
+        auto invperm = it3.GetPerm();
+        CheckInverse(it.GetPerm(), invperm);
     }
 }
 

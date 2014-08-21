@@ -109,7 +109,7 @@ namespace ESMC {
             inline void CheckConsistency() const;
             inline GCmdRef MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const;
             inline MgrT::SubstMapT ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
-                                             const vector<u32>& Perm);
+                                             const vector<u08>& Perm);
             inline void MakeMsgCanonMap();
 
             ExpT InvariantExp;

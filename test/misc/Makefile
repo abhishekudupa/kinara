@@ -22,7 +22,7 @@ LDFLAGS+=-Wl,-rpath $(realpath ../../src/extern/boost-local/boost_install/lib)
 LDFLAGS+=-Wl,-rpath $(realpath ../../src/extern/z3-4.3.1/install/)
 
 LINKFLAGS=$(LDFLAGS)
-LINKFLAGS+=-lesmc -lz3 
+LINKFLAGS+=-lesmc -lz3 -lboost_system
 
 CXXFLAGS+=$(OPTFLAGS)
 

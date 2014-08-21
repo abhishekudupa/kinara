@@ -41,34 +41,89 @@
 #define ESMC_PERMUTATIONS_HPP_
 
 #include <vector>
+#include <unordered_map>
+#include <boost/functional/hash.hpp>
 
 #include "../common/FwdDecls.hpp"
 
 namespace ESMC {
     namespace Symm {
 
+        namespace Detail {
+            class PermVecHasher
+            {
+            public:
+                inline u64 operator () (const vector<u08>& PermVec) const
+                {
+                    u64 Retval = 0;
+                    for (auto const& Elem : PermVec) {
+                        boost::hash_combine(Retval, Elem);
+                    }
+                    return Retval;
+                }
+            };
+        } /* end namespace Detail */
+        
+        class DomainPermuter
+        {
+        private:
+            static const u32 MaxExplicitSize;
+
+            u32 DomainSize;
+            u32 PermSize;
+            u32 Offset;
+            vector<u08> IdentityPerm;
+            bool Compact;
+            const u32 DomMinusOneFactorial;
+            mutable vector<u08> CachedPerm;
+            mutable vector<u08> CachedInvPerm;
+            vector<vector<u08>> Permutations;
+            unordered_map<vector<u08>, u32, Detail::PermVecHasher> PermToIdxMap;
+            vector<u32> PermIdxToInvPermIdx;
+
+            inline void GetPermForLehmerCode(u32 Code, vector<u08>& OutPerm) const;
+            inline u32 GetLehmerCodeForPerm(const vector<u08>& Perm) const;
+            inline void InvertPerm(const vector<u08>& Perm, vector<u08>& OutPerm) const;
+
+        public:
+            DomainPermuter(u32 DomainSize, u32 Offset, 
+                               bool Compact = false);
+            ~DomainPermuter();
+
+            // Accessors
+            u32 GetDomainSize() const;
+            u32 GetOffset() const;
+            const vector<u08>& GetIdentityPerm() const;
+            u32 GetPermSize() const;
+
+            const vector<u08>& GetPerm(u32 Idx) const;
+            const vector<u08>& GetInvPerm(u32 Idx) const;
+            const vector<u08>& GetInvPerm(const vector<u08>& Perm) const;
+            void GetInvPerm(const vector<u08>& Perm,
+                            vector<u08>& OutPerm) const;
+
+            void GetPerm(u32 Idx, vector<u08>& OutPerm) const;
+            void GetInvPerm(u32 Idx, vector<u08>& OutPerm) const;
+            u32 GetPermIdx(const vector<u08>& Perm) const;
+            u32 GetInvPermIdx(const vector<u08>& Perm) const;
+            u32 GetInvPermIdx(u32 Idx) const;
+        };
+
+        
         class PermutationSet
         {
         public:
-            // definition of an iterator class
-            class iterator
+            class iterator 
             {
                 friend class PermutationSet;
-
             private:
-                vector<u32> StateVector;
                 PermutationSet* PermSet;
-                i64 Index;
-                bool Compact;
-
-                inline void Next();
-                inline void Prev();
+                u32 Index;
 
             public:
                 iterator();
-                iterator(PermutationSet* PermSet, bool Compact);
                 iterator(const iterator& Other);
-                iterator(iterator&& Other);
+                iterator(u32 Index, PermutationSet* PermSet);
                 ~iterator();
 
                 iterator& operator ++ ();
@@ -76,61 +131,50 @@ namespace ESMC {
                 
                 iterator& operator -- ();
                 iterator operator -- (int Dummy);
-                
-                iterator operator + (u32 Addend) const;
-                iterator operator - (u32 Addent) const;
-                
+
                 iterator& operator += (u32 Addend);
                 iterator& operator -= (u32 Addend);
 
-                iterator& operator = (iterator Other);
+                iterator operator + (u32 Addend) const;
+                iterator operator - (u32 Addend) const;
+
+                const vector<u08>& GetPerm() const;
+                u32 GetIndex() const;
 
                 bool operator == (const iterator& Other) const;
                 bool operator != (const iterator& Other) const;
-                
-                const vector<u32>& GetPerm() const;
-                u32 GetIndex() const;
+                iterator& operator = (const iterator& Other);
             };
 
             friend class iterator;
 
         private:
-            bool Compact;
-            mutable vector<u32> CachedPerm;
-            // If we're not using compact representations
-            vector<vector<u32>> Permutations;
-            u32 NumTypes;
-            u32 PermVecSize;
-            vector<u32> Offsets;
+            vector<u32> DomainSizes;
+            vector<DomainPermuter*> DomPermuters;
+            vector<u32> Multipliers;
+            const u32 NumDomains;
             iterator BeginIterator;
             iterator EndIterator;
-            i64 MaxIndex;
-            
+            u32 Size;
+            u32 PermVecSize;
+            u32 CachedIdx;
+            vector<u32> CachedIndices;
+            vector<u08> CachedPerm;
+
+            inline void GetPermForIndex(u32 Index);
+
         public:
-            PermutationSet();
-            PermutationSet(const vector<u32>& TypeSizes, bool Compact);
-            PermutationSet(const PermutationSet& Other);
-            PermutationSet(PermutationSet&& Other);
+            PermutationSet(const vector<u32>& DomainSizes, bool Compact);
             ~PermutationSet();
-
-            PermutationSet& operator = (PermutationSet Other);
-
-            const vector<u32>& GetPerm(u32 Index) const;
-            void GetPerm(u32 Index, vector<u32>& PermVec) const;
-            const vector<u32>& GetInversePerm(u32 Index) const;
-            void GetInversePerm(u32 Index, vector<u32>& OutPermVec) const;
-
-            iterator GetIterator(u32 Index) const;
-            iterator GetIteratorForInv(u32 Index) const;
-
-            const vector<u32>& GetInversePerm(const vector<u32>& PermVec) const;
-            void GetInversePerm(const vector<u32>& PermVec, vector<u32>& OutPermVec) const;
+            
+            u32 GetSize() const;
+            u32 GetPermVecSize() const;
+            
+            iterator GetIterator(u32 Idx) const;
+            iterator GetIteratorForInv(u32 Idx) const;
 
             const iterator& Begin() const;
             const iterator& End() const;
-            i64 GetMaxIndex() const;
-            u32 GetPermVecSize() const;
-            u32 GetOffsetForIdx(u32 Idx) const;
         };
 
     } /* end namespace Symm */

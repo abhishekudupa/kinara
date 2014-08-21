@@ -340,7 +340,7 @@ namespace ESMC {
 
 
         inline MgrT::SubstMapT LabelledTS::ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
-                                                     const vector<u32>& Perm)
+                                                     const vector<u08>& Perm)
         {
             MgrT::SubstMapT Retval;
             for (auto const& ParamElemVec : ParamElems) {
@@ -366,7 +366,7 @@ namespace ESMC {
             }
             
             PermutationSet PermSet(TypeSizes, true);
-            const u32 NumPerms = PermSet.GetMaxIndex();
+            const u32 NumPerms = PermSet.GetSize();
             for (u32 i = 0; i < NumMsgTypes; ++i) {
                 MsgCanonMap[i] = vector<u32>(NumPerms);
             }
@@ -393,7 +393,7 @@ namespace ESMC {
                     auto const& ParamType = PInstToParamType[CurMType];
                     for (auto it2 = PermSet.Begin(); it2 != PermSet.End(); ++it2) {
                         const u32 CurPermIndex = it2.GetIndex();
-                        const vector<u32>& CurPerm = it2.GetPerm();
+                        auto const& CurPerm = it2.GetPerm();
                     
                         auto SubstMap = ApplyPerm(ParamElems, CurPerm);
                         
@@ -460,8 +460,15 @@ namespace ESMC {
                 // symmetric types marked as used
                 
                 auto const& EFSMParams = EFSM->Params;
+                u64 TotalPermSize = 1;
                 for (auto const& Param : EFSMParams) {
                     UsedSymmTypes.insert(Param->GetType());
+                    TotalPermSize *= (Factorial(Param->GetType()->GetCardinality()));
+                    if (TotalPermSize > UINT32_MAX) {
+                        throw ESMCError((string)"Product of permutation sizes of " + 
+                                        "symmetric types exceeds the maximum supported " + 
+                                        "value");
+                    }
                 }
                 auto const& Decls = EFSM->SymTab.Bot()->GetDeclMap();
                 for (auto const& Decl : Decls) {
@@ -652,6 +659,13 @@ namespace ESMC {
         {
             AssertNotFrozen();
             CheckTypeName(Name);
+
+            if (Size > 12) {
+                throw ESMCError((string)"Symmetric types of size > 12 cannot " + 
+                                "be created. The factorial representation gets " + 
+                                "too large");
+            }
+
             NamedTypes[Name] = SymmTypes[Name] = 
                 Mgr->MakeType<ExprSymmetricType>(Name, Size);
             

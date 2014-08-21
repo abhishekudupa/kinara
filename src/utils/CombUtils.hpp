@@ -75,6 +75,15 @@ namespace ESMC {
         return Result;
     }
 
+    static inline u64 Factorial(u32 Num)
+    {
+        u64 Retval = 1;
+        for (u32 i = 1; i <= Num; ++i) {
+            Retval *= i;
+        }
+        return Retval;
+    }
+
 } /* end namespace */
 
 #endif /* ESMC_COMB_UTILS_HPP_ */
