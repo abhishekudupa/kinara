@@ -72,11 +72,12 @@ namespace ESMC {
         {
         private:
             vector<pair<ExpT, ScalarPrinter>> ExpsToPrint;
+            LTSCompiler* Compiler;
 
             void MakePrinters(const ExpT& Exp, LabelledTS* TheLTS);
             
         public:
-            StateVecPrinter(LabelledTS* TheLTS);
+            StateVecPrinter(LabelledTS* TheLTS, LTSCompiler* Compiler);
             ~StateVecPrinter();
 
             vector<string> PrintState(const StateVec* StateVector) const;

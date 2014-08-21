@@ -47,6 +47,7 @@
 #include "Compiler.hpp"
 #include "StateVec.hpp"
 #include "ZeroPage.hpp"
+#include "LTSChecker.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -205,7 +206,7 @@ namespace ESMC {
             return Size;
         }
 
-        void RValueInterpreter::MakeInterpreter(const ExpT& Exp)
+        void RValueInterpreter::MakeInterpreter(const ExpT& Exp, LTSCompiler* Compiler)
         {
             auto& Ext = Exp->ExtensionData;
             if (Ext.Interp != nullptr) {
@@ -217,9 +218,11 @@ namespace ESMC {
                 if (Ext.ClearConstant) {
                     Ext.Interp = 
                         new CompiledConstInterpreter(Type->GetByteSize(), ZeroPage::Get());
+                    Compiler->RegisterInterp(Ext.Interp);
                 } else {
                     Ext.Interp = 
                         new CompiledConstInterpreter(Type->GetByteSize(), Ext.ConstVal);
+                    Compiler->RegisterInterp(Ext.Interp);
                 }
                 return;
             }
@@ -244,6 +247,7 @@ namespace ESMC {
                                                            Type->Is<Exprs::ExprScalarType>(),
                                                            Ext.Offset,
                                                            Low, High);
+                Compiler->RegisterInterp(Ext.Interp);
                 return;
             }
 
@@ -264,7 +268,7 @@ namespace ESMC {
 
             vector<RValueInterpreter*> SubInterps;
             for (auto const& Child : Children) {
-                MakeInterpreter(Child);
+                MakeInterpreter(Child, Compiler);
                 SubInterps.push_back(Child->ExtensionData.Interp);
             }
 
@@ -372,6 +376,8 @@ namespace ESMC {
                 throw UnimplementedException("Uninterpreted Function Interpretations",
                                              __FILE__, __LINE__);
             }
+
+            Compiler->RegisterInterp(Ext.Interp);
         }
 
         LValueInterpreter::LValueInterpreter(u32 Size, bool Msg, 
@@ -1127,13 +1133,30 @@ namespace ESMC {
             memcpy(DstPtr, Ptr, Size);
         }
 
+        LTSCompiler::LTSCompiler()
+        {
+            // Nothing here
+        }
+
+        LTSCompiler::~LTSCompiler()
+        {
+            for (auto Interp : InterpsToFree) {
+                delete Interp;
+            }
+        }
+
+        void LTSCompiler::RegisterInterp(RValueInterpreter *Interp)
+        {
+            InterpsToFree.push_back(Interp);
+        }
+
         void LTSCompiler::CompileExp(const ExpT& Exp, LabelledTS* TheLTS)
         {
             OffsetCompiler::Do(Exp, TheLTS);
-            RValueInterpreter::MakeInterpreter(Exp);
+            RValueInterpreter::MakeInterpreter(Exp, this);
         }
         
-        void LTSCompiler::Do(LabelledTS* TheLTS)
+        void LTSCompiler::CompileLTS(LabelledTS* TheLTS)
         {
             for (auto const& GCmd : TheLTS->GuardedCommands) {
                 CompileExp(GCmd->GetGuard(), TheLTS);
@@ -1157,24 +1180,9 @@ namespace ESMC {
                 }
             }
         }
-        
 
     } /* end namespace */
 } /* end namespace */
 
 // 
 // Compiler.cpp ends here
-
-
-
-
-
-
-
-
-
-
-
-
-
-

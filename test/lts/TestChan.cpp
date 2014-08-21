@@ -39,6 +39,7 @@
 
 #include "../../src/uflts/LabelledTS.hpp"
 #include "../../src/uflts/LTSEFSM.hpp"
+#include "../../src/uflts/LTSChannelEFSM.hpp"
 
 using namespace ESMC;
 using namespace LTS;
@@ -47,22 +48,21 @@ using namespace Exprs;
 int main()
 {
     auto TheLTS = new LabelledTS();
-    auto Mgr = TheLTS->GetMgr();
     auto SymmType = TheLTS->MakeSymmType("IDType", 2);
     auto ChanSymmType = TheLTS->MakeSymmType("ChanIDType", 2);
     vector<ExpT> Params;
-    Params.push_back(Mgr->MakeVar("ParamVar", SymmType));
-    auto TrueExp = Mgr->MakeTrue();
+    Params.push_back(TheLTS->MakeVar("ParamVar", SymmType));
+    auto TrueExp = TheLTS->MakeTrue();
 
     set<string> EnumMembers = { "EnumConst1", "EnumConst2", "EnumConst3" };
-    auto EnumType = Mgr->MakeType<ExprEnumType>("EnumType", EnumMembers);
+    auto EnumType = TheLTS->MakeEnumType("EnumType", EnumMembers);
 
     vector<pair<string, ExprTypeRef>> Rec1Fields;
-    Rec1Fields.push_back(make_pair("BoolField", Mgr->MakeType<ExprBoolType>()));
-    Rec1Fields.push_back(make_pair("RangeField", Mgr->MakeType<ExprRangeType>(0, 100)));
+    Rec1Fields.push_back(make_pair("BoolField", TheLTS->MakeBoolType()));
+    Rec1Fields.push_back(make_pair("RangeField", TheLTS->MakeRangeType(0, 100)));
 
     vector<pair<string, ExprTypeRef>> Rec2Fields;
-    Rec2Fields.push_back(make_pair("RangeField", Mgr->MakeType<ExprRangeType>(0, 100)));
+    Rec2Fields.push_back(make_pair("RangeField", TheLTS->MakeRangeType(0, 100)));
     Rec2Fields.push_back(make_pair("EnumField", EnumType));
 
     auto MType1 = TheLTS->MakeMsgTypes(Params, TrueExp, "MType1", Rec1Fields, true);
@@ -71,7 +71,7 @@ int main()
     TheLTS->FreezeMsgs();
     
     vector<ExpT> ChanParams;
-    ChanParams = { Mgr->MakeVar("ChanID", ChanSymmType) };
+    ChanParams = { TheLTS->MakeVar("ChanID", ChanSymmType) };
 
     auto Chan1 = TheLTS->MakeChannel("Chan1", ChanParams, TrueExp, 4, true, false, true, false, LTSFairnessType::Strong);
     Chan1->AddMsgs(Params, TrueExp, MType1, Params, LTSFairnessType::Strong, LossDupFairnessType::NotAlwaysLostOrDup);

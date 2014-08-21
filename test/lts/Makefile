@@ -49,5 +49,5 @@ TestChan: TestChan.cpp
 	$(CXX) $(CXXFLAGS) $< -o $@ $(LINKFLAGS) 
 
 clean:
-	rm -rf $(TESTS) *.o core core.*
+	rm -rf $(TESTS) *.o core core.* valgrind.*
 

@@ -125,7 +125,7 @@ namespace ESMC {
         void StateVecPrinter::MakePrinters(const ExpT& Exp, LabelledTS* TheLTS)
         {
             auto Mgr = TheLTS->GetMgr();
-            LTSCompiler::CompileExp(Exp, TheLTS);
+            Compiler->CompileExp(Exp, TheLTS);
             auto Type = Exp->GetType();
             if (Type->Is<ExprScalarType>()) {
                 auto Offset = Exp->ExtensionData.Offset;
@@ -151,12 +151,18 @@ namespace ESMC {
             }
         }
         
-        StateVecPrinter::StateVecPrinter(LabelledTS* TheLTS)
+        StateVecPrinter::StateVecPrinter(LabelledTS* TheLTS, LTSCompiler* Compiler)
+            : Compiler(Compiler)
         {
             auto const& StateVectorVars = TheLTS->GetStateVectorVars();
             for (auto const& Var : StateVectorVars) {
                 MakePrinters(Var, TheLTS);
             }
+        }
+
+        StateVecPrinter::~StateVecPrinter()
+        {
+            // Nothing here
         }
 
         vector<string> StateVecPrinter::PrintState(const StateVec* StateVector) const

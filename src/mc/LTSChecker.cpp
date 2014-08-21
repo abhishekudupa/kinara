@@ -129,18 +129,22 @@ namespace ESMC {
         LTSChecker::LTSChecker(LabelledTS* TheLTS)
             : TheLTS(TheLTS)
         {
-            // Compile the LTS first and foremost
-            LTSCompiler::Do(TheLTS);
+            Compiler = new LTSCompiler();
+            Compiler->CompileLTS(TheLTS);
             Factory = new StateFactory(TheLTS->StateVectorSize,
                                        TheLTS->GetUnifiedMType()->GetByteSize());
             TheCanonicalizer = new Canonicalizer(TheLTS);
             ZeroState = Factory->MakeState();
-            Printer = new StateVecPrinter(TheLTS);
+            Printer = new StateVecPrinter(TheLTS, Compiler);
         }
 
         LTSChecker::~LTSChecker()
         {
             delete TheLTS;
+            delete Compiler;
+            delete Factory;
+            delete TheCanonicalizer;
+            delete Printer;
         }
 
         inline void LTSChecker::ApplyUpdates(const vector<LTSAssignRef>& Updates, 

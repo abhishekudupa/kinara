@@ -346,7 +346,7 @@ namespace ESMC {
             for (auto const& ParamElemVec : ParamElems) {
                 auto const& ParamType = ParamElemVec[0]->GetType();
                 auto Extension = ParamType->GetExtension<LTSTypeExtensionT>();
-                const u32 Offset = Extension->TypeOffset;
+                const i32 Offset = Extension->TypeOffset;
                 for (u32 i = 0; i < ParamElemVec.size(); ++i) {
                     Retval[ParamElemVec[i]] = ParamElemVec[Perm[Offset + i]];
                 }
@@ -399,7 +399,13 @@ namespace ESMC {
                         
                         vector<ExpT> PermParams;
                         for (auto const& InstParam : InstParams) {
-                            PermParams.push_back(SubstMap[InstParam]);
+                            if (SubstMap.find(InstParam) == SubstMap.end()) {
+                                // Not a part of the symmetry
+                                // set up an identity mapping
+                                PermParams.push_back(InstParam);
+                            } else {
+                                PermParams.push_back(SubstMap[InstParam]);
+                            }
                         }
 
                         auto PermType = Mgr->InstantiateType(ParamType, PermParams);

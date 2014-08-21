@@ -67,6 +67,8 @@ namespace ESMC {
             static void Do(const ExpT& Exp, const LabelledTS* TheLTS);
         };
 
+        class LTSCompiler;
+
         class RValueInterpreter : public RefCountable
         {
         protected:
@@ -83,7 +85,7 @@ namespace ESMC {
             virtual i64 EvaluateScalar(const StateVec* StateVector) const = 0;
             virtual const u08* Evaluate(const StateVec* StateVector) const = 0;
 
-            static void MakeInterpreter(const ExpT& Exp);
+            static void MakeInterpreter(const ExpT& Exp, LTSCompiler* Compiler);
 
             template <typename T>
             inline T* As()
@@ -408,9 +410,16 @@ namespace ESMC {
 
         class LTSCompiler
         {
+        private:
+            vector<RValueInterpreter*> InterpsToFree;
+
         public:
-            static void CompileExp(const ExpT& Exp, LabelledTS* TheLTS);
-            static void Do(LabelledTS* TheLTS);
+            LTSCompiler();
+            ~LTSCompiler();
+
+            void RegisterInterp(RValueInterpreter* Interp);
+            void CompileExp(const ExpT& Exp, LabelledTS* TheLTS);
+            void CompileLTS(LabelledTS* TheLTS);
         };
         
     } /* end namespace MC */
