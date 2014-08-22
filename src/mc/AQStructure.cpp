@@ -140,6 +140,11 @@
              it->second.insert(NewEdge);
          }
 
+         u64 AQStructure::GetNumStates() const
+         {
+             return StateSet.size();
+         }
+
     } /* end namespace MC */
 } /* end namespace ESMC */
 

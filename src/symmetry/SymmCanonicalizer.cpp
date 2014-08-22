@@ -448,6 +448,7 @@ namespace ESMC {
             auto Factory = InputVector->GetFactory();
             StateVec* BestStateVec = InputVector->Clone();
             auto WorkingStateVec = InputVector->Clone();
+            PermID = 0;
 
             for (auto it = PermSet->Begin(); it != PermSet->End(); ++it) {
                 WorkingStateVec->Set(*InputVector);

@@ -150,6 +150,9 @@ namespace ESMC {
             delete Factory;
             delete TheCanonicalizer;
             delete Printer;
+            if (AQS != nullptr) {
+                delete AQS;
+            }
         }
 
         inline void LTSChecker::ApplyUpdates(const vector<LTSAssignRef>& Updates, 
@@ -174,14 +177,13 @@ namespace ESMC {
 
         inline const GCmdRef& LTSChecker::GetNextEnabledCmd(StateVec* State, i64& LastFired)
         {
-            do {
-                ++LastFired;
+            while(++LastFired < NumGuardedCmds) {
                 auto const& Guard = GuardedCommands[LastFired]->GetGuard();
                 auto GRes = Guard->ExtensionData.Interp->EvaluateScalar(State);
                 if (GRes != 0) {
                     return GuardedCommands[LastFired];
                 }
-            } while (LastFired < NumGuardedCmds);
+            }
             return GCmdRef::NullPtr;
         }
 
@@ -195,10 +197,10 @@ namespace ESMC {
                 auto& CurEntry = DFSStack.back();
                 auto State = CurEntry.GetState();
                 
-                cout << "Considering State:" << endl;
-                cout << "--------------------------------------------------------" << endl;
-                Printer->PrintState(State, cout);
-                cout << "--------------------------------------------------------" << endl;
+                // cout << "Considering State:" << endl;
+                // cout << "--------------------------------------------------------" << endl;
+                // Printer->PrintState(State, cout);
+                // cout << "--------------------------------------------------------" << endl;
 
                 auto& LastFired = CurEntry.GetLastFired();
                 bool Deadlocked = (LastFired == -1);
@@ -208,10 +210,14 @@ namespace ESMC {
                     if (Deadlocked) {
                         // TODO: Handle deadlocks here
                     }
+                    // cout << "No more successors, popping from stack!" << endl;
                     // Done exploring this state
                     DFSStack.pop_back();
                     continue;
                 }
+
+                // Clear out the message buffer before continuing
+                State->ClearMsgBuffer();
                 
                 // Successors remain to be explored
                 auto const& Updates = Cmd->GetUpdates();
@@ -233,6 +239,7 @@ namespace ESMC {
 
                 if (AQS->Find(CanonState) == nullptr) {
                     AQS->Insert(CanonState);
+                    // cout << "Pushed new successor onto stack." << endl;
                     // TODO: ensure that permid is inverted here
                     // or invert it ourselves
                     AQS->AddEdge(State, CanonState, PermID);
@@ -241,6 +248,7 @@ namespace ESMC {
                 } else {
                     // Successor already explored, add edge
                     // and continue
+                    // cout << "Successor has been previously encountered." << endl;
                     AQS->AddEdge(State, CanonState, PermID);
                     continue;
                 }
@@ -259,12 +267,11 @@ namespace ESMC {
             for (auto const& ISGen : ISGens) {
                 auto CurState = Factory->MakeState();
                 ApplyUpdates(ISGen, ZeroState, CurState);
-                auto&& PrintLines = Printer->PrintState(CurState);
 
                 cout << "Initial State:" << endl;
-                for (auto const& PrintLine : PrintLines) {
-                    cout << PrintLine << endl;
-                }
+                cout << "--------------------------------------------------------" << endl;
+                Printer->PrintState(CurState, cout);
+                cout << "--------------------------------------------------------" << endl;
 
                 u32 CanonPerm = 0;
                 auto CanonState = TheCanonicalizer->Canonicalize(CurState, CanonPerm);
@@ -273,6 +280,9 @@ namespace ESMC {
                     DoDFS(CanonState);
                 }
             }
+
+            cout << "AQS Built!" << endl;
+            cout << "AQS contains " << AQS->GetNumStates() << " states." << endl;
         }
 
     } /* end namespace MC */

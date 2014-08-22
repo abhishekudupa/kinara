@@ -353,7 +353,6 @@ namespace ESMC {
 
             const u32 NumInsts = ParamInsts.size();
             for (u32 i = 0; i < NumInsts; ++i) {
-                auto const& ParamInst = ParamInsts[i];
                 auto const& SubstMap = ParamSubsts[i];
                 auto&& SubstParams = SubstAll(Params, SubstMap, Mgr);
                 

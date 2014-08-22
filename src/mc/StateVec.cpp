@@ -221,7 +221,7 @@ namespace ESMC {
               StateVecBufferPool(new boost::pool<>(StateSize)),
               NumActiveStates(0),
               MsgSize(MsgSize),
-              MsgBuffer(new u08[MsgSize])
+              MsgBuffer((u08*)calloc(sizeof(u08), MsgSize))
         {
             // Nothing here
         }
@@ -230,7 +230,7 @@ namespace ESMC {
         {
             delete StateVecPool;
             delete StateVecBufferPool;
-            delete[] MsgBuffer;
+            free(MsgBuffer);
         }
 
         void StateFactory::ClearMsgBuffer()

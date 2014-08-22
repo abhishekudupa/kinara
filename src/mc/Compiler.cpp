@@ -606,8 +606,7 @@ namespace ESMC {
 
         i64 NOTInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            return (SubInterps[0]->EvaluateScalar(StateVector) == 
-                    SubInterps[1]->EvaluateScalar(StateVector));
+            return (SubInterps[0]->EvaluateScalar(StateVector) == 0);
         }
 
         const u08* NOTInterpreter::Evaluate(const StateVec* StateVector) const
@@ -805,7 +804,7 @@ namespace ESMC {
         i64 SUBInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
             i64 Retval = 0;
-            bool First;
+            bool First = true;
             for (auto SubInterp : SubInterps) {
                 if (First) {
                     Retval += SubInterp->EvaluateScalar(StateVector);

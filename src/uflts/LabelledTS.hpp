@@ -111,6 +111,7 @@ namespace ESMC {
             inline MgrT::SubstMapT ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
                                              const vector<u08>& Perm);
             inline void MakeMsgCanonMap();
+            inline void InstantiateInitState(const InitStateRef& InitState);
 
             ExpT InvariantExp;
             ExpT FinalCondExp;

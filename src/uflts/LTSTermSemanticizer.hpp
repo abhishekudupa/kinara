@@ -544,7 +544,7 @@ namespace ESMC {
 
                 vector<ExprTypeRef> ChildTypes;
                 auto const& Children = Exp->GetChildren();
-                for (auto const& Child : Exp->GetChildren()) {
+                for (auto const& Child : Children) {
                     Child->Accept(this);
                     ChildTypes.push_back(Child->GetType());
                 }

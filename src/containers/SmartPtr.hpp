@@ -68,8 +68,8 @@ namespace ESMC {
         T* Ptr_;
 
         template <typename U>
-        inline ptrdiff_t Compare_(const U& Other) const;
-        inline ptrdiff_t Compare_(const T* OtherPtr) const;
+        inline i64 Compare_(const U& Other) const;
+        inline i64 Compare_(const T* OtherPtr) const;
 
     public:
         static const SmartPtr NullPtr;
@@ -123,8 +123,8 @@ namespace ESMC {
         const T* Ptr_;
         
         template<typename U>
-        inline ptrdiff_t Compare_(const U& Other) const;
-        inline ptrdiff_t Compare_(const T* OtherPtr) const;
+        inline i64 Compare_(const U& Other) const;
+        inline i64 Compare_(const T* OtherPtr) const;
 
     public:
         static const CSmartPtr NullPtr;
@@ -179,15 +179,15 @@ namespace ESMC {
 
     template <typename T>
     template <typename U>
-    inline ptrdiff_t SmartPtr<T>::Compare_(const U &Other) const
+    inline i64 SmartPtr<T>::Compare_(const U &Other) const
     {
-        return (Ptr_ - Other.Ptr_);
+        return (i64)((char*)Ptr_ - (char*)Other.Ptr_);
     }
 
     template <typename T>
-    inline ptrdiff_t SmartPtr<T>::Compare_(const T *OtherPtr) const
+    inline i64 SmartPtr<T>::Compare_(const T *OtherPtr) const
     {
-        return (Ptr_ - OtherPtr);
+        return (i64)((char*)Ptr_ - (char*)OtherPtr);
     }
 
     template <typename T>
@@ -368,15 +368,15 @@ namespace ESMC {
 
     template <typename T>
     template <typename U>
-    inline ptrdiff_t CSmartPtr<T>::Compare_(const U &Other) const
+    inline i64 CSmartPtr<T>::Compare_(const U &Other) const
     {
-        return (Ptr_ - Other.Ptr_);
+        return (i64)((char*)Ptr_ - (char*)Other.Ptr_);
     }
 
     template <typename T>
-    inline ptrdiff_t CSmartPtr<T>::Compare_(const T *OtherPtr) const
+    inline i64 CSmartPtr<T>::Compare_(const T *OtherPtr) const
     {
-        return (Ptr_ - OtherPtr);
+        return (i64)((char*)Ptr_ - (char*)OtherPtr);
     }
 
     template <typename T>

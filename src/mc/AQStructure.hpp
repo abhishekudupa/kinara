@@ -131,6 +131,7 @@ namespace ESMC {
             void Insert(StateVec* SV);
             void InsertInitState(StateVec* SV);
             void AddEdge(StateVec* Source, StateVec* Target, u32 Permutation);
+            u64 GetNumStates() const;
         };
 
     } /* end namespace MC */

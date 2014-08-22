@@ -67,7 +67,7 @@ int main()
 
     // Add the message types
     vector<pair<string, ExprTypeRef>> MsgFields;
-    auto RangeType = TheLTS->MakeRangeType(0, 99);
+    auto RangeType = TheLTS->MakeRangeType(0, 9);
     MsgFields.push_back(make_pair("Data", RangeType));
 
     auto DataMsgType = TheLTS->MakeMsgTypes(Params, TrueExp, "DataMsg", MsgFields, true);
@@ -151,7 +151,7 @@ int main()
     auto CountExp = TheLTS->MakeVar("Count", RangeType);
     auto ZeroExp = TheLTS->MakeVal("0", RangeType);
     auto OneExp = TheLTS->MakeVal("1", RangeType);
-    auto MaxExp = TheLTS->MakeVal("99", RangeType);
+    auto MaxExp = TheLTS->MakeVal("9", RangeType);
     auto CountIncExp = TheLTS->MakeOp(LTSOps::OpITE, 
                                       TheLTS->MakeOp(LTSOps::OpEQ, CountExp, MaxExp),
                                       ZeroExp,
@@ -208,6 +208,12 @@ int main()
     InitUpdates.push_back(new LTSAssignSimple(ServerDotLast, TheLTS->MakeVal("clear", ServerDotLast->GetType())));
     InitUpdates.push_back(new LTSAssignSimple(ServerDotReq, ParamExp));
 
+
+    vector<ExpT> ClientUpdParams = { TheLTS->MakeVar("UpdClientParam", ClientIDType) };
+    ClientStateVar = TheLTS->MakeOp(LTSOps::OpIndex, 
+                                    TheLTS->MakeVar("Client", ClientType),
+                                    ClientUpdParams[0]);
+
     auto ClientDotState = TheLTS->MakeOp(LTSOps::OpField, ClientStateVar,
                                          TheLTS->MakeVar("state", FAType));
     auto ClientDotLast = TheLTS->MakeOp(LTSOps::OpField, ClientStateVar,
@@ -215,9 +221,9 @@ int main()
     auto ClientDotCount = TheLTS->MakeOp(LTSOps::OpField, ClientStateVar,
                                          TheLTS->MakeVar("Count", FAType));
 
-    InitUpdates.push_back(new LTSAssignSimple(ClientDotState, TheLTS->MakeVal("InitState", ClientDotState->GetType())));
-    InitUpdates.push_back(new LTSAssignSimple(ClientDotLast, TheLTS->MakeVal("0", ClientDotLast->GetType())));
-    InitUpdates.push_back(new LTSAssignSimple(ClientDotCount, TheLTS->MakeVal("0", ClientDotCount->GetType())));
+    InitUpdates.push_back(new LTSAssignParam(ClientUpdParams, TrueExp, ClientDotState, TheLTS->MakeVal("InitState", ClientDotState->GetType())));
+    InitUpdates.push_back(new LTSAssignParam(ClientUpdParams, TrueExp, ClientDotLast, TheLTS->MakeVal("0", ClientDotLast->GetType())));
+    InitUpdates.push_back(new LTSAssignParam(ClientUpdParams, TrueExp, ClientDotCount, TheLTS->MakeVal("0", ClientDotCount->GetType())));
 
     InitStates.push_back(new LTSInitState(Params, TrueExp, InitUpdates));
     TheLTS->AddInitStates(InitStates);

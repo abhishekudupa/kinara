@@ -323,11 +323,7 @@ namespace ESMC {
                                    const vector<LTSAssignRef>& Updates)
             : Params(Params), Constraint(Constraint), Updates(Updates)
         {
-            for (auto const& Update : Updates) {
-                if (Update->Is<LTSAssignParam>()) {
-                    throw ESMCError((string)"Parametric updates not allowed in initial state");
-                }
-            }
+            // Nothing here
         }
 
         LTSInitState::~LTSInitState()
@@ -355,9 +351,3 @@ namespace ESMC {
 
 // 
 // LTSTransitions.cpp ends here
-
-
-
-
-
-

@@ -1,53 +1,35 @@
-OPTFLAGS=-ggdb3 -O0 -fno-inline
-#OPTFLAGS=-O3 -flto
+PROJECT_NAME=ltstests
+PROJECT_ROOT=$(realpath .)
+BASE_OBJ_DIR=$(PROJECT_ROOT)/obj
+BASE_LIB_DIR=$(PROJECT_ROOT)/lib
+BASE_BIN_DIR=$(PROJECT_ROOT)/bin
+BASE_GEN_DIR=$(PROJECT_ROOT)
+BASE_SRC_DIR=$(PROJECT_ROOT)
 
 CXX=g++
 
 ifeq "x$(CXX)" "xg++"
-CXXFLAGS=-Wno-unused-local-typedefs
-else
-CXXFLAGS=
+CXXFLAGS+=-Wno-unused-local-typedefs
 endif
 
-CXXFLAGS+=-std=c++11 -fopenmp
-CXXFLAGS+=-I ../../src/exprmgr/ -I ../../src/extern/boost-local/boost_install/include
-CXXFLAGS+=-I ../../src/extern/z3-4.3.1/src/api -fopenmp -Wall -pedantic -fopenmp
+CXXFLAGS+=-std=c++11 -Wall -pedantic -fopenmp -pipe
+CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/src/api
+CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/include
 
-LDFLAGS=-L ../../src/extern/z3-4.3.1/install/
-LDFLAGS+=-L ../../src/extern/boost-local/boost_install/lib/ 
-LDFLAGS+=-L ../../lib/debug
+PROJECT_EXECUTABLES=PingPongChan
+PingPongChan_SYS_LIBS=esmc z3 rt boost_system
+PingPongChan_EXT_LIBS=boost z3 esmc
+libboost_FULL_PATH=$(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/install.ph
+libboost_MAKE_DIR=$(PROJECT_ROOT)/../../src/extern/boost-local/
+libz3_FULL_PATH=$(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install/libz3.so
+libz3_MAKE_DIR=$(PROJECT_ROOT)/../../src/extern/z3-4.3.1/
+libesmc_FULL_PATH=$(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)/libesmc.so
+libesmc_MAKE_DIR=$(PROJECT_ROOT)/../../
 
-LDFLAGS+=-Wl,-rpath $(realpath ../../lib/debug)
-LDFLAGS+=-Wl,-rpath $(realpath ../../src/extern/boost-local/boost_install/lib)
-LDFLAGS+=-Wl,-rpath $(realpath ../../src/extern/z3-4.3.1/install/)
+PingPongChan_OBJS=PingPongChan.o
+PingPongChan_LIB_PATHS= \
+    $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \
+    $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
+    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
-LINKFLAGS=$(LDFLAGS)
-LINKFLAGS+=-lesmc -lz3 -lboost_system
-
-CXXFLAGS+=$(OPTFLAGS)
-
-TESTS=\
-	PingPong \
-	PingPongChan \
-	SemTest \
-	TestChan \
-
-default:	all
-
-all: $(TESTS)
-
-SemTest: SemTest.cpp
-	$(CXX) $(CXXFLAGS) $< -o $@ $(LINKFLAGS) 
-
-PingPong: PingPong.cpp
-	$(CXX) $(CXXFLAGS) $< -o $@ $(LINKFLAGS) 
-
-PingPongChan: PingPongChan.cpp
-	$(CXX) $(CXXFLAGS) $< -o $@ $(LINKFLAGS) 
-
-TestChan: TestChan.cpp
-	$(CXX) $(CXXFLAGS) $< -o $@ $(LINKFLAGS) 
-
-clean:
-	rm -rf $(TESTS) *.o core core.* valgrind.*
-
+include $(PROJECT_ROOT)/../../Makefile.util

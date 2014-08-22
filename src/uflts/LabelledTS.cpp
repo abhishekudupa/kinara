@@ -938,43 +938,78 @@ namespace ESMC {
             return Retval;
         }
 
+        inline void LabelledTS::InstantiateInitState(const InitStateRef& InitState)
+        {
+            auto const& Params = InitState->GetParams();
+            auto const& Constraint = InitState->GetConstraint();
+            auto const& Updates = InitState->GetUpdates();
+
+            SymTab.Push();
+            CheckParams(Params, Constraint, SymTab, Mgr, true);
+            
+            auto&& ParamInsts = InstantiateParams(Params, Constraint, Mgr);
+            const u32 NumParams = Params.size();
+            for (auto const& ParamInst : ParamInsts) {
+                InitStateGenerators.push_back(vector<LTSAssignRef>());
+                
+                MgrT::SubstMapT SubstMap;
+                for (u32 i = 0; i < NumParams; ++i) {
+                    SubstMap[Params[i]] = ParamInst[i];
+                }
+
+                for (auto const& Update : Updates) {
+                    if (Update->Is<LTSAssignSimple>()) {
+                        CheckUpdates({ Update }, SymTab, Mgr, false, "");
+                        auto SubstLHS = Mgr->Substitute(SubstMap, Update->GetLHS());
+                        auto SubstRHS = Mgr->Substitute(SubstMap, Update->GetRHS());
+                        auto NewAsgn = new LTSAssignSimple(SubstLHS, SubstRHS);
+                        auto&& Vars = Mgr->Gather(SubstRHS, Detail::VarGatherer());
+                        if (Vars.size() > 0) {
+                            throw ESMCError((string)"Init state updates cannot refer " + 
+                                            "to variables");
+                        }
+                        InitStateGenerators.back().push_back(NewAsgn);
+                    } else {
+                        auto UpdateAsParam = Update->As<LTSAssignParam>();
+                        auto const& AsgnParams = UpdateAsParam->GetParams();
+                        auto const& AsgnConstraint = UpdateAsParam->GetConstraint();
+
+                        CheckUpdates({ Update }, SymTab, Mgr, false, "");
+
+                        auto&& AsgnParamInsts = InstantiateParams(AsgnParams, 
+                                                                  AsgnConstraint, Mgr);
+                        const u32 NumAsgnParams = AsgnParams.size();
+
+                        for (auto& AsgnParamInst : AsgnParamInsts) {
+                            MgrT::SubstMapT LocalSubstMap = SubstMap;
+                            for (u32 i = 0; i < NumAsgnParams; ++i) {
+                                LocalSubstMap[AsgnParams[i]] = AsgnParamInst[i];
+                            }
+
+                            auto SubstLHS = Mgr->Substitute(LocalSubstMap, Update->GetLHS());
+                            auto SubstRHS = Mgr->Substitute(LocalSubstMap, Update->GetRHS());
+                            auto NewAsgn = new LTSAssignSimple(SubstLHS, SubstRHS);
+                            auto&& Vars = Mgr->Gather(SubstRHS, Detail::VarGatherer());
+                            if (Vars.size() > 0) {
+                                throw ESMCError((string)"Init state updates cannot refer " + 
+                                                "to variables");
+                            }
+                            InitStateGenerators.back().push_back(NewAsgn);
+                        }
+                    }
+                }
+            }
+
+            SymTab.Pop();
+        }
+
         void LabelledTS::AddInitStates(const vector<InitStateRef>& InitStates)
         {
             AssertAutomataFrozen();
             AssertNotFrozen();
 
             for (auto const& InitState : InitStates) {
-
-                auto const& Params = InitState->GetParams();
-                auto const& Constraint = InitState->GetConstraint();
-                auto const& Updates = InitState->GetUpdates();
-                
-                SymTab.Push();
-                CheckParams(Params, Constraint, SymTab, Mgr, true);
-                CheckUpdates(Updates, SymTab, Mgr, false, "");
-                SymTab.Pop();
-                
-                auto&& ParamInsts = InstantiateParams(Params, Constraint, Mgr);
-                const u32 NumParams = Params.size();
-                for (auto const& ParamInst : ParamInsts) {
-                    InitStateGenerators.push_back(vector<LTSAssignRef>());
-                    
-                    MgrT::SubstMapT SubstMap;
-                    for (u32 i = 0; i < NumParams; ++i) {
-                        SubstMap[Params[i]] = ParamInst[i];
-                    }
-
-                    for (auto const& Update : Updates) {
-                        auto SubstLHS = Mgr->Substitute(SubstMap, Update->GetLHS());
-                        auto SubstRHS = Mgr->Substitute(SubstMap, Update->GetRHS());
-                        auto NewAsgn = new LTSAssignSimple(SubstLHS, SubstRHS);
-                        auto&& Vars = Mgr->Gather(SubstRHS, Detail::VarGatherer());
-                        if (Vars.size() > 0) {
-                            throw ESMCError((string)"Init state updates cannot refer to variables");
-                        }
-                        InitStateGenerators.back().push_back(NewAsgn);
-                    }
-                }
+                InstantiateInitState(InitState);
             }
         }
 
