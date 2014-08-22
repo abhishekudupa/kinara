@@ -121,16 +121,16 @@ namespace ESMC {
         {
         private:
             SVHashSetT StateSet;
+            vector<StateVec*> InitStates;
 
         public:
             AQStructure();
             virtual ~AQStructure();
 
-            StateVec* Find(const StateVec* SV) const;
-            void Insert(const StateVec* SV);
-            void AddEdge(const StateVec* Source, 
-                         const StateVec* Target,
-                         u32 Permutation);
+            StateVec* Find(StateVec* SV) const;
+            void Insert(StateVec* SV);
+            void InsertInitState(StateVec* SV);
+            void AddEdge(StateVec* Source, StateVec* Target, u32 Permutation);
         };
 
     } /* end namespace MC */

@@ -54,7 +54,7 @@ namespace ESMC {
             {
             private:
                 StateVec* State;
-                u32 LastFired;
+                i64 LastFired;
 
             public:
                 DFSStackEntry();
@@ -66,12 +66,12 @@ namespace ESMC {
                 DFSStackEntry& operator = (const DFSStackEntry& Other);
                 bool operator == (const DFSStackEntry& Other) const;
 
-                u32& GetLastFired();
-                u32 GetLastFired() const;
+                i64& GetLastFired();
+                i64 GetLastFired() const;
                 const StateVec* GetState() const;
                 StateVec* GetState();
                 
-                void SetLastFired(u32 NewLastFired);
+                void SetLastFired(i64 NewLastFired);
             };
 
         } /* end namespace Detail */
@@ -85,7 +85,12 @@ namespace ESMC {
             StateVec* ZeroState;
             StateVecPrinter* Printer;
             LTSCompiler* Compiler;
+            AQStructure* AQS;
+            vector<GCmdRef> GuardedCommands;
+            u32 NumGuardedCmds;
 
+            inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);
+            inline void DoDFS(StateVec* Root);
             inline void ApplyUpdates(const vector<LTSAssignRef>& Updates,
                                      const StateVec* InputState,
                                      StateVec* OutputState) const;

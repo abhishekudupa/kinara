@@ -192,6 +192,25 @@ namespace ESMC {
             }
             return Retval;
         }
+
+        void StateVecPrinter::PrintState(const StateVec* StateVector, ostream& Out) const
+        {
+            auto&& Lines = PrintState(StateVector);
+            for (auto const& Line : Lines) {
+                Out << Line << endl;
+            }
+        }
+
+        void StateVecPrinter::PrintState(const StateVec* StateVector, 
+                                         const StateVec* PrevStateVector,
+                                         ostream& Out) const
+        {
+            auto&& Lines = PrintState(StateVector, PrevStateVector);
+            for (auto const& Line : Lines) {
+                Out << Line << endl;
+            }
+        }
+
     }
 } /* end namespace ESMC */
 

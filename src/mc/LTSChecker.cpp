@@ -40,12 +40,13 @@
 #include "../uflts/LabelledTS.hpp"
 #include "../symmetry/SymmCanonicalizer.hpp"
 #include "../uflts/LTSAssign.hpp"
-
+#include "../uflts/LTSTransitions.hpp"
 
 #include "LTSChecker.hpp"
 #include "Compiler.hpp"
 #include "StateVec.hpp"
 #include "StateVecPrinter.hpp"
+#include "AQStructure.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -56,13 +57,13 @@ namespace ESMC {
         namespace Detail {
 
             DFSStackEntry::DFSStackEntry()
-                : State(nullptr), LastFired(0)
+                : State(nullptr), LastFired(-1)
             {
                 // Nothing here
             }
 
             DFSStackEntry::DFSStackEntry(StateVec* State)
-                : State(State), LastFired(0)
+                : State(State), LastFired(-1)
             {
                 // Nothing here
             }
@@ -99,12 +100,12 @@ namespace ESMC {
                 return (State == Other.State && LastFired == Other.LastFired);
             }
 
-            u32& DFSStackEntry::GetLastFired() 
+            i64& DFSStackEntry::GetLastFired() 
             {
                 return LastFired;
             }
 
-            u32 DFSStackEntry::GetLastFired() const
+            i64 DFSStackEntry::GetLastFired() const
             {
                 return LastFired;
             }
@@ -119,15 +120,17 @@ namespace ESMC {
                 return State;
             }
 
-            void DFSStackEntry::SetLastFired(u32 NewLastFired)
+            void DFSStackEntry::SetLastFired(i64 NewLastFired)
             {
                 LastFired = NewLastFired;
             }
 
         } /* end namespace Detail */
 
+        using namespace Detail;
+
         LTSChecker::LTSChecker(LabelledTS* TheLTS)
-            : TheLTS(TheLTS)
+            : TheLTS(TheLTS), AQS(nullptr)
         {
             Compiler = new LTSCompiler();
             Compiler->CompileLTS(TheLTS);
@@ -136,6 +139,8 @@ namespace ESMC {
             TheCanonicalizer = new Canonicalizer(TheLTS);
             ZeroState = Factory->MakeState();
             Printer = new StateVecPrinter(TheLTS, Compiler);
+            GuardedCommands = TheLTS->GetGuardedCmds();
+            NumGuardedCmds = GuardedCommands.size();
         }
 
         LTSChecker::~LTSChecker()
@@ -167,9 +172,90 @@ namespace ESMC {
             return;
         }
 
+        inline const GCmdRef& LTSChecker::GetNextEnabledCmd(StateVec* State, i64& LastFired)
+        {
+            do {
+                ++LastFired;
+                auto const& Guard = GuardedCommands[LastFired]->GetGuard();
+                auto GRes = Guard->ExtensionData.Interp->EvaluateScalar(State);
+                if (GRes != 0) {
+                    return GuardedCommands[LastFired];
+                }
+            } while (LastFired < NumGuardedCmds);
+            return GCmdRef::NullPtr;
+        }
+
+        inline void LTSChecker::DoDFS(StateVec *Root)
+        {
+            vector<DFSStackEntry> DFSStack;
+            AQS->InsertInitState(Root);
+            DFSStack.push_back(DFSStackEntry(Root));
+
+            while (DFSStack.size() > 0) {
+                auto& CurEntry = DFSStack.back();
+                auto State = CurEntry.GetState();
+                
+                cout << "Considering State:" << endl;
+                cout << "--------------------------------------------------------" << endl;
+                Printer->PrintState(State, cout);
+                cout << "--------------------------------------------------------" << endl;
+
+                auto& LastFired = CurEntry.GetLastFired();
+                bool Deadlocked = (LastFired == -1);
+                auto const& Cmd = GetNextEnabledCmd(State, LastFired);
+
+                if (Cmd == GCmdRef::NullPtr) {
+                    if (Deadlocked) {
+                        // TODO: Handle deadlocks here
+                    }
+                    // Done exploring this state
+                    DFSStack.pop_back();
+                    continue;
+                }
+                
+                // Successors remain to be explored
+                auto const& Updates = Cmd->GetUpdates();
+                auto NextState = State->Clone();
+
+                for (auto const& Update : Updates) {
+                    auto const& LHS = Update->GetLHS();
+                    auto const& RHS = Update->GetRHS();
+
+                    auto LHSInterp = LHS->ExtensionData.Interp->SAs<LValueInterpreter>();
+                    auto RHSInterp = RHS->ExtensionData.Interp;
+                    
+                    LHSInterp->Update(RHSInterp, State, NextState);
+                }
+
+                u32 PermID;
+                auto CanonState = TheCanonicalizer->Canonicalize(NextState, PermID);
+                // TODO: Check for errors
+
+                if (AQS->Find(CanonState) == nullptr) {
+                    AQS->Insert(CanonState);
+                    // TODO: ensure that permid is inverted here
+                    // or invert it ourselves
+                    AQS->AddEdge(State, CanonState, PermID);
+                    DFSStack.push_back(DFSStackEntry(CanonState));
+                    continue;
+                } else {
+                    // Successor already explored, add edge
+                    // and continue
+                    AQS->AddEdge(State, CanonState, PermID);
+                    continue;
+                }
+            }
+        }
+
         void LTSChecker::BuildAQS()
         {
+            if (AQS != nullptr) {
+                return;
+            }
+            AQS = new AQStructure();
+
             auto const& ISGens = TheLTS->GetInitStateGenerators();
+
             for (auto const& ISGen : ISGens) {
                 auto CurState = Factory->MakeState();
                 ApplyUpdates(ISGen, ZeroState, CurState);
@@ -182,13 +268,10 @@ namespace ESMC {
 
                 u32 CanonPerm = 0;
                 auto CanonState = TheCanonicalizer->Canonicalize(CurState, CanonPerm);
-                auto&& CanonPrintLines = Printer->PrintState(CanonState);
-
-                cout << "Canonicalized Initial State:" << endl;
-                for (auto const& PrintLine : CanonPrintLines) {
-                    cout << PrintLine << endl;
-                }
                 
+                if (AQS->Find(CanonState) == nullptr) {
+                    DoDFS(CanonState);
+                }
             }
         }
 

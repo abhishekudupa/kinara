@@ -407,6 +407,18 @@ namespace ESMC {
             return Msg;
         }
 
+        void LValueInterpreter::Update(const RValueInterpreter *RHS, 
+                                       const StateVec *InStateVector, 
+                                       StateVec *OutStateVector) const
+        {
+            if (Scalar) {
+                WriteScalar(RHS->EvaluateScalar(InStateVector),
+                            OutStateVector);
+            } else {
+                Write(RHS->Evaluate(InStateVector), OutStateVector);
+            }
+        }
+
         CompiledConstInterpreter::CompiledConstInterpreter(u32 Size, i64 Value)
             : RValueInterpreter(true, Size), Value(Value), Ptr(nullptr)
         {

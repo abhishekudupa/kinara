@@ -138,6 +138,9 @@ namespace ESMC {
 
             virtual void WriteScalar(i64 Value, StateVec* StateVector) const = 0;
             virtual void Write(const u08* Ptr, StateVec* StateVector) const = 0;
+
+            void Update(const RValueInterpreter* RHS, const StateVec* InStateVector,
+                        StateVec* OutStateVector) const;
         };
 
         class CompiledConstInterpreter : public RValueInterpreter

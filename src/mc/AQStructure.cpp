@@ -100,9 +100,9 @@
              // Nothing here
          }
 
-         StateVec* AQStructure::Find(const StateVec* SV) const
+         StateVec* AQStructure::Find(StateVec* SV) const
          {
-             auto it = StateSet.find(const_cast<StateVec*>(SV));
+             auto it = StateSet.find(SV);
              if (it == StateSet.end()) {
                  return nullptr;
              } else {
@@ -110,22 +110,28 @@
              }
          }
 
-         void AQStructure::Insert(const StateVec* SV)
+         void AQStructure::Insert(StateVec* SV)
          {
              if (Find(SV)) {
                  return;
              }
-             StateSet[const_cast<StateVec*>(SV)] = AQSEdgeSetT();
+             StateSet[SV] = AQSEdgeSetT();
          }
 
-         void AQStructure::AddEdge(const StateVec* Source,
-                                   const StateVec* Target,
-                                   u32 Permutation)
+         void AQStructure::InsertInitState(StateVec* SV)
          {
-             auto it = StateSet.find(const_cast<StateVec*>(Source));
-             if (it == StateSet.end()) {
+             if (Find(SV)) {
                  return;
              }
+             StateSet[SV] = AQSEdgeSetT();
+             InitStates.push_back(SV);
+         }
+
+         void AQStructure::AddEdge(StateVec* Source,
+                                   StateVec* Target,
+                                   u32 Permutation)
+         {
+             auto it = StateSet.find(Source);
              AQSEdge NewEdge(Target, Permutation);
              auto it2 = it->second.find(NewEdge);
              if (it2 != it->second.end()) {

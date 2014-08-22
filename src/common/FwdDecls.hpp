@@ -126,6 +126,7 @@ namespace ESMC {
 
         class RValueInterpreter;
         class LValueInterpreter;
+        class AQStructure;
     } /* end namespace MC */
 
     namespace Symm {

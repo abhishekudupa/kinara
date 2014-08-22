@@ -85,6 +85,11 @@ namespace ESMC {
             // Prints delta
             vector<string> PrintState(const StateVec* StateVector,
                                       const StateVec* PrevStateVector) const;
+
+            void PrintState(const StateVec* StateVector, ostream& Out) const;
+            void PrintState(const StateVec* StateVector,
+                            const StateVec* PrevStateVector,
+                            ostream& Out) const;
         };
 
     } /* end namespace MC */
@@ -94,3 +99,13 @@ namespace ESMC {
 
 // 
 // StateVecPrinter.hpp ends here
+
+
+
+
+
+
+
+
+
+
