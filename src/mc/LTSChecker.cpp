@@ -136,15 +136,16 @@ namespace ESMC {
             Compiler->CompileLTS(TheLTS);
             Factory = new StateFactory(TheLTS->StateVectorSize,
                                        TheLTS->GetUnifiedMType()->GetByteSize());
-            TheCanonicalizer = new Canonicalizer(TheLTS);
-            ZeroState = Factory->MakeState();
             Printer = new StateVecPrinter(TheLTS, Compiler);
+            TheCanonicalizer = new Canonicalizer(TheLTS, Printer);
             GuardedCommands = TheLTS->GetGuardedCmds();
+            ZeroState = Factory->MakeState();
             NumGuardedCmds = GuardedCommands.size();
         }
 
         LTSChecker::~LTSChecker()
         {
+            Factory->TakeState(ZeroState);
             delete TheLTS;
             delete Compiler;
             delete Factory;
@@ -232,12 +233,20 @@ namespace ESMC {
                     
                     LHSInterp->Update(RHSInterp, State, NextState);
                 }
-
+                
+                // cout << "Got Next State (Uncanonicalized):" << endl;
+                // cout << "--------------------------------------------------------" << endl;
+                // Printer->PrintState(NextState, cout);
+                // cout << "--------------------------------------------------------" << endl;
+                
                 u32 PermID;
                 auto CanonState = TheCanonicalizer->Canonicalize(NextState, PermID);
+                // auto CanonState = NextState;
                 // TODO: Check for errors
 
-                if (AQS->Find(CanonState) == nullptr) {
+                auto ExistingState = AQS->Find(CanonState);
+
+                if (ExistingState == nullptr) {
                     AQS->Insert(CanonState);
                     // cout << "Pushed new successor onto stack." << endl;
                     // TODO: ensure that permid is inverted here
@@ -249,7 +258,8 @@ namespace ESMC {
                     // Successor already explored, add edge
                     // and continue
                     // cout << "Successor has been previously encountered." << endl;
-                    AQS->AddEdge(State, CanonState, PermID);
+                    AQS->AddEdge(State, ExistingState, PermID);
+                    CanonState->GetFactory()->TakeState(CanonState);
                     continue;
                 }
             }
@@ -278,11 +288,15 @@ namespace ESMC {
                 
                 if (AQS->Find(CanonState) == nullptr) {
                     DoDFS(CanonState);
+                } else {
+                    CanonState->GetFactory()->TakeState(CanonState);
                 }
             }
 
             cout << "AQS Built!" << endl;
-            cout << "AQS contains " << AQS->GetNumStates() << " states." << endl;
+            cout << "AQS contains " << AQS->GetNumStates() << " states and " 
+                 << AQS->GetNumEdges() << " edges." << endl;
+            cout << Factory->GetNumActiveStates() << " active states from state factory." << endl;
         }
 
     } /* end namespace MC */
@@ -290,3 +304,13 @@ namespace ESMC {
 
 // 
 // LTSChecker.cpp ends here
+
+
+
+
+
+
+
+
+
+

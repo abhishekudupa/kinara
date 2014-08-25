@@ -338,6 +338,10 @@ namespace ESMC {
             return UsedSymmTypes;
         }
 
+        u32 LabelledTS::GetStateVectorSize() const
+        {
+            return StateVectorSize;
+        }
 
         inline MgrT::SubstMapT LabelledTS::ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
                                                      const vector<u08>& Perm)
@@ -411,6 +415,9 @@ namespace ESMC {
                         auto PermType = Mgr->InstantiateType(ParamType, PermParams);
                         u32 PermTypeID = UMType->GetTypeIDForMemberType(PermType);
                         MsgCanonMap[CurMTypeID][CurPermIndex] = PermTypeID;
+
+                        cout << CurMType->ToString() << " -> " << PermType->ToString()
+                             << " on permutation " << Symm::PermToString(CurPerm) << endl;
                     }
                 }
             }
@@ -446,7 +453,8 @@ namespace ESMC {
                 // Not strictly our job, but it's easiest to 
                 // add the extension data right here
                 CurStateVar->ExtensionData.Offset = StateVectorSize;
-
+                cout << "Var \"" << Name << "\" assigned to offset " << StateVectorSize
+                     << " - " << StateVectorSize + StateVarType->GetByteSize() << endl;
                 StateVectorVars.push_back(CurStateVar);
                 StateVectorSize += StateVarType->GetByteSize();
                 ValidAutomata[EFSM->Name] = 
@@ -583,6 +591,12 @@ namespace ESMC {
 
         ExprTypeRef LabelledTS::MakeRangeType(i64 Low, i64 High)
         {
+            if (High - Low + 1 >= UINT32_MAX ||
+                High >= INT64_MAX / 2) {
+                throw ESMCError((string)"Bounds for range type exceed limits. " + 
+                                "We require High - Low + 1 < " + to_string(UINT32_MAX) + 
+                                " and HIGH < " + to_string(INT64_MAX / 2));
+            }
             return Mgr->MakeType<ExprRangeType>(Low, High);
         }
 
@@ -815,11 +829,18 @@ namespace ESMC {
 
         ExpT LabelledTS::MakeVal(const string& ValString, const ExprTypeRef& Type)
         {
-            if (!Type->Is<ExprEnumType>() &&
-                !Type->Is<ExprRangeType>()) {
-                throw ESMCError((string)"Cannot create constant of type \"" + 
-                                Type->ToString() + "\" only boolean, numeric and enumerated " + 
-                                " type constants are allowed to be created");
+            if (ValString == "clear") {
+                return Mgr->MakeVal(ValString, Type);
+            } else {
+                if (Type->Is<ExprSymmetricType>()) {
+                    throw ESMCError((string)"Only constant of a symmetric type that " +
+                                    "can be created is the \"clear\" constant");
+                }
+                if (!Type->Is<ExprScalarType>()) {
+                    throw ESMCError((string)"Cannot create constant of type \"" + 
+                                    Type->ToString() + "\" only boolean, numeric and enumerated " + 
+                                    " type constants are allowed to be created");
+                }
             }
             return Mgr->MakeVal(ValString, Type);
         }
@@ -997,6 +1018,14 @@ namespace ESMC {
                             InitStateGenerators.back().push_back(NewAsgn);
                         }
                     }
+                }
+                
+                // Add the initial states for the channels as well
+                for (auto const& NameChanEFSM : ChannelEFSMs) {
+                    auto ChanEFSM = NameChanEFSM.second;
+                    InitStateGenerators.back().insert(InitStateGenerators.back().end(),
+                                                      ChanEFSM->InitStateUpdates.begin(),
+                                                      ChanEFSM->InitStateUpdates.end());
                 }
             }
 

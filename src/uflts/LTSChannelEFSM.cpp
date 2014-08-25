@@ -88,6 +88,21 @@ namespace ESMC {
             MaxChanExp = Mgr->MakeVal(to_string(Capacity), CountType);
             OneExp = Mgr->MakeVal("1", CountType);
             ZeroExp = Mgr->MakeVal("0", CountType);
+
+            // Make the initial states as well
+            vector<LTSAssignRef> InitUpdates;
+            InitUpdates.push_back(new LTSAssignSimple(CountExp, Mgr->MakeVal("0", CountType)));
+            InitUpdates.push_back(new LTSAssignSimple(ArrayExp, Mgr->MakeVal("clear", ArrayType)));
+            if (Lossy) {
+                InitUpdates.push_back(new LTSAssignSimple(LastMsgExp, Mgr->MakeVal("clear", ValType)));
+            }
+            InitUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                      Mgr->MakeVal("ChanInitState", StateType)));
+            for (auto const& ParamInst : ParamInsts) {
+                auto&& RebasedUpdates = RebaseUpdates(ParamInst, InitUpdates);
+                InitStateUpdates.insert(InitStateUpdates.end(), RebasedUpdates.begin(),
+                                        RebasedUpdates.end());
+            }
         }
 
         ChannelEFSM::~ChannelEFSM()

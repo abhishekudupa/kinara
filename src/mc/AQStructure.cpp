@@ -53,12 +53,12 @@
          {
              // Nothing here
          }
-
+         
          AQSEdge::AQSEdge(const AQSEdge& Other) 
              : Target(Other.Target), Permutation(Other.Permutation)
-        {
-            // Nothing here
-        }
+         {
+             // Nothing here
+         }
 
          AQSEdge::~AQSEdge()
          {
@@ -143,6 +143,15 @@
          u64 AQStructure::GetNumStates() const
          {
              return StateSet.size();
+         }
+
+         u64 AQStructure::GetNumEdges() const
+         {
+             u64 Retval = 0;
+             for (auto const& StateEdges : StateSet) {
+                 Retval += StateEdges.second.size();
+             }
+             return Retval;
          }
 
     } /* end namespace MC */

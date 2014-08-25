@@ -40,8 +40,10 @@
 #if !defined ESMC_AQ_STRUCTURE_HPP_
 #define ESMC_AQ_STRUCTURE_HPP_
 
-#include <unordered_set>
-#include <unordered_map>
+#include <new>
+#include <sparse_hash_set>
+#include <sparse_hash_map>
+
 #include <boost/functional/hash.hpp>
 
 #include "../common/FwdDecls.hpp"
@@ -50,6 +52,9 @@
 
 namespace ESMC {
     namespace MC {
+
+        using google::sparse_hash_set;
+        using google::sparse_hash_map;
 
         namespace Detail {
 
@@ -110,12 +115,18 @@ namespace ESMC {
 
         } /* end namespace Detail */
 
-        typedef unordered_set<AQSEdge, Detail::AQSEdgeHash> AQSEdgeSetT;
+        // typedef unordered_set<AQSEdge, Detail::AQSEdgeHash> AQSEdgeSetT;
+        typedef sparse_hash_set<AQSEdge, Detail::AQSEdgeHash> AQSEdgeSetT;
 
 
-        typedef unordered_map<StateVec*, AQSEdgeSetT,
-                              Detail::StateVecPtrHasher,
-                              Detail::StateVecPtrEquals> SVHashSetT;
+        // typedef unordered_map<StateVec*, AQSEdgeSetT,
+        //                       Detail::StateVecPtrHasher,
+        //                       Detail::StateVecPtrEquals> SVHashSetT;
+
+        typedef sparse_hash_map<StateVec*, AQSEdgeSetT,
+                                Detail::StateVecPtrHasher,
+                                Detail::StateVecPtrEquals> SVHashSetT;
+
 
         class AQStructure
         {
@@ -132,6 +143,7 @@ namespace ESMC {
             void InsertInitState(StateVec* SV);
             void AddEdge(StateVec* Source, StateVec* Target, u32 Permutation);
             u64 GetNumStates() const;
+            u64 GetNumEdges() const;
         };
 
     } /* end namespace MC */

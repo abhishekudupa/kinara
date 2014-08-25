@@ -63,6 +63,18 @@ namespace ESMC {
                 }
             };
         } /* end namespace Detail */
+
+
+        static inline string PermToString(const vector<u08>& Perm)
+        {
+            ostringstream sstr;
+            sstr << "< ";
+            for (auto const& Elem : Perm) {
+                sstr << (u32)Elem << " ";
+            }
+            sstr << ">";
+            return sstr.str();
+        }
         
         class DomainPermuter
         {

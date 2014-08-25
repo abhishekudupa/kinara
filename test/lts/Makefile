@@ -16,9 +16,12 @@ CXXFLAGS+=-std=c++11 -Wall -pedantic -fopenmp -pipe
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/include
 
-PROJECT_EXECUTABLES=PingPongChan
+PROJECT_EXECUTABLES=PingPongChan TestChan
 PingPongChan_SYS_LIBS=esmc z3 rt boost_system
 PingPongChan_EXT_LIBS=boost z3 esmc
+TestChan_SYS_LIBS=esmc z3 rt boost_system
+TestChan_EXT_LIBS=boost z3 esmc
+
 libboost_FULL_PATH=$(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/install.ph
 libboost_MAKE_DIR=$(PROJECT_ROOT)/../../src/extern/boost-local/
 libz3_FULL_PATH=$(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install/libz3.so
@@ -27,9 +30,17 @@ libesmc_FULL_PATH=$(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)/libesmc.so
 libesmc_MAKE_DIR=$(PROJECT_ROOT)/../../
 
 PingPongChan_OBJS=PingPongChan.o
+TestChan_OBJS=TestChan.o
+
 PingPongChan_LIB_PATHS= \
     $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \
     $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
+
+TestChan_LIB_PATHS= \
+    $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \
+    $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
+    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
+
 
 include $(PROJECT_ROOT)/../../Makefile.util

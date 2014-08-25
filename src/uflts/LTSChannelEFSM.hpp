@@ -76,6 +76,9 @@ namespace ESMC {
             UIDGenerator MessageFairnessUIDGen;
             UIDGenerator LossDupFairnessUIDGen;
 
+            // The initial state updates
+            vector<LTSAssignRef> InitStateUpdates;
+
             inline void MakeInputTransition(u32 InstanceID,
                                             const MgrT::SubstMapT& SubstMap,
                                             const ExprTypeRef& MessageType,

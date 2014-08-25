@@ -118,8 +118,12 @@ namespace ESMC {
                 ActVal = StateVector->ReadWord(Offset);
             }
 
-            ActVal += Low;
-            return TypeAsScalar->ValToConst(ActVal);
+            if (ActVal == 0) {
+                return "undefined";
+            } else {
+                ActVal = ActVal + Low - 1;
+                return TypeAsScalar->ValToConst(ActVal);
+            }
         }
 
         void StateVecPrinter::MakePrinters(const ExpT& Exp, LabelledTS* TheLTS)

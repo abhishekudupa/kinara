@@ -54,6 +54,7 @@ namespace ESMC {
         using ESMC::Exprs::ExprTypeRef;
         using ESMC::LTS::LabelledTS;
         using ESMC::LTS::ExpT;
+        using ESMC::MC::StateVecPrinter;
 
         extern const u32 MaxExplicitSize;
 
@@ -91,6 +92,8 @@ namespace ESMC {
         private:
             u32 ElemSize;
             u32 NumElems;
+            // Is this array indexed by a symmetric type?
+            bool IsSymmArray;
             vector<PermuterBase*> ElemPermuters;
 
         public:
@@ -184,9 +187,10 @@ namespace ESMC {
             vector<PermuterBase*> Permuters;
             vector<ChanBufferSorter*> Sorters;
             PermutationSet* PermSet;
+            StateVecPrinter* Printer;
 
         public:
-            Canonicalizer(const LabelledTS* TheLTS);
+            Canonicalizer(const LabelledTS* TheLTS, StateVecPrinter* Printer);
             ~Canonicalizer();
             
             StateVec* Canonicalize(const StateVec* InputVector, u32& PermID) const;

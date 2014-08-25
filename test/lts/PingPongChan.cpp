@@ -60,7 +60,7 @@ int main()
 {
     auto TheLTS = new LabelledTS();
 
-    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 2);
+    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 4);
     auto ParamExp = TheLTS->MakeVar("ClientID", ClientIDType);
     vector<ExpT> Params = { ParamExp };
     auto TrueExp = TheLTS->MakeTrue();
@@ -124,6 +124,7 @@ int main()
     auto AckAccFieldExp = TheLTS->MakeVar("Data", FAType);
     auto AckAccExp = TheLTS->MakeOp(LTSOps::OpField, AckMsgExp, AckAccFieldExp);
     ServerOutputUpdates.push_back(new LTSAssignSimple(AckAccExp, LastMsgExp));
+    ServerOutputUpdates.push_back(new LTSAssignSimple(LastReqExp, TheLTS->MakeVal("clear", ClientIDType)));
     ServerOutputUpdates.push_back(new LTSAssignSimple(LastMsgExp, TheLTS->MakeVal("clear", RangeType)));
     auto ServerGuard = TheLTS->MakeOp(LTSOps::OpEQ, LastReqExp, ParamExp);
     
@@ -206,7 +207,7 @@ int main()
                                        TheLTS->MakeVar("LastReq", FAType));
     InitUpdates.push_back(new LTSAssignSimple(ServerDotState, TheLTS->MakeVal("InitState", ServerDotState->GetType())));
     InitUpdates.push_back(new LTSAssignSimple(ServerDotLast, TheLTS->MakeVal("clear", ServerDotLast->GetType())));
-    InitUpdates.push_back(new LTSAssignSimple(ServerDotReq, ParamExp));
+    InitUpdates.push_back(new LTSAssignSimple(ServerDotReq, TheLTS->MakeVal("clear", ServerDotReq->GetType())));
 
 
     vector<ExpT> ClientUpdParams = { TheLTS->MakeVar("UpdClientParam", ClientIDType) };
@@ -222,10 +223,10 @@ int main()
                                          TheLTS->MakeVar("Count", FAType));
 
     InitUpdates.push_back(new LTSAssignParam(ClientUpdParams, TrueExp, ClientDotState, TheLTS->MakeVal("InitState", ClientDotState->GetType())));
-    InitUpdates.push_back(new LTSAssignParam(ClientUpdParams, TrueExp, ClientDotLast, TheLTS->MakeVal("0", ClientDotLast->GetType())));
+    InitUpdates.push_back(new LTSAssignParam(ClientUpdParams, TrueExp, ClientDotLast, TheLTS->MakeVal("clear", ClientDotLast->GetType())));
     InitUpdates.push_back(new LTSAssignParam(ClientUpdParams, TrueExp, ClientDotCount, TheLTS->MakeVal("0", ClientDotCount->GetType())));
 
-    InitStates.push_back(new LTSInitState(Params, TrueExp, InitUpdates));
+    InitStates.push_back(new LTSInitState(vector<ExpT>(), TrueExp, InitUpdates));
     TheLTS->AddInitStates(InitStates);
 
     auto BoundVarExp = TheLTS->MakeBoundVar(0, ClientIDType);
@@ -247,6 +248,16 @@ int main()
     TheLTS->AddInvariant(QExp);
 
     TheLTS->Freeze();
+
+    auto const& StateVectorVars = TheLTS->GetStateVectorVars();
+
+    cout << "LTS Vars:" << endl;
+    for (auto const& Var : StateVectorVars) {
+        cout << Var->ToString() << " : " << endl;
+        cout << Var->GetType()->ToString() << endl;
+    }
+    
+    cout << "State vector size is " << TheLTS->GetStateVectorSize() << " bytes." << endl;
 
     cout << "Guarded Commands:" << endl;
     auto const& GCmds = TheLTS->GetGuardedCmds();

@@ -43,12 +43,13 @@
 #include "../common/FwdDecls.hpp"
 #include "../uflts/LTSTypes.hpp"
 
-
 namespace ESMC {
     namespace MC {
 
         using namespace ESMC::LTS;
-        
+
+        extern const i64 UndefValue;
+
         class OffsetCompiler : public VisitorBaseT
         {
         private:
@@ -148,9 +149,11 @@ namespace ESMC {
         private:
             i64 Value;
             u08* Ptr;
+            i64 Low;
+            i64 High;
             
         public:
-            CompiledConstInterpreter(u32 Size, i64 Value);
+            CompiledConstInterpreter(u32 Size, i64 Value, i64 Low, i64 High);
             CompiledConstInterpreter(u32 Size, u08* Ptr);
             virtual ~CompiledConstInterpreter();
 
@@ -182,6 +185,10 @@ namespace ESMC {
         {
         protected:
             vector<RValueInterpreter*> SubInterps;
+            mutable vector<i64> SubEvals;
+            const u32 NumSubInterps;
+
+            inline void EvaluateSubInterps(const StateVec* StateVector) const;
             
         public:
             OpInterpreter(bool Scalar, u32 Size, 
@@ -376,11 +383,13 @@ namespace ESMC {
         private:
             LValueInterpreter* ArrayInterp;
             RValueInterpreter* IndexInterp;
+            u32 ElemSize;
 
         public:
             IndexInterpreter(u32 Size, bool Msg, bool IsScalar,
                              LValueInterpreter* ArrayInterp,
                              RValueInterpreter* IndexInterp,
+                             u32 ElemSize,
                              i64 Low, i64 High);
             virtual ~IndexInterpreter();
 

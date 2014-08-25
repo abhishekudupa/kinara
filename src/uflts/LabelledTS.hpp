@@ -137,6 +137,7 @@ namespace ESMC {
             const vector<GCmdRef>& GetGuardedCmds() const;
             const vector<ExpT>& GetStateVectorVars() const;
             const set<ExprTypeRef>& GetUsedSymmTypes() const;
+            u32 GetStateVectorSize() const;
 
             // methods for creating expressions
             // and types.

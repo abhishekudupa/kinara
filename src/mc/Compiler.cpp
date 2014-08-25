@@ -52,6 +52,8 @@
 namespace ESMC {
     namespace MC {
 
+        const i64 UndefValue = INT64_MAX;
+        
         using namespace ESMC::LTS;
 
         OffsetCompiler::OffsetCompiler(const LabelledTS* TheLTS)
@@ -108,18 +110,13 @@ namespace ESMC {
                     return;
                 } else {
                     Exp->ExtensionData.ConstCompiled = true;
-                    auto TypeAsRange = Type->As<ExprRangeType>();
-                    if (TypeAsRange != nullptr) {
-                        Exp->ExtensionData.ConstVal = TypeAsRange->GetLow();
-                    } else {
-                        Exp->ExtensionData.ConstVal = 0;
-                    }
+                    Exp->ExtensionData.ConstVal = 0;
                     return;
                 }
             }
             
 
-            auto Val = Type->As<ExprScalarType>()->ConstToVal(ConstVal);
+            auto Val = Type->As<ExprScalarType>()->ConstToVal(ConstVal) + 1;
             Exp->ExtensionData.ConstVal = Val;
             Exp->ExtensionData.ConstCompiled = true;
         }
@@ -159,7 +156,7 @@ namespace ESMC {
                     ValueSize = Align(ValueSize, ValueSize);
                     Exp->ExtensionData.Offset = 
                         Children[0]->ExtensionData.Offset + 
-                        (ValueSize * Children[1]->ExtensionData.ConstVal);
+                        (ValueSize * (Children[1]->ExtensionData.ConstVal - 1));
                     return;
                 }
             }
@@ -220,8 +217,11 @@ namespace ESMC {
                         new CompiledConstInterpreter(Type->GetByteSize(), ZeroPage::Get());
                     Compiler->RegisterInterp(Ext.Interp);
                 } else {
+                    auto TypeAsScalar = Type->As<ExprScalarType>();
+                    i64 Low = 0;
+                    i64 High = TypeAsScalar->GetCardinality() - 1;
                     Ext.Interp = 
-                        new CompiledConstInterpreter(Type->GetByteSize(), Ext.ConstVal);
+                        new CompiledConstInterpreter(Type->GetByteSize(), Ext.ConstVal, Low, High);
                     Compiler->RegisterInterp(Ext.Interp);
                 }
                 return;
@@ -340,11 +340,14 @@ namespace ESMC {
                     throw InternalError((string)"Expected an LValueInterpreter.\nAt: " +
                                         __FILE__ + ":" + to_string(__LINE__));
                 }
-                
+                auto ArrayType = Children[0]->GetType()->SAs<Exprs::ExprArrayType>();
+                u32 TotalSize = ArrayType->GetByteSize();
+                u32 ElemSize = TotalSize / ArrayType->GetIndexType()->GetCardinality();
                 Ext.Interp = new IndexInterpreter(Type->GetByteSize(),
                                                   Ext.IsMsg, Type->Is<Exprs::ExprScalarType>(),
                                                   SubInterps[0]->As<LValueInterpreter>(), 
                                                   SubInterps[1],
+                                                  ElemSize,
                                                   Low, High);
 
             }
@@ -419,8 +422,11 @@ namespace ESMC {
             }
         }
 
-        CompiledConstInterpreter::CompiledConstInterpreter(u32 Size, i64 Value)
-            : RValueInterpreter(true, Size), Value(Value), Ptr(nullptr)
+        CompiledConstInterpreter::CompiledConstInterpreter(u32 Size, i64 Value,
+                                                           i64 Low, i64 High)
+            : RValueInterpreter(true, Size), Value(Value), Ptr(nullptr),
+              Low(Low), High(High)
+
         {
             // Nothing here
         }
@@ -439,7 +445,11 @@ namespace ESMC {
         i64 CompiledConstInterpreter::EvaluateScalar(const StateVec *StateVector) const
         {
             if (Scalar) {
-                return Value;
+                if (Value == 0) {
+                    return UndefValue;
+                } else {
+                    return Value + Low - 1;
+                }
             }
             throw InternalError((string)"EvaluateScalar() called on non-scalar type");
         }
@@ -447,12 +457,11 @@ namespace ESMC {
         const u08* CompiledConstInterpreter::Evaluate(const StateVec *StateVector) const
         {
             if (Scalar) {
-                return (u08*)(&Value);
+                throw InternalError((string)"Evaluate() called on scalar type");
             } else {
                 return Ptr;
             }
         }
-
 
         CompiledLValueInterpreter::CompiledLValueInterpreter(u32 Size, bool Msg, 
                                                              bool Scalar, u32 Offset, 
@@ -472,31 +481,29 @@ namespace ESMC {
             if (!Scalar) {
                 throw InternalError((string)"EvaluateScalar() called on non-scalar type");
             }
+            i64 RawVal = 0;
             if (Msg) {
                 if (Size == 1) {
-                    i64 RawVal = StateVector->ReadByteMsg(Offset);
-                    return RawVal + Low;
+                    RawVal = StateVector->ReadByteMsg(Offset);
                 } else if (Size == 2) {
-                    i64 RawVal = StateVector->ReadShortMsg(Offset);
-                    return RawVal + Low;
+                    RawVal = StateVector->ReadShortMsg(Offset);
                 } else if (Size == 4) {
-                    i64 RawVal = StateVector->ReadWordMsg(Offset);
-                    return RawVal + Low;                    
+                    RawVal = StateVector->ReadWordMsg(Offset);
                 }
             } else {
                 if (Size == 1) {
-                    i64 RawVal = StateVector->ReadByte(Offset);
-                    return RawVal + Low;
+                    RawVal = StateVector->ReadByte(Offset);
                 } else if (Size == 2) {
-                    i64 RawVal = StateVector->ReadShort(Offset);
-                    return RawVal + Low;
+                    RawVal = StateVector->ReadShort(Offset);
                 } else if (Size == 4) {
-                    i64 RawVal = StateVector->ReadWord(Offset);
-                    return RawVal + Low;                    
+                    RawVal = StateVector->ReadWord(Offset);
                 }
             }
-            // To get the compiler to shut up
-            return INT64_MAX;
+            if (RawVal == 0) {
+                return UndefValue;
+            } else {
+                return RawVal + Low - 1;
+            }
         }
 
         const u08* CompiledLValueInterpreter::Evaluate(const StateVec* StateVector) const
@@ -510,27 +517,33 @@ namespace ESMC {
 
         void CompiledLValueInterpreter::WriteScalar(i64 Value, StateVec* StateVector) const 
         {
+            i64 RawValue = 0;
             if (!Scalar) {
                 throw InternalError((string)"WriteScalar() called on non-scalar type");
             }
-            if (Value < Low || Value > High) {
+            if (Value == UndefValue) {
+                RawValue = 0;
+            }
+            else if (Value < Low || Value > High) {
                 throw ESMCError((string)"Out of bounds write detected");
+            } else {
+                RawValue = Value - Low + 1;
             }
             if (Msg) {
                 if (Size == 1) {
-                    StateVector->WriteByteMsg(Offset, (u08)(Value - Low));
+                    StateVector->WriteByteMsg(Offset, (u08)RawValue);
                 } else if (Size == 2) {
-                    StateVector->WriteShortMsg(Offset, (u16)(Value - Low));
+                    StateVector->WriteShortMsg(Offset, (u16)RawValue);
                 } else if (Size == 4) {
-                    StateVector->WriteWordMsg(Offset, (u32)(Value - Low));
+                    StateVector->WriteWordMsg(Offset, (u32)RawValue);
                 }
             } else {
                 if (Size == 1) {
-                    StateVector->WriteByte(Offset, (u08)(Value - Low));
+                    StateVector->WriteByte(Offset, (u08)RawValue);
                 } else if (Size == 2) {
-                    StateVector->WriteShort(Offset, (u16)(Value - Low));
+                    StateVector->WriteShort(Offset, (u16)RawValue);
                 } else if (Size == 4) {
-                    StateVector->WriteWord(Offset, (u32)(Value - Low));
+                    StateVector->WriteWord(Offset, (u32)RawValue);
                 }
             }
         }
@@ -554,7 +567,8 @@ namespace ESMC {
 
         OpInterpreter::OpInterpreter(bool Scalar, u32 Size,
                                      const vector<RValueInterpreter*>& SubInterps)
-            : RValueInterpreter(Scalar, Size), SubInterps(SubInterps)
+            : RValueInterpreter(Scalar, Size), SubInterps(SubInterps), 
+              SubEvals(SubInterps.size()), NumSubInterps(SubInterps.size())
         {
             // Nothing here
         }
@@ -562,6 +576,18 @@ namespace ESMC {
         OpInterpreter::~OpInterpreter()
         {
             // Nothing here
+        }
+
+        inline void OpInterpreter::EvaluateSubInterps(const StateVec *StateVector) const
+        {
+            for (u32 i = 0; i < NumSubInterps; ++i) {
+                auto EvalValue = SubInterps[i]->EvaluateScalar(StateVector);
+                if (EvalValue == UndefValue) {
+                    throw ESMCError((string)"Undefined value used in computation");
+                } else {
+                    SubEvals[i] = EvalValue;
+                }
+            }
         }
 
         EQInterpreter::EQInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -578,8 +604,9 @@ namespace ESMC {
         i64 EQInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
             if (SubInterps[0]->IsScalar()) {
-                return (SubInterps[0]->EvaluateScalar(StateVector) ==
-                        SubInterps[1]->EvaluateScalar(StateVector));
+                auto SubEval1 = SubInterps[0]->EvaluateScalar(StateVector);
+                auto SubEval2 = SubInterps[1]->EvaluateScalar(StateVector);
+                return (SubEval1 == SubEval2);
             } else {
                 return memcmp(SubInterps[0]->Evaluate(StateVector),
                               SubInterps[1]->Evaluate(StateVector),
@@ -606,7 +633,8 @@ namespace ESMC {
 
         i64 NOTInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            return (SubInterps[0]->EvaluateScalar(StateVector) == 0);
+            EvaluateSubInterps(StateVector);
+            return (SubEvals[0] == 0);
         }
 
         const u08* NOTInterpreter::Evaluate(const StateVec* StateVector) const
@@ -631,9 +659,8 @@ namespace ESMC {
             if (!Scalar) {
                 throw InternalError((string)"EvaluateScalar() called on non-scalar type");
             }
-            return (SubInterps[0]->EvaluateScalar(StateVector) != 0 ? 
-                    SubInterps[1]->EvaluateScalar(StateVector) : 
-                    SubInterps[2]->EvaluateScalar(StateVector));
+            EvaluateSubInterps(StateVector);
+            return (SubEvals[0] != 0 ? SubEvals[1] : SubEvals[2]);
         }
 
         const u08* ITEInterpreter::Evaluate(const StateVec *StateVector) const
@@ -660,8 +687,9 @@ namespace ESMC {
 
         i64 ORInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            for (auto SubInterp : SubInterps) {
-                if (SubInterp->EvaluateScalar(StateVector) != 0) {
+            EvaluateSubInterps(StateVector);
+            for (auto SubEval : SubEvals) {
+                if (SubEval != 0) {
                     return 1;
                 }
             }
@@ -686,8 +714,9 @@ namespace ESMC {
 
         i64 ANDInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            for (auto SubInterp : SubInterps) {
-                if (SubInterp->EvaluateScalar(StateVector) == 0) {
+            EvaluateSubInterps(StateVector);
+            for (auto SubEval : SubEvals) {
+                if (SubEval == 0) {
                     return 0;
                 }
             }
@@ -712,8 +741,8 @@ namespace ESMC {
 
         i64 IMPLIESInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            return (SubInterps[0]->EvaluateScalar(StateVector) == 0 ||
-                    SubInterps[1]->EvaluateScalar(StateVector) != 0);
+            EvaluateSubInterps(StateVector);
+            return (SubEvals[0] == 0 || SubEvals[1] != 0);
         }
 
         const u08* IMPLIESInterpreter::Evaluate(const StateVec* StateVector) const
@@ -734,8 +763,8 @@ namespace ESMC {
 
         i64 IFFInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            return (SubInterps[0]->EvaluateScalar(StateVector) ==
-                    SubInterps[1]->EvaluateScalar(StateVector));
+            EvaluateSubInterps(StateVector);
+            return (SubEvals[0] == SubEvals[1]);
         }
 
         const u08* IFFInterpreter::Evaluate(const StateVec* StateVector) const
@@ -756,8 +785,8 @@ namespace ESMC {
 
         i64 XORInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            return (SubInterps[0]->EvaluateScalar(StateVector) !=
-                    SubInterps[1]->EvaluateScalar(StateVector));
+            EvaluateSubInterps(StateVector);
+            return (SubEvals[0] != SubEvals[1]);
         }
 
         const u08* XORInterpreter::Evaluate(const StateVec* StateVector) const
@@ -778,9 +807,10 @@ namespace ESMC {
 
         i64 ADDInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
+            EvaluateSubInterps(StateVector);
             i64 Retval = 0;
-            for (auto SubInterp : SubInterps) {
-                Retval += SubInterp->EvaluateScalar(StateVector);
+            for (auto SubEval : SubEvals) {
+                Retval += SubEval;
             }
             return Retval;
         }
@@ -803,14 +833,15 @@ namespace ESMC {
 
         i64 SUBInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
+            EvaluateSubInterps(StateVector);
             i64 Retval = 0;
             bool First = true;
-            for (auto SubInterp : SubInterps) {
+            for (auto SubEval : SubEvals) {
                 if (First) {
-                    Retval += SubInterp->EvaluateScalar(StateVector);
+                    Retval += SubEval;
                     First = false;
                 } else {
-                    Retval -= SubInterp->EvaluateScalar(StateVector);
+                    Retval -= SubEval;
                 }
             }
             return Retval;
@@ -834,8 +865,9 @@ namespace ESMC {
 
         i64 MINUSInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
+            EvaluateSubInterps(StateVector);
             i64 Retval = 0;
-            Retval = Retval - SubInterps[0]->EvaluateScalar(StateVector);
+            Retval = Retval - SubEvals[0];
             return Retval;
         }
 
@@ -857,9 +889,10 @@ namespace ESMC {
 
         i64 MULInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
+            EvaluateSubInterps(StateVector);
             i64 Retval = 1;
-            for (auto SubInterp : SubInterps) {
-                Retval *= SubInterp->EvaluateScalar(StateVector);
+            for (auto SubEval : SubEvals) {
+                Retval *= SubEval;
             }
             return Retval;
         }
@@ -882,9 +915,8 @@ namespace ESMC {
 
         i64 DIVInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            i64 Retval = SubInterps[0]->EvaluateScalar(StateVector);
-            Retval = Retval / SubInterps[1]->EvaluateScalar(StateVector);
-            return Retval;
+            EvaluateSubInterps(StateVector);
+            return (SubEvals[0] / SubEvals[1]);
         }
 
         const u08* DIVInterpreter::Evaluate(const StateVec* StateVector) const
@@ -905,9 +937,8 @@ namespace ESMC {
 
         i64 MODInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            i64 Retval = SubInterps[0]->EvaluateScalar(StateVector);
-            Retval = Retval % SubInterps[1]->EvaluateScalar(StateVector);
-            return Retval;
+            EvaluateSubInterps(StateVector);
+            return (SubEvals[0] % SubEvals[1]);
         }
 
         const u08* MODInterpreter::Evaluate(const StateVec* StateVector) const
@@ -928,8 +959,8 @@ namespace ESMC {
 
         i64 GTInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            return (SubInterps[0]->EvaluateScalar(StateVector) > 
-                    SubInterps[1]->EvaluateScalar(StateVector));
+            EvaluateSubInterps(StateVector);
+            return (SubEvals[0] > SubEvals[1]);
         }
 
         const u08* GTInterpreter::Evaluate(const StateVec* StateVector) const
@@ -950,8 +981,8 @@ namespace ESMC {
 
         i64 GEInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            return (SubInterps[0]->EvaluateScalar(StateVector) >=
-                    SubInterps[1]->EvaluateScalar(StateVector));
+            EvaluateSubInterps(StateVector);
+            return (SubEvals[0] >= SubEvals[1]);
         }
 
         const u08* GEInterpreter::Evaluate(const StateVec* StateVector) const
@@ -972,8 +1003,8 @@ namespace ESMC {
 
         i64 LTInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            return (SubInterps[0]->EvaluateScalar(StateVector) <
-                    SubInterps[1]->EvaluateScalar(StateVector));
+            EvaluateSubInterps(StateVector);
+            return (SubEvals[0] < SubEvals[1]);
         }
 
         const u08* LTInterpreter::Evaluate(const StateVec* StateVector) const
@@ -994,8 +1025,8 @@ namespace ESMC {
 
         i64 LEInterpreter::EvaluateScalar(const StateVec* StateVector) const
         {
-            return (SubInterps[0]->EvaluateScalar(StateVector) <=
-                    SubInterps[1]->EvaluateScalar(StateVector));
+            EvaluateSubInterps(StateVector);
+            return (SubEvals[0] <= SubEvals[1]);
         }
 
         const u08* LEInterpreter::Evaluate(const StateVec* StateVector) const
@@ -1006,9 +1037,11 @@ namespace ESMC {
         IndexInterpreter::IndexInterpreter(u32 Size, bool Msg, bool IsScalar,
                                            LValueInterpreter* ArrayInterp,
                                            RValueInterpreter* IndexInterp,
+                                           u32 ElemSize,
                                            i64 Low, i64 High)
             : LValueInterpreter(Size, Msg, IsScalar, Low, High),
-              ArrayInterp(ArrayInterp), IndexInterp(IndexInterp)
+              ArrayInterp(ArrayInterp), IndexInterp(IndexInterp),
+              ElemSize(ElemSize)
         {
             // Nothing here
         }
@@ -1023,16 +1056,28 @@ namespace ESMC {
             if (!Scalar) {
                 throw ESMCError((string)"EvaluateScalar() called on non-scalar type");
             }
-            u32 Offset = IndexInterp->EvaluateScalar(StateVector);
+            i64 Offset = IndexInterp->EvaluateScalar(StateVector);
+            if (Offset == UndefValue) {
+                throw ESMCError((string)"Undefined value used in index expression");
+            }
+            Offset *= ElemSize;
+            
             const u08* DstPtr = ArrayInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + 
                 Offset;
 
+            i64 RawVal = 0;
             if (Size == 1) {
-                return (*DstPtr) + Low;
+                RawVal = *DstPtr;
             } else if (Size == 2) {
-                return *((u16*)(DstPtr)) + Low;
+                RawVal = *((u16*)(DstPtr));
             } else {
-                return *((u32*)(DstPtr)) + Low;
+                RawVal = *((u32*)(DstPtr));
+            }
+
+            if (RawVal == 0) {
+                return UndefValue;
+            } else {
+                return RawVal - 1 + Low;
             }
         }
 
@@ -1041,7 +1086,12 @@ namespace ESMC {
             if (Scalar) {
                 throw ESMCError((string)"Evaluate() called on scalar type");
             }
-            u32 Offset = IndexInterp->EvaluateScalar(StateVector);
+            i64 Offset = IndexInterp->EvaluateScalar(StateVector);
+            if (Offset == UndefValue) {
+                throw ESMCError((string)"Undefined value used in index expression");
+            }
+            Offset *= ElemSize;
+
             const u08* DstPtr = ArrayInterp->Evaluate(StateVector) + Offset;
             return DstPtr;
         }
@@ -1052,23 +1102,42 @@ namespace ESMC {
                 throw ESMCError((string)"WriteScalar() called on non-scalar type");
             }
 
-            u32 Offset = IndexInterp->EvaluateScalar(StateVector);
+            i64 Offset = IndexInterp->EvaluateScalar(StateVector);
+            if (Offset == UndefValue) {
+                throw ESMCError((string)"Undefined value used in index expression");
+            }
+            Offset *= ElemSize;
+            
             u08* DstPtr = 
                 const_cast<u08*>(ArrayInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + 
                                  Offset);
 
-            if (Size == 1) {
-                *((u08*)(DstPtr)) = (u08)(Value - Low);
-            } else if (Size == 2) {
-                *((u16*)(DstPtr)) = (u16)(Value - Low);
+            i64 RawVal = 0;
+            if (Value == UndefValue) {
+                RawVal = 0;
+            } else if (Value < Low || Value > High) {
+                throw ESMCError((string)"Out of bound write detected");
             } else {
-                *((u32*)(DstPtr)) = (u32)(Value - Low);
+                RawVal = Value - Low + 1;
+            }
+
+            if (Size == 1) {
+                *((u08*)(DstPtr)) = (u08)RawVal;
+            } else if (Size == 2) {
+                *((u16*)(DstPtr)) = (u16)RawVal;
+            } else {
+                *((u32*)(DstPtr)) = (u32)RawVal;
             }
         }
 
         void IndexInterpreter::Write(const u08* Ptr, StateVec* StateVector) const
         {
-            u32 Offset = IndexInterp->EvaluateScalar(StateVector);
+            i64 Offset = IndexInterp->EvaluateScalar(StateVector);
+            if (Offset == UndefValue) {
+                throw ESMCError((string)"Undefined value used in index expression");
+            }
+            Offset *= ElemSize;
+
             u08* DstPtr = 
                 const_cast<u08*>(ArrayInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + 
                                  Offset);
@@ -1100,13 +1169,20 @@ namespace ESMC {
             const u08* DstPtr = 
                 RecInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + FieldOffset;
 
+            i64 RawVal = 0;
             if (Size == 1) {
-                return (*DstPtr) + Low;
+                RawVal = (*DstPtr);
             } else if (Size == 2) {
-                return *((u16*)(DstPtr)) + Low;
+                RawVal = *((u16*)(DstPtr));
             } else {
-                return *((u32*)(DstPtr)) + Low;
-            }            
+                RawVal = *((u32*)(DstPtr));
+            }
+
+            if (RawVal == 0) {
+                return UndefValue;
+            } else {
+                return RawVal + Low - 1;
+            }
         }
 
         const u08* FieldInterpreter::Evaluate(const StateVec* StateVector) const
@@ -1122,17 +1198,26 @@ namespace ESMC {
             if (!Scalar) {
                 throw ESMCError((string)"WriteScalar() called on non-scalar type");
             }
+
+            i64 RawVal = 0;
+            if (Value == UndefValue) {
+                RawVal = 0;
+            } else if (Value < Low || Value > High) {
+                throw ESMCError((string)"Out of bounds write detected");
+            } else {
+                RawVal = Value - Low + 1;
+            }
             
             u08* DstPtr = 
                 const_cast<u08*>(RecInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + 
                                  FieldOffset);
 
             if (Size == 1) {
-                *((u08*)(DstPtr)) = (u08)(Value - Low);
+                *((u08*)(DstPtr)) = (u08)RawVal;
             } else if (Size == 2) {
-                *((u16*)(DstPtr)) = (u16)(Value - Low);
+                *((u16*)(DstPtr)) = (u16)RawVal;
             } else {
-                *((u32*)(DstPtr)) = (u32)(Value - Low);
+                *((u32*)(DstPtr)) = (u32)RawVal;
             }
         }
 

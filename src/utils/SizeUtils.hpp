@@ -65,9 +65,11 @@ namespace ESMC {
         }
     }
 
+    // We add one to the range to accommodate the 
+    // undefined value
     static inline u32 BytesForRange(u32 RangeWidth)
     {
-        auto LogVal = (u32)ceil(log((double)RangeWidth) / log(2.0));
+        auto LogVal = (u32)ceil(log((double)(RangeWidth + 1)) / log(2.0));
         if (LogVal <= 8) {
             return 1;
         } else if (LogVal <= 16) {

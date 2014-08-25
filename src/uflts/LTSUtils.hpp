@@ -311,8 +311,14 @@ namespace ESMC {
                 auto SymmConstsLHS = Mgr->Gather(Asgn->GetLHS(), Detail::SymmConstGatherer());
                 auto SymmConstsRHS = Mgr->Gather(Asgn->GetRHS(), Detail::SymmConstGatherer());
                 if (SymmConstsLHS.size() != 0 || SymmConstsRHS.size() != 0) {
-                    throw ESMCError((string)"Assignments cannot contain symmetric constant " + 
-                                    "literal values. This breaks symmetry!");
+                    if (!(SymmConstsLHS.size() == 0 && 
+                          Asgn->GetRHS()->Is<Exprs::ConstExpression>() &&
+                          (Asgn->GetRHS()->SAs<Exprs::ConstExpression>()->GetConstValue() == 
+                           "clear") &&
+                          SymmConstsRHS.size() == 1)) {
+                        throw ESMCError((string)"Assignments cannot contain symmetric constant " + 
+                                        "literal values. This breaks symmetry!");
+                    }
                 }
                 
                 // Finally check type compat
