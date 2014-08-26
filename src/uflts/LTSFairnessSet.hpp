@@ -72,6 +72,8 @@ namespace ESMC {
             const vector<LTSTransRef>& GetTransitions() const;
             FairSetFairnessType GetFairnessType() const;
             u32 GetFairnessSetID() const;
+
+            static void ResetFairnessSetID();
         };
         
     } /* end namespace LTS */

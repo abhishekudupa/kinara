@@ -1,8 +1,8 @@
-// LTSFairnessSet.cpp --- 
+// Trace.hpp --- 
 // 
-// Filename: LTSFairnessSet.cpp
+// Filename: Trace.hpp
 // Author: Abhishek Udupa
-// Created: Fri Aug  8 17:18:20 2014 (-0400)
+// Created: Mon Aug 25 15:10:30 2014 (-0400)
 // 
 // 
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,61 +37,36 @@
 
 // Code:
 
-#include "LTSFairnessSet.hpp"
-#include "LTSTransitions.hpp"
+#if !defined ESMC_TRACE_HPP_
+#define ESMC_TRACE_HPP_
+
+#include "../common/FwdDecls.hpp"
 
 namespace ESMC {
-    namespace LTS {
+    namespace MC {
 
-        UIDGenerator LTSFairnessSet::FairnessUIDGenerator(1);
-
-        LTSFairnessSet::LTSFairnessSet(EFSMBase* TheEFSM,
-                                       const string& Name,
-                                       FairSetFairnessType Fairness,
-                                       const vector<LTSTransRef>& Transitions)
-            : TheEFSM(TheEFSM), Name(Name), Fairness(Fairness), Transitions(Transitions),
-              FairnessSetID(FairnessUIDGenerator.GetUID())
+        class TraceBase 
         {
-            // Nothing here
-        }
+        public:
+            TraceBase();
+            virtual ~TraceBase();
 
-        LTSFairnessSet::~LTSFairnessSet()
+            virtual string ToString() const = 0;
+        };
+
+        class SafetyViolation : public TraceBase
         {
-            // Nothing here
-        }
+        private:
+            vector<vector<pair<string, string>>> TheTrace;
 
-        void LTSFairnessSet::AddTransition(const LTSTransRef& Trans) const
-        {
-            Transitions.push_back(Trans);
-        }
+        public:
+            
+        };
 
-        const string& LTSFairnessSet::GetName() const
-        {
-            return Name;
-        }
-
-        const vector<LTSTransRef>& LTSFairnessSet::GetTransitions() const
-        {
-            return Transitions;
-        }
-
-        FairSetFairnessType LTSFairnessSet::GetFairnessType() const
-        {
-            return Fairness;
-        }
-
-        u32 LTSFairnessSet::GetFairnessSetID() const
-        {
-            return FairnessSetID;
-        }
-
-        void LTSFairnessSet::ResetFairnessSetID()
-        {
-            FairnessUIDGenerator.Reset();
-        }
-
-    } /* end namespace LTS */
+    } /* end namespace MC */
 } /* end namespace ESMC */
 
+#endif /* ESMC_TRACE_HPP_ */
+
 // 
-// LTSFairnessSet.cpp ends here
+// Trace.hpp ends here

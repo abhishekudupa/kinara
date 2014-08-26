@@ -43,6 +43,7 @@
 #include <vector>
 #include <unordered_map>
 #include <boost/functional/hash.hpp>
+#include <iterator>
 
 #include "../common/FwdDecls.hpp"
 
@@ -174,6 +175,7 @@ namespace ESMC {
             vector<u08> CachedPerm;
 
             inline void GetPermForIndex(u32 Index);
+            inline u32 GetIndexForPerm(const vector<u08>& Perm) const;
 
         public:
             PermutationSet(const vector<u32>& DomainSizes, bool Compact);
@@ -184,6 +186,8 @@ namespace ESMC {
             
             iterator GetIterator(u32 Idx) const;
             iterator GetIteratorForInv(u32 Idx) const;
+            iterator Compose(const iterator& Perm, u32 Idx);
+            iterator Compose(u32 PermIdx, u32 Idx);
 
             const iterator& Begin() const;
             const iterator& End() const;

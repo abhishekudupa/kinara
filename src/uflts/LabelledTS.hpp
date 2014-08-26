@@ -55,6 +55,7 @@ namespace ESMC {
             friend class MC::LTSChecker;
             friend class MC::LTSCompiler;
             friend class MC::StateVecPrinter;
+            friend class MC::BuchiAutomaton;
 
             static const string ProductMsgName;
 

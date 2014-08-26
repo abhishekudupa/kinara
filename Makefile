@@ -63,6 +63,7 @@ libesmc_OBJS= \
 	LTSTermSemanticizer.o \
 	LTSTransitions.o \
 	LTSUtils.o \
+	OmegaAutomaton.o \
 	Permutations.o \
 	SpookyHash.o \
 	StateVec.o \

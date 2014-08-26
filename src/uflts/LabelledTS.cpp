@@ -265,7 +265,6 @@ namespace ESMC {
             // for each message type, get the transitions 
             // on the message type from each efsm
 
-            // TODO: add info on fairnesses
             for (auto const& NameType : MsgTypes) {
                 vector<vector<LTSTransRef>> TransForCP;
 
@@ -441,7 +440,7 @@ namespace ESMC {
             }
 
             AutomataFrozen = true;
-            
+
             StateVectorSize = 0;
             // Create the state variables
             for (auto& NameEFSM : AllEFSMs) {
@@ -449,6 +448,8 @@ namespace ESMC {
                 EFSM->Freeze();
                 auto const& Name = EFSM->Name;
                 auto const& StateVarType = EFSM->StateVarType;
+
+                // Make the state variables
                 auto CurStateVar = Mgr->MakeVar(Name, StateVarType);
                 // Not strictly our job, but it's easiest to 
                 // add the extension data right here

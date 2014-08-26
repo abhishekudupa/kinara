@@ -401,6 +401,21 @@ namespace ESMC {
             return;
         }
 
+        inline u32 PermutationSet::GetIndexForPerm(const vector<u08>& Perm) const
+        {
+            u32 RunningOffset = 0;
+            u32 Index = 0;
+            for (u32 i = 0; i < NumDomains; ++i) {
+                Index = Index * Multipliers[i];
+                vector<u08> CurVec(Perm.begin() + RunningOffset, 
+                                   Perm.begin() + RunningOffset + DomainSizes[i]);
+                RunningOffset += DomainSizes[i];
+                auto CurIndex = DomPermuters[i]->GetPermIdx(CurVec);
+                Index += CurIndex;
+            }
+            return Index;
+        }
+
         PermutationSet::~PermutationSet()
         {
             for (auto DomPermuter : DomPermuters) {
@@ -448,6 +463,28 @@ namespace ESMC {
                 Retval = (Retval * Multipliers[i]) + InvIndices[i];
             }
             return iterator(Retval, const_cast<PermutationSet*>(this));
+        }
+
+        PermutationSet::iterator PermutationSet::Compose(u32 PermIdx, u32 Idx)
+        {
+            return Compose(GetIterator(PermIdx), Idx);
+        }
+
+        PermutationSet::iterator PermutationSet::Compose(const iterator& Perm, u32 Idx)
+        {
+            vector<u08> OrigPerm = Perm.GetPerm();
+            GetPermForIndex(Idx);
+            vector<u08> Composed(OrigPerm.size());
+
+            u32 Offset = 0;
+            for (u32 i = 0; i < NumDomains; ++i) {
+                for (u32 j = 0; j < DomainSizes[i]; ++j) {
+                    Composed[Offset + j] = OrigPerm[Offset + CachedPerm[Offset + j]];
+                }
+                Offset += DomainSizes[i];
+            }
+            auto ComposedIdx = GetIndexForPerm(Composed);
+            return iterator(ComposedIdx, this);
         }
 
     } /* end namespace Symm */

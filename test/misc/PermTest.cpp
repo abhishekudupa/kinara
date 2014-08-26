@@ -101,6 +101,19 @@ int main()
         PrintVec(it3.GetPerm());
         auto invperm = it3.GetPerm();
         CheckInverse(it.GetPerm(), invperm);
+
+        auto it4 = Compact->Compose(it, 0);
+        if (it4 != it) {
+            cout << "Composing with identity did not give same result!" << endl;
+            exit(1);
+        }
+
+        auto it5 = Compact->Compose(it, it3.GetIndex());
+        if (it5.GetIndex() != 0) {
+            cout << "Composing with inverse did not give identity!" << endl;
+            exit(1);
+        }
+
     }
 
     delete Compact;
@@ -123,6 +136,18 @@ int main()
         PrintVec(it3.GetPerm());
         auto invperm = it3.GetPerm();
         CheckInverse(it.GetPerm(), invperm);
+
+        auto it4 = Full->Compose(it, 0);
+        if (it4 != it) {
+            cout << "Composing with identity did not give same result!" << endl;
+            exit(1);
+        }
+
+        auto it5 = Full->Compose(it, it3.GetIndex());
+        if (it5.GetIndex() != 0) {
+            cout << "Composing with inverse did not give identity!" << endl;
+            exit(1);
+        }
     }
 }
 
