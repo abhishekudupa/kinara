@@ -209,9 +209,6 @@ namespace ESMC {
             ExpT Guard;
             vector<LTSAssignRef> Updates;
             ExprTypeRef MsgType;
-            // The set of fairness IDs that this 
-            // guarded command belongs to
-            vector<u32>& FairSets;
 
         public:
             LTSGuardedCommand(const ExpT& Guard,

@@ -88,7 +88,7 @@ namespace ESMC {
             AQStructure* AQS;
             vector<GCmdRef> GuardedCommands;
             u32 NumGuardedCmds;
-            map<string, OmegaAutomaton*> OmegaAutomata;
+            map<string, BuchiAutomaton*> OmegaAutomata;
 
             inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);
             inline void DoDFS(StateVec* Root);

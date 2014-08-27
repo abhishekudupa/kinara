@@ -318,8 +318,8 @@ namespace ESMC {
                 throw ESMCError((string)"Monitor named \"" + Name + "\" already exists " + 
                                 "in the LTS Checker");
             }
-            auto Retval = new BuchiMonitor(TheLTS, Name, SymmIndices, Constraint,
-                                           SymmCanonicalizer->GetPermSet(), Compiler);
+            auto Retval = new BuchiAutomaton(TheLTS, Name, SymmIndices, Constraint,
+                                             TheCanonicalizer->GetPermSet(), Compiler);
             OmegaAutomata[Name] = Retval;
             return Retval;
         }
