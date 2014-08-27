@@ -196,6 +196,7 @@ namespace ESMC {
             StateVec* Canonicalize(const StateVec* InputVector, u32& PermID) const;
             StateVec* ApplyPermutation(const StateVec* InputVector, u32 PermID) const;
             StateVec* ApplyInvPermutation(const StateVec* InputVector, u32 PermID) const;
+            PermutationSet* GetPermSet() const;
         };
         
     } /* end namespace Symm */

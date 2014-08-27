@@ -548,6 +548,11 @@ namespace ESMC {
             return Retval;
         }
 
+        PermutationSet* Canonicalizer::GetPermSet() const
+        {
+            return PermSet;
+        }
+
     } /* end namespace Symm */
 } /* end namespace ESMC */
 

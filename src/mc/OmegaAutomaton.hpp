@@ -68,6 +68,7 @@ namespace ESMC {
             PermutationSet* PermSet;
             LTSCompiler* Compiler;
             bool StatesFrozen;
+            bool Frozen;
             vector<MgrT::SubstMapT> PermSubstMaps;
             // Transitions for each permutation
             // further indexed by stateid.
@@ -77,8 +78,11 @@ namespace ESMC {
             vector<u32> InitialStates;
             u32 NumStates;
 
+            inline void AssertFrozen() const;
+            inline void AssertNotFrozen() const;
             inline void AssertStatesFrozen() const;
             inline void AssertStatesNotFrozen() const;
+
             inline void GenSubstMaps(const vector<ExpT>& InitInst);
             
         public:
@@ -114,6 +118,8 @@ namespace ESMC {
                                       const StateVec* StateVector) const;
             const unordered_set<u32>& GetAcceptingStates() const;
             bool IsAccepting(u32 StateID) const;
+
+            void Freeze();
         };
 
     } /* end namespace MC */

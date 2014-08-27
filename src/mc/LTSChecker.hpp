@@ -88,6 +88,7 @@ namespace ESMC {
             AQStructure* AQS;
             vector<GCmdRef> GuardedCommands;
             u32 NumGuardedCmds;
+            map<string, OmegaAutomaton*> OmegaAutomata;
 
             inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);
             inline void DoDFS(StateVec* Root);
@@ -100,6 +101,12 @@ namespace ESMC {
             virtual ~LTSChecker();
 
             void BuildAQS();
+            void ClearAQS();
+
+            BuchiAutomaton* MakeBuchiMonitor(const string& Name, 
+                                             const vector<ExpT>& SymmIndices,
+                                             const ExpT& Constraint);
+            void CheckLiveness(const string& BuchiMonitorName);
         };
 
     } /* end namespace MC */

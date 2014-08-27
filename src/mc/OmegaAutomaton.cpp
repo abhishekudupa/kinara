@@ -115,6 +115,22 @@ namespace ESMC {
             }
         }        
 
+        inline void BuchiAutomaton::AssertFrozen() const
+        {
+            if (!Frozen) {
+                throw ESMCError((string)"The requested operation can only be performed " + 
+                                "after the Buchi Automaton has been frozen");
+            }
+        }
+
+        inline void BuchiAutomaton::AssertNotFrozen() const
+        {
+            if (Frozen) {
+                throw ESMCError((string)"The requested operation can only be performed " + 
+                                "before the Buchi Automaton has been frozen");
+            }
+        }        
+
         BuchiAutomaton::BuchiAutomaton(LabelledTS* TheLTS, const string& Name,
                                        const vector<ExpT> SymmIndices,
                                        const ExpT& Constraint, PermutationSet* PermSet,
@@ -179,6 +195,7 @@ namespace ESMC {
                                            const ExpT& Guard)
         {
             AssertStatesFrozen();
+            AssertNotFrozen();
             
             auto Mgr = TheLTS->GetMgr();
 
@@ -274,6 +291,16 @@ namespace ESMC {
         bool BuchiAutomaton::IsAccepting(u32 StateID) const
         {
             return (AcceptingStates.find(StateID) != AcceptingStates.end());
+        }
+
+        void BuchiAutomaton::Freeze()
+        {
+            if (Frozen) {
+                return;
+            }
+
+            AssertStatesFrozen();
+            Frozen = true;
         }
 
     } /* end namespace MC */

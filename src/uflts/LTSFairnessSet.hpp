@@ -48,7 +48,6 @@
 namespace ESMC {
     namespace LTS {
 
-
         class LTSFairnessSet : public RefCountable
         {
         private:
@@ -75,7 +74,7 @@ namespace ESMC {
 
             static void ResetFairnessSetID();
         };
-        
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

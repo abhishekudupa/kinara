@@ -47,6 +47,7 @@
 #include "StateVec.hpp"
 #include "StateVecPrinter.hpp"
 #include "AQStructure.hpp"
+#include "OmegaAutomaton.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -153,6 +154,10 @@ namespace ESMC {
             delete Printer;
             if (AQS != nullptr) {
                 delete AQS;
+            }
+
+            for (auto const& Aut : OmegaAutomata) {
+                delete Aut.second;
             }
         }
 
@@ -299,18 +304,42 @@ namespace ESMC {
             cout << Factory->GetNumActiveStates() << " active states from state factory." << endl;
         }
 
+        void LTSChecker::ClearAQS() 
+        {
+            delete AQS;
+            AQS = nullptr;
+        }
+
+        BuchiAutomaton* LTSChecker::MakeBuchiMonitor(const string& Name, 
+                                                     const vector<ExpT>& SymmIndices, 
+                                                     const ExpT &Constraint)
+        {
+            if (OmegaAutomata.find(Name) != OmegaAutomata.end()) {
+                throw ESMCError((string)"Monitor named \"" + Name + "\" already exists " + 
+                                "in the LTS Checker");
+            }
+            auto Retval = new BuchiMonitor(TheLTS, Name, SymmIndices, Constraint,
+                                           SymmCanonicalizer->GetPermSet(), Compiler);
+            OmegaAutomata[Name] = Retval;
+            return Retval;
+        }
+
+        void LTSChecker::CheckLiveness(const string& BuchiMonitorName) 
+        {
+            auto it = OmegaAutomata.find(BuchiMonitorName);
+            if (it == OmegaAutomata.end()) {
+                throw ESMCError((string)"Buchi Monitor with name \"" + BuchiMonitorName + 
+                                "\" was not found to check liveness property");
+            }
+            if (AQS == nullptr) {
+                throw ESMCError((string)"AQS not built to check liveness property!");
+            }
+            
+            auto Monitor = it->second;
+        }
+
     } /* end namespace MC */
 } /* end namespace ESMC */
 
 // 
 // LTSChecker.cpp ends here
-
-
-
-
-
-
-
-
-
-
