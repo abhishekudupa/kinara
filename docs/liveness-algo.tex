@@ -3,57 +3,29 @@
 \usepackage{amssymb}
 \usepackage{fullpage}
 \usepackage{setspace}
+\usepackage{xspace}
 \usepackage[lined,linesnumbered,commentsnumbered,ruled,vlined]{algorithm2e}
 
-\title{Algorithm to check Liveness with\\Transition-based Fairness Constraints}
+\newcommand{\symset}{\ensuremath{T}\xspace}
+\newcommand{\varset}{\ensuremath{V}\xspace}
+\newcommand{\cmdset}{\ensuremath{G}\xspace}
+\newcommand{\fairsetset}{\ensuremath{\mathcal{F}}\xspace}
 
+\title{Algorithm to check Liveness with\\Transition-based Fairness Constraints}
 \begin{document}
 \begin{spacing}{1}
 \maketitle
 
-We are given a set of symmetric types $\mathcal{Y}$ and a set of symmetric
-variables $P$, where each variable $p \in P$ has a type drawn from
-$\mathcal{Y}$. We have a set of state variables $V$, where each $v \in V$
-has a type and is optionally parametrized by a set of parameter variables
-$P_v \in P$. $T$, is a set of transitions where each $t \in
-T$ is parametrized by by a set $P_t \subseteq P$ of symmetric
-parameters variables. Further, we are also given a set of fairness
-constraints $\mathcal{F}$. Each fairness constraint $F \in \mathcal{F}$ is
-a set of parametrized transitions $\{t_{F1}, t_{F2}, ... t_{Fn_f}\}$. 
-We require that every transition of a fairness constraint
-$F \in \mathcal{F}$ be parametrized by the same set of parameters $P_F$. We
-then say that the fairness constraint $F$ is parametrized by variables $P_F$.
-
-Suppose we are given an $\omega$-automaton $A$, parametrized over a
-set of parameters $P_{\omega}$, we want to check if
-starting from some initial state $s_0$, executing the product of the
-transitions $T$ and the transitions of the automaton $A$ results in an
-accepting cycle, when each $F \in \mathcal{F}$ is instantiated with an
-appropriate set of parameters $P_F \subseteq P_{\omega}$.
-What follows is an adaptation of Sistla's algorithm
-in this setting.
-
-\begin{itemize}
-\item
-$\overline{u}.\mathtt{dfnum}$ -- Same as in paper
-\item
-$\overline{u}.\mathtt{onstack}$ --- Same as in paper
-\item
-$\overline{u}.\mathtt{perm}$ --- The exact set of permutations
-of the set of parameters $P_{\omega}$ that were applied on the path from $s_0$.
-\item
-$I^k$ stored in each state $\overline{u}$ as a component of the AQSI,
-is a $|p_{\omega}|$-tuple, with one element indicating the current
-value of each parameter $p \in p_{\omega}$.
-\item
-$\overline{u}.\mathtt{partition}$ is a set of sets of cardinality
-  $|P_{\omega}|$, such that $\overline{u}.\mathtt{partition}$ contains a
-  set $s$, that has cardinality $|\mathtt{type}(p)|$ for each $p \in
-  P_{\omega}$.
-\item
-$\overline{u}.\mathtt{final}$ denotes that an accepting state has been 
-  encountered in the current SCC.
-\end{itemize}
+We are given a set of symmetric types $\symset$, and a set of
+variables $\varset$. Each $v \in \varset$ is a symmetric array indexed
+by an ordered multiset of types $I_v = \{t_{v1}, t_{v2}, \ldots
+t_{vn_v}\}$, where each $t_{vi} \in \symset$. $\cmdset$ is a set of
+guarded commands, where each $g \in \cmdset$ is also indexed by a set
+of types $I_g = \{t_{g1}, t_{g2}, \ldots t_{gn_g}\}$. We define
+$\fairsetset$ to be a set of fairness constraints, where each fairness
+constraint $F \in \fairsetset$ is a set of guarded commands $\{g_1,
+g_2, \ldots, g_{Fn}\}$, such that $I_{g_1} = I_{g_2} = \ldots =
+I_{g_{Fn}} = I_F$.
 
 \begin{algorithm}
 \IncMargin{1em}
