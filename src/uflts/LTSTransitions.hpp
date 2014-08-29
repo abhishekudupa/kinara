@@ -220,7 +220,6 @@ namespace ESMC {
             const vector<LTSAssignRef>& GetUpdates() const;
             const ExprTypeRef& GetMsgType() const;
             string ToString() const;
-            const vector<u32>& GetFairSets() const;
         };
 
         class LTSInitState : public RefCountable

@@ -74,7 +74,7 @@ namespace ESMC {
 
             static void ResetFairnessSetID();
         };
-
+        
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

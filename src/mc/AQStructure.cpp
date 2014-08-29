@@ -48,14 +48,16 @@
              // Nothing here
          }
 
-         AQSEdge::AQSEdge(const StateVec* Target, u32 Permutation)
-             : Target(Target), Permutation(Permutation)
+         AQSEdge::AQSEdge(const StateVec* Target, u32 Permutation,
+                          u32 GCmdIndex)
+             : Target(Target), Permutation(Permutation), GCmdIndex(GCmdIndex)
          {
              // Nothing here
          }
          
          AQSEdge::AQSEdge(const AQSEdge& Other) 
-             : Target(Other.Target), Permutation(Other.Permutation)
+             : Target(Other.Target), Permutation(Other.Permutation),
+               GCmdIndex(Other.GCmdIndex)
          {
              // Nothing here
          }
@@ -72,12 +74,14 @@
              }
              Target = Other.Target;
              Permutation = Other.Permutation;
+             GCmdIndex = Other.GCmdIndex;
              return *this;
          }
 
          bool AQSEdge::operator == (const AQSEdge& Other) const
          {
-             return (Target == Other.Target && Permutation == Other.Permutation);
+             return (Target == Other.Target && Permutation == Other.Permutation &&
+                     GCmdIndex == Other.GCmdIndex);
          }
 
          const StateVec* AQSEdge::GetTarget() const
@@ -88,6 +92,11 @@
          u32 AQSEdge::GetPermutation() const
          {
              return Permutation;
+         }
+
+         u32 AQSEdge::GetGCmdIndex() const
+         {
+             return GCmdIndex;
          }
 
          AQStructure::AQStructure()
@@ -127,12 +136,11 @@
              InitStates.push_back(SV);
          }
 
-         void AQStructure::AddEdge(StateVec* Source,
-                                   StateVec* Target,
-                                   u32 Permutation)
+         void AQStructure::AddEdge(StateVec* Source, StateVec* Target,
+                                   u32 Permutation, u32 GCmdIndex)
          {
              auto it = StateSet.find(Source);
-             AQSEdge NewEdge(Target, Permutation);
+             AQSEdge NewEdge(Target, Permutation, GCmdIndex);
              auto it2 = it->second.find(NewEdge);
              if (it2 != it->second.end()) {
                  return;
@@ -152,6 +160,16 @@
                  Retval += StateEdges.second.size();
              }
              return Retval;
+         }
+
+         const AQSEdgeSetT& AQStructure::GetEdges(const StateVec* SV) const
+         {
+             auto it = StateSet.find(const_cast<StateVec*>(SV));
+             if (it == StateSet.end()) {
+                 return EmptyEdgeSet;
+             } else {
+                 return it->second;
+             }
          }
 
     } /* end namespace MC */

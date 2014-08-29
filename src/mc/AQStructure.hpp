@@ -85,10 +85,12 @@ namespace ESMC {
         private:
             const StateVec* Target;
             u32 Permutation;
+            u32 GCmdIndex;
 
         public:
             AQSEdge();
-            AQSEdge(const StateVec* Target, u32 Permutation);
+            AQSEdge(const StateVec* Target, u32 Permutation,
+                    u32 GCmdIndex);
             AQSEdge(const AQSEdge& Other);
             ~AQSEdge();
             
@@ -97,6 +99,7 @@ namespace ESMC {
 
             const StateVec* GetTarget() const;
             u32 GetPermutation() const;
+            u32 GetGCmdIndex() const;
         };
 
         namespace Detail {
@@ -109,6 +112,7 @@ namespace ESMC {
                     u64 Retval = 0;
                     boost::hash_combine(Retval, Edge.GetTarget());
                     boost::hash_combine(Retval, Edge.GetPermutation());
+                    boost::hash_combine(Retval, Edge.GetGCmdIndex());
                     return Retval;
                 }
             };
@@ -133,6 +137,7 @@ namespace ESMC {
         private:
             SVHashSetT StateSet;
             vector<StateVec*> InitStates;
+            AQSEdgeSetT EmptyEdgeSet;
 
         public:
             AQStructure();
@@ -141,9 +146,11 @@ namespace ESMC {
             StateVec* Find(StateVec* SV) const;
             void Insert(StateVec* SV);
             void InsertInitState(StateVec* SV);
-            void AddEdge(StateVec* Source, StateVec* Target, u32 Permutation);
+            void AddEdge(StateVec* Source, StateVec* Target, 
+                         u32 Permutation, u32 GCmdIndex);
             u64 GetNumStates() const;
             u64 GetNumEdges() const;
+            const AQSEdgeSetT& GetEdges(const StateVec* SV) const;
         };
 
     } /* end namespace MC */

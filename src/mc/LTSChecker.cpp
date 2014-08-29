@@ -256,14 +256,14 @@ namespace ESMC {
                     // cout << "Pushed new successor onto stack." << endl;
                     // TODO: ensure that permid is inverted here
                     // or invert it ourselves
-                    AQS->AddEdge(State, CanonState, PermID);
+                    AQS->AddEdge(State, CanonState, PermID, LastFired);
                     DFSStack.push_back(DFSStackEntry(CanonState));
                     continue;
                 } else {
                     // Successor already explored, add edge
                     // and continue
                     // cout << "Successor has been previously encountered." << endl;
-                    AQS->AddEdge(State, ExistingState, PermID);
+                    AQS->AddEdge(State, ExistingState, PermID, LastFired);
                     CanonState->GetFactory()->TakeState(CanonState);
                     continue;
                 }

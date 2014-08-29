@@ -50,6 +50,7 @@ libesmc_OBJS= \
 	AQStructure.o \
 	Compiler.o \
 	ExprTypes.o \
+	IndexSet.o \
 	LabelledTS.o \
 	LTSAssign.o \
 	LTSAutomaton.o \
