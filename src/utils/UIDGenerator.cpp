@@ -57,6 +57,11 @@ namespace ESMC {
         return NextUID++;
     }
 
+    i64 UIDGenerator::LastUID() const
+    {
+        return (NextUID - 1);
+    }
+
     void UIDGenerator::Reset()
     {
         NextUID = InitSeed;

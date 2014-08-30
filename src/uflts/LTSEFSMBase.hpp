@@ -53,6 +53,7 @@ namespace ESMC {
         class EFSMBase : public virtual AutomatonBase
         {
             friend class LabelledTS;
+            friend class LTSProcessFairnessGroup;
 
         protected:
             LTSFairnessType Fairness;
@@ -68,8 +69,7 @@ namespace ESMC {
             // Transitions per instance
             map<vector<ExpT>, vector<LTSTransRef>> Transitions;
 
-            // Fairness sets per instance
-            map<string, map<vector<ExpT>, LTSFairSetRef>> Fairnesses;
+            LTSPFGRef Fairnesses;
             // mapping between internal fairness sets and user 
             // defined names for fairnesses
             map<string, set<string>> UserToInternalFairness;
@@ -178,12 +178,12 @@ namespace ESMC {
             virtual LTSFairnessType GetFairnessType() const;
 
             virtual void AddFairnessSet(const string& Name, FairSetFairnessType Fairness);
-            virtual const map<vector<ExpT>, LTSFairSetRef>& GetFairnessSet(const string& 
-                                                                           FairnessName) 
-                const;
-            virtual const LTSFairSetRef& GetFairnessForInst(const string& FairnessName,
-                                                            const vector<ExpT>& InstParams) const;
-            virtual const map<string, map<vector<ExpT>, LTSFairSetRef>>& GetAllFairnessSets() const;
+            virtual const LTSFairSetRef& GetFairnessSet(const string& FairnessName) const;
+            virtual const LTSFairObjRef& 
+            GetFairnessForInst(const string& FairnessName,
+                               const vector<ExpT>& InstParams) const;
+
+            virtual const LTSPFGRef& GetAllFairnessSets() const;
 
             virtual void FreezeStates() override;
             virtual void FreezeVars();

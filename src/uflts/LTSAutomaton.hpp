@@ -76,6 +76,7 @@ namespace ESMC {
                                   bool Initial = false, bool Final = false, 
                                   bool Accepting = false, bool Error = false);
 
+            const string& GetName() const;
             vector<LTSState> GetStates() const;
             const ExprTypeRef& GetStateType() const;
             const vector<vector<ExpT>>& GetParamInsts() const;
@@ -83,6 +84,36 @@ namespace ESMC {
             u32 GetNumInstances() const;
             u32 GetNumInstancesUnconstrained() const;
             virtual string ToString() const = 0;
+
+            template <typename T>
+            inline T* As()
+            {
+                return dynamic_cast<T*>(this);
+            }
+
+            template <typename T>
+            inline const T* As() const
+            {
+                return dynamic_cast<const T*>(this);
+            }
+
+            template <typename T>
+            inline T* SAs()
+            {
+                return static_cast<T*>(this);
+            }
+
+            template <typename T>
+            inline const T* SAs() const
+            {
+                return static_cast<const T*>(this);
+            }
+
+            template <typename T>
+            inline bool Is() const
+            {
+                return (dynamic_cast<const T*>(this) != nullptr);
+            }
         };
 
     } /* end namespace LTS */

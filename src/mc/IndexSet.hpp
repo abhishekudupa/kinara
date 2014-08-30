@@ -108,7 +108,6 @@ namespace ESMC {
         class ProcessIndexSet
         {
         private:
-            vector<ExprTypeRef> IndexTypes;
             vector<u32> TypeOffsets;
             u32 IndexVectorSize;
             u32 NumIndexVectors;
@@ -121,7 +120,7 @@ namespace ESMC {
                           IndexVectorPtrEquals> IndexVecToID;
 
         public:
-            ProcessIndexSet(const vector<ExpT>& IndexExps);
+            ProcessIndexSet(const vector<vector<ExpT>>& ParamInsts);
             ~ProcessIndexSet();
 
             u32 Permute(u32 IndexID, const vector<u08>& Permutation) const;
@@ -133,9 +132,11 @@ namespace ESMC {
         private:
             vector<ProcessIndexSet*> ProcessIdxSets;
             vector<u32> Multipliers;
+            // Scratchpad
+            mutable vector<u32> Scratchpad;
 
         public:
-            SystemIndexSet(const vector<vector<ExpT>>& IndexExps);
+            SystemIndexSet(const vector<vector<vector<ExpT>>>& ParamInsts);
             ~SystemIndexSet();
 
             u32 Permute(u32 IndexID, const vector<u08>& Permutation) const;

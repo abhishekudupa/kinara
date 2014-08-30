@@ -51,17 +51,14 @@ namespace ESMC {
                            const vector<ExpT>& Params, const ExpT& Constraint,
                            LTSFairnessType Fairness)
             : AutomatonBase(TheLTS, Name, Params, Constraint),
-              Fairness(Fairness), VarsFrozen(false), EFSMFrozen(false)
+              Fairness(Fairness), VarsFrozen(false), EFSMFrozen(false),
+              Fairnesses(new LTSProcessFairnessGroup(this))
         {
             if (Fairness != LTSFairnessType::None) {
                 auto FairsetFairness = Fairness == LTSFairnessType::Weak ? 
                     FairSetFairnessType::Weak : FairSetFairnessType::Strong;
 
-                for (auto const& ParamInst : ParamInsts) {
-                    Fairnesses["ProcessFairness"][ParamInst] = new LTSFairnessSet(this,
-                                                                                  "ProcessFairness",
-                                                                                  FairsetFairness);
-                }
+                Fairnesses->AddFairnessSet("ProcessFairness", FairsetFairness);
             }
         }
 
@@ -288,11 +285,7 @@ namespace ESMC {
         void EFSMBase::CheckFairnessSets(const set<string>& FairnessSetNames) const
         {
             for (auto const& FairnessSetName : FairnessSetNames) {
-                auto it = Fairnesses.find(FairnessSetName);
-                if (it == Fairnesses.end()) {
-                    throw ESMCError((string)"No fairness set called \"" + FairnessSetName + 
-                                    "\" has been declared yet in EFSM \"" + Name + "\"");
-                }
+                (void)Fairnesses->GetFairnessSet(FairnessSetName);
             }
         }
 
@@ -538,46 +531,22 @@ namespace ESMC {
         {
             AssertStatesFrozen();
             AssertEFSMNotFrozen();
-
-            if (Fairnesses.find(Name) != Fairnesses.end()) {
-                throw ESMCError((string)"Fairness Set \"" + Name + "\" has already " + 
-                                "been declared in EFSM \"" + this->Name + "\"");
-            }
-            // Add to every instance
-            Fairnesses[Name] = map<vector<ExpT>, LTSFairSetRef>();
-            for (auto const& ParamInst : ParamInsts) {
-                Fairnesses[Name][ParamInst] = new LTSFairnessSet(this, Name, Fairness);
-            }
+            Fairnesses->AddFairnessSet(Name, Fairness);
         }
 
-        const LTSFairSetRef& EFSMBase::GetFairnessForInst(const string& FairnessName,
+        const LTSFairObjRef& EFSMBase::GetFairnessForInst(const string& FairnessName,
                                                           const vector<ExpT>& InstParams) const
         {
-            auto it = Fairnesses.find(FairnessName);
-            if (it == Fairnesses.end()) {
-                throw ESMCError((string)"No fairness set called \"" + FairnessName + 
-                                "\" has been declared yet in EFSM \"" + Name + "\"");
-            }
-            auto it2 = it->second.find(InstParams);
-            if (it2 == it->second.end()) {
-                throw ESMCError((string)"No fairness set called \"" + FairnessName + 
-                                "\" available for the given instance parameters");
-            }
-            return it2->second;
+            return Fairnesses->GetFairnessObj(FairnessName, InstParams);
         }
 
-        const map<vector<ExpT>, LTSFairSetRef>& 
+        const LTSFairSetRef& 
         EFSMBase::GetFairnessSet(const string& FairnessName) const
         {
-            auto it = Fairnesses.find(FairnessName);
-            if (it == Fairnesses.end()) {
-                throw ESMCError((string)"No fairness set called \"" + FairnessName + 
-                                "\" has been declared yet in EFSM \"" + Name + "\"");
-            }
-            return it->second;
+            return Fairnesses->GetFairnessSet(FairnessName);
         }
 
-        const map<string, map<vector<ExpT>, LTSFairSetRef> >&
+        const LTSPFGRef&
         EFSMBase::GetAllFairnessSets() const
         {
             return Fairnesses;
@@ -793,7 +762,7 @@ namespace ESMC {
 
             auto SimpGuard = Mgr->Simplify(ElimGuard);
 
-            auto CurTransition = new LTSTransitionInput(this, IS, FS, SimpGuard,
+            auto CurTransition = new LTSTransitionInput(this, ParamInst, IS, FS, SimpGuard,
                                                         SimpUpdates, MessageName, 
                                                         ActMType);
             Transitions[ParamInst].push_back(CurTransition);
@@ -985,13 +954,10 @@ namespace ESMC {
                 LocalFairnessSets.insert("ProcessFairness");
             }
 
-            auto CurTransition = new LTSTransitionOutput(this, IS, FS, SimpGuard,
+            auto CurTransition = new LTSTransitionOutput(this, ParamInst, IS, FS, SimpGuard,
                                                          SimpUpdates, MessageName,
                                                          ActMType, LocalFairnessSets);
 
-            for (auto const& FairnessSet : LocalFairnessSets) {
-                Fairnesses[FairnessSet][ParamInst]->AddTransition(CurTransition);
-            }
 
             Transitions[ParamInst].push_back(CurTransition);
         }
@@ -1115,13 +1081,14 @@ namespace ESMC {
             const u32 NumInsts = ParamInsts.size();
             const u32 NumTransParams = TransParams.size();
 
-            for (u32 i = 0; i < NumInsts; ++i) {
+            if (SplatFairness == SplatFairnessType::Group) {
+                Fairnesses->AddFairnessSet(SplatPrefix, SetFairnessType);
+                UserToInternalFairness[SplatPrefix].insert(SplatPrefix);
+            }
 
-                if (SplatFairness == SplatFairnessType::Group) {
-                    Fairnesses[SplatPrefix][ParamInsts[i]] = 
-                        new LTSFairnessSet(this, SplatPrefix, SetFairnessType);
-                    UserToInternalFairness[SplatPrefix].insert(SplatPrefix);
-                }
+            bool FirstInstance = true;
+
+            for (u32 i = 0; i < NumInsts; ++i) {
 
                 auto const& SubstMap = ParamSubsts[i];
                 auto SubstConstraint = Mgr->Substitute(SubstMap, Constraint);
@@ -1129,6 +1096,8 @@ namespace ESMC {
                 auto&& TransParamInsts = InstantiateParams(TransParams, SubstConstraint, Mgr);
                 UIDGenerator LocalFairnessUIDGenerator;
 
+                // Since we're being symmetric, the number of instances
+                // must be the same for each parameter
                 for (auto const& TransParamInst : TransParamInsts) {
 
                     MgrT::SubstMapT LocalSubstMap = SubstMap;
@@ -1152,13 +1121,12 @@ namespace ESMC {
                     if (SplatFairness == SplatFairnessType::Individual) {
                         SplatFairnessSetName = SplatPrefix + "_" + 
                             to_string(LocalFairnessUIDGenerator.GetUID());
-                        // This gets repeated as many times as there are 
-                        // instances, but that's okay!
-                        UserToInternalFairness[SplatPrefix].insert(SplatFairnessSetName);
                         LocalFairnessSets.insert(SplatFairnessSetName);
-                        auto NewFairnessSet = new LTSFairnessSet(this, SplatFairnessSetName,
-                                                                 SetFairnessType);
-                        Fairnesses[SplatFairnessSetName][ParamInsts[i]] = NewFairnessSet;
+                        
+                        if (FirstInstance) {
+                            Fairnesses->AddFairnessSet(SplatFairnessSetName, SetFairnessType);
+                            UserToInternalFairness[SplatPrefix].insert(SplatFairnessSetName);
+                        }
                     }
                     
                     AddOutputTransForInstance(i, LocalSubstMap, InitState,
@@ -1166,6 +1134,8 @@ namespace ESMC {
                                               MessageName, MessageType, ActMType,
                                               LocalFairnessSets);
                 }
+
+                FirstInstance = false;
             }
         }
 
@@ -1216,12 +1186,8 @@ namespace ESMC {
                 LocalFairnessSets.insert("ProcessFairness");
             }
 
-            auto CurTransition = new LTSTransitionInternal(this, IS, FS, SimpGuard,
+            auto CurTransition = new LTSTransitionInternal(this, ParamInst, IS, FS, SimpGuard,
                                                            SimpUpdates, LocalFairnessSets);
-
-            for (auto const& FairnessSet : LocalFairnessSets) {
-                Fairnesses[FairnessSet][ParamInst]->AddTransition(CurTransition);
-            }
 
             Transitions[ParamInst].push_back(CurTransition);
         }
@@ -1295,13 +1261,14 @@ namespace ESMC {
             const u32 NumInsts = ParamInsts.size();
             const u32 NumTransParams = TransParams.size();
 
-            for (u32 i = 0; i < NumInsts; ++i) {
+            if (SplatFairness == SplatFairnessType::Group) {
+                Fairnesses->AddFairnessSet(SplatPrefix, SetFairnessType);
+                UserToInternalFairness[SplatPrefix].insert(SplatPrefix);
+            }
 
-                if (SplatFairness == SplatFairnessType::Group) {
-                    Fairnesses[SplatPrefix][ParamInsts[i]] = 
-                        new LTSFairnessSet(this, SplatPrefix, SetFairnessType);
-                    UserToInternalFairness[SplatPrefix].insert(SplatPrefix);
-                }
+            bool FirstInstance = true;
+            
+            for (u32 i = 0; i < NumInsts; ++i) {
 
                 auto const& SubstMap = ParamSubsts[i];
                 auto SubstConstraint = Mgr->Substitute(SubstMap, Constraint);
@@ -1330,16 +1297,19 @@ namespace ESMC {
                         SplatFairnessSetName = SplatPrefix + "_" + 
                             to_string(LocalFairnessUIDGenerator.GetUID());
                         LocalFairnessSets.insert(SplatFairnessSetName);
-                        UserToInternalFairness[SplatPrefix].insert(SplatFairnessSetName);
-                        auto NewFairnessSet = new LTSFairnessSet(this, SplatFairnessSetName,
-                                                                 SetFairnessType);
-                        Fairnesses[SplatFairnessSetName][ParamInsts[i]] = NewFairnessSet;
+
+                        if (FirstInstance) {
+                            Fairnesses->AddFairnessSet(SplatFairnessSetName, SetFairnessType);
+                            UserToInternalFairness[SplatPrefix].insert(SplatFairnessSetName);
+                        }
                     }
                     
                     AddInternalTransForInstance(i, LocalSubstMap, InitState,
                                                 FinalState, Guard, Updates,
                                                 LocalFairnessSets);
                 }
+
+                FirstInstance = false;
             }
         }
 

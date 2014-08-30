@@ -92,16 +92,18 @@ namespace ESMC {
         class LTSTransitionInput;
         class LTSTransitionOutput;
         class LTSTransitionInternal;
-        class BuchiMonitorTransition;
         class LTSInitState;
 
         typedef CSmartPtr<LTSTransitionBase> LTSTransRef;
-        typedef CSmartPtr<BuchiMonitorTransition> BuchiTransRef;
         typedef CSmartPtr<LTSInitState> InitStateRef;
 
+        class LTSFairnessObject;
         class LTSFairnessSet;
+        class LTSProcessFairnessGroup;
 
+        typedef CSmartPtr<LTSFairnessObject> LTSFairObjRef;
         typedef CSmartPtr<LTSFairnessSet> LTSFairSetRef;
+        typedef CSmartPtr<LTSProcessFairnessGroup> LTSPFGRef;
 
         class LTSGuardedCommand;
         typedef CSmartPtr<LTSGuardedCommand> GCmdRef;

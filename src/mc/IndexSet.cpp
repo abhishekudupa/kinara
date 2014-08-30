@@ -96,11 +96,15 @@ namespace ESMC {
             return new IndexVector(NewIndexVec, Size);
         }
 
-        ProcessIndexSet::ProcessIndexSet(const vector<ExpT>& IndexExps)
+        ProcessIndexSet::ProcessIndexSet(const vector<vector<ExpT>>& ParamInsts)
         {
-            NumIndexVectors = 1;
-            for (auto const& IndexExp : IndexExps) {
-                auto const& Type = IndexExp->GetType();
+            NumIndexVectors = ParamInsts.size();
+
+            vector<ExprTypeRef> IndexTypes;
+            map<ExprTypeRef, map<string, u32>> ValueMaps;
+
+            for (auto const& Exp : ParamInsts[0]) {
+                auto const& Type = Exp->GetType();
                 IndexTypes.push_back(Type);
                 auto TypeExt = Type->GetExtension<LTSTypeExtensionT>();
                 auto TypeOffset = TypeExt->TypeOffset;
@@ -108,24 +112,24 @@ namespace ESMC {
                 IndexTypes.push_back(Type);
                 TypeOffsets.push_back(TypeOffset);
                 IndexVectorSize++;
-                NumIndexVectors *= Type->GetCardinality();
-            }
 
-            // Populate the index vectors
-            vector<vector<u08>> VecsForCP;
-            for (auto const& Type : IndexTypes) {
-                VecsForCP.push_back(vector<u08>());
-                for (u32 i = 0; i < Type->GetCardinality(); ++i) {
-                    VecsForCP.back().push_back(i);
+                // Populate the value maps
+                auto const& Values = Type->GetElements();
+                u32 i = 0;
+                for (auto const& Value : Values) {
+                    ValueMaps[Type][Value] = i;
+                    ++i;
                 }
             }
-
-            auto&& CPVecs = CrossProduct<u08>(VecsForCP.begin(), VecsForCP.end());
+            
+            // Populate the index vectors
+            
+            auto&& CPVecs = CrossProduct<ExpT>(ParamInsts.begin(), ParamInsts.end());
             u32 CurID = 0;
             for (auto const& CPTuple : CPVecs) {
                 u08* CurIV = (u08*)malloc(sizeof(u08) * IndexVectorSize);
                 for (u32 i = 0; i < CPTuple.size(); ++i) {
-                    CurIV[i] = CPTuple[i];
+                    CurIV[i] = ValueMaps[CPTuple[i]->GetType()][CPTuple[i]->ToString()];
                 }
                 auto CurIndexVec = new IndexVector(CurIV, IndexVectorSize);
                 IDToIndexVec.push_back(CurIndexVec);
@@ -142,6 +146,7 @@ namespace ESMC {
             for (auto const& IV : IDToIndexVec) {
                 delete IV;
             }
+            delete WorkingIV;
         }
 
         u32 ProcessIndexSet::Permute(u32 IndexID, const vector<u08>& Perm) const
@@ -163,11 +168,12 @@ namespace ESMC {
             return NumIndexVectors;
         }
 
-        SystemIndexSet::SystemIndexSet(const vector<vector<ExpT>>& IndexExps)
+        SystemIndexSet::SystemIndexSet(const vector<vector<vector<ExpT>>>& ParamInsts)
         {
-            for (auto const& IndexVec : IndexExps) {
-                ProcessIdxSets.push_back(new ProcessIndexSet(IndexVec));
+            for (auto const& ParamInst : ParamInsts) {
+                ProcessIdxSets.push_back(new ProcessIndexSet(ParamInst));
                 Multipliers.push_back(ProcessIdxSets.back()->GetNumIndexVectors());
+                Scratchpad.push_back(0);
             }
         }
 
@@ -181,18 +187,17 @@ namespace ESMC {
         u32 SystemIndexSet::Permute(u32 IndexID, const vector<u08>& Perm) const
         {
             auto LeftIdx = IndexID;
-            vector<u32> Indices;
+            
             for (u32 i = 0; i < ProcessIdxSets.size(); ++i) {
                 auto CurID = LeftIdx % Multipliers[i];
                 LeftIdx = LeftIdx / Multipliers[i];
-                
-                Indices.push_back(ProcessIdxSets[i]->Permute(CurID, Perm));
+                Scratchpad[i] = CurID;
             }
 
             // Now build up the return value
             u32 Retval = 0;
             for (u32 i = ProcessIdxSets.size(); i > 0; --i) {
-                Retval = (Retval * Multipliers[i-1]) + Indices[i-1];
+                Retval = (Retval * Multipliers[i-1]) + Scratchpad[i-1];
             }
             return Retval;
         }

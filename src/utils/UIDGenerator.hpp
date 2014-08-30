@@ -55,6 +55,7 @@ namespace ESMC {
         ~UIDGenerator();
 
         i64 GetUID();
+        i64 LastUID() const;
         void Reset();
         string GetStrUID();
     };

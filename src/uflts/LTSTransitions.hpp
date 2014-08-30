@@ -56,9 +56,13 @@ namespace ESMC {
             LTSState InitState;
             LTSState FinalState;
             ExpT Guard;
+            // The parameters with which I was 
+            // instantiated
+            vector<ExpT> ParamInst;
 
         public:
             AutomatonTransitionBase(AutomatonBase* Automaton,
+                                    const vector<ExpT>& ParamInst,
                                     const LTSState& InitState,
                                     const LTSState& FinalState,
                                     const ExpT& Guard);
@@ -68,6 +72,7 @@ namespace ESMC {
             const LTSState& GetInitState() const;
             const LTSState& GetFinalState() const;
             const ExpT& GetGuard() const;
+            const vector<ExpT>& GetParamInst() const;
 
             virtual string ToString(u32 Indent = 0) const = 0;
             
@@ -110,6 +115,7 @@ namespace ESMC {
             
         public:
             LTSTransitionBase(EFSMBase* TheEFSM,
+                              const vector<ExpT>& ParamInst,
                               const LTSState& InitState,
                               const LTSState& FinalState,
                               const ExpT& Guard,
@@ -128,6 +134,7 @@ namespace ESMC {
 
         public:
             LTSTransitionIOBase(EFSMBase* TheEFSM,
+                                const vector<ExpT>& ParamInst,
                                 const LTSState& InitState,
                                 const LTSState& FinalState,
                                 const ExpT& Guard,
@@ -144,6 +151,7 @@ namespace ESMC {
         {
         public:
             LTSTransitionInput(EFSMBase* TheEFSM,
+                               const vector<ExpT>& ParamInst,
                                const LTSState& InitState,
                                const LTSState& FinalState,
                                const ExpT& Guard,
@@ -162,6 +170,7 @@ namespace ESMC {
 
         public:
             LTSTransitionOutput(EFSMBase* TheEFSM,
+                                const vector<ExpT>& ParamInst,
                                 const LTSState& InitState,
                                 const LTSState& FinalState,
                                 const ExpT& Guard,
@@ -183,6 +192,7 @@ namespace ESMC {
 
         public:
             LTSTransitionInternal(EFSMBase* TheEFSM,
+                                  const vector<ExpT>& ParamInst,
                                   const LTSState& InitState,
                                   const LTSState& FinalState,
                                   const ExpT& Guard,
@@ -194,31 +204,28 @@ namespace ESMC {
             virtual string ToString(u32 Indent = 0) const override;
         };
 
-        class BuchiMonitorTransition : public AutomatonTransitionBase
-        {
-        public:
-            using AutomatonTransitionBase::AutomatonTransitionBase;
-            virtual ~BuchiMonitorTransition();
-            
-            virtual string ToString(u32 Indent = 0) const override;
-        };
-
         class LTSGuardedCommand : public RefCountable
         {
         private:
             ExpT Guard;
             vector<LTSAssignRef> Updates;
             ExprTypeRef MsgType;
+            set<LTSFairObjRef> Fairnesses;
+            
+            // Fairness ID, instance ID for each fairness
+            mutable vector<pair<u32, u32>> FairBVBits;
 
         public:
             LTSGuardedCommand(const ExpT& Guard,
                               const vector<LTSAssignRef>& Updates,
-                              const ExprTypeRef& MsgType = ExprTypeRef::NullPtr);
+                              const ExprTypeRef& MsgType,
+                              const set<LTSFairObjRef>& Fairnesses);
             virtual ~LTSGuardedCommand();
 
             const ExpT& GetGuard() const;
             const vector<LTSAssignRef>& GetUpdates() const;
             const ExprTypeRef& GetMsgType() const;
+            const set<LTSFairObjRef>& GetFairnesses() const;
             string ToString() const;
         };
 

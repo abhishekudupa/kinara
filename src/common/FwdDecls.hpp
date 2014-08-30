@@ -129,6 +129,9 @@ namespace ESMC {
         class AQStructure;
         class StateVecPrinter;
         class BuchiAutomaton;
+        
+        class IndexSet;
+
     } /* end namespace MC */
 
     namespace Symm {

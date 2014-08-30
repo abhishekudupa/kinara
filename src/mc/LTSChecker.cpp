@@ -335,7 +335,7 @@ namespace ESMC {
                 throw ESMCError((string)"AQS not built to check liveness property!");
             }
             
-            auto Monitor = it->second;
+            // auto Monitor = it->second;
         }
 
     } /* end namespace MC */

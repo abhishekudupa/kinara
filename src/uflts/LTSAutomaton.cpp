@@ -158,6 +158,11 @@ namespace ESMC {
             return ParamInsts.size();
         }
 
+        const string& AutomatonBase::GetName() const
+        {
+            return Name;
+        }
+
         u32 AutomatonBase::GetNumInstancesUnconstrained() const
         {
             u32 Retval = 1;

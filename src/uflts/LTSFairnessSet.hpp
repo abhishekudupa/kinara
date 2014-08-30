@@ -48,31 +48,100 @@
 namespace ESMC {
     namespace LTS {
 
-        class LTSFairnessSet : public RefCountable
+        // One fairness object, that can consist 
+        // of multiple transitions, all parameterized
+        // by the same index vector
+        class LTSFairnessObject : public RefCountable
         {
         private:
-            EFSMBase* TheEFSM;
             string Name;
+            EFSMBase* TheEFSM;
+            vector<ExpT> IndexInst;
+            u32 InstanceID;
             FairSetFairnessType Fairness;
-            mutable vector<LTSTransRef> Transitions;
-            u32 FairnessSetID;
+            u32 FairnessID;
+            // Raw pointer to avoid ref count cycles
+            LTSFairnessSet* FairnessSet;
 
             static UIDGenerator FairnessUIDGenerator;
 
         public:
-            LTSFairnessSet(EFSMBase* TheEFSM,
-                           const string& Name,
-                           FairSetFairnessType Fairness,
-                           const vector<LTSTransRef>& Transitions = vector<LTSTransRef>());
-            ~LTSFairnessSet();
+            LTSFairnessObject(LTSFairnessSet* FairnessSet,
+                              const string& Name, EFSMBase* TheEFSM,
+                              const vector<ExpT>& IndexInst,
+                              FairSetFairnessType Fairness, u32 InstanceID);
+            virtual ~LTSFairnessObject();
 
-            void AddTransition(const LTSTransRef& Trans) const;
             const string& GetName() const;
-            const vector<LTSTransRef>& GetTransitions() const;
+            EFSMBase* GetEFSM() const;
+            const vector<ExpT>& GetIndexInst() const;
             FairSetFairnessType GetFairnessType() const;
-            u32 GetFairnessSetID() const;
+            u32 GetFairnessID() const;
+            u32 GetInstanceID() const;
 
-            static void ResetFairnessSetID();
+            LTSFairnessSet* GetFairnessSet() const;
+
+            static void ResetFairnessUID();
+        };
+
+        // A parametrized fairness object, which consists of 
+        // one or more instances of fairness objects
+        class LTSFairnessSet : public RefCountable
+        {
+            friend class EFSMBase;
+
+        private:
+            string Name;
+            EFSMBase* TheEFSM;
+            vector<vector<ExpT>> AllInstances;
+            map<vector<ExpT>, LTSFairObjRef> FairnessObjects;
+            u32 FairnessIDLow;
+            u32 FairnessIDHigh;
+            u32 NumInstances;
+            FairSetFairnessType Fairness;
+            
+            // Raw pointer to avoid ref counted cycles
+            LTSProcessFairnessGroup* PFGroup;
+            
+        public:
+            LTSFairnessSet(LTSProcessFairnessGroup* PFGroup,
+                           const string& Name, EFSMBase* TheEFSM,
+                           const vector<vector<ExpT>>& AllInstances,
+                           FairSetFairnessType Fairness);
+            virtual ~LTSFairnessSet();
+
+            const string& GetName() const;
+            EFSMBase* GetEFSM() const;
+            const vector<vector<ExpT>>& GetAllInstances() const;
+            const map<vector<ExpT>, LTSFairObjRef>& GetFairnessObjs() const;
+            u32 GetFairnessIDLow() const;
+            u32 GetFairnessIDHigh() const;
+            u32 GetNumInstances() const;
+            FairSetFairnessType GetFairnessType() const;
+
+            LTSProcessFairnessGroup* GetPFGroup() const;
+
+            const LTSFairObjRef& GetFairnessObj(const vector<ExpT>& Instance) const;
+        };
+
+        class LTSProcessFairnessGroup : public RefCountable
+        {
+            friend class EFSMBase;
+        private:
+            EFSMBase* TheEFSM;
+            mutable map<string, LTSFairSetRef> FairnessSets;
+            
+        public:
+            LTSProcessFairnessGroup(EFSMBase* TheEFSM);
+            virtual ~LTSProcessFairnessGroup();
+            
+            void AddFairnessSet(const string& Name, FairSetFairnessType FairnessType) const;
+            EFSMBase* GetEFSM() const;
+            const map<string, LTSFairSetRef>& GetFairnessSets() const;
+            
+            const LTSFairSetRef& GetFairnessSet(const string& Name) const;
+            const LTSFairObjRef& GetFairnessObj(const string& Name, 
+                                                const vector<ExpT>& Instance) const;
         };
         
     } /* end namespace LTS */
@@ -82,3 +151,14 @@ namespace ESMC {
 
 // 
 // LTSFairnessSet.hpp ends here
+
+
+
+
+
+
+
+
+
+
+

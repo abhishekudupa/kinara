@@ -192,10 +192,9 @@ namespace ESMC {
                     throw ESMCError((string)"Parameters to EFSMS must be variable expressions");
                 }
                 auto Type = ParamAsVar->GetVarType();
-                if ((!Type->Is<Exprs::ExprSymmetricType>()) &&
-                    (!Type->Is<Exprs::ExprRangeType>()) &&
-                    (!Type->Is<Exprs::ExprEnumType>())) {
-                    throw ESMCError((string)"Parameter types must be symmetric, range or enum");
+                if ((!Type->Is<Exprs::ExprSymmetricType>())) {
+                    // TODO: Extend this to range types as well some day.
+                    throw ESMCError((string)"Parameter types must be symmetric types");
                 }
                 
                 auto const& VarName = ParamAsVar->GetVarName();

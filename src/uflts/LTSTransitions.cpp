@@ -41,16 +41,18 @@
 #include "LTSState.hpp"
 #include "LTSAssign.hpp"
 #include "LTSEFSM.hpp"
+#include "LTSFairnessSet.hpp"
 
 namespace ESMC {
     namespace LTS {
 
         AutomatonTransitionBase::AutomatonTransitionBase(AutomatonBase* Automaton,
+                                                         const vector<ExpT>& ParamInst,
                                                          const LTSState& InitState,
                                                          const LTSState& FinalState,
                                                          const ExpT& Guard)
             : Automaton(Automaton), InitState(InitState), FinalState(FinalState),
-              Guard(Guard)
+              Guard(Guard), ParamInst(ParamInst)
         {
             // Nothing here
         }
@@ -80,12 +82,18 @@ namespace ESMC {
             return Guard;
         }
 
+        const vector<ExpT>& AutomatonTransitionBase::GetParamInst() const
+        {
+            return ParamInst;
+        }
+
         LTSTransitionBase::LTSTransitionBase(EFSMBase* TheEFSM,
+                                             const vector<ExpT>& ParamInst,
                                              const LTSState& InitState,
                                              const LTSState& FinalState,
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates)
-            : AutomatonTransitionBase(TheEFSM, InitState, FinalState, Guard),
+            : AutomatonTransitionBase(TheEFSM, ParamInst, InitState, FinalState, Guard),
               Updates(Updates)
         {
             // Nothing here
@@ -108,13 +116,15 @@ namespace ESMC {
 
 
         LTSTransitionIOBase::LTSTransitionIOBase(EFSMBase* TheEFSM,
+                                                 const vector<ExpT>& ParamInst,
                                                  const LTSState& InitState,
                                                  const LTSState& FinalState,
                                                  const ExpT& Guard,
                                                  const vector<LTSAssignRef>& Updates,
                                                  const string& MessageName,
                                                  const ExprTypeRef& MessageType)
-            : LTSTransitionBase(TheEFSM, InitState, FinalState, Guard, Updates),
+            : LTSTransitionBase(TheEFSM, ParamInst, InitState, 
+                            FinalState, Guard, Updates),
               MessageName(MessageName), MessageType(MessageType)
         {
             // Nothing here
@@ -136,13 +146,14 @@ namespace ESMC {
         }
 
         LTSTransitionInput::LTSTransitionInput(EFSMBase* TheEFSM,
+                                               const vector<ExpT>& ParamInst,
                                                const LTSState& InitState,
                                                const LTSState& FinalState,
                                                const ExpT& Guard,
                                                const vector<LTSAssignRef>& Updates,
                                                const string& MessageName,
                                                const ExprTypeRef& MessageType)
-            : LTSTransitionIOBase(TheEFSM, InitState, FinalState, Guard, Updates, 
+            : LTSTransitionIOBase(TheEFSM, ParamInst, InitState, FinalState, Guard, Updates,
                                   MessageName, MessageType)
         {
             // Nothing here
@@ -173,6 +184,7 @@ namespace ESMC {
         }
 
         LTSTransitionOutput::LTSTransitionOutput(EFSMBase* TheEFSM,
+                                                 const vector<ExpT>& ParamInst,
                                                  const LTSState& InitState,
                                                  const LTSState& FinalState,
                                                  const ExpT& Guard,
@@ -180,7 +192,7 @@ namespace ESMC {
                                                  const string& MessageName,
                                                  const ExprTypeRef& MessageType,
                                                  const set<string>& CompOfFairnessSets)
-            : LTSTransitionIOBase(TheEFSM, InitState, FinalState, Guard, Updates,
+            : LTSTransitionIOBase(TheEFSM, ParamInst, InitState, FinalState, Guard, Updates,
                                   MessageName, MessageType),  
               CompOfFairnessSets(CompOfFairnessSets)
         {
@@ -217,12 +229,13 @@ namespace ESMC {
         }
 
         LTSTransitionInternal::LTSTransitionInternal(EFSMBase* TheEFSM,
+                                                     const vector<ExpT>& ParamInst,
                                                      const LTSState& InitState,
                                                      const LTSState& FinalState,
                                                      const ExpT& Guard,
                                                      const vector<LTSAssignRef>& Updates,
                                                      const set<string>& CompOfFairnessSets)
-            : LTSTransitionBase(TheEFSM, InitState, FinalState, Guard, Updates),
+            : LTSTransitionBase(TheEFSM, ParamInst, InitState, FinalState, Guard, Updates),
               CompOfFairnessSets(CompOfFairnessSets)
         {
             // Nothing here
@@ -256,27 +269,12 @@ namespace ESMC {
             return sstr.str();
         }
 
-        BuchiMonitorTransition::~BuchiMonitorTransition()
-        {
-            // Nothing here
-        }
-
-        string BuchiMonitorTransition::ToString(u32 Indent) const
-        {
-            ostringstream sstr;
-            string IndentString(Indent, ' ');
-            sstr << IndentString << "buchi transition {" << endl;
-            sstr << IndentString << "    " << InitState.GetName() << " -> " 
-                 << FinalState.GetName() << endl;
-            sstr << IndentString << "    Guard: " << Guard->ToString() << endl;
-            sstr << IndentString << "}" << endl;
-            return sstr.str();
-        }
-
         LTSGuardedCommand::LTSGuardedCommand(const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
-                                             const ExprTypeRef& MsgType)
-            : Guard(Guard), Updates(Updates), MsgType(MsgType)
+                                             const ExprTypeRef& MsgType,
+                                             const set<LTSFairObjRef>& Fairnesses)
+            : Guard(Guard), Updates(Updates), MsgType(MsgType), 
+              Fairnesses(Fairnesses)
         {
             // Nothing here
         }
@@ -299,6 +297,11 @@ namespace ESMC {
         const ExprTypeRef& LTSGuardedCommand::GetMsgType() const
         {
             return MsgType;
+        }
+
+        const set<LTSFairObjRef>& LTSGuardedCommand::GetFairnesses() const
+        {
+            return Fairnesses;
         }
 
         string LTSGuardedCommand::ToString() const
