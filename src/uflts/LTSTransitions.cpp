@@ -276,7 +276,9 @@ namespace ESMC {
             : Guard(Guard), Updates(Updates), MsgType(MsgType), 
               Fairnesses(Fairnesses)
         {
-            // Nothing here
+            for (auto const& Fairness : Fairnesses) {
+                FairnessBits.push_back(Fairness->GetFairnessID());
+            }
         }
 
         LTSGuardedCommand::~LTSGuardedCommand()
@@ -302,6 +304,11 @@ namespace ESMC {
         const set<LTSFairObjRef>& LTSGuardedCommand::GetFairnesses() const
         {
             return Fairnesses;
+        }
+
+        const vector<u32>& LTSGuardedCommand::GetFairnessBits() const
+        {
+            return FairnessBits;
         }
 
         string LTSGuardedCommand::ToString() const

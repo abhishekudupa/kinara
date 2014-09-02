@@ -1,176 +1,272 @@
- // AQStructure.cpp --- 
- // 
- // Filename: AQStructure.cpp
- // Author: Abhishek Udupa
- // Created: Tue Aug 19 11:51:55 2014 (-0400)
- // 
- // 
- // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
- // All rights reserved.
- // 
- // Redistribution and use in source and binary forms, with or without
- // modification, are permitted provided that the following conditions are met:
- // 1. Redistributions of source code must retain the above copyright
- //    notice, this list of conditions and the following disclaimer.
- // 2. Redistributions in binary form must reproduce the above copyright
- //    notice, this list of conditions and the following disclaimer in the
- //    documentation and/or other materials provided with the distribution.
- // 3. All advertising materials mentioning features or use of this software
- //    must display the following acknowledgement:
- //    This product includes software developed by The University of Pennsylvania
- // 4. Neither the name of the University of Pennsylvania nor the
- //    names of its contributors may be used to endorse or promote products
- //    derived from this software without specific prior written permission.
- // 
- // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
- // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- // DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
- // DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- // (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- // LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- // 
- // 
+// AQStructure.cpp --- 
+// 
+// Filename: AQStructure.cpp
+// Author: Abhishek Udupa
+// Created: Tue Aug 19 11:51:55 2014 (-0400)
+// 
+// 
+// Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
+// All rights reserved.
+// 
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+// 1. Redistributions of source code must retain the above copyright
+//    notice, this list of conditions and the following disclaimer.
+// 2. Redistributions in binary form must reproduce the above copyright
+//    notice, this list of conditions and the following disclaimer in the
+//    documentation and/or other materials provided with the distribution.
+// 3. All advertising materials mentioning features or use of this software
+//    must display the following acknowledgement:
+//    This product includes software developed by The University of Pennsylvania
+// 4. Neither the name of the University of Pennsylvania nor the
+//    names of its contributors may be used to endorse or promote products
+//    derived from this software without specific prior written permission.
+// 
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
+// EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+// WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+// (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+// LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+// SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+// 
+// 
 
- // Code:
+// Code:
 
- #include "AQStructure.hpp"
+#include <boost/functional/hash.hpp>
 
- namespace ESMC {
-     namespace MC {
+#include "AQStructure.hpp"
 
-         AQSEdge::AQSEdge()
-             : Target(nullptr), Permutation(0)
-         {
-             // Nothing here
-         }
+namespace ESMC {
+    namespace MC {
 
-         AQSEdge::AQSEdge(const StateVec* Target, u32 Permutation,
-                          u32 GCmdIndex)
-             : Target(Target), Permutation(Permutation), GCmdIndex(GCmdIndex)
-         {
-             // Nothing here
-         }
-         
-         AQSEdge::AQSEdge(const AQSEdge& Other) 
-             : Target(Other.Target), Permutation(Other.Permutation),
-               GCmdIndex(Other.GCmdIndex)
-         {
-             // Nothing here
-         }
+        AQStructure::AQStructure()
+            : EdgePool(new boost::pool<>(sizeof(AQSEdge)))
+        {
+            // Nothing here
+        }
 
-         AQSEdge::~AQSEdge()
-         {
-             // Nothing here
-         }
+        AQStructure::~AQStructure()
+        {
+            delete EdgePool;
+        }
 
-         AQSEdge& AQSEdge::operator = (const AQSEdge& Other)
-         {
-             if (&Other == this) {
-                 return *this;
-             }
-             Target = Other.Target;
-             Permutation = Other.Permutation;
-             GCmdIndex = Other.GCmdIndex;
-             return *this;
-         }
+        StateVec* AQStructure::Find(StateVec* SV) const
+        {
+            auto it = StateHashSet.find(SV);
+            if (it == StateHashSet.end()) {
+                return nullptr;
+            } else {
+                return it->first;
+            }
+        }
 
-         bool AQSEdge::operator == (const AQSEdge& Other) const
-         {
-             return (Target == Other.Target && Permutation == Other.Permutation &&
-                     GCmdIndex == Other.GCmdIndex);
-         }
+        void AQStructure::Insert(StateVec* SV)
+        {
+            if (Find(SV)) {
+                return;
+            }
+            StateHashSet[SV] = AQSEdgeSetT();
+        }
 
-         const StateVec* AQSEdge::GetTarget() const
-         {
-             return Target;
-         }
+        void AQStructure::InsertInitState(StateVec* SV)
+        {
+            if (Find(SV)) {
+                return;
+            }
+            StateHashSet[SV] = AQSEdgeSetT();
+            InitStates.push_back(SV);
+        }
 
-         u32 AQSEdge::GetPermutation() const
-         {
-             return Permutation;
-         }
+        void AQStructure::AddEdge(StateVec* Source, StateVec* Target,
+                                  u32 Permutation, u32 GCmdIndex)
+        {
+            auto SourceIt = StateHashSet.find(Source);
+            auto DestIt = StateHashSet.find(Target);
 
-         u32 AQSEdge::GetGCmdIndex() const
-         {
-             return GCmdIndex;
-         }
+            if (SourceIt == StateHashSet.end() || 
+                DestIt == StateHashSet.end()) {
+                throw InternalError((string)"Attempted to add edge with one " + 
+                                    "or more states not known to the AQS.\n" + 
+                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
+            }
 
-         AQStructure::AQStructure()
-         {
-             // Nothing here
-         }
+            auto NewEdge = 
+                new (EdgePool->malloc()) AQSEdge(Target, Permutation, GCmdIndex);
+            auto EdgeIt = EdgeHashSet.find(NewEdge);
+            if (EdgeIt != EdgeHashSet.end()) {
+                EdgePool->free(NewEdge);
+                NewEdge = *EdgeIt;
+            } else {
+                EdgeHashSet.insert(NewEdge);
+            }
 
-         AQStructure::~AQStructure()
-         {
-             // Nothing here
-         }
+            SourceIt->second.insert(NewEdge);
+        }
 
-         StateVec* AQStructure::Find(StateVec* SV) const
-         {
-             auto it = StateSet.find(SV);
-             if (it == StateSet.end()) {
-                 return nullptr;
-             } else {
-                 return it->first;
-             }
-         }
+        u64 AQStructure::GetNumStates() const
+        {
+            return StateHashSet.size();
+        }
 
-         void AQStructure::Insert(StateVec* SV)
-         {
-             if (Find(SV)) {
-                 return;
-             }
-             StateSet[SV] = AQSEdgeSetT();
-         }
+        u64 AQStructure::GetNumEdges() const
+        {
+            return EdgeHashSet.size();
+        }
 
-         void AQStructure::InsertInitState(StateVec* SV)
-         {
-             if (Find(SV)) {
-                 return;
-             }
-             StateSet[SV] = AQSEdgeSetT();
-             InitStates.push_back(SV);
-         }
+        const vector<StateVec*>& AQStructure::GetInitStates() const
+        {
+            return InitStates;
+        }
 
-         void AQStructure::AddEdge(StateVec* Source, StateVec* Target,
-                                   u32 Permutation, u32 GCmdIndex)
-         {
-             auto it = StateSet.find(Source);
-             AQSEdge NewEdge(Target, Permutation, GCmdIndex);
-             auto it2 = it->second.find(NewEdge);
-             if (it2 != it->second.end()) {
-                 return;
-             }
-             it->second.insert(NewEdge);
-         }
+        const AQSEdgeSetT& AQStructure::GetEdges(const StateVec* SV) const
+        {
+            auto it = StateHashSet.find(const_cast<StateVec*>(SV));
+            if (it == StateHashSet.end()) {
+                return EmptyEdgeSet;
+            } else {
+                return it->second;
+            }
+        }
 
-         u64 AQStructure::GetNumStates() const
-         {
-             return StateSet.size();
-         }
+        ProductState::ProductState(const StateVec* SVPtr, u32 MonitorState,
+                                   u32 IndexID)
+            : SVPtr(SVPtr), MonitorState(MonitorState), IndexID(IndexID)
+        {
+            // Nothing here
+        }
 
-         u64 AQStructure::GetNumEdges() const
-         {
-             u64 Retval = 0;
-             for (auto const& StateEdges : StateSet) {
-                 Retval += StateEdges.second.size();
-             }
-             return Retval;
-         }
+        ProductState::~ProductState()
+        {
+            // Nothing here
+        }
 
-         const AQSEdgeSetT& AQStructure::GetEdges(const StateVec* SV) const
-         {
-             auto it = StateSet.find(const_cast<StateVec*>(SV));
-             if (it == StateSet.end()) {
-                 return EmptyEdgeSet;
-             } else {
-                 return it->second;
-             }
-         }
+        const StateVec* ProductState::GetSVPtr() const
+        {
+            return SVPtr;
+        }
+
+        u32 ProductState::GetMonitorState() const
+        {
+            return MonitorState;
+        }
+
+        u32 ProductState::GetIndexID() const
+        {
+            return IndexID;
+        }
+
+        u64 ProductState::Hash() const
+        {
+            u64 Retval = 0;
+            boost::hash_combine(Retval, SVPtr);
+            boost::hash_combine(Retval, ((u64)MonitorState << 32 | (u64)IndexID));
+            return Retval;
+        }
+
+        bool ProductState::operator == (const ProductState& Other) const
+        {
+            return (SVPtr == Other.SVPtr &&
+                    MonitorState == Other.MonitorState &&
+                    IndexID == Other.IndexID);
+        }
+
+
+        ProductStructure::ProductStructure()
+            : PSPool(new boost::pool<>(sizeof(ProductState))),
+              PEPool(new boost::pool<>(sizeof(ProductEdge)))
+        {
+            // Nothing here
+        }
+
+        ProductStructure::~ProductStructure()
+        {
+            delete PSPool;
+            delete PEPool;
+        }
+
+        ProductState* ProductStructure::AddInitialState(const StateVec *SVPtr, 
+                                                        u32 MonitorState, 
+                                                        u32 IndexID)
+        {
+            bool New;
+            auto NewPS = AddState(SVPtr, MonitorState, IndexID, New);
+            if (New) {
+                InitialStates.push_back(NewPS);
+            }
+            return NewPS;
+        }
+
+        ProductState* ProductStructure::AddState(const StateVec* SVPtr,
+                                                 u32 MonitorState,
+                                                 u32 IndexID, bool& New)
+        {
+            auto NewPS = new (PSPool->malloc()) ProductState(SVPtr, MonitorState, IndexID);
+            auto it = PSHashSet.find(NewPS);
+            if (it == PSHashSet.end()) {
+                PSHashSet[NewPS] = EmptyEdgeSet;
+                New = true;
+                return NewPS;
+            } else {
+                PSPool->free(NewPS);
+                NewPS = it->first;
+                New = false;
+                return NewPS;
+            }
+        }
+
+        void ProductStructure::AddEdge(ProductState* Source, ProductState* Target,
+                                       u32 Permutation, u32 GCmdIndex)
+        {
+            auto SourceIt = PSHashSet.find(Source);
+            auto TargetIt = PSHashSet.find(Target);
+            
+            if (SourceIt == PSHashSet.end() || TargetIt == PSHashSet.end()) {
+                throw InternalError((string)"Source and/or target state not known " + 
+                                    "to ProductStructure while adding edge.\nAt: " + 
+                                    __FILE__ + ":" + to_string(__LINE__));
+            }
+            auto NewEdge = 
+                new (PEPool->malloc()) ProductEdge(Target, Permutation, GCmdIndex);
+            auto EdgeIt = EdgeHashSet.find(NewEdge);
+            if (EdgeIt == EdgeHashSet.end()) {
+                EdgeHashSet.insert(NewEdge);
+            } else {
+                PEPool->free(NewEdge);
+                NewEdge = *EdgeIt;
+            }
+
+            SourceIt->second.insert(NewEdge);
+        }
+
+        const vector<ProductState*>& ProductStructure::GetInitialStates() const
+        {
+            return InitialStates;
+        }
+
+        const ProductEdgeSetT& ProductStructure::GetEdges(ProductState* State) const
+        {
+            auto it = PSHashSet.find(State);
+            if (it == PSHashSet.end()) {
+                return EmptyEdgeSet;
+            } else {
+                return it->second;
+            }
+        }
+
+        u32 ProductStructure::GetNumEdges() const
+        {
+            return EdgeHashSet.size();
+        }
+
+        u32 ProductStructure::GetNumStates() const
+        {
+            return PSHashSet.size();
+        }
 
     } /* end namespace MC */
 } /* end namespace ESMC */

@@ -59,17 +59,16 @@ namespace ESMC {
         private:
             string Name;
             vector<ExpT> SymmIndices;
+            vector<vector<ExpT>> SymmInsts;
             ExpT Constraint;
             LabelledTS* TheLTS;
             UIDGenerator StateUIDGenerator;
             SymbolTable SymTab;
             map<string, u32> StateNameToStateID;
             map<u32, string> StateIDToStateName;
-            PermutationSet* PermSet;
             LTSCompiler* Compiler;
             bool StatesFrozen;
             bool Frozen;
-            vector<MgrT::SubstMapT> PermSubstMaps;
             // Transitions for each permutation
             // further indexed by stateid.
             // A transition is a guard and a next state id
@@ -77,7 +76,8 @@ namespace ESMC {
             unordered_set<u32> AcceptingStates;
             vector<u32> InitialStates;
             u32 NumStates;
-
+            ProcessIndexSet* TheIndexSet;
+            
             inline void AssertFrozen() const;
             inline void AssertNotFrozen() const;
             inline void AssertStatesFrozen() const;
@@ -87,9 +87,9 @@ namespace ESMC {
             
         public:
             BuchiAutomaton(LabelledTS* TheLTS, const string& Name, 
-                           const vector<ExpT> SymmIndices,
-                           const ExpT& Constraint, PermutationSet* PermSet,
-                           LTSCompiler* Compiler);
+                           const vector<ExpT>& SymmIndices,
+                           const ExpT& Constraint, LTSCompiler* Compiler);
+
             ~BuchiAutomaton();
             void AddState(const string& StateName, bool Initial,
                           bool Accepting);
@@ -114,10 +114,11 @@ namespace ESMC {
 
             // Methods for model checking
             const vector<u32>& GetInitialStates() const;
-            vector<u32> GetNextStates(u32 CurState, u32 PermIdx, 
+            vector<u32> GetNextStates(u32 CurState, u32 IndexID, 
                                       const StateVec* StateVector) const;
             const unordered_set<u32>& GetAcceptingStates() const;
             bool IsAccepting(u32 StateID) const;
+            const ProcessIndexSet* GetIndexSet() const;
 
             void Freeze();
         };

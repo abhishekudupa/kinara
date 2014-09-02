@@ -86,6 +86,7 @@ namespace ESMC {
             StateVecPrinter* Printer;
             LTSCompiler* Compiler;
             AQStructure* AQS;
+            ProductStructure* ThePS;
             vector<GCmdRef> GuardedCommands;
             u32 NumGuardedCmds;
             map<string, BuchiAutomaton*> OmegaAutomata;
@@ -95,6 +96,7 @@ namespace ESMC {
             inline void ApplyUpdates(const vector<LTSAssignRef>& Updates,
                                      const StateVec* InputState,
                                      StateVec* OutputState) const;
+            inline void ConstructProduct(BuchiAutomaton* Monitor);
 
         public:
             LTSChecker(LabelledTS* TheLTS);

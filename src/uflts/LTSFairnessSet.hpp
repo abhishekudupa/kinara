@@ -99,6 +99,9 @@ namespace ESMC {
             u32 FairnessIDHigh;
             u32 NumInstances;
             FairSetFairnessType Fairness;
+            u32 FairnessSetID;
+
+            static UIDGenerator FairnessSetUIDGenerator;
             
             // Raw pointer to avoid ref counted cycles
             LTSProcessFairnessGroup* PFGroup;
@@ -117,6 +120,7 @@ namespace ESMC {
             u32 GetFairnessIDLow() const;
             u32 GetFairnessIDHigh() const;
             u32 GetNumInstances() const;
+            u32 GetFairnessSetID() const;
             FairSetFairnessType GetFairnessType() const;
 
             LTSProcessFairnessGroup* GetPFGroup() const;

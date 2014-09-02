@@ -42,6 +42,7 @@
 #include "../hash/SpookyHash.hpp"
 
 #include "../utils/CombUtils.hpp"
+#include "../uflts/LTSEFSMBase.hpp"
 
 #include "IndexSet.hpp"
 
@@ -52,6 +53,7 @@ namespace ESMC {
         using LTS::ExpT;
         using Symm::PermutationSet;
         using LTS::LTSTypeExtensionT;
+        using LTS::EFSMBase;
 
         IndexVector::IndexVector(u08* TheIndexVector, u32 Size)
             : TheIndexVector(TheIndexVector), Size(Size)
@@ -62,6 +64,11 @@ namespace ESMC {
         IndexVector::~IndexVector()
         {
             free(TheIndexVector);
+        }
+
+        u32 IndexVector::GetSize() const
+        {
+            return Size;
         }
 
         i32 IndexVector::Compare(const IndexVector* Other) const
@@ -96,49 +103,66 @@ namespace ESMC {
             return new IndexVector(NewIndexVec, Size);
         }
 
+        u08* IndexVector::GetVector()
+        {
+            return TheIndexVector;
+        }
+
+        const u08* IndexVector::GetVector() const
+        {
+            return TheIndexVector;
+        }
+
         ProcessIndexSet::ProcessIndexSet(const vector<vector<ExpT>>& ParamInsts)
         {
+
+            if (ParamInsts.size() == 1 && ParamInsts[0].size() == 0) {
+                // Non parametrized process
+                IndexVectorSize = 1;
+                NumIndexVectors = 1;
+                auto TheIV = (u08*)malloc(sizeof(u08));
+                TheIV[0] = 0;
+                auto TheIndexVec = new IndexVector(TheIV, IndexVectorSize);
+                ParamVecToIndexVec[ParamInsts[0]] = TheIndexVec;
+                IndexVecToParamVec[TheIndexVec] = ParamInsts[0];
+                IDToIndexVec.push_back(TheIndexVec);
+                IndexVecToID[TheIndexVec] = 0;
+                auto TempIV = (u08*)malloc(sizeof(u08) * IndexVectorSize);
+                WorkingIV = new IndexVector(TempIV, IndexVectorSize);
+                return;
+            }
+
+            // The general case when there's more than one instance
+            IndexVectorSize = ParamInsts[0].size();
             NumIndexVectors = ParamInsts.size();
-
-            vector<ExprTypeRef> IndexTypes;
-            map<ExprTypeRef, map<string, u32>> ValueMaps;
-
-            for (auto const& Exp : ParamInsts[0]) {
-                auto const& Type = Exp->GetType();
-                IndexTypes.push_back(Type);
-                auto TypeExt = Type->GetExtension<LTSTypeExtensionT>();
-                auto TypeOffset = TypeExt->TypeOffset;
-
-                IndexTypes.push_back(Type);
-                TypeOffsets.push_back(TypeOffset);
-                IndexVectorSize++;
-
-                // Populate the value maps
-                auto const& Values = Type->GetElements();
-                u32 i = 0;
-                for (auto const& Value : Values) {
-                    ValueMaps[Type][Value] = i;
-                    ++i;
-                }
-            }
-            
-            // Populate the index vectors
-            
-            auto&& CPVecs = CrossProduct<ExpT>(ParamInsts.begin(), ParamInsts.end());
-            u32 CurID = 0;
-            for (auto const& CPTuple : CPVecs) {
-                u08* CurIV = (u08*)malloc(sizeof(u08) * IndexVectorSize);
-                for (u32 i = 0; i < CPTuple.size(); ++i) {
-                    CurIV[i] = ValueMaps[CPTuple[i]->GetType()][CPTuple[i]->ToString()];
-                }
-                auto CurIndexVec = new IndexVector(CurIV, IndexVectorSize);
-                IDToIndexVec.push_back(CurIndexVec);
-                IndexVecToID[CurIndexVec] = CurID;
-                ++CurID;
-            }
 
             auto TempIV = (u08*)malloc(sizeof(u08) * IndexVectorSize);
             WorkingIV = new IndexVector(TempIV, IndexVectorSize);
+
+            // figure out the type offsets
+            for (auto const& Exp : ParamInsts[0]) {
+                auto const& Type = Exp->GetType();
+                auto Ext = Type->GetExtension<LTS::LTSTypeExtensionT>();
+                TypeOffsets.push_back(Ext->TypeOffset);
+            }
+
+            for (u32 j = 0; j < NumIndexVectors; ++j) {
+                auto const& ParamInst = ParamInsts[j];
+                auto CurIV = (u08*)malloc(sizeof(u08) * IndexVectorSize);
+                for (u32 i = 0; i < IndexVectorSize; ++i) {
+                    auto CurExp = ParamInst[i]->As<Exprs::ConstExpression>();
+                    auto const& CurVal = CurExp->GetConstValue();
+                    auto const& CurType = CurExp->GetConstType()->As<Exprs::ExprScalarType>();
+                    
+                    auto IndexVal = CurType->ConstToVal(CurVal);
+                    CurIV[i] = (u08)IndexVal;
+                }
+                auto TheIV = new IndexVector(CurIV, IndexVectorSize);
+                ParamVecToIndexVec[ParamInst] = TheIV;
+                IndexVecToParamVec[TheIV] = ParamInst;
+                IDToIndexVec.push_back(TheIV);
+                IndexVecToID[TheIV] = j;
+            }
         }
 
         ProcessIndexSet::~ProcessIndexSet()
@@ -151,6 +175,9 @@ namespace ESMC {
 
         u32 ProcessIndexSet::Permute(u32 IndexID, const vector<u08>& Perm) const
         {
+            if (NumIndexVectors == 1) {
+                return IndexID;
+            }
             auto OrigIV = IDToIndexVec[IndexID];
             for (u32 i = 0; i < IndexVectorSize; ++i) {
                 (*WorkingIV)[i] = Perm[TypeOffsets[i] + (*OrigIV)[i]];
@@ -168,13 +195,26 @@ namespace ESMC {
             return NumIndexVectors;
         }
 
-        SystemIndexSet::SystemIndexSet(const vector<vector<vector<ExpT>>>& ParamInsts)
+        const IndexVector* ProcessIndexSet::GetIndexVector(u32 IndexID) const
         {
-            for (auto const& ParamInst : ParamInsts) {
-                ProcessIdxSets.push_back(new ProcessIndexSet(ParamInst));
+            return IDToIndexVec[IndexID];
+        }
+
+        u32 ProcessIndexSet::GetIndexID(const IndexVector *IndexVec) const
+        {
+            auto it = IndexVecToID.find(const_cast<IndexVector*>(IndexVec));
+            return it->second;
+        }
+
+        SystemIndexSet::SystemIndexSet(const vector<EFSMBase*>& Processes)
+        {
+            for (auto const& Process : Processes) {
+                auto const& ParamInsts = Process->GetParamInsts();
+                ProcessIdxSets.push_back(new ProcessIndexSet(ParamInsts));
                 Multipliers.push_back(ProcessIdxSets.back()->GetNumIndexVectors());
                 Scratchpad.push_back(0);
             }
+            CachedIdxVectors = vector<const IndexVector*>(ProcessIdxSets.size());
         }
 
         SystemIndexSet::~SystemIndexSet()
@@ -191,7 +231,7 @@ namespace ESMC {
             for (u32 i = 0; i < ProcessIdxSets.size(); ++i) {
                 auto CurID = LeftIdx % Multipliers[i];
                 LeftIdx = LeftIdx / Multipliers[i];
-                Scratchpad[i] = CurID;
+                Scratchpad[i] = ProcessIdxSets[i]->Permute(CurID, Perm);
             }
 
             // Now build up the return value
@@ -200,6 +240,19 @@ namespace ESMC {
                 Retval = (Retval * Multipliers[i-1]) + Scratchpad[i-1];
             }
             return Retval;
+        }
+
+        const vector<const IndexVector*>& 
+        SystemIndexSet::GetIndexVectors(u32 IndexID) const
+        {
+            auto LeftIdx = IndexID;
+            for (u32 i = 0; i < ProcessIdxSets.size(); ++i) {
+                auto CurID = LeftIdx % Multipliers[i];
+                LeftIdx = LeftIdx / Multipliers[i];
+                CachedIdxVectors[i] = ProcessIdxSets[i]->GetIndexVector(CurID);
+            }
+
+            return CachedIdxVectors;
         }
 
     } /* end namespace MC */

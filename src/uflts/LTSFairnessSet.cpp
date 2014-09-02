@@ -107,12 +107,15 @@ namespace ESMC {
         }
 
         
+        UIDGenerator LTSFairnessSet::FairnessSetUIDGenerator;
+        
         LTSFairnessSet::LTSFairnessSet(LTSProcessFairnessGroup* PFGroup,
                                        const string& Name, EFSMBase* TheEFSM,
                                        const vector<vector<ExpT>>& AllInstances,
                                        FairSetFairnessType Fairness)
             : Name(Name), TheEFSM(TheEFSM), AllInstances(AllInstances),
-              Fairness(Fairness), PFGroup(PFGroup)
+              Fairness(Fairness), FairnessSetID(FairnessSetUIDGenerator.GetUID()),
+              PFGroup(PFGroup)
         {
             // Instantiate a fairness object for every instance
             NumInstances = AllInstances.size();
@@ -133,6 +136,11 @@ namespace ESMC {
         LTSFairnessSet::~LTSFairnessSet()
         {
             // Nothing here
+        }
+
+        u32 LTSFairnessSet::GetFairnessSetID() const
+        {
+            return FairnessSetID;
         }
 
         const string& LTSFairnessSet::GetName() const
@@ -248,5 +256,5 @@ namespace ESMC {
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-// 
+//
 // LTSFairnessSet.cpp ends here

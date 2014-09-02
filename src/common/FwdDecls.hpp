@@ -127,9 +127,12 @@ namespace ESMC {
         class RValueInterpreter;
         class LValueInterpreter;
         class AQStructure;
+        class ProductStructure;
         class StateVecPrinter;
         class BuchiAutomaton;
         
+        class IndexVector;
+        class ProcessIndexSet;
         class IndexSet;
 
     } /* end namespace MC */

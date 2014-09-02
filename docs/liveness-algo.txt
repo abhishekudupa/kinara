@@ -1,0 +1,67 @@
+for each instance i that A tracks, and each initial state s_0 of AQS:
+    set (s_0, a_0, i) as an initial state of BBar, 
+    where s_0 is the initial state of the AQS
+
+for each s = (s_0, a_0, i):
+    BBarSCC(s);
+
+def BBarSCC(state):
+    (s, a, i) = state;
+    state.lowlink = state.index = curindex;
+    curindex = curindex + 1;
+    state.onstack = true;
+    state.final = true if a is final, else false
+    state.visited = true;
+    DFSStack.push(state);
+    SCCStack.push(state);
+
+    while (DFSStack.size() > 0):
+        curstate = (cs, a, i) = DFSStack.top();
+        nextstate = (ns, a', i') = next successor of curstate
+        
+        if (nextstate is defined):
+            if (nextstate is not visited):
+                nextstate.lowlink = nextstate.index = curindex;
+                curindex = curindex + 1;
+                nextstate.onstack = true;
+                nextstatestate.final = true if a' is final, else false
+                nextstate.visited = true;
+                DFSStack.push(nextstate);
+                SCCStack.push(nextstate);
+                continue
+
+            else if (nextstate.onstack):
+                curstate.lowlink = min(curstate.lowlink, nextstate.index)
+                continue;
+
+        else:
+            DFSStack.pop();
+            prevstate = (ps, ap, ip) = DFSStack.top();
+            prevstate.lowlink = min(prevstate.lowlink, curstate.lowlink)
+            prevstate.final = prevstate.final | curstate.final
+
+            if (curstate.lowlink == curstate.index):
+                SCC = { SCCStack.pop() until SCCStack.top().index = curstate.index inclusive }
+                if (SCC is final):
+                    for each s in SCC mark s.InSCC = true;
+                    cex = CheckFair(curstate, SCC);
+                    if (cex is defined):
+                        report counterexample cex
+
+
+
+def CheckFair(sccroot, SCCStates):
+    threaded_roots = {};
+
+    for each index in the system index set:
+        add (sccroot, index) to threaded_roots;
+
+    for each s = (sccroot, index) in threaded_roots:
+        for each fairnessset p whose indexth fairnessobject is enabled in s:
+            s.enabled[p] = true;
+        s.executed[p] = false for all fairnesssets
+        DFSStack.push(s)
+
+        while (DFSStack.size() > 0):
+            (s, i) = curstate = DFSStack.top();
+                

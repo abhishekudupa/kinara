@@ -40,6 +40,8 @@
 #if !defined ESMC_LTS_AUTOMATON_HPP_
 #define ESMC_LTS_AUTOMATON_HPP_
 
+#include "../utils/UIDGenerator.hpp"
+
 #include "LTSTypes.hpp"
 #include "LTSState.hpp"
 #include "SymbolTable.hpp"
@@ -49,6 +51,9 @@ namespace ESMC {
 
         class AutomatonBase
         {
+        private:
+            static UIDGenerator AutomatonClassIDGen;
+
         protected:
             LabelledTS* TheLTS;
             string Name;
@@ -59,6 +64,7 @@ namespace ESMC {
             ExprTypeRef StateType;
             vector<vector<ExpT>> ParamInsts;
             vector<MgrT::SubstMapT> ParamSubsts;
+            u32 ClassID;
 
             bool StatesFrozen;
 
@@ -83,6 +89,7 @@ namespace ESMC {
             const vector<MgrT::SubstMapT>& GetParamSubsts() const;
             u32 GetNumInstances() const;
             u32 GetNumInstancesUnconstrained() const;
+            u32 GetClassID() const;
             virtual string ToString() const = 0;
 
             template <typename T>

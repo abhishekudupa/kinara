@@ -44,6 +44,7 @@
 
 #include "OmegaAutomaton.hpp"
 #include "Compiler.hpp"
+#include "IndexSet.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -53,51 +54,6 @@ namespace ESMC {
         using LTS::ExpT;
         using LTS::ExprTypeRef;
         using Symm::PermutationSet;
-
-        inline void BuchiAutomaton::GenSubstMaps(const vector<ExpT>& InitInst)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            set<ExprTypeRef> DistinctTypes;
-            for (auto const& Index : InitInst) {
-                DistinctTypes.insert(Index->GetType());
-            }
-            
-            vector<vector<ExpT>> TypeElems;
-            for (auto const& Type : DistinctTypes) {
-                TypeElems.push_back(vector<ExpT>());
-                auto&& Elems = Type->GetElements();
-                for (auto const& Elem : Elems) {
-                    TypeElems.back().push_back(Mgr->MakeVal(Elem, Type));
-                }
-            }
-
-            for (auto it = PermSet->Begin(); it != PermSet->End(); ++it) {
-                auto const& Perm = it.GetPerm();
-                MgrT::SubstMapT SubstMap;
-
-                u32 TypeIndex = 0;
-                for (auto const& Type : DistinctTypes) {
-                    auto TypeExt = Type->GetExtension<LTS::LTSTypeExtensionT>();
-                    auto Offset = TypeExt->TypeOffset;
-                    u32 i = 0;
-                    for (auto const& Elem : TypeElems[TypeIndex]) {
-                        SubstMap[Elem] = TypeElems[TypeIndex][Offset + i];
-                        ++i;
-                    }
-                    ++TypeIndex;
-                }
-
-                auto&& SubstInst = LTS::SubstAll(InitInst, SubstMap, Mgr);
-                MgrT::SubstMapT FinalSubstMap;
-                u32 i = 0;
-                for (auto const& SymmIndex : SymmIndices) {
-                    FinalSubstMap[SymmIndex] = SubstInst[i];
-                    ++i;
-                }
-                
-                PermSubstMaps.push_back(FinalSubstMap);
-            }
-        }
 
         inline void BuchiAutomaton::AssertStatesFrozen() const
         {
@@ -132,24 +88,22 @@ namespace ESMC {
         }        
 
         BuchiAutomaton::BuchiAutomaton(LabelledTS* TheLTS, const string& Name,
-                                       const vector<ExpT> SymmIndices,
-                                       const ExpT& Constraint, PermutationSet* PermSet,
-                                       LTSCompiler* Compiler)
+                                       const vector<ExpT>& SymmIndices,
+                                       const ExpT& Constraint, LTSCompiler* Compiler)
             : Name(Name), SymmIndices(SymmIndices), 
-              Constraint(Constraint), TheLTS(TheLTS), PermSet(PermSet),
-              Compiler(Compiler), StatesFrozen(false), 
-              Transitions(PermSet->GetSize()), NumStates(0)
+              Constraint(Constraint), TheLTS(TheLTS),
+              Compiler(Compiler), StatesFrozen(false), Frozen(false),
+              NumStates(0)
         {
             SymTab.Pop();
             SymTab.Push(TheLTS->SymTab.Bot());
-
+            
             LTS::CheckParams(SymmIndices, Constraint, SymTab, TheLTS->GetMgr(), true);
             // Create the substitution maps for each permutation
             // starting from the canonical initial index values
-            auto&& ParamInsts = LTS::InstantiateParams(SymmIndices, Constraint, 
-                                                       TheLTS->GetMgr());
-            auto InitInst = ParamInsts[0];
-            GenSubstMaps(InitInst);
+            SymmInsts = LTS::InstantiateParams(SymmIndices, Constraint, 
+                                                 TheLTS->GetMgr());
+            TheIndexSet = new ProcessIndexSet(SymmInsts);
         }
 
         BuchiAutomaton::~BuchiAutomaton()
@@ -185,9 +139,8 @@ namespace ESMC {
             }
             
             StatesFrozen = true;
-            for (u32 i = 0; i < Transitions.size(); ++i) {
-                Transitions[i] = vector<vector<pair<ExpT, u32>>>(NumStates);
-            }
+            Transitions = vector<vector<vector<pair<ExpT, u32>>>>(SymmInsts.size(), 
+                                                                  vector<vector<pair<ExpT, u32>>>(NumStates));
         }
 
         void BuchiAutomaton::AddTransition(const string& InitState, 
@@ -220,13 +173,19 @@ namespace ESMC {
                                 " for Buchi Automaton transition undefined");
             }
             auto FinalStateID = it->second;
-            u32 PermIdx = 0;
-            for (auto const& SubstMap : PermSubstMaps) {
+            u32 InstIdx = 0;
+            for (auto const& SymmInst : SymmInsts) {
+                // Create a substitution map for this instance
+                MgrT::SubstMapT SubstMap;
+                for (u32 i = 0; i < SymmInst.size(); ++i) {
+                    SubstMap[SymmIndices[i]] = SymmInst[i];
+                }
+
                 auto SubstGuard = Mgr->Substitute(SubstMap, UnrolledGuard);
                 Compiler->CompileExp(SubstGuard, TheLTS);
                 auto NewTrans = make_pair(SubstGuard, FinalStateID);
-                Transitions[PermIdx][InitStateID].push_back(NewTrans);
-                ++PermIdx;
+                Transitions[InstIdx][InitStateID].push_back(NewTrans);
+                ++InstIdx;
             }
         }
 
@@ -267,10 +226,10 @@ namespace ESMC {
             return InitialStates;
         }
 
-        vector<u32> BuchiAutomaton::GetNextStates(u32 CurState, u32 PermIdx, 
+        vector<u32> BuchiAutomaton::GetNextStates(u32 CurState, u32 IndexID, 
                                                   const StateVec* StateVector) const
         {
-            auto const& TransVec = Transitions[PermIdx][CurState];
+            auto const& TransVec = Transitions[IndexID][CurState];
             vector<u32> Retval;
 
             for (auto const& Trans : TransVec) {
@@ -291,6 +250,11 @@ namespace ESMC {
         bool BuchiAutomaton::IsAccepting(u32 StateID) const
         {
             return (AcceptingStates.find(StateID) != AcceptingStates.end());
+        }
+
+        const ProcessIndexSet* BuchiAutomaton::GetIndexSet() const
+        {
+            return TheIndexSet;
         }
 
         void BuchiAutomaton::Freeze()

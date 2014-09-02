@@ -44,7 +44,7 @@
 #include <sparse_hash_set>
 #include <sparse_hash_map>
 
-#include <boost/functional/hash.hpp>
+#include <boost/pool/pool.hpp>
 
 #include "../common/FwdDecls.hpp"
 
@@ -79,53 +79,129 @@ namespace ESMC {
 
         } /* end namespace Detail */
 
-
-        class AQSEdge
+        
+        template <typename STATETYPE>
+        class AnnotatedEdge
         {
         private:
-            const StateVec* Target;
+            const STATETYPE* Target;
             u32 Permutation;
             u32 GCmdIndex;
 
         public:
-            AQSEdge();
-            AQSEdge(const StateVec* Target, u32 Permutation,
-                    u32 GCmdIndex);
-            AQSEdge(const AQSEdge& Other);
-            ~AQSEdge();
-            
-            AQSEdge& operator = (const AQSEdge& Other);
-            bool operator == (const AQSEdge& Other) const;
+            inline AnnotatedEdge()
+                : Target(nullptr), Permutation(0), GCmdIndex(0)
+            {
+                // Nothing here
+            }
 
-            const StateVec* GetTarget() const;
-            u32 GetPermutation() const;
-            u32 GetGCmdIndex() const;
+            inline AnnotatedEdge(const STATETYPE* Target, u32 Permutation,
+                                 u32 GCmdIndex)
+                : Target(Target), Permutation(Permutation),
+                  GCmdIndex(GCmdIndex)
+            {
+                // Nothing here
+            }
+
+            inline AnnotatedEdge(const AnnotatedEdge& Other)
+                : Target(Other.Target), Permutation(Other.Permutation),
+                  GCmdIndex(Other.GCmdIndex)
+            {
+                // Nothing here
+            }
+
+            inline ~AnnotatedEdge()
+            {
+                // Nothing here
+            }
+            
+            inline AnnotatedEdge& operator = (const AnnotatedEdge& Other)
+            {
+                if (&Other == this) {
+                    return *this;
+                }
+                Target = Other.Target;
+                Permutation = Other.Permutation;
+                GCmdIndex = Other.GCmdIndex;
+                return *this;
+            }
+
+            inline bool operator == (const AnnotatedEdge& Other) const
+            {
+                return (Target == Other.Target && 
+                        Permutation == Other.Permutation &&
+                        GCmdIndex == Other.GCmdIndex);
+            }
+
+            inline const STATETYPE* GetTarget() const
+            {
+                return Target;
+            }
+
+            inline u32 GetPermutation() const
+            {
+                return Permutation;
+            }
+
+            inline u32 GetGCmdIndex() const
+            {
+                return GCmdIndex;
+            }
+
+            inline u64 Hash() const
+            {
+                u64 Retval = 0;
+                boost::hash_combine(Retval, Target);
+                boost::hash_combine(Retval, (((u64)Permutation << 32) | (u64)GCmdIndex));
+                return Retval;
+            }
         };
 
-        namespace Detail {
 
-            class AQSEdgeHash
+        namespace Detail {
+            
+            template <typename STATETYPE>
+            class AnnotatedEdgeHash
             {
             public:
-                inline u64 operator () (const AQSEdge& Edge) const
+                inline u64 operator () (const AnnotatedEdge<STATETYPE>& Edge) const
                 {
-                    u64 Retval = 0;
-                    boost::hash_combine(Retval, Edge.GetTarget());
-                    boost::hash_combine(Retval, Edge.GetPermutation());
-                    boost::hash_combine(Retval, Edge.GetGCmdIndex());
-                    return Retval;
+                    return Edge.Hash();
                 }
             };
 
+            template <typename STATETYPE>
+            class AnnotatedEdgePtrHasher
+            {
+            public:
+                inline u64 operator () (const AnnotatedEdge<STATETYPE>* Edge) const
+                {
+                    return Edge->Hash();
+                }
+            };
+
+            template <typename STATETYPE>
+            class AnnotatedEdgePtrEquals
+            {
+            public:
+                inline bool operator () (const AnnotatedEdge<STATETYPE>* Ptr1, 
+                                         const AnnotatedEdge<STATETYPE>* Ptr2) const
+                {
+                    return (*Ptr1 == *Ptr2);
+                }
+            };
+
+            typedef AnnotatedEdgePtrEquals<StateVec> AQSEdgePtrEquals;
+            typedef AnnotatedEdgePtrHasher<StateVec> AQSEdgePtrHasher;
+
         } /* end namespace Detail */
 
-        // typedef unordered_set<AQSEdge, Detail::AQSEdgeHash> AQSEdgeSetT;
-        typedef sparse_hash_set<AQSEdge, Detail::AQSEdgeHash> AQSEdgeSetT;
+        typedef AnnotatedEdge<StateVec> AQSEdge;
+        typedef sparse_hash_set<AQSEdge*, 
+                                Detail::AQSEdgePtrHasher,
+                                Detail::AQSEdgePtrEquals> AQSEdgeHashSetT;
 
-
-        // typedef unordered_map<StateVec*, AQSEdgeSetT,
-        //                       Detail::StateVecPtrHasher,
-        //                       Detail::StateVecPtrEquals> SVHashSetT;
+        typedef sparse_hash_set<AQSEdge*> AQSEdgeSetT;
 
         typedef sparse_hash_map<StateVec*, AQSEdgeSetT,
                                 Detail::StateVecPtrHasher,
@@ -135,9 +211,11 @@ namespace ESMC {
         class AQStructure
         {
         private:
-            SVHashSetT StateSet;
+            SVHashSetT StateHashSet;
+            AQSEdgeHashSetT EdgeHashSet;
             vector<StateVec*> InitStates;
             AQSEdgeSetT EmptyEdgeSet;
+            boost::pool<>* EdgePool;
 
         public:
             AQStructure();
@@ -151,6 +229,93 @@ namespace ESMC {
             u64 GetNumStates() const;
             u64 GetNumEdges() const;
             const AQSEdgeSetT& GetEdges(const StateVec* SV) const;
+            const vector<StateVec*>& GetInitStates() const;
+        };
+
+        class ProductState
+        {
+        private:
+            const StateVec* SVPtr;
+            u32 MonitorState;
+            u32 IndexID;
+
+        public:
+            ProductState(const StateVec* SVPtr, u32 MonitorState,
+                         u32 IndexID);
+            ~ProductState();
+
+            const StateVec* GetSVPtr() const;
+            u32 GetMonitorState() const;
+            u32 GetIndexID() const;
+            u64 Hash() const;
+            bool operator == (const ProductState& Other) const;
+        };
+
+        namespace Detail {
+
+            typedef AnnotatedEdgePtrHasher<ProductState> ProductEdgePtrHasher;
+            typedef AnnotatedEdgePtrEquals<ProductState> ProductEdgePtrEquals;
+
+            class ProductStatePtrHasher
+            {
+            public:
+                inline u64 operator () (const ProductState* Ptr) const
+                {
+                    return Ptr->Hash();
+                }
+            };
+
+            class ProductStatePtrEquals
+            {
+            public:
+                inline bool operator () (const ProductState* Ptr1, 
+                                         const ProductState* Ptr2) const
+                {
+                    return (*Ptr1 == *Ptr2);
+                }
+            };
+
+        } /* end namespace Detail */
+
+        typedef AnnotatedEdge<ProductState> ProductEdge;
+        typedef sparse_hash_set<ProductEdge*, 
+                                Detail::ProductEdgePtrHasher,
+                                Detail::ProductEdgePtrEquals> ProductEdgeHashSetT;
+
+        typedef sparse_hash_set<ProductEdge*> ProductEdgeSetT;
+
+        typedef sparse_hash_map<ProductState*, ProductEdgeSetT,
+                                Detail::ProductStatePtrHasher,
+                                Detail::ProductStatePtrEquals> ProductStateHashSetT;
+
+        class ProductStructure
+        {
+        private:
+            ProductStateHashSetT PSHashSet;
+            ProductEdgeHashSetT EdgeHashSet;
+            vector<ProductState*> InitialStates;
+            ProductEdgeSetT EmptyEdgeSet;
+            boost::pool<>* PSPool;
+            boost::pool<>* PEPool;
+
+        public:
+            ProductStructure();
+            ~ProductStructure();
+
+            ProductState* AddInitialState(const StateVec* SVPtr,
+                                          u32 MonitorState,
+                                          u32 IndexID);
+
+            ProductState* AddState(const StateVec* SVPtr, u32 MonitorState,
+                                   u32 IndexID, bool& New);
+            void AddEdge(ProductState* Source, ProductState* Target,
+                         u32 Permutation, u32 GCmdIndex);
+
+            const vector<ProductState*>& GetInitialStates() const;
+            const ProductEdgeSetT& GetEdges(ProductState* State) const;
+            
+            u32 GetNumStates() const;
+            u32 GetNumEdges() const;
         };
 
     } /* end namespace MC */

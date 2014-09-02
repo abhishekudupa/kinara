@@ -37,6 +37,9 @@
 
 // Code:
 
+#include <stack>
+#include <deque>
+
 #include "../uflts/LabelledTS.hpp"
 #include "../symmetry/SymmCanonicalizer.hpp"
 #include "../uflts/LTSAssign.hpp"
@@ -48,6 +51,7 @@
 #include "StateVecPrinter.hpp"
 #include "AQStructure.hpp"
 #include "OmegaAutomaton.hpp"
+#include "IndexSet.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -131,7 +135,7 @@ namespace ESMC {
         using namespace Detail;
 
         LTSChecker::LTSChecker(LabelledTS* TheLTS)
-            : TheLTS(TheLTS), AQS(nullptr)
+            : TheLTS(TheLTS), AQS(nullptr), ThePS(nullptr)
         {
             Compiler = new LTSCompiler();
             Compiler->CompileLTS(TheLTS);
@@ -154,6 +158,9 @@ namespace ESMC {
             delete Printer;
             if (AQS != nullptr) {
                 delete AQS;
+            }
+            if (ThePS != nullptr) {
+                delete ThePS;
             }
 
             for (auto const& Aut : OmegaAutomata) {
@@ -195,12 +202,13 @@ namespace ESMC {
 
         inline void LTSChecker::DoDFS(StateVec *Root)
         {
-            vector<DFSStackEntry> DFSStack;
+            stack<DFSStackEntry> DFSStack;
             AQS->InsertInitState(Root);
-            DFSStack.push_back(DFSStackEntry(Root));
+            DFSStack.push(DFSStackEntry(Root));
+            auto PermSet = TheCanonicalizer->GetPermSet();
 
             while (DFSStack.size() > 0) {
-                auto& CurEntry = DFSStack.back();
+                auto& CurEntry = DFSStack.top();
                 auto State = CurEntry.GetState();
                 
                 // cout << "Considering State:" << endl;
@@ -212,13 +220,14 @@ namespace ESMC {
                 bool Deadlocked = (LastFired == -1);
                 auto const& Cmd = GetNextEnabledCmd(State, LastFired);
 
+
                 if (Cmd == GCmdRef::NullPtr) {
                     if (Deadlocked) {
                         // TODO: Handle deadlocks here
                     }
                     // cout << "No more successors, popping from stack!" << endl;
                     // Done exploring this state
-                    DFSStack.pop_back();
+                    DFSStack.pop();
                     continue;
                 }
 
@@ -228,6 +237,9 @@ namespace ESMC {
                 // Successors remain to be explored
                 auto const& Updates = Cmd->GetUpdates();
                 auto NextState = State->Clone();
+
+                // cout << "Firing guarded command:" << endl;
+                // cout << Cmd->ToString() << endl;
 
                 for (auto const& Update : Updates) {
                     auto const& LHS = Update->GetLHS();
@@ -254,16 +266,15 @@ namespace ESMC {
                 if (ExistingState == nullptr) {
                     AQS->Insert(CanonState);
                     // cout << "Pushed new successor onto stack." << endl;
-                    // TODO: ensure that permid is inverted here
-                    // or invert it ourselves
                     AQS->AddEdge(State, CanonState, PermID, LastFired);
-                    DFSStack.push_back(DFSStackEntry(CanonState));
+                    DFSStack.push(DFSStackEntry(CanonState));
                     continue;
                 } else {
                     // Successor already explored, add edge
                     // and continue
                     // cout << "Successor has been previously encountered." << endl;
-                    AQS->AddEdge(State, ExistingState, PermID, LastFired);
+                    auto InvPermID = PermSet->GetIteratorForInv(PermID).GetIndex();
+                    AQS->AddEdge(State, ExistingState, InvPermID, LastFired);
                     CanonState->GetFactory()->TakeState(CanonState);
                     continue;
                 }
@@ -283,10 +294,10 @@ namespace ESMC {
                 auto CurState = Factory->MakeState();
                 ApplyUpdates(ISGen, ZeroState, CurState);
 
-                cout << "Initial State:" << endl;
-                cout << "--------------------------------------------------------" << endl;
-                Printer->PrintState(CurState, cout);
-                cout << "--------------------------------------------------------" << endl;
+                // cout << "Initial State:" << endl;
+                // cout << "--------------------------------------------------------" << endl;
+                // Printer->PrintState(CurState, cout);
+                // cout << "--------------------------------------------------------" << endl;
 
                 u32 CanonPerm = 0;
                 auto CanonState = TheCanonicalizer->Canonicalize(CurState, CanonPerm);
@@ -306,8 +317,14 @@ namespace ESMC {
 
         void LTSChecker::ClearAQS() 
         {
-            delete AQS;
-            AQS = nullptr;
+            if (AQS != nullptr) {
+                delete AQS;
+                AQS = nullptr;
+            } 
+            if (ThePS != nullptr) {
+                delete ThePS;
+                ThePS = nullptr;
+            }
         }
 
         BuchiAutomaton* LTSChecker::MakeBuchiMonitor(const string& Name, 
@@ -318,10 +335,59 @@ namespace ESMC {
                 throw ESMCError((string)"Monitor named \"" + Name + "\" already exists " + 
                                 "in the LTS Checker");
             }
-            auto Retval = new BuchiAutomaton(TheLTS, Name, SymmIndices, Constraint,
-                                             TheCanonicalizer->GetPermSet(), Compiler);
+            auto Retval = new BuchiAutomaton(TheLTS, Name, SymmIndices, Constraint, Compiler);
             OmegaAutomata[Name] = Retval;
             return Retval;
+        }
+
+        inline void LTSChecker::ConstructProduct(BuchiAutomaton *Monitor)
+        {
+            deque<ProductState*> BFSQueue;
+            ThePS = new ProductStructure();
+            auto MonIndexSet = Monitor->GetIndexSet();
+            auto PermSet = TheCanonicalizer->GetPermSet();
+            
+            for (u32 i = 0; i < MonIndexSet->GetNumIndexVectors(); ++i) {
+                for (auto const& MonInitState : Monitor->GetInitialStates()) {
+                    for (auto const& AQSInitState : AQS->GetInitStates()) {
+                        ThePS->AddInitialState(AQSInitState, MonInitState, i);
+                    }
+                }
+            }
+            
+            // A BFS over the initial states
+            auto const& InitStates = ThePS->GetInitialStates();
+            BFSQueue.insert(BFSQueue.begin(), InitStates.begin(), InitStates.end());
+
+            while (BFSQueue.size() > 0) {
+                auto CurProdState = BFSQueue.front();
+                BFSQueue.pop_front();
+
+                auto SVPtr = CurProdState->GetSVPtr();
+                auto MonState = CurProdState->GetMonitorState();
+                auto IndexID = CurProdState->GetIndexID();
+                auto const& AQSEdges = AQS->GetEdges(SVPtr);
+                auto&& MonitorNextStates = Monitor->GetNextStates(MonState, IndexID, SVPtr);
+                for (auto const& Edge : AQSEdges) {
+                    auto NextSVPtr = Edge->GetTarget();
+                    auto PermID = Edge->GetPermutation();
+                    auto PermIt = PermSet->GetIterator(Edge->GetPermutation());
+                    auto NextIndexID = MonIndexSet->Permute(IndexID, PermIt.GetPerm());
+                    for (auto const& NextMonState : MonitorNextStates) {
+                        bool New;
+                        auto NextPS = 
+                            ThePS->AddState(NextSVPtr, NextMonState, NextIndexID, New);
+                        if (New) {
+                            BFSQueue.push_back(NextPS);
+                        }
+                        ThePS->AddEdge(CurProdState, NextPS, PermID, Edge->GetGCmdIndex());
+                    }
+                }
+            }
+
+            cout << "Product construction complete!" << endl;
+            cout << "Product Structure contains " << ThePS->GetNumStates()
+                 << " states and " << ThePS->GetNumEdges() << " edges." << endl;
         }
 
         void LTSChecker::CheckLiveness(const string& BuchiMonitorName) 
@@ -335,7 +401,16 @@ namespace ESMC {
                 throw ESMCError((string)"AQS not built to check liveness property!");
             }
             
-            // auto Monitor = it->second;
+            auto Monitor = it->second;
+            Monitor->Freeze();
+            
+            if (ThePS != nullptr) {
+                delete ThePS;
+                ThePS = nullptr;
+            }
+
+            cout << "Constructing Product..." << endl;
+            ConstructProduct(Monitor);
         }
 
     } /* end namespace MC */

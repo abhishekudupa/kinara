@@ -211,9 +211,7 @@ namespace ESMC {
             vector<LTSAssignRef> Updates;
             ExprTypeRef MsgType;
             set<LTSFairObjRef> Fairnesses;
-            
-            // Fairness ID, instance ID for each fairness
-            mutable vector<pair<u32, u32>> FairBVBits;
+            vector<u32> FairnessBits;
 
         public:
             LTSGuardedCommand(const ExpT& Guard,
@@ -227,6 +225,7 @@ namespace ESMC {
             const ExprTypeRef& GetMsgType() const;
             const set<LTSFairObjRef>& GetFairnesses() const;
             string ToString() const;
+            const vector<u32>& GetFairnessBits() const;
         };
 
         class LTSInitState : public RefCountable

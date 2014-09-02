@@ -50,6 +50,7 @@
 #include "../../src/uflts/LTSAssign.hpp"
 #include "../../src/uflts/LTSTransitions.hpp"
 #include "../../src/mc/LTSChecker.hpp"
+#include "../../src/mc/OmegaAutomaton.hpp"
 
 using namespace ESMC;
 using namespace LTS;
@@ -286,6 +287,26 @@ int main()
 
     auto Checker = new LTSChecker(TheLTS);
     Checker->BuildAQS();
+
+    auto Monitor = Checker->MakeBuchiMonitor("GFZero", Params, TrueExp);
+    Monitor->AddState("InitState", true, false);
+    Monitor->AddState("AcceptState", false, true);
+    Monitor->FreezeStates();
+
+    ClientStateVar = Monitor->MakeOp(LTSOps::OpIndex, Monitor->MakeVar("Client", ClientType),
+                                     Params[0]);
+    ClientDotCount = Monitor->MakeOp(LTSOps::OpField, ClientStateVar, 
+                                     Monitor->MakeVar("Count", FAType));
+
+    auto ClientCountZero = Monitor->MakeOp(LTSOps::OpEQ, ClientDotCount, ZeroExp);
+    auto NotClientCountZero = Monitor->MakeOp(LTSOps::OpNOT, ClientCountZero);
+    Monitor->AddTransition("InitState", "InitState", TrueExp);
+    Monitor->AddTransition("InitState", "AcceptState", NotClientCountZero);
+    Monitor->AddTransition("AcceptState", "AcceptState", NotClientCountZero);
+    Monitor->Freeze();
+
+    Checker->CheckLiveness("GFZero");
+
     delete Checker;
 }
 

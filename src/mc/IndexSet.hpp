@@ -42,6 +42,7 @@
 
 #include <boost/pool/pool.hpp>
 #include <unordered_map>
+#include <sparse_hash_set>
 
 #include "../uflts/LTSTypes.hpp"
 
@@ -53,6 +54,7 @@ namespace ESMC {
         using LTS::ExprTypeRef;
         using LTS::ExpT;
         using Symm::PermutationSet;
+        using LTS::EFSMBase;
 
         class IndexSet;
 
@@ -66,41 +68,49 @@ namespace ESMC {
             IndexVector(u08* TheIndexVector, u32 Size);
             ~IndexVector();
 
+            u32 GetSize() const;
             i32 Compare(const IndexVector* Other) const;
             u64 Hash() const;
             u08& operator [] (u32 Index);
             u08 operator [] (u32 Index) const;
             IndexVector* Clone() const;
+
+            u08* GetVector();
+            const u08* GetVector() const;
         };
 
-        class IndexVectorPtrHasher
-        {
-        public:
-            inline u64 operator () (const IndexVector* IndexVec) const
-            {
-                return IndexVec->Hash();
-            }
-        };
+        namespace Detail {
 
-        class IndexVectorPtrEquals
-        {
-        public:
-            inline bool operator () (const IndexVector* IndexVec1,
-                                     const IndexVector* IndexVec2) const
+            class IndexVectorPtrHasher
             {
-                return (IndexVec1->Compare(IndexVec2) == 0);
-            }
-        };
+            public:
+                inline u64 operator () (const IndexVector* IndexVec) const
+                {
+                    return IndexVec->Hash();
+                }
+            };
 
-        class IndexVectorPtrLessThan
-        {
-        public:
-            inline bool operator () (const IndexVector* IndexVec1,
-                                     const IndexVector* IndexVec2) const
+            class IndexVectorPtrEquals
             {
-                return (IndexVec1->Compare(IndexVec2) < 0);
-            }
-        };
+            public:
+                inline bool operator () (const IndexVector* IndexVec1,
+                                         const IndexVector* IndexVec2) const
+                {
+                    return (IndexVec1->Compare(IndexVec2) == 0);
+                }
+            };
+
+            class IndexVectorPtrLessThan
+            {
+            public:
+                inline bool operator () (const IndexVector* IndexVec1,
+                                         const IndexVector* IndexVec2) const
+                {
+                    return (IndexVec1->Compare(IndexVec2) < 0);
+                }
+            };
+
+        } /* end namespace Detail */
 
         // Manages the index vectors
         // for ONE process, which could be 
@@ -113,11 +123,15 @@ namespace ESMC {
             u32 NumIndexVectors;
             // scratchpad for permutations
             mutable IndexVector* WorkingIV;
+            map<vector<ExpT>, IndexVector*> ParamVecToIndexVec;
+            unordered_map<IndexVector*, vector<ExpT>,
+                          Detail::IndexVectorPtrHasher,
+                          Detail::IndexVectorPtrEquals> IndexVecToParamVec;
 
             vector<IndexVector*> IDToIndexVec;
             unordered_map<IndexVector*, u32,
-                          IndexVectorPtrHasher,
-                          IndexVectorPtrEquals> IndexVecToID;
+                          Detail::IndexVectorPtrHasher,
+                          Detail::IndexVectorPtrEquals> IndexVecToID;
 
         public:
             ProcessIndexSet(const vector<vector<ExpT>>& ParamInsts);
@@ -125,6 +139,12 @@ namespace ESMC {
 
             u32 Permute(u32 IndexID, const vector<u08>& Permutation) const;
             u32 GetNumIndexVectors() const;
+            const IndexVector* GetIndexVector(u32 IndexID) const;
+            u32 GetIndexID(const IndexVector* IndexVec) const;
+            const vector<ExpT>& GetParamVecForIndexID(u32 IndexID) const;
+            const vector<ExpT>& GetParamVecForIndexVec(const IndexVector* IndexVec) const;
+            u32 GetIndexIDForParamVec(const vector<ExpT>& ParamVec) const;
+            const IndexVector* GetIndexVecForParamVec(const vector<ExpT>& ParamVec) const;
         };
 
         class SystemIndexSet
@@ -134,14 +154,16 @@ namespace ESMC {
             vector<u32> Multipliers;
             // Scratchpad
             mutable vector<u32> Scratchpad;
+            mutable vector<const IndexVector*> CachedIdxVectors;
 
         public:
-            SystemIndexSet(const vector<vector<vector<ExpT>>>& ParamInsts);
+            SystemIndexSet(const vector<EFSMBase*>& Processes);
             ~SystemIndexSet();
 
             u32 Permute(u32 IndexID, const vector<u08>& Permutation) const;
+            const vector<const IndexVector*>& GetIndexVectors(u32 IndexID) const;
         };
-
+        
     } /* end namespace MC */
 } /* end namespace ESMC */
 
@@ -149,8 +171,6 @@ namespace ESMC {
 
 // 
 // IndexSet.hpp ends here
-
-
 
 
 

@@ -149,6 +149,20 @@ int main()
             exit(1);
         }
     }
+
+    delete Full;
+
+    TypeSizes.clear();
+    TypeSizes.push_back(4);
+    Compact = new PermutationSet(TypeSizes, true);
+    for (auto it = Compact->Begin(); it != Compact->End(); ++it) {
+        auto invit = Compact->GetIteratorForInv(it.GetIndex());
+        cout << it.GetIndex() << " -> " << invit.GetIndex() << endl;
+        auto Perm = it.GetPerm();
+        auto InvPerm = invit.GetPerm();
+        PrintVec(Perm);
+        PrintVec(InvPerm);
+    }
 }
 
 // 
