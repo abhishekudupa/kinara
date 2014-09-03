@@ -417,13 +417,18 @@ namespace ESMC {
                     auto const& CurEntry = DFSStack.top();
                     auto CurState = const_cast<ProductState*>(CurEntry.first);
                     auto EdgeToExplore = CurEntry.second;
+                    ++DFSStack.top().second;
                     auto const& Edges = ThePS->GetEdges(CurState);
 
-                    if (EdgeToExplore > Edges.size()) {
+                    if (EdgeToExplore >= Edges.size()) {
                         // We're done with this state
                         DFSStack.pop();
-                        auto PrevState = DFSStack.top().first;
-                        PrevState->LowLink = min(PrevState->LowLink, CurState->LowLink);
+                        // Update my ancestor's lowlink
+                        // if I have an ancestor!
+                        if (DFSStack.size() > 0) {
+                            auto PrevState = DFSStack.top().first;
+                            PrevState->LowLink = min(PrevState->LowLink, CurState->LowLink);
+                        }
                     } else {
                         // Push successor onto stack
                         // if unexplored, else update lowlink
@@ -438,7 +443,6 @@ namespace ESMC {
                             NextState->DFSNum = CurIndex;
                             NextState->LowLink = CurIndex;
                             NextState->OnStack = true;
-                            DFSStack.top().second = EdgeToExplore + 1;
                             DFSStack.push(make_pair(NextState, 0));
                             SCCStack.push(NextState);
                             ++CurIndex;
@@ -466,6 +470,8 @@ namespace ESMC {
                         } else {
                             // TODO: Send for threaded graph resolution
                             // and fairness checks
+                            cout << "Found non-singular SCC with " << NumStatesInSCC 
+                                 << " states." << endl;
                         }
                     }
                 }
@@ -494,7 +500,7 @@ namespace ESMC {
             cout << "Constructing Product..." << endl;
             ConstructProduct(Monitor);
 
-            // CheckSCCs();
+            CheckSCCs();
         }
 
     } /* end namespace MC */
@@ -502,3 +508,13 @@ namespace ESMC {
 
 // 
 // LTSChecker.cpp ends here
+
+
+
+
+
+
+
+
+
+
