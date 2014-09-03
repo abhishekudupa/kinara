@@ -240,6 +240,17 @@ namespace ESMC {
             u32 IndexID;
 
         public:
+            // Status variables that do not affect the 
+            // identity of this node
+            mutable bool InSCC;
+            mutable bool OnStack;
+            mutable bool Singular;
+            mutable bool Final;
+
+            mutable i32 DFSNum;
+            mutable i32 LowLink;
+
+        public:
             ProductState(const StateVec* SVPtr, u32 MonitorState,
                          u32 IndexID);
             ~ProductState();
@@ -249,6 +260,8 @@ namespace ESMC {
             u32 GetIndexID() const;
             u64 Hash() const;
             bool operator == (const ProductState& Other) const;
+
+            void ClearMarkings() const;
         };
 
         namespace Detail {
@@ -316,6 +329,7 @@ namespace ESMC {
             
             u32 GetNumStates() const;
             u32 GetNumEdges() const;
+            void ClearAllMarkings() const;
         };
 
     } /* end namespace MC */

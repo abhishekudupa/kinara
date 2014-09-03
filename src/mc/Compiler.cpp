@@ -115,7 +115,6 @@ namespace ESMC {
                 }
             }
             
-
             auto Val = Type->As<ExprScalarType>()->ConstToVal(ConstVal) + 1;
             Exp->ExtensionData.ConstVal = Val;
             Exp->ExtensionData.ConstCompiled = true;
@@ -375,6 +374,7 @@ namespace ESMC {
                                                   Ext.FieldOffset,
                                                   Low, High);
             }
+
             default:
                 throw UnimplementedException("Uninterpreted Function Interpretations",
                                              __FILE__, __LINE__);

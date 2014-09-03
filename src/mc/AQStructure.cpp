@@ -135,7 +135,9 @@ namespace ESMC {
 
         ProductState::ProductState(const StateVec* SVPtr, u32 MonitorState,
                                    u32 IndexID)
-            : SVPtr(SVPtr), MonitorState(MonitorState), IndexID(IndexID)
+            : SVPtr(SVPtr), MonitorState(MonitorState), IndexID(IndexID),
+              InSCC(false), OnStack(false), Singular(false), Final(false),
+              DFSNum(-1), LowLink(-1)
         {
             // Nothing here
         }
@@ -175,6 +177,14 @@ namespace ESMC {
                     IndexID == Other.IndexID);
         }
 
+        void ProductState::ClearMarkings() const
+        {
+            InSCC = false;
+            OnStack = false;
+            Singular = false;
+            DFSNum = -1;
+            LowLink = -1;
+        }
 
         ProductStructure::ProductStructure()
             : PSPool(new boost::pool<>(sizeof(ProductState))),
@@ -266,6 +276,13 @@ namespace ESMC {
         u32 ProductStructure::GetNumStates() const
         {
             return PSHashSet.size();
+        }
+
+        void ProductStructure::ClearAllMarkings() const
+        {
+            for (auto PS : PSHashSet) {
+                PS.first->ClearMarkings();
+            }
         }
 
     } /* end namespace MC */

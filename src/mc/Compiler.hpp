@@ -70,7 +70,7 @@ namespace ESMC {
 
         class LTSCompiler;
 
-        class RValueInterpreter : public RefCountable
+        class RValueInterpreter
         {
         protected:
             bool Scalar;

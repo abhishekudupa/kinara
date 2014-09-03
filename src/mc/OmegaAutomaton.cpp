@@ -108,7 +108,7 @@ namespace ESMC {
 
         BuchiAutomaton::~BuchiAutomaton()
         {
-            // Nothing here
+            delete TheIndexSet;
         }
 
         void BuchiAutomaton::AddState(const string& StateName, bool Initial, bool Accepting)

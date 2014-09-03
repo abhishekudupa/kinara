@@ -259,8 +259,13 @@ namespace ESMC {
                 u32 PermID;
                 auto CanonState = TheCanonicalizer->Canonicalize(NextState, PermID);
                 // auto CanonState = NextState;
-                // TODO: Check for errors
 
+                auto const& Invar = TheLTS->GetInvariant();
+                auto Interp = Invar->ExtensionData.Interp;
+                if (Interp->EvaluateScalar(CanonState) != 1) {
+                    // error
+                }
+                
                 auto ExistingState = AQS->Find(CanonState);
 
                 if (ExistingState == nullptr) {
@@ -365,6 +370,9 @@ namespace ESMC {
 
                 auto SVPtr = CurProdState->GetSVPtr();
                 auto MonState = CurProdState->GetMonitorState();
+                if (Monitor->IsAccepting(MonState)) {
+                    CurProdState->Final = true;
+                }
                 auto IndexID = CurProdState->GetIndexID();
                 auto const& AQSEdges = AQS->GetEdges(SVPtr);
                 auto&& MonitorNextStates = Monitor->GetNextStates(MonState, IndexID, SVPtr);
@@ -390,6 +398,80 @@ namespace ESMC {
                  << " states and " << ThePS->GetNumEdges() << " edges." << endl;
         }
 
+        inline void LTSChecker::CheckSCCs()
+        {
+            // Find the SCCs on the fly
+            stack<pair<const ProductState*, u32>> DFSStack;
+            stack<ProductState*> SCCStack;
+
+            u32 CurIndex = 0;
+            for (auto InitState : ThePS->GetInitialStates()) {
+                InitState->DFSNum = CurIndex;
+                InitState->LowLink = CurIndex;
+                InitState->OnStack = true;
+                DFSStack.push(make_pair(InitState, 0));
+                SCCStack.push(InitState);
+                ++CurIndex;
+
+                while (DFSStack.size() > 0) {
+                    auto const& CurEntry = DFSStack.top();
+                    auto CurState = const_cast<ProductState*>(CurEntry.first);
+                    auto EdgeToExplore = CurEntry.second;
+                    auto const& Edges = ThePS->GetEdges(CurState);
+
+                    if (EdgeToExplore > Edges.size()) {
+                        // We're done with this state
+                        DFSStack.pop();
+                        auto PrevState = DFSStack.top().first;
+                        PrevState->LowLink = min(PrevState->LowLink, CurState->LowLink);
+                    } else {
+                        // Push successor onto stack
+                        // if unexplored, else update lowlink
+                        auto it = Edges.begin();
+                        for (u32 i = 0; i < EdgeToExplore; ++i) {
+                            ++it;
+                        }
+                        auto CurEdge = *(it);
+                        auto NextState = const_cast<ProductState*>(CurEdge->GetTarget());
+                        if (NextState->DFSNum == -1) {
+                            // unexplored
+                            NextState->DFSNum = CurIndex;
+                            NextState->LowLink = CurIndex;
+                            NextState->OnStack = true;
+                            DFSStack.top().second = EdgeToExplore + 1;
+                            DFSStack.push(make_pair(NextState, 0));
+                            SCCStack.push(NextState);
+                            ++CurIndex;
+                        } else if (NextState->OnStack) {
+                            // explored
+                            CurState->LowLink = min(CurState->LowLink, NextState->DFSNum);
+                        }
+                        continue;
+                    }
+
+                    // We only get here if we've popped a state 
+                    // from the DFS stack.
+                    if (CurState->LowLink == CurState->DFSNum) {
+                        u32 NumStatesInSCC = 0;
+                        ProductState* SCCState = nullptr;
+                        do {
+                            SCCState = SCCStack.top();
+                            SCCState->InSCC = true;
+                            SCCStack.pop();
+                            ++NumStatesInSCC;
+                        } while (SCCState != CurState);
+
+                        if (NumStatesInSCC == 1) {
+                            // Singular SCC
+                        } else {
+                            // TODO: Send for threaded graph resolution
+                            // and fairness checks
+                        }
+                    }
+                }
+            }
+        }
+
         void LTSChecker::CheckLiveness(const string& BuchiMonitorName) 
         {
             auto it = OmegaAutomata.find(BuchiMonitorName);
@@ -411,6 +493,8 @@ namespace ESMC {
 
             cout << "Constructing Product..." << endl;
             ConstructProduct(Monitor);
+
+            // CheckSCCs();
         }
 
     } /* end namespace MC */

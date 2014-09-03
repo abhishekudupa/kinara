@@ -97,6 +97,7 @@ namespace ESMC {
                                      const StateVec* InputState,
                                      StateVec* OutputState) const;
             inline void ConstructProduct(BuchiAutomaton* Monitor);
+            inline void CheckSCCs();
 
         public:
             LTSChecker(LabelledTS* TheLTS);
