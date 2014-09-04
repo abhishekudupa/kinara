@@ -44,6 +44,8 @@
 #include "../symmetry/SymmCanonicalizer.hpp"
 #include "../uflts/LTSAssign.hpp"
 #include "../uflts/LTSTransitions.hpp"
+#include "../uflts/LTSFairnessSet.hpp"
+#include "../uflts/LTSEFSMBase.hpp"
 
 #include "LTSChecker.hpp"
 #include "Compiler.hpp"
@@ -146,6 +148,22 @@ namespace ESMC {
             GuardedCommands = TheLTS->GetGuardedCmds();
             ZeroState = Factory->MakeState();
             NumGuardedCmds = GuardedCommands.size();
+
+            NumProcesses = 0;
+            NumEnExBits = 0;
+
+            for (auto const& NameEFSM : TheLTS->AllEFSMs) {
+                auto EFSM = NameEFSM.second;
+                NumProcesses += EFSM->GetNumInstances();
+
+                auto const& AllFairnesses = EFSM->GetAllFairnessSets();
+                auto const& AllFairnessSets = AllFairnesses->GetFairnessSets();
+
+                for (auto const& NameFSet : AllFairnessSets) {
+                    NumEnExBits += NameFSet.second->GetNumInstances();
+                    FairnessSets.push_back(NameFSet.second);
+                }
+            }
         }
 
         LTSChecker::~LTSChecker()
@@ -348,7 +366,7 @@ namespace ESMC {
         inline void LTSChecker::ConstructProduct(BuchiAutomaton *Monitor)
         {
             deque<ProductState*> BFSQueue;
-            ThePS = new ProductStructure();
+            ThePS = new ProductStructure(NumProcesses, NumEnExBits);
             auto MonIndexSet = Monitor->GetIndexSet();
             auto PermSet = TheCanonicalizer->GetPermSet();
             
@@ -371,7 +389,7 @@ namespace ESMC {
                 auto SVPtr = CurProdState->GetSVPtr();
                 auto MonState = CurProdState->GetMonitorState();
                 if (Monitor->IsAccepting(MonState)) {
-                    CurProdState->Final = true;
+                    CurProdState->Status.Accepting = true;
                 }
                 auto IndexID = CurProdState->GetIndexID();
                 auto const& AQSEdges = AQS->GetEdges(SVPtr);
@@ -408,7 +426,7 @@ namespace ESMC {
             for (auto InitState : ThePS->GetInitialStates()) {
                 InitState->DFSNum = CurIndex;
                 InitState->LowLink = CurIndex;
-                InitState->OnStack = true;
+                InitState->Status.OnStack = true;
                 DFSStack.push(make_pair(InitState, 0));
                 SCCStack.push(InitState);
                 ++CurIndex;
@@ -442,11 +460,11 @@ namespace ESMC {
                             // unexplored
                             NextState->DFSNum = CurIndex;
                             NextState->LowLink = CurIndex;
-                            NextState->OnStack = true;
+                            NextState->Status.OnStack = true;
                             DFSStack.push(make_pair(NextState, 0));
                             SCCStack.push(NextState);
                             ++CurIndex;
-                        } else if (NextState->OnStack) {
+                        } else if (NextState->Status.OnStack) {
                             // explored
                             CurState->LowLink = min(CurState->LowLink, NextState->DFSNum);
                         }
@@ -460,7 +478,7 @@ namespace ESMC {
                         ProductState* SCCState = nullptr;
                         do {
                             SCCState = SCCStack.top();
-                            SCCState->InSCC = true;
+                            SCCState->Status.InSCC = true;
                             SCCStack.pop();
                             ++NumStatesInSCC;
                         } while (SCCState != CurState);
@@ -508,13 +526,3 @@ namespace ESMC {
 
 // 
 // LTSChecker.cpp ends here
-
-
-
-
-
-
-
-
-
-

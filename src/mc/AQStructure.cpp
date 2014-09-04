@@ -134,10 +134,11 @@ namespace ESMC {
         }
 
         ProductState::ProductState(const StateVec* SVPtr, u32 MonitorState,
-                                   u32 IndexID)
+                                   u32 IndexID, u32 NumProcesses, u32 NumEnExBits)
             : SVPtr(SVPtr), MonitorState(MonitorState), IndexID(IndexID),
-              InSCC(false), OnStack(false), Singular(false), Final(false),
-              DFSNum(-1), LowLink(-1)
+              Status(), DFSNum(-1), LowLink(-1),
+              TrackingBits(NumProcesses, false), 
+              EnExBits(NumEnExBits * 2, false)
         {
             // Nothing here
         }
@@ -179,15 +180,17 @@ namespace ESMC {
 
         void ProductState::ClearMarkings() const
         {
-            InSCC = false;
-            OnStack = false;
-            Singular = false;
+            Status.InSCC = false;
+            Status.OnStack = false;
+            Status.Singular = false;
+            Status.Accepting = false;
             DFSNum = -1;
             LowLink = -1;
         }
 
-        ProductStructure::ProductStructure()
-            : PSPool(new boost::pool<>(sizeof(ProductState))),
+        ProductStructure::ProductStructure(u32 NumProcesses, u32 NumEnExBits)
+            : NumProcesses(NumProcesses), NumEnExBits(NumEnExBits),
+              PSPool(new boost::pool<>(sizeof(ProductState))),
               PEPool(new boost::pool<>(sizeof(ProductEdge)))
         {
             // Nothing here
@@ -215,7 +218,10 @@ namespace ESMC {
                                                  u32 MonitorState,
                                                  u32 IndexID, bool& New)
         {
-            auto NewPS = new (PSPool->malloc()) ProductState(SVPtr, MonitorState, IndexID);
+            auto NewPS = 
+                new (PSPool->malloc()) 
+                ProductState(SVPtr, MonitorState, IndexID, NumProcesses, NumEnExBits);
+
             auto it = PSHashSet.find(NewPS);
             if (it == PSHashSet.end()) {
                 PSHashSet[NewPS] = EmptyEdgeSet;
@@ -283,6 +289,11 @@ namespace ESMC {
             for (auto PS : PSHashSet) {
                 PS.first->ClearMarkings();
             }
+        }
+
+        u32 ProductStructure::GetNumProcesses() const
+        {
+            return NumProcesses;
         }
 
     } /* end namespace MC */

@@ -53,6 +53,7 @@ namespace ESMC {
 
         using LTS::ExprTypeRef;
         using LTS::ExpT;
+        using LTS::LabelledTS;
         using Symm::PermutationSet;
         using LTS::EFSMBase;
 
@@ -147,21 +148,23 @@ namespace ESMC {
             const IndexVector* GetIndexVecForParamVec(const vector<ExpT>& ParamVec) const;
         };
 
+        // At any point of time, one index from the set of 
+        // all process indices is tracked. Used in threaded
+        // graph construction/simulation
         class SystemIndexSet
         {
         private:
             vector<ProcessIndexSet*> ProcessIdxSets;
-            vector<u32> Multipliers;
-            // Scratchpad
-            mutable vector<u32> Scratchpad;
-            mutable vector<const IndexVector*> CachedIdxVectors;
-
+            vector<u32> DomainSizes;
+            u32 NumTrackedIndices;
+            vector<pair<ProcessIndexSet*, u32>> IndexToPIdx;
+            
         public:
-            SystemIndexSet(const vector<EFSMBase*>& Processes);
+            SystemIndexSet(const vector<vector<vector<ExpT>>>& ProcessParamInsts);
             ~SystemIndexSet();
 
             u32 Permute(u32 IndexID, const vector<u08>& Permutation) const;
-            const vector<const IndexVector*>& GetIndexVectors(u32 IndexID) const;
+            u32 GetNumTrackedIndices();
         };
         
     } /* end namespace MC */
@@ -171,13 +174,3 @@ namespace ESMC {
 
 // 
 // IndexSet.hpp ends here
-
-
-
-
-
-
-
-
-
-

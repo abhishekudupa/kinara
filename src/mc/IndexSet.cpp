@@ -206,15 +206,20 @@ namespace ESMC {
             return it->second;
         }
 
-        SystemIndexSet::SystemIndexSet(const vector<EFSMBase*>& Processes)
+        
+        SystemIndexSet::SystemIndexSet(const vector<vector<vector<ExpT>>>& ProcessParamInsts)
+            : NumTrackedIndices(0)
         {
-            for (auto const& Process : Processes) {
-                auto const& ParamInsts = Process->GetParamInsts();
-                ProcessIdxSets.push_back(new ProcessIndexSet(ParamInsts));
-                Multipliers.push_back(ProcessIdxSets.back()->GetNumIndexVectors());
-                Scratchpad.push_back(0);
+            for (auto const& ProcessParamInst : ProcessParamInsts) {
+                auto CurPIdxSet = new ProcessIndexSet(ProcessParamInst);
+                auto CurSize = CurPIdxSet->GetNumIndexVectors();
+                DomainSizes.push_back(CurSize);
+                for (u32 i = 0; i < CurSize; ++i) {
+                    IndexToPIdx.push_back(make_pair(CurPIdxSet, NumTrackedIndices));
+                }
+
+                NumTrackedIndices += CurSize;
             }
-            CachedIdxVectors = vector<const IndexVector*>(ProcessIdxSets.size());
         }
 
         SystemIndexSet::~SystemIndexSet()
@@ -224,35 +229,15 @@ namespace ESMC {
             }
         }
 
-        u32 SystemIndexSet::Permute(u32 IndexID, const vector<u08>& Perm) const
+        u32 SystemIndexSet::Permute(u32 IndexID, const vector<u08>& Permutation) const
         {
-            auto LeftIdx = IndexID;
-            
-            for (u32 i = 0; i < ProcessIdxSets.size(); ++i) {
-                auto CurID = LeftIdx % Multipliers[i];
-                LeftIdx = LeftIdx / Multipliers[i];
-                Scratchpad[i] = ProcessIdxSets[i]->Permute(CurID, Perm);
-            }
+            // Get the index set and offset
+            auto const& IdxOffset = IndexToPIdx[IndexID];
+            auto PIdxSet = IdxOffset.first;
+            auto Offset = IdxOffset.second;
 
-            // Now build up the return value
-            u32 Retval = 0;
-            for (u32 i = ProcessIdxSets.size(); i > 0; --i) {
-                Retval = (Retval * Multipliers[i-1]) + Scratchpad[i-1];
-            }
-            return Retval;
-        }
-
-        const vector<const IndexVector*>& 
-        SystemIndexSet::GetIndexVectors(u32 IndexID) const
-        {
-            auto LeftIdx = IndexID;
-            for (u32 i = 0; i < ProcessIdxSets.size(); ++i) {
-                auto CurID = LeftIdx % Multipliers[i];
-                LeftIdx = LeftIdx / Multipliers[i];
-                CachedIdxVectors[i] = ProcessIdxSets[i]->GetIndexVector(CurID);
-            }
-
-            return CachedIdxVectors;
+            auto Retval = PIdxSet->Permute(IndexID - Offset, Permutation);
+            return Retval + Offset;
         }
 
     } /* end namespace MC */

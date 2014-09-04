@@ -74,6 +74,23 @@ namespace ESMC {
                 void SetLastFired(i64 NewLastFired);
             };
 
+            class FairnessChecker
+            {
+            private:
+                LTSFairSetRef FairSet;
+                // How many instances do I have
+                u32 NumInstances;
+                // Where's the 0th enabled/executed bit located
+                u32 Offset;
+
+            public:
+                FairnessChecker(const LTSFairSetRef& FairSet);
+                ~FairnessChecker();
+
+                
+
+            };
+
         } /* end namespace Detail */
 
         class LTSChecker
@@ -89,6 +106,12 @@ namespace ESMC {
             ProductStructure* ThePS;
             vector<GCmdRef> GuardedCommands;
             u32 NumGuardedCmds;
+            // Total number of processes
+            u32 NumProcesses;
+            // Number of bits required for 
+            // enabled/executed tracking
+            u32 NumEnExBits;
+            vector<LTSFairSetRef> FairnessSets;
             map<string, BuchiAutomaton*> OmegaAutomata;
 
             inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);

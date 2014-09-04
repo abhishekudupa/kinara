@@ -232,6 +232,23 @@ namespace ESMC {
             const vector<StateVec*>& GetInitStates() const;
         };
 
+        // A bitfield structure for the status bits 
+        // in the product state
+        struct ThreadedGraphStatusT
+        {
+            bool InSCC : 1;
+            bool OnStack : 1;
+            bool Singular : 1;
+            bool Accepting : 1;
+
+            inline ThreadedGraphStatusT()
+                : InSCC(false), OnStack(false),
+                  Singular(false), Accepting(false)
+            {
+                // Nothing here
+            }
+        };
+
         class ProductState
         {
         private:
@@ -242,17 +259,16 @@ namespace ESMC {
         public:
             // Status variables that do not affect the 
             // identity of this node
-            mutable bool InSCC;
-            mutable bool OnStack;
-            mutable bool Singular;
-            mutable bool Final;
+            mutable ThreadedGraphStatusT Status;
 
             mutable i32 DFSNum;
             mutable i32 LowLink;
+            mutable vector<bool> TrackingBits;
+            mutable vector<bool> EnExBits;
 
         public:
             ProductState(const StateVec* SVPtr, u32 MonitorState,
-                         u32 IndexID);
+                         u32 IndexID, u32 NumProcesses, u32 NumEnExBits);
             ~ProductState();
 
             const StateVec* GetSVPtr() const;
@@ -304,6 +320,8 @@ namespace ESMC {
         class ProductStructure
         {
         private:
+            u32 NumProcesses;
+            u32 NumEnExBits;
             ProductStateHashSetT PSHashSet;
             ProductEdgeHashSetT EdgeHashSet;
             vector<ProductState*> InitialStates;
@@ -312,7 +330,7 @@ namespace ESMC {
             boost::pool<>* PEPool;
 
         public:
-            ProductStructure();
+            ProductStructure(u32 NumProcesses, u32 NumEnExBits);
             ~ProductStructure();
 
             ProductState* AddInitialState(const StateVec* SVPtr,
@@ -330,6 +348,7 @@ namespace ESMC {
             u32 GetNumStates() const;
             u32 GetNumEdges() const;
             void ClearAllMarkings() const;
+            u32 GetNumProcesses() const;
         };
 
     } /* end namespace MC */
