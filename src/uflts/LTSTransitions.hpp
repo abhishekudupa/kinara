@@ -210,7 +210,8 @@ namespace ESMC {
             ExpT Guard;
             vector<LTSAssignRef> Updates;
             ExprTypeRef MsgType;
-            set<LTSFairObjRef> Fairnesses;
+            vector<LTSFairObjRef> FairnessObjs;
+            vector<LTSFairSetRef> FairnessSets;
             vector<u32> FairnessBits;
 
         public:
@@ -223,9 +224,9 @@ namespace ESMC {
             const ExpT& GetGuard() const;
             const vector<LTSAssignRef>& GetUpdates() const;
             const ExprTypeRef& GetMsgType() const;
-            const set<LTSFairObjRef>& GetFairnesses() const;
+            const vector<LTSFairObjRef>& GetFairnessObjs() const;
+            const vector<LTSFairSetRef>& GetFairnessSets() const;
             string ToString() const;
-            const vector<u32>& GetFairnessBits() const;
         };
 
         class LTSInitState : public RefCountable

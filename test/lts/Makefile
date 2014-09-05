@@ -15,6 +15,7 @@ endif
 CXXFLAGS+=-std=c++11 -Wall -pedantic -fopenmp -pipe
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/include
+CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/sparsehash
 
 PROJECT_EXECUTABLES=PingPongChan TestChan Elevator Flip
 

@@ -41,6 +41,9 @@
 #define ESMC_LTS_CHECKER_HPP_
 
 #include "../common/FwdDecls.hpp"
+#include "../uflts/LTSTypes.hpp"
+
+#include "AQStructure.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -80,15 +83,39 @@ namespace ESMC {
                 LTSFairSetRef FairSet;
                 // How many instances do I have
                 u32 NumInstances;
-                // Where's the 0th enabled/executed bit located
-                u32 Offset;
+                // Are we tracking a strong fairness
+                bool IsStrong;
+                // The system index set
+                SystemIndexSet* SysIdxSet;
+                // Status bits
+                bool Enabled;
+                bool Executed;
+                bool Disabled;
+                // The class (process class) id that this
+                // fairness belongs to
+                u32 ClassID;
+                // Guarded commands I need to respond to
+                // for each tracked index
+                vector<vector<bool>> GCmdsToRespondTo;
+                vector<vector<u32>> GCmdIDsToRespondTo;
+                // Set of states where I'm enabled, but 
+                // not taken
+                unordered_set<const ProductState*> EnabledStates;
 
             public:
-                FairnessChecker(const LTSFairSetRef& FairSet);
+                FairnessChecker(const LTSFairSetRef& FairSet,
+                                SystemIndexSet* SysIdxSet,
+                                const vector<GCmdRef>& GuardedCommands);
                 ~FairnessChecker();
-
                 
+                void Reset();
+                void ProcessSCCState(const ProductState* State,
+                                     const ProductEdgeSetT& Edges,
+                                     u32 TrackedIndex);
 
+                bool IsFair() const;
+                bool IsStrongFairness() const;
+                const unordered_set<const ProductState*>& GetEnabledStates() const;
             };
 
         } /* end namespace Detail */
@@ -108,10 +135,10 @@ namespace ESMC {
             u32 NumGuardedCmds;
             // Total number of processes
             u32 NumProcesses;
-            // Number of bits required for 
-            // enabled/executed tracking
-            u32 NumEnExBits;
-            vector<LTSFairSetRef> FairnessSets;
+            // The system index set
+            SystemIndexSet* SysIdxSet;
+            // Fairness Checkers by class id
+            vector<vector<Detail::FairnessChecker*>> FairnessCheckers;
             map<string, BuchiAutomaton*> OmegaAutomata;
 
             inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);
@@ -120,7 +147,13 @@ namespace ESMC {
                                      const StateVec* InputState,
                                      StateVec* OutputState) const;
             inline void ConstructProduct(BuchiAutomaton* Monitor);
-            inline void CheckSCCs();
+            inline vector<const ProductState*> GetAcceptingSCCs();
+            
+            inline void DoThreadedBFS(const ProductState* SCCRoot,
+                                      u32 IndexID);
+
+            inline bool CheckSCCFairness(const ProductState* SCCRoot, 
+                                         vector<const ProductState*>& UnfairStates);
 
         public:
             LTSChecker(LabelledTS* TheLTS);

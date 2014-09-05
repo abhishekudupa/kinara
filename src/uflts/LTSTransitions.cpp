@@ -274,11 +274,14 @@ namespace ESMC {
                                              const ExprTypeRef& MsgType,
                                              const set<LTSFairObjRef>& Fairnesses)
             : Guard(Guard), Updates(Updates), MsgType(MsgType), 
-              Fairnesses(Fairnesses)
+              FairnessObjs(Fairnesses.begin(), Fairnesses.end())
         {
-            for (auto const& Fairness : Fairnesses) {
-                FairnessBits.push_back(Fairness->GetFairnessID());
+            set<LTSFairSetRef> FairSets;
+            for (auto const& FairObj : FairnessObjs) {
+                FairSets.insert(FairObj->GetFairnessSet());
             }
+
+            FairnessSets.insert(FairnessSets.begin(), FairSets.begin(), FairSets.end());
         }
 
         LTSGuardedCommand::~LTSGuardedCommand()
@@ -301,14 +304,14 @@ namespace ESMC {
             return MsgType;
         }
 
-        const set<LTSFairObjRef>& LTSGuardedCommand::GetFairnesses() const
+        const vector<LTSFairObjRef>& LTSGuardedCommand::GetFairnessObjs() const
         {
-            return Fairnesses;
+            return FairnessObjs;
         }
 
-        const vector<u32>& LTSGuardedCommand::GetFairnessBits() const
+        const vector<LTSFairSetRef>& LTSGuardedCommand::GetFairnessSets() const
         {
-            return FairnessBits;
+            return FairnessSets;
         }
 
         string LTSGuardedCommand::ToString() const

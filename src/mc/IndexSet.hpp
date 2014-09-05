@@ -122,6 +122,7 @@ namespace ESMC {
             vector<u32> TypeOffsets;
             u32 IndexVectorSize;
             u32 NumIndexVectors;
+            i32 ClassID;
             // scratchpad for permutations
             mutable IndexVector* WorkingIV;
             map<vector<ExpT>, IndexVector*> ParamVecToIndexVec;
@@ -135,9 +136,10 @@ namespace ESMC {
                           Detail::IndexVectorPtrEquals> IndexVecToID;
 
         public:
-            ProcessIndexSet(const vector<vector<ExpT>>& ParamInsts);
+            ProcessIndexSet(const vector<vector<ExpT>>& ParamInsts, i32 ClassID = -1);
             ~ProcessIndexSet();
 
+            i32 GetClassID() const;
             u32 Permute(u32 IndexID, const vector<u08>& Permutation) const;
             u32 GetNumIndexVectors() const;
             const IndexVector* GetIndexVector(u32 IndexID) const;
@@ -158,13 +160,18 @@ namespace ESMC {
             vector<u32> DomainSizes;
             u32 NumTrackedIndices;
             vector<pair<ProcessIndexSet*, u32>> IndexToPIdx;
+            // Low, High for a class id
+            vector<pair<u32, u32>> ClassIDBounds;
             
         public:
             SystemIndexSet(const vector<vector<vector<ExpT>>>& ProcessParamInsts);
             ~SystemIndexSet();
 
             u32 Permute(u32 IndexID, const vector<u08>& Permutation) const;
-            u32 GetNumTrackedIndices();
+            u32 GetNumTrackedIndices() const;
+
+            u32 GetClassID(u32 IndexID) const;
+            i32 GetIndexForClassID(u32 IndexID, u32 ClassID) const;
         };
         
     } /* end namespace MC */

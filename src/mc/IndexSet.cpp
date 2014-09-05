@@ -113,7 +113,9 @@ namespace ESMC {
             return TheIndexVector;
         }
 
-        ProcessIndexSet::ProcessIndexSet(const vector<vector<ExpT>>& ParamInsts)
+        ProcessIndexSet::ProcessIndexSet(const vector<vector<ExpT>>& ParamInsts,
+                                         i32 ClassID)
+            : ClassID(ClassID)
         {
 
             if (ParamInsts.size() == 1 && ParamInsts[0].size() == 0) {
@@ -173,6 +175,11 @@ namespace ESMC {
             delete WorkingIV;
         }
 
+        i32 ProcessIndexSet::GetClassID() const
+        {
+            return ClassID;
+        }
+
         u32 ProcessIndexSet::Permute(u32 IndexID, const vector<u08>& Perm) const
         {
             if (NumIndexVectors == 1) {
@@ -210,14 +217,17 @@ namespace ESMC {
         SystemIndexSet::SystemIndexSet(const vector<vector<vector<ExpT>>>& ProcessParamInsts)
             : NumTrackedIndices(0)
         {
+            u32 ClassID = 0;
             for (auto const& ProcessParamInst : ProcessParamInsts) {
-                auto CurPIdxSet = new ProcessIndexSet(ProcessParamInst);
+                auto CurPIdxSet = new ProcessIndexSet(ProcessParamInst, ClassID);
+                ProcessIdxSets.push_back(CurPIdxSet);
                 auto CurSize = CurPIdxSet->GetNumIndexVectors();
                 DomainSizes.push_back(CurSize);
                 for (u32 i = 0; i < CurSize; ++i) {
                     IndexToPIdx.push_back(make_pair(CurPIdxSet, NumTrackedIndices));
                 }
-
+                ClassIDBounds.push_back(make_pair(NumTrackedIndices, CurSize - 1));
+                ++ClassID;
                 NumTrackedIndices += CurSize;
             }
         }
@@ -238,6 +248,26 @@ namespace ESMC {
 
             auto Retval = PIdxSet->Permute(IndexID - Offset, Permutation);
             return Retval + Offset;
+        }
+
+        u32 SystemIndexSet::GetNumTrackedIndices() const
+        {
+            return NumTrackedIndices;
+        }
+
+        u32 SystemIndexSet::GetClassID(u32 IndexID) const
+        {
+            return (u32)(IndexToPIdx[IndexID].first->GetClassID());
+        }
+
+        i32 SystemIndexSet::GetIndexForClassID(u32 IndexID, u32 ClassID) const
+        {
+            auto const& Bounds = ClassIDBounds[ClassID];
+            if (IndexID >= Bounds.first && IndexID < Bounds.second) {
+                return (IndexID - Bounds.first);
+            } else {
+                return -1;
+            }
         }
 
     } /* end namespace MC */

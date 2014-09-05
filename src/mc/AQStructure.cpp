@@ -134,18 +134,17 @@ namespace ESMC {
         }
 
         ProductState::ProductState(const StateVec* SVPtr, u32 MonitorState,
-                                   u32 IndexID, u32 NumProcesses, u32 NumEnExBits)
+                                   u32 IndexID, u32 NumProcesses)
             : SVPtr(SVPtr), MonitorState(MonitorState), IndexID(IndexID),
               Status(), DFSNum(-1), LowLink(-1),
-              TrackingBits(NumProcesses, false), 
-              EnExBits(NumEnExBits * 2, false)
+              TrackingBits(NumProcesses, false)
         {
             // Nothing here
         }
 
         ProductState::~ProductState()
         {
-            // Nothing here
+            TrackingBits.clear();
         }
 
         const StateVec* ProductState::GetSVPtr() const
@@ -180,17 +179,120 @@ namespace ESMC {
 
         void ProductState::ClearMarkings() const
         {
-            Status.InSCC = false;
+            Status.InSCC = -1;
             Status.OnStack = false;
-            Status.Singular = false;
+            Status.ThreadedVisted = false;
             Status.Accepting = false;
+            Status.Deleted = false;
             DFSNum = -1;
             LowLink = -1;
+
+            for (u32 i = 0; i < TrackingBits.size(); ++i) {
+                TrackingBits[i] = false;
+            }
         }
 
-        ProductStructure::ProductStructure(u32 NumProcesses, u32 NumEnExBits)
-            : NumProcesses(NumProcesses), NumEnExBits(NumEnExBits),
-              PSPool(new boost::pool<>(sizeof(ProductState))),
+        void ProductState::MarkInSCC(u32 SCCID) const
+        {
+            Status.InSCC = SCCID;
+        }
+
+        void ProductState::MarkNotInSCC() const
+        {
+            Status.InSCC = -1;
+        }
+
+        bool ProductState::IsInSCC(u32 SCCID) const
+        {
+            return ((Status.InSCC != -1) && 
+                    ((u32)Status.InSCC == SCCID));
+        }
+
+        void ProductState::MarkOnStack() const
+        {
+            Status.OnStack = true;
+        }
+
+        void ProductState::MarkNotOnStack() const
+        {
+            Status.OnStack = false;
+        }
+
+        bool ProductState::IsOnStack() const
+        {
+            return Status.OnStack;
+        }
+
+        void ProductState::MarkThreadedVisited() const
+        {
+            Status.ThreadedVisted = true;
+        }
+
+        void ProductState::MarkNotThreadedVisited() const
+        {
+            Status.ThreadedVisted = false;
+        }
+
+        bool ProductState::IsThreadedVisited() const
+        {
+            return Status.ThreadedVisted;
+        }
+
+        void ProductState::MarkAccepting() const
+        {
+            Status.Accepting = true;
+        }
+
+        void ProductState::MarkNotAccepting() const
+        {
+            Status.Accepting = false;
+        }
+
+        bool ProductState::IsAccepting() const
+        {
+            return Status.Accepting;
+        }
+
+        void ProductState::MarkDeleted() const
+        {
+            Status.Deleted = true;
+        }
+
+        void ProductState::MarkNotDeleted() const
+        {
+            Status.Deleted = false;
+        }
+
+        bool ProductState::IsDeleted() const
+        {
+            return Status.Deleted;
+        }
+
+        void ProductState::MarkTracked(u32 BitNum) const
+        {
+            TrackingBits[BitNum] = true;
+        }
+
+        void ProductState::MarkNotTracked(u32 BitNum) const
+        {
+            TrackingBits[BitNum] = false;
+        }
+
+        bool ProductState::IsTracked(u32 BitNum) const
+        {
+            return TrackingBits[BitNum];
+        }
+
+        void ProductState::ClearAllTracked() const
+        {
+            for (u32 i = 0; i < TrackingBits.size(); ++i) {
+                TrackingBits[i] = false;
+            }
+        }
+
+        ProductStructure::ProductStructure(u32 NumProcesses)
+            : NumProcesses(NumProcesses),
+              PSPool(new boost::object_pool<ProductState>()),
               PEPool(new boost::pool<>(sizeof(ProductEdge)))
         {
             // Nothing here
@@ -220,7 +322,7 @@ namespace ESMC {
         {
             auto NewPS = 
                 new (PSPool->malloc()) 
-                ProductState(SVPtr, MonitorState, IndexID, NumProcesses, NumEnExBits);
+                ProductState(SVPtr, MonitorState, IndexID, NumProcesses);
 
             auto it = PSHashSet.find(NewPS);
             if (it == PSHashSet.end()) {
@@ -228,7 +330,7 @@ namespace ESMC {
                 New = true;
                 return NewPS;
             } else {
-                PSPool->free(NewPS);
+                PSPool->destroy(NewPS);
                 NewPS = it->first;
                 New = false;
                 return NewPS;
@@ -286,7 +388,7 @@ namespace ESMC {
 
         void ProductStructure::ClearAllMarkings() const
         {
-            for (auto PS : PSHashSet) {
+            for (auto const& PS : PSHashSet) {
                 PS.first->ClearMarkings();
             }
         }
@@ -294,6 +396,15 @@ namespace ESMC {
         u32 ProductStructure::GetNumProcesses() const
         {
             return NumProcesses;
+        }
+
+        void 
+        ProductStructure::ApplyToAllStates(const function<void (const ESMC::MC::ProductState *)>& 
+                                           Func) const
+        {
+            for (auto const& PS : PSHashSet) {
+                Func(PS.first);
+            }
         }
 
     } /* end namespace MC */

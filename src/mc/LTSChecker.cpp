@@ -132,6 +132,114 @@ namespace ESMC {
                 LastFired = NewLastFired;
             }
 
+            
+            // Fairness Checker implementation
+            FairnessChecker::FairnessChecker(const LTSFairSetRef& FairSet,
+                                             SystemIndexSet* SysIdxSet,
+                                             const vector<GCmdRef>& GuardedCommands)
+                : FairSet(FairSet), NumInstances(FairSet->GetNumInstances()),
+                  IsStrong(FairSet->GetFairnessType() == FairSetFairnessType::Strong),
+                  SysIdxSet(SysIdxSet), Enabled(false), 
+                  Executed(false), Disabled(false),
+                  ClassID(FairSet->GetEFSM()->GetClassID()),
+                  GCmdsToRespondTo(SysIdxSet->GetNumTrackedIndices(), 
+                                   vector<bool>(GuardedCommands.size())),
+                  GCmdIDsToRespondTo(SysIdxSet->GetNumTrackedIndices())
+            {
+                const u32 NumTrackedIndices = SysIdxSet->GetNumTrackedIndices();
+                for (u32 TrackedIndex = 0; TrackedIndex < NumTrackedIndices; ++TrackedIndex) {
+                    auto InstanceID = SysIdxSet->GetIndexForClassID(TrackedIndex, ClassID);
+                    if (InstanceID < 0) {
+                        continue;
+                    }
+                    
+                    u32 i = 0;
+                    for (auto const& Cmd : GuardedCommands) {
+                        auto const& FairObjs = Cmd->GetFairnessObjs();
+                        for (auto const& FairObj : FairObjs) {
+                            if (FairObj->GetFairnessSet() == FairSet &&
+                                FairObj->GetInstanceID() == (u32)InstanceID) {
+                                GCmdsToRespondTo[TrackedIndex][i] = true;
+                            }
+                            GCmdIDsToRespondTo[TrackedIndex].push_back(i);
+                        }
+                        ++i;
+                    }
+                }
+            }
+
+            FairnessChecker::~FairnessChecker()
+            {
+                // Nothing here
+            }
+
+            void FairnessChecker::Reset()
+            {
+                for (u32 i = 0; i < NumInstances; ++i) {
+                    Enabled = false;
+                    Executed = false;
+                    Disabled = false;
+                }
+            }
+
+            void FairnessChecker::ProcessSCCState(const ProductState* State,
+                                                  const ProductEdgeSetT& Edges,
+                                                  u32 TrackedIndex)
+            {
+                auto InstanceID = SysIdxSet->GetIndexForClassID(TrackedIndex, ClassID);
+                if (InstanceID < 0) {
+                    return;
+                }
+
+                auto const SCCID = State->Status.InSCC;
+
+                bool AtLeastOneEnabled = false;
+                for (auto const& Edge : Edges) {
+                    auto NextState = Edge->GetTarget();
+                    auto GCmdIndex = Edge->GetGCmdIndex();
+                    if (!GCmdsToRespondTo[TrackedIndex][GCmdIndex]) {
+                        continue;
+                    }
+                    // This command causes this state to be marked 
+                    // enabled
+                    Enabled = true;
+                    AtLeastOneEnabled = true;
+                    
+                    if (NextState->IsInSCC(SCCID)) {
+                        Executed = true;
+                        if (EnabledStates.size() > 0) {
+                            EnabledStates.clear();
+                        }
+                    } else {
+                        EnabledStates.insert(State);
+                    }
+                }
+
+                // if no commands are enabled, then we're disabled!
+                if (!AtLeastOneEnabled) {
+                    Disabled = true;
+                }
+            }
+
+            bool FairnessChecker::IsFair() const
+            {
+                if (IsStrong) {
+                    return (!Enabled || Executed);
+                } else {
+                    return (Disabled || Executed);
+                }
+            }
+
+            bool FairnessChecker::IsStrongFairness() const
+            {
+                return IsStrong;
+            }
+
+            const unordered_set<const ProductState*>& FairnessChecker::GetEnabledStates() const
+            {
+                return EnabledStates;
+            }
+
         } /* end namespace Detail */
 
         using namespace Detail;
@@ -150,20 +258,38 @@ namespace ESMC {
             NumGuardedCmds = GuardedCommands.size();
 
             NumProcesses = 0;
-            NumEnExBits = 0;
+            
+            vector<vector<vector<ExpT>>> ProcessInsts(TheLTS->AllEFSMs.size());
+            FairnessCheckers = vector<vector<Detail::FairnessChecker*>>(TheLTS->AllEFSMs.size());
 
             for (auto const& NameEFSM : TheLTS->AllEFSMs) {
                 auto EFSM = NameEFSM.second;
+                u32 ClassID = EFSM->GetClassID();
+                ProcessInsts[ClassID] = EFSM->GetParamInsts();
                 NumProcesses += EFSM->GetNumInstances();
+            }
+
+            SysIdxSet = new SystemIndexSet(ProcessInsts);
+
+            for (auto const& NameEFSM : TheLTS->AllEFSMs) {
+                auto EFSM = NameEFSM.second;
+                u32 ClassID = EFSM->GetClassID();
 
                 auto const& AllFairnesses = EFSM->GetAllFairnessSets();
                 auto const& AllFairnessSets = AllFairnesses->GetFairnessSets();
 
-                for (auto const& NameFSet : AllFairnessSets) {
-                    NumEnExBits += NameFSet.second->GetNumInstances();
-                    FairnessSets.push_back(NameFSet.second);
+                for (auto const& NameFS : AllFairnessSets) {
+                    auto const& FS = NameFS.second;
+                    auto CurChecker = new FairnessChecker(FS, SysIdxSet, GuardedCommands);
+                    if (FS->GetFairnessType() == FairSetFairnessType::Strong) {
+                        FairnessCheckers[ClassID].push_back(CurChecker);
+                    } else {
+                        FairnessCheckers[ClassID].insert(FairnessCheckers[ClassID].begin(),
+                                                         CurChecker);
+                    }
                 }
             }
+
         }
 
         LTSChecker::~LTSChecker()
@@ -183,6 +309,12 @@ namespace ESMC {
 
             for (auto const& Aut : OmegaAutomata) {
                 delete Aut.second;
+            }
+            delete SysIdxSet;
+            for (auto const& FCheckList : FairnessCheckers) {
+                for (auto FChecker : FCheckList) {
+                    delete FChecker;
+                }
             }
         }
 
@@ -366,7 +498,7 @@ namespace ESMC {
         inline void LTSChecker::ConstructProduct(BuchiAutomaton *Monitor)
         {
             deque<ProductState*> BFSQueue;
-            ThePS = new ProductStructure(NumProcesses, NumEnExBits);
+            ThePS = new ProductStructure(NumProcesses);
             auto MonIndexSet = Monitor->GetIndexSet();
             auto PermSet = TheCanonicalizer->GetPermSet();
             
@@ -389,7 +521,7 @@ namespace ESMC {
                 auto SVPtr = CurProdState->GetSVPtr();
                 auto MonState = CurProdState->GetMonitorState();
                 if (Monitor->IsAccepting(MonState)) {
-                    CurProdState->Status.Accepting = true;
+                    CurProdState->MarkAccepting();
                 }
                 auto IndexID = CurProdState->GetIndexID();
                 auto const& AQSEdges = AQS->GetEdges(SVPtr);
@@ -416,17 +548,109 @@ namespace ESMC {
                  << " states and " << ThePS->GetNumEdges() << " edges." << endl;
         }
 
-        inline void LTSChecker::CheckSCCs()
+        inline void LTSChecker::DoThreadedBFS(const ProductState *SCCRoot, u32 IndexID)
+        {
+            deque<pair<const ProductState*, u32>> BFSQueue;
+            SCCRoot->MarkTracked(IndexID);
+            const u32 SCCID = SCCRoot->Status.InSCC;
+            // We can set the class id here,
+            // since the classes will not change
+            const u32 ClassID = SysIdxSet->GetClassID(IndexID);
+
+            BFSQueue.push_back(make_pair(SCCRoot, IndexID));
+            auto PermSet = TheCanonicalizer->GetPermSet();
+            
+            while (BFSQueue.size() > 0) {
+                auto const& CurEntry = BFSQueue.front();
+
+                auto CurState = CurEntry.first;
+                auto CurIndex = CurEntry.second;
+                BFSQueue.pop_front();
+
+                auto const& CurEdges = ThePS->GetEdges(const_cast<ProductState*>(CurState));
+
+                // process this state for fairness
+                for (auto Checker : FairnessCheckers[ClassID]) {
+                    Checker->ProcessSCCState(CurState, CurEdges, CurIndex);
+                }
+
+                for (auto Edge : CurEdges) {
+                    auto NextState = Edge->GetTarget();
+                    auto Permutation = Edge->GetPermutation();
+                    auto PermIt = PermSet->GetIterator(Permutation);
+
+                    if (!NextState->IsInSCC(SCCID)) {
+                        // Not in this scc
+                        continue;
+                    }
+
+                    auto NextIndex = SysIdxSet->Permute(CurIndex, PermIt.GetPerm());
+                    if (NextState->IsTracked(NextIndex)) {
+                        continue;
+                    }
+
+                    NextState->MarkTracked(NextIndex);
+                    BFSQueue.push_back(make_pair(NextState, NextIndex));
+                }
+            }
+        }
+
+        inline bool LTSChecker::CheckSCCFairness(const ProductState *SCCRoot, 
+                                                 vector<const ProductState*>& UnfairStates)
+        {
+            const u32 IndexMax = SysIdxSet->GetNumTrackedIndices();
+            for (u32 IndexID = 0; IndexID < IndexMax; ++IndexID) {
+                if (SCCRoot->IsTracked(IndexID)) {
+                    continue;
+                } 
+
+                auto ClassID = SysIdxSet->GetClassID(IndexID);
+                // Reset all the fairness checkers
+                for (auto FChecker : FairnessCheckers[ClassID]) {
+                    FChecker->Reset();
+                }
+                DoThreadedBFS(SCCRoot, IndexID);
+                // Are all the fairness requirements satisfied?
+                for (auto FChecker : FairnessCheckers[ClassID]) {
+                    if (!FChecker->IsFair()) {
+                        if (!FChecker->IsStrongFairness()) {
+                            // Weak fairness, nothing to do
+                            return false;
+                        } else {
+                            // Find the states that cause this 
+                            // particular fairness to fail
+                            // i.e., states where this fairness
+                            // is enabled
+                            auto const& EnabledStates = FChecker->GetEnabledStates();
+                            UnfairStates.insert(UnfairStates.end(), EnabledStates.begin(),
+                                                EnabledStates.end());
+                            return false;
+                        }
+                    }
+                    // This fairness set is satisfied!
+                }
+            }
+            return true;
+        }
+
+        inline vector<const ProductState*> LTSChecker::GetAcceptingSCCs()
         {
             // Find the SCCs on the fly
             stack<pair<const ProductState*, u32>> DFSStack;
             stack<ProductState*> SCCStack;
+            vector<const ProductState*> Retval;
 
             u32 CurIndex = 0;
+            u32 CurSCCID = 0;
+
             for (auto InitState : ThePS->GetInitialStates()) {
+                if (InitState->IsDeleted()) {
+                    continue;
+                }
+
                 InitState->DFSNum = CurIndex;
                 InitState->LowLink = CurIndex;
-                InitState->Status.OnStack = true;
+                InitState->MarkOnStack();
                 DFSStack.push(make_pair(InitState, 0));
                 SCCStack.push(InitState);
                 ++CurIndex;
@@ -435,7 +659,6 @@ namespace ESMC {
                     auto const& CurEntry = DFSStack.top();
                     auto CurState = const_cast<ProductState*>(CurEntry.first);
                     auto EdgeToExplore = CurEntry.second;
-                    ++DFSStack.top().second;
                     auto const& Edges = ThePS->GetEdges(CurState);
 
                     if (EdgeToExplore >= Edges.size()) {
@@ -448,6 +671,7 @@ namespace ESMC {
                             PrevState->LowLink = min(PrevState->LowLink, CurState->LowLink);
                         }
                     } else {
+                        ++DFSStack.top().second;
                         // Push successor onto stack
                         // if unexplored, else update lowlink
                         auto it = Edges.begin();
@@ -456,15 +680,15 @@ namespace ESMC {
                         }
                         auto CurEdge = *(it);
                         auto NextState = const_cast<ProductState*>(CurEdge->GetTarget());
-                        if (NextState->DFSNum == -1) {
-                            // unexplored
+                        if (NextState->DFSNum == -1 && (!(NextState->IsDeleted()))) {
+                            // unexplored and not deleted
                             NextState->DFSNum = CurIndex;
                             NextState->LowLink = CurIndex;
-                            NextState->Status.OnStack = true;
+                            NextState->MarkOnStack();
                             DFSStack.push(make_pair(NextState, 0));
                             SCCStack.push(NextState);
                             ++CurIndex;
-                        } else if (NextState->Status.OnStack) {
+                        } else if (NextState->IsOnStack()) {
                             // explored
                             CurState->LowLink = min(CurState->LowLink, NextState->DFSNum);
                         }
@@ -476,24 +700,37 @@ namespace ESMC {
                     if (CurState->LowLink == CurState->DFSNum) {
                         u32 NumStatesInSCC = 0;
                         ProductState* SCCState = nullptr;
+                        vector<ProductState*> SCCStateVec;
+                        bool FoundAccepting = false;
                         do {
                             SCCState = SCCStack.top();
-                            SCCState->Status.InSCC = true;
+                            SCCState->MarkInSCC(CurSCCID);
+                            SCCState->MarkNotOnStack();
                             SCCStack.pop();
+                            if (SCCState->IsAccepting()) {
+                                FoundAccepting = true;
+                            }
                             ++NumStatesInSCC;
+                            SCCStateVec.push_back(SCCState);
                         } while (SCCState != CurState);
 
                         if (NumStatesInSCC == 1) {
-                            // Singular SCC
+                            SCCState->MarkNotInSCC();
+                        } else if (!FoundAccepting) {
+                            // Unmark all the SCCs
+                            for (auto SCCState : SCCStateVec) {
+                                SCCState->MarkNotInSCC();
+                            }
                         } else {
-                            // TODO: Send for threaded graph resolution
-                            // and fairness checks
-                            cout << "Found non-singular SCC with " << NumStatesInSCC 
-                                 << " states." << endl;
+                            // Non-singular AND accepting
+                            // Send this for further processing
+                            Retval.push_back(CurState);
+                            ++CurSCCID;
                         }
                     }
                 }
             }
+            return Retval;
         }
 
         void LTSChecker::CheckLiveness(const string& BuchiMonitorName) 
@@ -518,7 +755,44 @@ namespace ESMC {
             cout << "Constructing Product..." << endl;
             ConstructProduct(Monitor);
 
-            CheckSCCs();
+            bool FixPoint = false;
+
+            while (!FixPoint) {
+                FixPoint = true;
+                cout << "Getting accepting SCCs... " << endl;
+                auto&& SCCRoots = GetAcceptingSCCs();
+                // Check if each of the SCCs are fair
+                vector<const ProductState*> UnfairStates;
+                cout << "Checking Fairness of SCCs..." << endl;
+                for (auto SCCRoot : SCCRoots) {
+                    UnfairStates.clear();
+                    auto IsFair = CheckSCCFairness(SCCRoot, UnfairStates);
+                    if (!IsFair && UnfairStates.size() > 0) {
+                        // Not fair, due to a strong fairness
+                        FixPoint = false;
+                        // Mark all states as being unexplored
+                        ThePS->ClearAllMarkings();
+                        cout << "Deleting unfair states..." << endl;
+                        for (auto UnfairState : UnfairStates) {
+                            UnfairState->MarkDeleted();
+                        }
+                        // Redo SCCs
+                        break;
+                    } else if (!IsFair) {
+                        // Not fair due to weak fairness, can't help
+                        // Check if some other SCC is fair
+                        continue;
+                    } else {
+                        // Fair, turn this into a counterexample
+                        // TODO
+                        cout << "Found fair accepting SCC" << endl;
+                        return;
+                    }
+                }
+            }
+
+            cout << "No liveness violations found! :-)" << endl;
+            return;
         }
 
     } /* end namespace MC */

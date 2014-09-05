@@ -45,6 +45,7 @@
 #include <sparse_hash_map>
 
 #include <boost/pool/pool.hpp>
+#include <boost/pool/object_pool.hpp>
 
 #include "../common/FwdDecls.hpp"
 
@@ -236,14 +237,15 @@ namespace ESMC {
         // in the product state
         struct ThreadedGraphStatusT
         {
-            bool InSCC : 1;
             bool OnStack : 1;
-            bool Singular : 1;
+            bool ThreadedVisted : 1;
             bool Accepting : 1;
+            bool Deleted : 1;
+            i32 InSCC : 28;
 
             inline ThreadedGraphStatusT()
-                : InSCC(false), OnStack(false),
-                  Singular(false), Accepting(false)
+                : OnStack(false), ThreadedVisted(false), Accepting(false),
+                  Deleted(false), InSCC(-1)
             {
                 // Nothing here
             }
@@ -264,11 +266,10 @@ namespace ESMC {
             mutable i32 DFSNum;
             mutable i32 LowLink;
             mutable vector<bool> TrackingBits;
-            mutable vector<bool> EnExBits;
 
         public:
             ProductState(const StateVec* SVPtr, u32 MonitorState,
-                         u32 IndexID, u32 NumProcesses, u32 NumEnExBits);
+                         u32 IndexID, u32 NumProcesses);
             ~ProductState();
 
             const StateVec* GetSVPtr() const;
@@ -278,6 +279,32 @@ namespace ESMC {
             bool operator == (const ProductState& Other) const;
 
             void ClearMarkings() const;
+
+            void MarkOnStack() const;
+            void MarkNotOnStack() const;
+            bool IsOnStack() const;
+
+            void MarkThreadedVisited() const;
+            void MarkNotThreadedVisited() const;
+            bool IsThreadedVisited() const;
+
+            void MarkAccepting() const;
+            void MarkNotAccepting() const;
+            bool IsAccepting() const;
+            
+            void MarkDeleted() const;
+            void MarkNotDeleted() const;
+            bool IsDeleted() const;
+
+            void MarkInSCC(u32 SCCID) const;
+            void MarkNotInSCC() const;
+            bool IsInSCC(u32 SCCID) const;
+
+            void MarkTracked(u32 BitNum) const;
+            void MarkNotTracked(u32 BitNum) const;
+            void ClearAllTracked() const;
+            bool IsTracked(u32 BitNum) const;
+            
         };
 
         namespace Detail {
@@ -321,16 +348,15 @@ namespace ESMC {
         {
         private:
             u32 NumProcesses;
-            u32 NumEnExBits;
             ProductStateHashSetT PSHashSet;
             ProductEdgeHashSetT EdgeHashSet;
             vector<ProductState*> InitialStates;
             ProductEdgeSetT EmptyEdgeSet;
-            boost::pool<>* PSPool;
+            boost::object_pool<ProductState>* PSPool;
             boost::pool<>* PEPool;
 
         public:
-            ProductStructure(u32 NumProcesses, u32 NumEnExBits);
+            ProductStructure(u32 NumProcesses);
             ~ProductStructure();
 
             ProductState* AddInitialState(const StateVec* SVPtr,
@@ -349,6 +375,8 @@ namespace ESMC {
             u32 GetNumEdges() const;
             void ClearAllMarkings() const;
             u32 GetNumProcesses() const;
+
+            void ApplyToAllStates(const function<void(const ProductState*)>& Func) const;
         };
 
     } /* end namespace MC */
