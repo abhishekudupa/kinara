@@ -60,6 +60,7 @@ namespace ESMC {
             u32 InstanceID;
             FairSetFairnessType Fairness;
             u32 FairnessID;
+            u32 FairnessSetID;
             // Raw pointer to avoid ref count cycles
             LTSFairnessSet* FairnessSet;
 
@@ -78,6 +79,7 @@ namespace ESMC {
             FairSetFairnessType GetFairnessType() const;
             u32 GetFairnessID() const;
             u32 GetInstanceID() const;
+            u32 GetFairnessSetID() const;
 
             LTSFairnessSet* GetFairnessSet() const;
 

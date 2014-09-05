@@ -53,6 +53,7 @@ namespace ESMC {
             : Name(Name), TheEFSM(TheEFSM), IndexInst(IndexInst), 
               InstanceID(InstanceID), Fairness(Fairness), 
               FairnessID(FairnessUIDGenerator.GetUID()),
+              FairnessSetID(FairnessSet->GetFairnessSetID()), 
               FairnessSet(FairnessSet)
         {
             // Instantiate the name with the index instance
@@ -94,6 +95,11 @@ namespace ESMC {
         u32 LTSFairnessObject::GetInstanceID() const
         {
             return InstanceID;
+        }
+
+        u32 LTSFairnessObject::GetFairnessSetID() const
+        {
+            return FairnessSetID;
         }
 
         void LTSFairnessObject::ResetFairnessUID()
