@@ -130,6 +130,21 @@ namespace ESMC {
         {
             return ErrMsg.c_str();
         }
+
+        inline const string& GetFileName() const
+        {
+            return FileName;
+        }
+
+        inline u32 GetLineNum() const
+        {
+            return LineNum;
+        }
+
+        inline const string& GetMethodName() const
+        {
+            return MethodName;
+        }
     };
 
 } /* end namespace ESMC */

@@ -17,17 +17,22 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/sparsehash
 
-PROJECT_EXECUTABLES=PingPongChan TestChan Elevator Flip
+PROJECT_EXECUTABLES=PingPongChan TestChan Elevator Flip FlipSimple
 
 PingPongChan_SYS_LIBS=esmc z3 rt boost_system
 PingPongChan_EXT_LIBS=boost z3 esmc
+
 TestChan_SYS_LIBS=esmc z3 rt boost_system
 TestChan_EXT_LIBS=boost z3 esmc
+
 Elevator_SYS_LIBS=esmc z3 rt boost_system
 Elevator_EXT_LIBS=boost z3 esmc
+
 Flip_SYS_LIBS=esmc z3 rt boost_system
 Flip_EXT_LIBS=boost z3 esmc
 
+FlipSimple_SYS_LIBS=esmc z3 rt boost_system
+FlipSimple_EXT_LIBS=boost z3 esmc
 
 libboost_FULL_PATH=$(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/install.ph
 libboost_MAKE_DIR=$(PROJECT_ROOT)/../../src/extern/boost-local/
@@ -39,6 +44,7 @@ libesmc_MAKE_DIR=$(PROJECT_ROOT)/../../
 PingPongChan_OBJS=PingPongChan.o
 TestChan_OBJS=TestChan.o
 Flip_OBJS=Flip.o
+FlipSimple_OBJS=FlipSimple.o
 Elevator_OBJS=Elevator.o
 
 
@@ -62,5 +68,9 @@ Flip_LIB_PATHS= \
     $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
+FlipSimple_LIB_PATHS= \
+    $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \
+    $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
+    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
 include $(PROJECT_ROOT)/../../Makefile.util

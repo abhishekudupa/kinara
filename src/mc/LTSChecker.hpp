@@ -97,7 +97,6 @@ namespace ESMC {
                 // Guarded commands I need to respond to
                 // for each tracked index
                 vector<vector<bool>> GCmdsToRespondTo;
-                vector<vector<u32>> GCmdIDsToRespondTo;
                 // Set of states where I'm enabled, but 
                 // not taken
                 unordered_set<const ProductState*> EnabledStates;

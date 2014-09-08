@@ -143,8 +143,7 @@ namespace ESMC {
                   Executed(false), Disabled(false),
                   ClassID(FairSet->GetEFSM()->GetClassID()),
                   GCmdsToRespondTo(SysIdxSet->GetNumTrackedIndices(), 
-                                   vector<bool>(GuardedCommands.size())),
-                  GCmdIDsToRespondTo(SysIdxSet->GetNumTrackedIndices())
+                                   vector<bool>(GuardedCommands.size()))
             {
                 const u32 NumTrackedIndices = SysIdxSet->GetNumTrackedIndices();
                 for (u32 TrackedIndex = 0; TrackedIndex < NumTrackedIndices; ++TrackedIndex) {
@@ -161,7 +160,6 @@ namespace ESMC {
                                 FairObj->GetInstanceID() == (u32)InstanceID) {
                                 GCmdsToRespondTo[TrackedIndex][i] = true;
                             }
-                            GCmdIDsToRespondTo[TrackedIndex].push_back(i);
                         }
                         ++i;
                     }
@@ -724,6 +722,18 @@ namespace ESMC {
                         } else {
                             // Non-singular AND accepting
                             // Send this for further processing
+
+                            cout << "Accepting SCC:" << endl;
+                            for (auto SCCState : SCCStateVec) {
+                                cout << "State:" << endl
+                                     << "------------------------------------------"
+                                     << endl;
+
+                                Printer->PrintState(SCCState->GetSVPtr(), cout);
+                                cout << "------------------------------------------"
+                                     << endl;
+                            }
+
                             Retval.push_back(CurState);
                             ++CurSCCID;
                         }

@@ -300,6 +300,7 @@ int main()
 
     auto ClientCountZero = Monitor->MakeOp(LTSOps::OpEQ, ClientDotCount, ZeroExp);
     auto NotClientCountZero = Monitor->MakeOp(LTSOps::OpNOT, ClientCountZero);
+
     Monitor->AddTransition("InitState", "InitState", TrueExp);
     Monitor->AddTransition("InitState", "AcceptState", NotClientCountZero);
     Monitor->AddTransition("AcceptState", "AcceptState", NotClientCountZero);

@@ -159,6 +159,8 @@ namespace ESMC {
 
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+            i64 GetLow() const;
+            i64 GetHigh() const;
         };
 
         class CompiledLValueInterpreter : public LValueInterpreter

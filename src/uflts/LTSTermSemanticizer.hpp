@@ -1635,7 +1635,7 @@ namespace ESMC {
                 }
 
                 TypeToSort[Type] = LoweredSort;
-                return LoweredSort;
+                return TypeToSort[Type];
             }
 
             template <typename E, template <typename> class S>

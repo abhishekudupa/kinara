@@ -226,7 +226,8 @@ namespace ESMC {
                 for (u32 i = 0; i < CurSize; ++i) {
                     IndexToPIdx.push_back(make_pair(CurPIdxSet, NumTrackedIndices));
                 }
-                ClassIDBounds.push_back(make_pair(NumTrackedIndices, CurSize - 1));
+                ClassIDBounds.push_back(make_pair(NumTrackedIndices, 
+                                                  NumTrackedIndices + CurSize - 1));
                 ++ClassID;
                 NumTrackedIndices += CurSize;
             }
@@ -263,7 +264,7 @@ namespace ESMC {
         i32 SystemIndexSet::GetIndexForClassID(u32 IndexID, u32 ClassID) const
         {
             auto const& Bounds = ClassIDBounds[ClassID];
-            if (IndexID >= Bounds.first && IndexID < Bounds.second) {
+            if (IndexID >= Bounds.first && IndexID <= Bounds.second) {
                 return (IndexID - Bounds.first);
             } else {
                 return -1;

@@ -463,6 +463,16 @@ namespace ESMC {
             }
         }
 
+        i64 CompiledConstInterpreter::GetLow() const
+        {
+            return Low;
+        }
+
+        i64 CompiledConstInterpreter::GetHigh() const
+        {
+            return High;
+        }
+
         CompiledLValueInterpreter::CompiledLValueInterpreter(u32 Size, bool Msg, 
                                                              bool Scalar, u32 Offset, 
                                                              i64 Low, i64 High)
