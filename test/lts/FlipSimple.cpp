@@ -89,7 +89,12 @@ int main()
                               DataMsgType, MsgParams);
 
     // Client structure
-    auto ClientEFSM = TheLTS->MakeGenEFSM("Client", MsgParams, TrueExp, LTSFairnessType::Strong);
+    // auto ClientEFSM = TheLTS->MakeGenEFSM("Client", MsgParams, TrueExp, LTSFairnessType::Strong);
+
+    // Commenting the above line and uncommenting the line below
+    // should result in a liveness violation, which is of course
+    // "unfair".
+    auto ClientEFSM = TheLTS->MakeGenEFSM("Client", MsgParams, TrueExp, LTSFairnessType::None);
     
     ClientEFSM->AddState("InitState");
     ClientEFSM->FreezeStates();
