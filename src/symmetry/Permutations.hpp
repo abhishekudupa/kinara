@@ -175,6 +175,7 @@ namespace ESMC {
             vector<u08> CachedPerm;
 
             inline void GetPermForIndex(u32 Index);
+            inline void GetPermForIndex(u32 Index, vector<u08>& OutVec) const;
             inline u32 GetIndexForPerm(const vector<u08>& Perm) const;
 
         public:
@@ -191,6 +192,8 @@ namespace ESMC {
 
             const iterator& Begin() const;
             const iterator& End() const;
+
+            void Print(u32 PermIdx, ostream& Out) const;
         };
 
     } /* end namespace Symm */

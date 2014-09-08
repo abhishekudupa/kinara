@@ -41,6 +41,7 @@
 
 #include "StateVecPrinter.hpp"
 #include "StateVec.hpp"
+#include "AQStructure.hpp"
 #include "Compiler.hpp"
 
 namespace ESMC {
@@ -213,6 +214,17 @@ namespace ESMC {
             for (auto const& Line : Lines) {
                 Out << Line << endl;
             }
+        }
+
+        void StateVecPrinter::PrintState(const ProductState* State, ostream& Out) const
+        {
+            auto&& Lines = PrintState(State->GetSVPtr());
+            for (auto const& Line : Lines) {
+                Out << Line << endl;
+            }
+
+            Out << "Tracked Index: " << State->GetIndexID() << endl;
+            Out << "Monitor State: " << State->GetMonitorState() << endl;
         }
 
     }

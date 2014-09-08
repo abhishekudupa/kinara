@@ -55,7 +55,7 @@ namespace ESMC {
         using LTS::ExprTypeRef;
         using Symm::PermutationSet;
 
-        inline void BuchiAutomaton::AssertStatesFrozen() const
+        inline void BuchiAutomatonBase::AssertStatesFrozen() const
         {
             if (!StatesFrozen) {
                 throw ESMCError((string)"The requested operation can only be performed " + 
@@ -63,55 +63,39 @@ namespace ESMC {
             }
         }
 
-        inline void BuchiAutomaton::AssertStatesNotFrozen() const
+        inline void BuchiAutomatonBase::AssertStatesNotFrozen() const
         {
             if (StatesFrozen) {
                 throw ESMCError((string)"The requested operation can only be performed " + 
                                 "before the states of the Buchi Automaton have been frozen");
             }
-        }        
-
-        inline void BuchiAutomaton::AssertFrozen() const
-        {
-            if (!Frozen) {
-                throw ESMCError((string)"The requested operation can only be performed " + 
-                                "after the Buchi Automaton has been frozen");
-            }
         }
 
-        inline void BuchiAutomaton::AssertNotFrozen() const
-        {
-            if (Frozen) {
-                throw ESMCError((string)"The requested operation can only be performed " + 
-                                "before the Buchi Automaton has been frozen");
-            }
-        }        
-
-        BuchiAutomaton::BuchiAutomaton(LabelledTS* TheLTS, const string& Name,
-                                       const vector<ExpT>& SymmIndices,
-                                       const ExpT& Constraint, LTSCompiler* Compiler)
-            : Name(Name), SymmIndices(SymmIndices), 
-              Constraint(Constraint), TheLTS(TheLTS),
-              Compiler(Compiler), StatesFrozen(false), Frozen(false),
-              NumStates(0)
+        BuchiAutomatonBase::BuchiAutomatonBase(LabelledTS* TheLTS, const string& Name,
+                                               const vector<ExpT>& SymmIndices,
+                                               const ExpT& Constraint)
+            : Name(Name), SymmIndices(SymmIndices), Constraint(Constraint), 
+              TheLTS(TheLTS), StatesFrozen(false), NumStates(0)
         {
             SymTab.Pop();
             SymTab.Push(TheLTS->SymTab.Bot());
-            
+            // Push another scope to avoid polluting the 
+            // symbol table of the LTS with my parameters
+            SymTab.Push();
             LTS::CheckParams(SymmIndices, Constraint, SymTab, TheLTS->GetMgr(), true);
             // Create the substitution maps for each permutation
             // starting from the canonical initial index values
             SymmInsts = LTS::InstantiateParams(SymmIndices, Constraint, 
-                                                 TheLTS->GetMgr());
+                                               TheLTS->GetMgr());
             TheIndexSet = new ProcessIndexSet(SymmInsts);
         }
-
-        BuchiAutomaton::~BuchiAutomaton()
+        
+        BuchiAutomatonBase::~BuchiAutomatonBase()
         {
             delete TheIndexSet;
         }
 
-        void BuchiAutomaton::AddState(const string& StateName, bool Initial, bool Accepting)
+        void BuchiAutomatonBase::AddState(const string& StateName, bool Initial, bool Accepting)
         {
             AssertStatesNotFrozen();
 
@@ -132,20 +116,82 @@ namespace ESMC {
             ++NumStates;
         }
 
-        void BuchiAutomaton::FreezeStates()
+        void BuchiAutomatonBase::FreezeStates()
         {
             if (StatesFrozen) {
                 return;
             }
             
             StatesFrozen = true;
-            Transitions = vector<vector<vector<pair<ExpT, u32>>>>(SymmInsts.size(), 
-                                                                  vector<vector<pair<ExpT, u32>>>(NumStates));
         }
 
-        void BuchiAutomaton::AddTransition(const string& InitState, 
-                                           const string& FinalState, 
-                                           const ExpT& Guard)
+        const vector<u32>& BuchiAutomatonBase::GetInitialStates() const
+        {
+            return InitialStates;
+        }
+
+        const unordered_set<u32>& BuchiAutomatonBase::GetAcceptingStates() const
+        {
+            return AcceptingStates;
+        }
+
+        bool BuchiAutomatonBase::IsAccepting(u32 StateID) const
+        {
+            return (AcceptingStates.find(StateID) != AcceptingStates.end());
+        }
+
+        const ProcessIndexSet* BuchiAutomatonBase::GetIndexSet() const
+        {
+            return TheIndexSet;
+        }
+
+
+        inline void StateBuchiAutomaton::AssertFrozen() const
+        {
+            if (!Frozen) {
+                throw ESMCError((string)"The requested operation can only be performed " + 
+                                "after the Buchi Automaton has been frozen");
+            }
+        }
+
+        inline void StateBuchiAutomaton::AssertNotFrozen() const
+        {
+            if (Frozen) {
+                throw ESMCError((string)"The requested operation can only be performed " + 
+                                "before the Buchi Automaton has been frozen");
+            }
+        }        
+
+        StateBuchiAutomaton::StateBuchiAutomaton(LabelledTS* TheLTS, const string& Name,
+                                                 const vector<ExpT>& SymmIndices,
+                                                 const ExpT& Constraint, LTSCompiler* Compiler)
+            : BuchiAutomatonBase(TheLTS, Name, SymmIndices, Constraint),
+              Compiler(Compiler), Frozen(false)
+        {
+            // Nothing here
+        }
+
+        StateBuchiAutomaton::~StateBuchiAutomaton()
+        {
+            // Nothing here
+        }
+
+
+        void StateBuchiAutomaton::FreezeStates()
+        {
+            if (StatesFrozen) {
+                return;
+            }
+
+            BuchiAutomatonBase::FreezeStates();
+            Transitions = 
+                vector<vector<vector<pair<ExpT, u32>>>>(TheIndexSet->GetNumIndexVectors(),
+                                                        vector<vector<pair<ExpT, u32>>>(NumStates));
+        }
+
+        void StateBuchiAutomaton::AddTransition(const string& InitState, 
+                                                const string& FinalState, 
+                                                const ExpT& Guard)
         {
             AssertStatesFrozen();
             AssertNotFrozen();
@@ -189,45 +235,42 @@ namespace ESMC {
             }
         }
 
-        ExpT BuchiAutomaton::MakeVar(const string& Name, const ExprTypeRef& Type)
+        ExpT StateBuchiAutomaton::MakeVar(const string& Name, const ExprTypeRef& Type)
         {
             auto Retval = TheLTS->MakeVar(Name, Type);
             LTS::CheckExpr(Retval, SymTab, TheLTS->GetMgr());
             return Retval;
         }
 
-        ExpT BuchiAutomaton::MakeBoundVar(i64 Idx, const ExprTypeRef& Type)
+        ExpT StateBuchiAutomaton::MakeBoundVar(i64 Idx, const ExprTypeRef& Type)
         {
             return TheLTS->MakeBoundVar(Idx, Type);
         }
 
-        ExpT BuchiAutomaton::MakeVal(const string& Value, const ExprTypeRef& Type)
+        ExpT StateBuchiAutomaton::MakeVal(const string& Value, const ExprTypeRef& Type)
         {
             return TheLTS->MakeVal(Value, Type);
         }
 
-        ExpT BuchiAutomaton::MakeExists(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body)
+        ExpT StateBuchiAutomaton::MakeExists(const vector<ExprTypeRef>& QVarTypes, 
+                                             const ExpT& Body)
         {
             return TheLTS->MakeExists(QVarTypes, Body);
         }
 
-        ExpT BuchiAutomaton::MakeForAll(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body)
+        ExpT StateBuchiAutomaton::MakeForAll(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body)
         {
             return TheLTS->MakeForAll(QVarTypes, Body);
         }
 
-        const ExprTypeRef& BuchiAutomaton::GetNamedType(const string& TypeName)
+        const ExprTypeRef& StateBuchiAutomaton::GetNamedType(const string& TypeName)
         {
             return TheLTS->GetNamedType(TypeName);
         }
 
-        const vector<u32>& BuchiAutomaton::GetInitialStates() const
-        {
-            return InitialStates;
-        }
 
-        vector<u32> BuchiAutomaton::GetNextStates(u32 CurState, u32 IndexID, 
-                                                  const StateVec* StateVector) const
+        vector<u32> StateBuchiAutomaton::GetNextStates(u32 CurState, u32 IndexID, 
+                                                       const StateVec* StateVector) const
         {
             auto const& TransVec = Transitions[IndexID][CurState];
             vector<u32> Retval;
@@ -242,22 +285,7 @@ namespace ESMC {
             return Retval;
         }
 
-        const unordered_set<u32>& BuchiAutomaton::GetAcceptingStates() const
-        {
-            return AcceptingStates;
-        }
-
-        bool BuchiAutomaton::IsAccepting(u32 StateID) const
-        {
-            return (AcceptingStates.find(StateID) != AcceptingStates.end());
-        }
-
-        const ProcessIndexSet* BuchiAutomaton::GetIndexSet() const
-        {
-            return TheIndexSet;
-        }
-
-        void BuchiAutomaton::Freeze()
+        void StateBuchiAutomaton::Freeze()
         {
             if (Frozen) {
                 return;

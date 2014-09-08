@@ -136,14 +136,16 @@ namespace ESMC {
             // Fairness Checker implementation
             FairnessChecker::FairnessChecker(const LTSFairSetRef& FairSet,
                                              SystemIndexSet* SysIdxSet,
-                                             const vector<GCmdRef>& GuardedCommands)
+                                             const vector<GCmdRef>& GuardedCommands,
+                                             LTSChecker* Checker)
                 : FairSet(FairSet), NumInstances(FairSet->GetNumInstances()),
                   IsStrong(FairSet->GetFairnessType() == FairSetFairnessType::Strong),
                   SysIdxSet(SysIdxSet), Enabled(false), 
                   Executed(false), Disabled(false),
                   ClassID(FairSet->GetEFSM()->GetClassID()),
                   GCmdsToRespondTo(SysIdxSet->GetNumTrackedIndices(), 
-                                   vector<bool>(GuardedCommands.size()))
+                                   vector<bool>(GuardedCommands.size())),
+                  Checker(Checker)
             {
                 const u32 NumTrackedIndices = SysIdxSet->GetNumTrackedIndices();
                 for (u32 TrackedIndex = 0; TrackedIndex < NumTrackedIndices; ++TrackedIndex) {
@@ -189,6 +191,14 @@ namespace ESMC {
                     return;
                 }
 
+                // cout << "Fairness Checker for fairness set: "
+                //      << FairSet->GetName() << " on EFSM "
+                //      << FairSet->GetEFSM()->GetName() << " with tracked index " 
+                //      << TrackedIndex << endl;
+                // cout << "Considering state:" << endl;
+                // Checker->Printer->PrintState(State, cout);
+                // cout << endl;
+
                 auto const SCCID = State->Status.InSCC;
 
                 bool AtLeastOneEnabled = false;
@@ -200,10 +210,23 @@ namespace ESMC {
                     }
                     // This command causes this state to be marked 
                     // enabled
+
+                    // cout << "Marking as Enabled, because command "
+                    //      << GCmdIndex << " is enabled" << endl;
+
                     Enabled = true;
                     AtLeastOneEnabled = true;
                     
                     if (NextState->IsInSCC(SCCID)) {
+                        // auto PermSet = Checker->TheCanonicalizer->GetPermSet();
+                        // cout << "Marking as Executed, because, next state is in SCC"
+                        //      << endl;
+                        // cout << "Next State:" << endl;
+                        // Checker->Printer->PrintState(NextState, cout);
+                        // cout << endl << "With permutation:" << endl << endl;
+                        // PermSet->Print(Edge->GetPermutation(), cout);
+                        // cout << endl;
+
                         Executed = true;
                         if (EnabledStates.size() > 0) {
                             EnabledStates.clear();
@@ -278,7 +301,8 @@ namespace ESMC {
 
                 for (auto const& NameFS : AllFairnessSets) {
                     auto const& FS = NameFS.second;
-                    auto CurChecker = new FairnessChecker(FS, SysIdxSet, GuardedCommands);
+                    auto CurChecker = new FairnessChecker(FS, SysIdxSet, 
+                                                          GuardedCommands, this);
                     if (FS->GetFairnessType() == FairSetFairnessType::Strong) {
                         FairnessCheckers[ClassID].push_back(CurChecker);
                     } else {
@@ -305,7 +329,7 @@ namespace ESMC {
                 delete ThePS;
             }
 
-            for (auto const& Aut : OmegaAutomata) {
+            for (auto const& Aut : AllBuchiAutomata) {
                 delete Aut.second;
             }
             delete SysIdxSet;
@@ -353,7 +377,6 @@ namespace ESMC {
             stack<DFSStackEntry> DFSStack;
             AQS->InsertInitState(Root);
             DFSStack.push(DFSStackEntry(Root));
-            auto PermSet = TheCanonicalizer->GetPermSet();
 
             while (DFSStack.size() > 0) {
                 auto& CurEntry = DFSStack.top();
@@ -426,8 +449,11 @@ namespace ESMC {
                     // Successor already explored, add edge
                     // and continue
                     // cout << "Successor has been previously encountered." << endl;
-                    auto InvPermID = PermSet->GetIteratorForInv(PermID).GetIndex();
-                    AQS->AddEdge(State, ExistingState, InvPermID, LastFired);
+                    // auto InvPermID = PermSet->GetIteratorForInv(PermID).GetIndex();
+
+                    // We do not invert. Since all transformations call for the 
+                    // inverse of the inverse anyway!
+                    AQS->AddEdge(State, ExistingState, PermID, LastFired);
                     CanonState->GetFactory()->TakeState(CanonState);
                     continue;
                 }
@@ -480,20 +506,23 @@ namespace ESMC {
             }
         }
 
-        BuchiAutomaton* LTSChecker::MakeBuchiMonitor(const string& Name, 
-                                                     const vector<ExpT>& SymmIndices, 
-                                                     const ExpT &Constraint)
+        StateBuchiAutomaton* 
+        LTSChecker::MakeStateBuchiMonitor(const string& Name, 
+                                          const vector<ExpT>& SymmIndices, 
+                                          const ExpT& Constraint)
         {
-            if (OmegaAutomata.find(Name) != OmegaAutomata.end()) {
+            if (AllBuchiAutomata.find(Name) != AllBuchiAutomata.end()) {
                 throw ESMCError((string)"Monitor named \"" + Name + "\" already exists " + 
                                 "in the LTS Checker");
             }
-            auto Retval = new BuchiAutomaton(TheLTS, Name, SymmIndices, Constraint, Compiler);
-            OmegaAutomata[Name] = Retval;
+            auto Retval = new StateBuchiAutomaton(TheLTS, Name, SymmIndices, 
+                                                  Constraint, Compiler);
+            AllBuchiAutomata[Name] = Retval;
+            StateBuchiAutomata[Name] = Retval;
             return Retval;
         }
 
-        inline void LTSChecker::ConstructProduct(BuchiAutomaton *Monitor)
+        inline void LTSChecker::ConstructProduct(StateBuchiAutomaton *Monitor)
         {
             deque<ProductState*> BFSQueue;
             ThePS = new ProductStructure(NumProcesses);
@@ -555,6 +584,11 @@ namespace ESMC {
             // since the classes will not change
             const u32 ClassID = SysIdxSet->GetClassID(IndexID);
 
+            // cout << "Doing threaded BFS on product state:" 
+            //      << endl;
+            // Printer->PrintState(SCCRoot, cout);
+            // cout << "With threaded tracked index " << IndexID << endl;
+
             BFSQueue.push_back(make_pair(SCCRoot, IndexID));
             auto PermSet = TheCanonicalizer->GetPermSet();
             
@@ -591,6 +625,8 @@ namespace ESMC {
                     BFSQueue.push_back(make_pair(NextState, NextIndex));
                 }
             }
+
+            // cout << "Threaded BFS done!" << endl;
         }
 
         inline bool LTSChecker::CheckSCCFairness(const ProductState *SCCRoot, 
@@ -600,13 +636,15 @@ namespace ESMC {
             for (u32 IndexID = 0; IndexID < IndexMax; ++IndexID) {
                 if (SCCRoot->IsTracked(IndexID)) {
                     continue;
-                } 
+                }
 
                 auto ClassID = SysIdxSet->GetClassID(IndexID);
                 // Reset all the fairness checkers
                 for (auto FChecker : FairnessCheckers[ClassID]) {
                     FChecker->Reset();
                 }
+
+                // cout << "Checking fairness of SCC with tracked index " << IndexID << endl;
                 DoThreadedBFS(SCCRoot, IndexID);
                 // Are all the fairness requirements satisfied?
                 for (auto FChecker : FairnessCheckers[ClassID]) {
@@ -723,16 +761,15 @@ namespace ESMC {
                             // Non-singular AND accepting
                             // Send this for further processing
 
-                            cout << "Accepting SCC:" << endl;
-                            for (auto SCCState : SCCStateVec) {
-                                cout << "State:" << endl
-                                     << "------------------------------------------"
-                                     << endl;
-
-                                Printer->PrintState(SCCState->GetSVPtr(), cout);
-                                cout << "------------------------------------------"
-                                     << endl;
-                            }
+                            // cout << "Accepting SCC:" << endl;
+                            // for (auto SCCState : SCCStateVec) {
+                            //     cout << "State:" << endl
+                            //          << "------------------------------------------"
+                            //          << endl;
+                            //     Printer->PrintState(SCCState, cout);
+                            //     cout << "------------------------------------------"
+                            //          << endl;
+                            // }
 
                             Retval.push_back(CurState);
                             ++CurSCCID;
@@ -745,8 +782,8 @@ namespace ESMC {
 
         void LTSChecker::CheckLiveness(const string& BuchiMonitorName) 
         {
-            auto it = OmegaAutomata.find(BuchiMonitorName);
-            if (it == OmegaAutomata.end()) {
+            auto it = AllBuchiAutomata.find(BuchiMonitorName);
+            if (it == AllBuchiAutomata.end()) {
                 throw ESMCError((string)"Buchi Monitor with name \"" + BuchiMonitorName + 
                                 "\" was not found to check liveness property");
             }
@@ -754,7 +791,13 @@ namespace ESMC {
                 throw ESMCError((string)"AQS not built to check liveness property!");
             }
             
-            auto Monitor = it->second;
+            auto Monitor = it->second->As<StateBuchiAutomaton>();
+            if (Monitor == nullptr) {
+                throw InternalError((string)"Monitor \"" + BuchiMonitorName + "\" is not " + 
+                                    "a state based Buchi Monitor, other monitor types " + 
+                                    "are not supported just yet!");
+            }
+
             Monitor->Freeze();
             
             if (ThePS != nullptr) {

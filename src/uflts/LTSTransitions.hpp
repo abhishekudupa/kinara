@@ -210,20 +210,21 @@ namespace ESMC {
             ExpT Guard;
             vector<LTSAssignRef> Updates;
             ExprTypeRef MsgType;
+            i32 MsgTypeID;
             vector<LTSFairObjRef> FairnessObjs;
             vector<LTSFairSetRef> FairnessSets;
-            vector<u32> FairnessBits;
 
         public:
             LTSGuardedCommand(const ExpT& Guard,
                               const vector<LTSAssignRef>& Updates,
-                              const ExprTypeRef& MsgType,
+                              const ExprTypeRef& MsgType, i32 MsgTypeID,
                               const set<LTSFairObjRef>& Fairnesses);
             virtual ~LTSGuardedCommand();
 
             const ExpT& GetGuard() const;
             const vector<LTSAssignRef>& GetUpdates() const;
             const ExprTypeRef& GetMsgType() const;
+            i32 GetMsgTypeID() const;
             const vector<LTSFairObjRef>& GetFairnessObjs() const;
             const vector<LTSFairSetRef>& GetFairnessSets() const;
             string ToString() const;

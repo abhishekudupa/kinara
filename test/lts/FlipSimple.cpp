@@ -56,7 +56,7 @@ int main()
 {
     auto TheLTS = new LabelledTS();
 
-    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 2);
+    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 3);
     auto BoolType = TheLTS->MakeBoolType();
     auto ParamExp = TheLTS->MakeVar("ClientID", ClientIDType);
     vector<ExpT> Params = { ParamExp };
@@ -89,12 +89,12 @@ int main()
                               DataMsgType, MsgParams);
 
     // Client structure
-    // auto ClientEFSM = TheLTS->MakeGenEFSM("Client", MsgParams, TrueExp, LTSFairnessType::Strong);
+    auto ClientEFSM = TheLTS->MakeGenEFSM("Client", MsgParams, TrueExp, LTSFairnessType::Strong);
 
     // Commenting the above line and uncommenting the line below
     // should result in a liveness violation, which is of course
     // "unfair".
-    auto ClientEFSM = TheLTS->MakeGenEFSM("Client", MsgParams, TrueExp, LTSFairnessType::None);
+    // auto ClientEFSM = TheLTS->MakeGenEFSM("Client", MsgParams, TrueExp, LTSFairnessType::None);
     
     ClientEFSM->AddState("InitState");
     ClientEFSM->FreezeStates();
@@ -184,7 +184,7 @@ int main()
 
     auto Checker = new LTSChecker(TheLTS);
 
-    auto Monitor = Checker->MakeBuchiMonitor("GFClear", Params, TrueExp);
+    auto Monitor = Checker->MakeStateBuchiMonitor("GFClear", Params, TrueExp);
     Monitor->AddState("InitState", true, false);
     Monitor->AddState("AcceptState", false, true);
     

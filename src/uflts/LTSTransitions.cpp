@@ -271,9 +271,9 @@ namespace ESMC {
 
         LTSGuardedCommand::LTSGuardedCommand(const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
-                                             const ExprTypeRef& MsgType,
+                                             const ExprTypeRef& MsgType, i32 MsgTypeID,
                                              const set<LTSFairObjRef>& Fairnesses)
-            : Guard(Guard), Updates(Updates), MsgType(MsgType), 
+            : Guard(Guard), Updates(Updates), MsgType(MsgType), MsgTypeID(MsgTypeID),
               FairnessObjs(Fairnesses.begin(), Fairnesses.end())
         {
             set<LTSFairSetRef> FairSets;
@@ -302,6 +302,11 @@ namespace ESMC {
         const ExprTypeRef& LTSGuardedCommand::GetMsgType() const
         {
             return MsgType;
+        }
+
+        i32 LTSGuardedCommand::GetMsgTypeID() const
+        {
+            return MsgTypeID;
         }
 
         const vector<LTSFairObjRef>& LTSGuardedCommand::GetFairnessObjs() const

@@ -100,11 +100,13 @@ namespace ESMC {
                 // Set of states where I'm enabled, but 
                 // not taken
                 unordered_set<const ProductState*> EnabledStates;
+                LTSChecker* Checker;
 
             public:
                 FairnessChecker(const LTSFairSetRef& FairSet,
                                 SystemIndexSet* SysIdxSet,
-                                const vector<GCmdRef>& GuardedCommands);
+                                const vector<GCmdRef>& GuardedCommands,
+                                LTSChecker* Checker);
                 ~FairnessChecker();
                 
                 void Reset();
@@ -121,6 +123,8 @@ namespace ESMC {
 
         class LTSChecker
         {
+            friend class Detail::FairnessChecker;
+
         private:
             LabelledTS* TheLTS;
             StateFactory* Factory;
@@ -138,14 +142,16 @@ namespace ESMC {
             SystemIndexSet* SysIdxSet;
             // Fairness Checkers by class id
             vector<vector<Detail::FairnessChecker*>> FairnessCheckers;
-            map<string, BuchiAutomaton*> OmegaAutomata;
+            map<string, BuchiAutomatonBase*> AllBuchiAutomata;
+            map<string, StateBuchiAutomaton*> StateBuchiAutomata;
+            map<string, MsgBuchiAutomaton*> MsgBuchiAutomata;
 
             inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);
             inline void DoDFS(StateVec* Root);
             inline void ApplyUpdates(const vector<LTSAssignRef>& Updates,
                                      const StateVec* InputState,
                                      StateVec* OutputState) const;
-            inline void ConstructProduct(BuchiAutomaton* Monitor);
+            inline void ConstructProduct(StateBuchiAutomaton* Monitor);
             inline vector<const ProductState*> GetAcceptingSCCs();
             
             inline void DoThreadedBFS(const ProductState* SCCRoot,
@@ -161,9 +167,10 @@ namespace ESMC {
             void BuildAQS();
             void ClearAQS();
 
-            BuchiAutomaton* MakeBuchiMonitor(const string& Name, 
-                                             const vector<ExpT>& SymmIndices,
-                                             const ExpT& Constraint);
+            StateBuchiAutomaton* MakeStateBuchiMonitor(const string& Name, 
+                                                       const vector<ExpT>& SymmIndices,
+                                                       const ExpT& Constraint);
+
             void CheckLiveness(const string& BuchiMonitorName);
         };
 

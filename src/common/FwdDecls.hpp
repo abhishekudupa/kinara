@@ -130,7 +130,10 @@ namespace ESMC {
         class ProductStructure;
         class ProductState;
         class StateVecPrinter;
-        class BuchiAutomaton;
+        
+        class BuchiAutomatonBase;
+        class StateBuchiAutomaton;
+        class MsgBuchiAutomaton;
         
         class IndexVector;
         class ProcessIndexSet;

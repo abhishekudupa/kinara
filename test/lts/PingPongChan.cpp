@@ -61,7 +61,7 @@ int main()
 {
     auto TheLTS = new LabelledTS();
 
-    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 2);
+    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 4);
     auto ParamExp = TheLTS->MakeVar("ClientID", ClientIDType);
     vector<ExpT> Params = { ParamExp };
     auto TrueExp = TheLTS->MakeTrue();
@@ -288,7 +288,7 @@ int main()
     auto Checker = new LTSChecker(TheLTS);
     Checker->BuildAQS();
 
-    auto Monitor = Checker->MakeBuchiMonitor("GFZero", Params, TrueExp);
+    auto Monitor = Checker->MakeStateBuchiMonitor("GFZero", Params, TrueExp);
     Monitor->AddState("InitState", true, false);
     Monitor->AddState("AcceptState", false, true);
     Monitor->FreezeStates();

@@ -257,8 +257,10 @@ namespace ESMC {
                     OutputEFSM->Fairnesses->GetFairnessObj(StrFairness, ParamInst);
                 ActualFairnesses.insert(ActFairness);
             }
-
-            return (new LTSGuardedCommand(Guard, UpdateComps, MsgType, ActualFairnesses));
+            auto UMTypeAsUnion = UnifiedMsgType->As<ExprUnionType>();
+            auto MsgTypeID = UMTypeAsUnion->GetTypeIDForMemberType(MsgType);
+            return (new LTSGuardedCommand(Guard, UpdateComps, MsgType, 
+                                          MsgTypeID, ActualFairnesses));
         }
 
         void LabelledTS::Freeze()
@@ -330,7 +332,7 @@ namespace ESMC {
                     auto CurGCmd = new LTSGuardedCommand(Trans->GetGuard(),
                                                          Trans->GetUpdates(),
                                                          ExprTypeRef::NullPtr,
-                                                         ActualFairSet);
+                                                         -1, ActualFairSet);
                     GuardedCommands.push_back(CurGCmd);
                 }
             }

@@ -53,10 +53,10 @@ namespace ESMC {
         using Symm::PermutationSet;
         using LTS::MgrT;
 
-        // An indexed Buchi automaton
-        class BuchiAutomaton
+        // An abstract base class for an indexed buchi automaton
+        class BuchiAutomatonBase
         {
-        private:
+        protected:
             string Name;
             vector<ExpT> SymmIndices;
             vector<vector<ExpT>> SymmInsts;
@@ -66,34 +66,82 @@ namespace ESMC {
             SymbolTable SymTab;
             map<string, u32> StateNameToStateID;
             map<u32, string> StateIDToStateName;
-            LTSCompiler* Compiler;
             bool StatesFrozen;
-            bool Frozen;
-            // Transitions for each permutation
-            // further indexed by stateid.
-            // A transition is a guard and a next state id
-            vector<vector<vector<pair<ExpT, u32>>>> Transitions;
+
             unordered_set<u32> AcceptingStates;
             vector<u32> InitialStates;
             u32 NumStates;
             ProcessIndexSet* TheIndexSet;
-            
-            inline void AssertFrozen() const;
-            inline void AssertNotFrozen() const;
+
             inline void AssertStatesFrozen() const;
             inline void AssertStatesNotFrozen() const;
 
-            inline void GenSubstMaps(const vector<ExpT>& InitInst);
-            
         public:
-            BuchiAutomaton(LabelledTS* TheLTS, const string& Name, 
-                           const vector<ExpT>& SymmIndices,
-                           const ExpT& Constraint, LTSCompiler* Compiler);
+            BuchiAutomatonBase(LabelledTS* TheLTS, const string& Name,
+                               const vector<ExpT>& SymmIndices,
+                               const ExpT& Constraint);
+            virtual ~BuchiAutomatonBase();
 
-            ~BuchiAutomaton();
             void AddState(const string& StateName, bool Initial,
                           bool Accepting);
-            void FreezeStates();
+            virtual void FreezeStates();
+            const vector<u32>& GetInitialStates() const;
+            const unordered_set<u32>& GetAcceptingStates() const;
+            bool IsAccepting(u32 StateID) const;
+            const ProcessIndexSet* GetIndexSet() const;
+
+            template <typename T>
+            inline T* As()
+            {
+                return dynamic_cast<T*>(this);
+            }
+
+            template <typename T>
+            inline const T* As() const
+            {
+                return dynamic_cast<const T*>(this);
+            }
+
+            template <typename T>
+            inline T* SAs()
+            {
+                return static_cast<T*>(this);
+            }
+
+            template <typename T>
+            inline const T* SAs() const
+            {
+                return static_cast<const T*>(this);
+            }
+
+            template <typename T>
+            inline bool Is() const
+            {
+                return (dynamic_cast<const T*>(this) != nullptr);
+            }
+        };
+
+        // An indexed Buchi automaton, driven by state predicates
+        class StateBuchiAutomaton : public BuchiAutomatonBase
+        {
+        private:
+            LTSCompiler* Compiler;
+            bool Frozen;
+            // Transitions for each tracked index
+            // further indexed by stateid.
+            // A transition is a guard and a next state id
+            vector<vector<vector<pair<ExpT, u32>>>> Transitions;
+            
+            inline void AssertFrozen() const;
+            inline void AssertNotFrozen() const;
+
+        public:
+            StateBuchiAutomaton(LabelledTS* TheLTS, const string& Name, 
+                                const vector<ExpT>& SymmIndices,
+                                const ExpT& Constraint, LTSCompiler* Compiler);
+
+            ~StateBuchiAutomaton();
+            virtual void FreezeStates() override;
             void AddTransition(const string& InitState, const string& FinalState,
                                const ExpT& Guard);
 
@@ -113,12 +161,8 @@ namespace ESMC {
             const ExprTypeRef& GetNamedType(const string& TypeName);
 
             // Methods for model checking
-            const vector<u32>& GetInitialStates() const;
             vector<u32> GetNextStates(u32 CurState, u32 IndexID, 
                                       const StateVec* StateVector) const;
-            const unordered_set<u32>& GetAcceptingStates() const;
-            bool IsAccepting(u32 StateID) const;
-            const ProcessIndexSet* GetIndexSet() const;
 
             void Freeze();
         };

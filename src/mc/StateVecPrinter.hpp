@@ -90,6 +90,8 @@ namespace ESMC {
             void PrintState(const StateVec* StateVector,
                             const StateVec* PrevStateVector,
                             ostream& Out) const;
+
+            void PrintState(const ProductState* State, ostream& Out) const;
         };
 
     } /* end namespace MC */

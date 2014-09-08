@@ -392,12 +392,38 @@ namespace ESMC {
                 auto const& CurPerm = DomPerm->GetPerm(CurIndex);
                 u32 BeginOffset = DomPerm->GetOffset();
                 u32 EndOffset = BeginOffset + DomainSizes[i-1];
-                for (u32 i = BeginOffset; i < EndOffset; ++i) {
-                    CachedPerm[i] = CurPerm[i-BeginOffset];
+                for (u32 j = BeginOffset; j < EndOffset; ++j) {
+                    CachedPerm[j] = CurPerm[j-BeginOffset];
                 }
                 CachedIndices[i-1] = CurIndex;
             }
             CachedIdx = Index;
+            return;
+        }
+
+        inline void PermutationSet::GetPermForIndex(u32 Index, vector<u08> &OutVec) const
+        {
+            if (Index == CachedIdx) {
+                OutVec = CachedPerm;
+            }
+            
+            OutVec = CachedPerm;
+            // Extract components
+            u32 LeftIndex = Index;
+            for (u32 i = NumDomains; i > 0; --i) {
+                auto CurIndex = LeftIndex % Multipliers[i-1];
+                LeftIndex = LeftIndex / Multipliers[i-1];
+                if (CachedIndices[i-1] == CurIndex) {
+                    continue;
+                }
+                auto DomPerm = DomPermuters[i-1];
+                auto const& CurPerm = DomPerm->GetPerm(CurIndex);
+                u32 BeginOffset = DomPerm->GetOffset();
+                u32 EndOffset = BeginOffset + DomainSizes[i-1];
+                for (u32 j = BeginOffset; j < EndOffset; ++j) {
+                    OutVec[j] = CurPerm[j-BeginOffset];
+                }
+            }
             return;
         }
 
@@ -485,6 +511,27 @@ namespace ESMC {
             }
             auto ComposedIdx = GetIndexForPerm(Composed);
             return iterator(ComposedIdx, this);
+        }
+
+        void PermutationSet::Print(u32 PermIdx, ostream& Out) const
+        {
+            vector<u08> PermVec;
+            GetPermForIndex(PermIdx, PermVec);
+            
+            u32 RunningOffset = 0;
+            for (u32 i = 0; i < NumDomains; ++i) {
+                if (i != 0) {
+                    Out << ", ";
+                }
+                Out << "{ ";
+                for (u32 j = 0; j < DomainSizes[i]; ++j) {
+                    if (j != 0) {
+                        Out << ", ";
+                    }
+                    Out << (u32)(PermVec[RunningOffset++]);
+                }
+                Out << " }";
+            }
         }
 
     } /* end namespace Symm */
