@@ -316,7 +316,7 @@ namespace ESMC {
 
         LTSChecker::~LTSChecker()
         {
-            Factory->TakeState(ZeroState);
+            ZeroState->Recycle();
             delete TheLTS;
             delete Compiler;
             delete Factory;
@@ -391,7 +391,6 @@ namespace ESMC {
                 bool Deadlocked = (LastFired == -1);
                 auto const& Cmd = GetNextEnabledCmd(State, LastFired);
 
-
                 if (Cmd == GCmdRef::NullPtr) {
                     if (Deadlocked) {
                         // TODO: Handle deadlocks here
@@ -454,7 +453,7 @@ namespace ESMC {
                     // We do not invert. Since all transformations call for the 
                     // inverse of the inverse anyway!
                     AQS->AddEdge(State, ExistingState, PermID, LastFired);
-                    CanonState->GetFactory()->TakeState(CanonState);
+                    CanonState->Recycle();
                     continue;
                 }
             }
@@ -465,7 +464,7 @@ namespace ESMC {
             if (AQS != nullptr) {
                 return;
             }
-            AQS = new AQStructure();
+            AQS = new AQStructure(TheLTS);
 
             auto const& ISGens = TheLTS->GetInitStateGenerators();
 
@@ -484,7 +483,7 @@ namespace ESMC {
                 if (AQS->Find(CanonState) == nullptr) {
                     DoDFS(CanonState);
                 } else {
-                    CanonState->GetFactory()->TakeState(CanonState);
+                    CanonState->Recycle();
                 }
             }
 

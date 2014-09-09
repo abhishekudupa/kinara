@@ -174,6 +174,11 @@ namespace ESMC {
             memcpy(StateBuffer, Other.StateBuffer, GetSize());
         }
 
+        void StateVec::Recycle() const
+        {
+            Factory->TakeState(this);
+        }
+
         u32 StateVec::Hash() const
         {
             return SpookyHash::SpookyHash::Hash32(StateBuffer, GetSize(), 

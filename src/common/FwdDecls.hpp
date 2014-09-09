@@ -118,6 +118,7 @@ namespace ESMC {
     } /* end namespace LTS */
 
     namespace MC {
+
         class StateVec;
         class StateFactory;
         class LTSChecker;
@@ -138,6 +139,13 @@ namespace ESMC {
         class IndexVector;
         class ProcessIndexSet;
         class SystemIndexSet;
+        
+        // Traces
+        typedef pair<LTS::GCmdRef, const StateVec*> TraceElemT;
+        class TraceBase;
+        class SafetyViolation;
+        class DeadlockViolation;
+        class LivenessViolation;
 
     } /* end namespace MC */
 

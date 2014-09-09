@@ -50,12 +50,15 @@
 #include "../common/FwdDecls.hpp"
 
 #include "StateVec.hpp"
+#include "Trace.hpp"
 
 namespace ESMC {
     namespace MC {
 
         using google::sparse_hash_set;
         using google::sparse_hash_map;
+        using LTS::LabelledTS;
+        using LTS::GCmdRef;
 
         namespace Detail {
 
@@ -208,6 +211,7 @@ namespace ESMC {
                                 Detail::StateVecPtrHasher,
                                 Detail::StateVecPtrEquals> SVHashSetT;
 
+        typedef PermutedPath<const StateVec*, GCmdRef> AQSPermPath;
 
         class AQStructure
         {
@@ -217,9 +221,10 @@ namespace ESMC {
             vector<StateVec*> InitStates;
             AQSEdgeSetT EmptyEdgeSet;
             boost::pool<>* EdgePool;
+            LabelledTS* TheLTS;
 
         public:
-            AQStructure();
+            AQStructure(LabelledTS* TheLTS);
             virtual ~AQStructure();
 
             StateVec* Find(StateVec* SV) const;
@@ -231,6 +236,40 @@ namespace ESMC {
             u64 GetNumEdges() const;
             const AQSEdgeSetT& GetEdges(const StateVec* SV) const;
             const vector<StateVec*>& GetInitStates() const;
+
+            LabelledTS* GetLTS() const;
+
+            // Path finding methods
+            AQSPermPath* FindPath(const StateVec* Origin, const StateVec* Target) const;
+            AQSPermPath* FindPath(const StateVec* Origin, 
+                                  const function<bool(const StateVec*)>& TargetPred) const;
+            AQSPermPath* FindPath(const StateVec* Origin,
+                                  const function<const StateVec*(const AQSEdgeSetT&)>&
+                                  TargetEdgePred) const;
+
+            AQSPermPath* FindShortestPath(const StateVec* Origin,
+                                          const StateVec* Target) const;
+            AQSPermPath* FindShortestPath(const StateVec* Origin,
+                                          const function<bool(const StateVec*)>& TargetPred) const;
+            AQSPermPath* FindShortestPath(const StateVec* Origin,
+                                          const function<const StateVec*(const AQSEdgeSetT&)>&
+                                          TargetEdgePred) const;
+
+
+            AQSPermPath* FindShortestPath(const StateVec* Origin,
+                                          const StateVec* Target,
+                                          const function<u32(const StateVec*, const AQSEdge*)>&
+                                          CostFunction) const;
+            AQSPermPath* FindShortestPath(const StateVec* Origin,
+                                          const function<bool(const StateVec*)>& TargetPred,
+                                          const function<u32(const StateVec*, const AQSEdge*)>&
+                                          CostFunction) const;
+            AQSPermPath* FindShortestPath(const StateVec* Origin,
+                                          const function<const StateVec*(const AQSEdgeSetT&)>& 
+                                          TargetEdgePred,
+                                          const function<u32(const StateVec*, const AQSEdge*)>&
+                                          CostFunction) const;
+
         };
 
         // A bitfield structure for the status bits 
@@ -304,7 +343,6 @@ namespace ESMC {
             void MarkNotTracked(u32 BitNum) const;
             void ClearAllTracked() const;
             bool IsTracked(u32 BitNum) const;
-            
         };
 
         namespace Detail {

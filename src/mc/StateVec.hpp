@@ -98,6 +98,7 @@ namespace ESMC {
             void ClearMsgBuffer();
             StateFactory* GetFactory() const;
             void Set(const StateVec& Other);
+            void Recycle() const;
         };
 
         class StateFactory

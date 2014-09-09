@@ -197,7 +197,7 @@ namespace ESMC {
                     u08* DstPtr = (DstBasePtr + Offset + (ElemSize * CurPutPos));
                     memcpy(DstPtr, SrcPtr, ElemSize);
                 }
-                NewOutStateVector->GetFactory()->TakeState(NewOutStateVector);
+                NewOutStateVector->Recycle();
             }
         }
 
@@ -410,7 +410,7 @@ namespace ESMC {
                 }
             }
 
-            WorkingVec->GetFactory()->TakeState(WorkingVec);
+            WorkingVec->Recycle();
             return;
         }
 
@@ -469,7 +469,6 @@ namespace ESMC {
         StateVec* Canonicalizer::Canonicalize(const StateVec* InputVector,
                                               u32& PermID) const
         {
-            auto Factory = InputVector->GetFactory();
             StateVec* BestStateVec = InputVector->Clone();
             auto WorkingStateVec = InputVector->Clone();
             PermID = 0;
@@ -522,8 +521,8 @@ namespace ESMC {
             // }
             
 
-            Factory->TakeState(WorkingStateVec);
-            Factory->TakeState(InputVector);
+            WorkingStateVec->Recycle();
+            InputVector->Recycle();
 
             return BestStateVec;
         }
@@ -551,6 +550,18 @@ namespace ESMC {
         PermutationSet* Canonicalizer::GetPermSet() const
         {
             return PermSet;
+        }
+
+        // Check if SV1 and SV2 are equivalent modulo some permutation
+        bool Canonicalizer::StatesEquivalent(const StateVec* SV1, const StateVec* SV2) const
+        {
+            u32 DummyPerm = 0;
+            auto CanonSV1 = Canonicalize(SV1, DummyPerm);
+            auto CanonSV2 = Canonicalize(SV2, DummyPerm);
+            auto Retval = CanonSV1->Equals(*CanonSV2);
+            CanonSV1->Recycle();
+            CanonSV2->Recycle();
+            return Retval;
         }
 
     } /* end namespace Symm */
