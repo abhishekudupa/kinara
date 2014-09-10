@@ -17,16 +17,19 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/sparsehash
 
-PROJECT_EXECUTABLES=PingPong TestChan SemTest
+PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple
 
-PingPong_SYS_LIBS=esmc z3 rt boost_system
-PingPong_EXT_LIBS=boost z3 esmc
+PingPongChan_SYS_LIBS=esmc z3 rt boost_system
+PingPongChan_EXT_LIBS=boost z3 esmc
 
-TestChan_SYS_LIBS=esmc z3 rt boost_system
-TestChan_EXT_LIBS=boost z3 esmc
+Elevator_SYS_LIBS=esmc z3 rt boost_system
+Elevator_EXT_LIBS=boost z3 esmc
 
-SemTest_SYS_LIBS=esmc z3 rt boost_system
-SemTest_EXT_LIBS=boost z3 esmc
+Flip_SYS_LIBS=esmc z3 rt boost_system
+Flip_EXT_LIBS=boost z3 esmc
+
+FlipSimple_SYS_LIBS=esmc z3 rt boost_system
+FlipSimple_EXT_LIBS=boost z3 esmc
 
 libboost_FULL_PATH=$(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/install.ph
 libboost_MAKE_DIR=$(PROJECT_ROOT)/../../src/extern/boost-local/
@@ -35,24 +38,30 @@ libz3_MAKE_DIR=$(PROJECT_ROOT)/../../src/extern/z3-4.3.1/
 libesmc_FULL_PATH=$(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)/libesmc.so
 libesmc_MAKE_DIR=$(PROJECT_ROOT)/../../
 
-PingPong_OBJS=PingPong.o
-TestChan_OBJS=TestChan.o
-SemTest_OBJS=SemTest.o
+PingPongChan_OBJS=PingPongChan.o
+Flip_OBJS=Flip.o
+FlipSimple_OBJS=FlipSimple.o
+Elevator_OBJS=Elevator.o
 
-PingPong_LIB_PATHS= \
+
+PingPongChan_LIB_PATHS= \
     $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \
     $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
-TestChan_LIB_PATHS= \
+Elevator_LIB_PATHS= \
     $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \
     $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
-SemTest_LIB_PATHS= \
+Flip_LIB_PATHS= \
     $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \
     $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
+FlipSimple_LIB_PATHS= \
+    $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \
+    $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
+    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
 include $(PROJECT_ROOT)/../../Makefile.util
