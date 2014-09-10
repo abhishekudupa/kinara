@@ -71,6 +71,7 @@ libesmc_OBJS= \
 	StateVecPrinter.o \
 	SymbolTable.o \
 	SymmCanonicalizer.o \
+	Trace.o \
 	UIDGenerator.o \
 	ZeroPage.o \
 

@@ -421,7 +421,7 @@ namespace ESMC {
                 Write(RHS->Evaluate(InStateVector), OutStateVector);
             }
         }
-
+        
         CompiledConstInterpreter::CompiledConstInterpreter(u32 Size, i64 Value,
                                                            i64 Low, i64 High)
             : RValueInterpreter(true, Size), Value(Value), Ptr(nullptr),

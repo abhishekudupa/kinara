@@ -148,9 +148,6 @@ namespace ESMC {
 
             inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);
             inline void DoDFS(StateVec* Root);
-            inline void ApplyUpdates(const vector<LTSAssignRef>& Updates,
-                                     const StateVec* InputState,
-                                     StateVec* OutputState) const;
             inline void ConstructProduct(StateBuchiAutomaton* Monitor);
             inline vector<const ProductState*> GetAcceptingSCCs();
             
@@ -164,15 +161,25 @@ namespace ESMC {
             LTSChecker(LabelledTS* TheLTS);
             virtual ~LTSChecker();
 
-            void BuildAQS();
+            vector<TraceBase*> BuildAQS();
             void ClearAQS();
 
             StateBuchiAutomaton* MakeStateBuchiMonitor(const string& Name, 
                                                        const vector<ExpT>& SymmIndices,
                                                        const ExpT& Constraint);
 
-            void CheckLiveness(const string& BuchiMonitorName);
+            vector<TraceBase*> CheckLiveness(const string& BuchiMonitorName);
         };
+
+        extern void ApplyUpdates(const vector<LTSAssignRef>& Updates, 
+                                 const StateVec* InputState, 
+                                 StateVec *OutputState);
+
+        extern StateVec* ExecuteCommand(const GCmdRef& Cmd,
+                                        const StateVec* InputState);
+
+        extern StateVec* TryExecuteCommand(const GCmdRef& Cmd,
+                                           const StateVec* InputState);
 
     } /* end namespace MC */
 } /* end namespace ESMC */

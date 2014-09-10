@@ -265,6 +265,42 @@ namespace ESMC {
 
         using namespace Detail;
 
+        // Extern helper function definitions
+        void ApplyUpdates(const vector<LTSAssignRef>& Updates, 
+                          const StateVec* InputState, 
+                          StateVec *OutputState)
+        {
+            for (auto const& Update : Updates) {
+                auto const& LHS = Update->GetLHS();
+                auto const& RHS = Update->GetRHS();
+                auto const& LHSInterp = LHS->ExtensionData.Interp->SAs<LValueInterpreter>();
+                auto const& RHSInterp = RHS->ExtensionData.Interp;
+                LHSInterp->Update(RHSInterp, InputState, OutputState);
+            }
+            return;
+        }
+
+        StateVec* ExecuteCommand(const GCmdRef& Cmd,
+                                 const StateVec* InputState)
+        {
+            auto Retval = InputState->Clone();
+            auto const& Updates = Cmd->GetUpdates();
+            ApplyUpdates(Updates, InputState, Retval);
+            return Retval;
+        }
+
+        StateVec* TryExecuteCommand(const GCmdRef& Cmd,
+                                    const StateVec* InputState)
+        {
+            auto const& Guard = Cmd->GetGuard();
+            auto GuardInterp = Guard->ExtensionData.Interp;
+            if (GuardInterp->EvaluateScalar(InputState) == 0) {
+                return nullptr;
+            } else {
+                return ExecuteCommand(Cmd, InputState);
+            }
+        }
+
         LTSChecker::LTSChecker(LabelledTS* TheLTS)
             : TheLTS(TheLTS), AQS(nullptr), ThePS(nullptr)
         {
@@ -340,26 +376,6 @@ namespace ESMC {
             }
         }
 
-        inline void LTSChecker::ApplyUpdates(const vector<LTSAssignRef>& Updates, 
-                                             const StateVec* InputState, 
-                                             StateVec *OutputState) const
-        {
-            for (auto const& Update : Updates) {
-                auto const& LHS = Update->GetLHS();
-                auto const& RHS = Update->GetRHS();
-                auto const& LHSInterp = LHS->ExtensionData.Interp->SAs<LValueInterpreter>();
-                auto const& RHSInterp = RHS->ExtensionData.Interp;
-                if (LHSInterp->IsScalar()) {
-                    LHSInterp->WriteScalar(RHSInterp->EvaluateScalar(InputState),
-                                           OutputState);
-                } else {
-                    LHSInterp->Write(RHSInterp->Evaluate(InputState),
-                                     OutputState);
-                }
-            }
-            return;
-        }
-
         inline const GCmdRef& LTSChecker::GetNextEnabledCmd(StateVec* State, i64& LastFired)
         {
             while(++LastFired < NumGuardedCmds) {
@@ -393,7 +409,10 @@ namespace ESMC {
 
                 if (Cmd == GCmdRef::NullPtr) {
                     if (Deadlocked) {
-                        // TODO: Handle deadlocks here
+                        // Remember this state, but continue on
+                        // with the AQS construction, we'll report
+                        // all counter-examples later
+                        AQS->AddDeadlockState(State);
                     }
                     // cout << "No more successors, popping from stack!" << endl;
                     // Done exploring this state
@@ -411,16 +430,8 @@ namespace ESMC {
                 // cout << "Firing guarded command:" << endl;
                 // cout << Cmd->ToString() << endl;
 
-                for (auto const& Update : Updates) {
-                    auto const& LHS = Update->GetLHS();
-                    auto const& RHS = Update->GetRHS();
+                ApplyUpdates(Updates, State, NextState);
 
-                    auto LHSInterp = LHS->ExtensionData.Interp->SAs<LValueInterpreter>();
-                    auto RHSInterp = RHS->ExtensionData.Interp;
-                    
-                    LHSInterp->Update(RHSInterp, State, NextState);
-                }
-                
                 // cout << "Got Next State (Uncanonicalized):" << endl;
                 // cout << "--------------------------------------------------------" << endl;
                 // Printer->PrintState(NextState, cout);
@@ -429,21 +440,26 @@ namespace ESMC {
                 u32 PermID;
                 auto CanonState = TheCanonicalizer->Canonicalize(NextState, PermID);
                 // auto CanonState = NextState;
-
-                auto const& Invar = TheLTS->GetInvariant();
-                auto Interp = Invar->ExtensionData.Interp;
-                if (Interp->EvaluateScalar(CanonState) != 1) {
-                    // error
-                }
                 
                 auto ExistingState = AQS->Find(CanonState);
 
                 if (ExistingState == nullptr) {
+
                     AQS->Insert(CanonState);
                     // cout << "Pushed new successor onto stack." << endl;
                     AQS->AddEdge(State, CanonState, PermID, LastFired);
                     DFSStack.push(DFSStackEntry(CanonState));
+
+                    // This is a new state, check for error
+                    auto const& Invar = TheLTS->GetInvariant();
+                    auto Interp = Invar->ExtensionData.Interp;
+                    if (Interp->EvaluateScalar(CanonState) != 1) {
+                        // Again, remember this state, but continue
+                        // on with the AQS construction
+                        AQS->AddErrorState(CanonState);
+                    }
                     continue;
+
                 } else {
                     // Successor already explored, add edge
                     // and continue
@@ -459,11 +475,14 @@ namespace ESMC {
             }
         }
 
-        void LTSChecker::BuildAQS()
+        vector<TraceBase*> LTSChecker::BuildAQS()
         {
+            vector<TraceBase*> Retval;
+
             if (AQS != nullptr) {
-                return;
+                return Retval;
             }
+
             AQS = new AQStructure(TheLTS);
 
             auto const& ISGens = TheLTS->GetInitStateGenerators();
@@ -491,6 +510,25 @@ namespace ESMC {
             cout << "AQS contains " << AQS->GetNumStates() << " states and " 
                  << AQS->GetNumEdges() << " edges." << endl;
             cout << Factory->GetNumActiveStates() << " active states from state factory." << endl;
+
+            // Do we have errors?
+            auto const& ErrorStates = AQS->GetErrorStates();
+            auto const& DeadlockStates = AQS->GetDeadlockStates();
+
+            for (auto ErrorState : ErrorStates) {
+                auto CurTrace = TraceBase::MakeSafetyViolation(ErrorState, TheLTS, 
+                                                               AQS, TheCanonicalizer,
+                                                               Printer);
+                Retval.push_back(CurTrace);
+            }
+            for (auto DeadlockState : DeadlockStates) {
+                auto CurTrace = TraceBase::MakeDeadlockViolation(DeadlockState, TheLTS, 
+                                                                 AQS, TheCanonicalizer,
+                                                                 Printer);
+                Retval.push_back(CurTrace);
+            }
+
+            return Retval;
         }
 
         void LTSChecker::ClearAQS() 
@@ -779,8 +817,10 @@ namespace ESMC {
             return Retval;
         }
 
-        void LTSChecker::CheckLiveness(const string& BuchiMonitorName) 
+        vector<TraceBase*> LTSChecker::CheckLiveness(const string& BuchiMonitorName) 
         {
+            vector<TraceBase*> Retval;
+
             auto it = AllBuchiAutomata.find(BuchiMonitorName);
             if (it == AllBuchiAutomata.end()) {
                 throw ESMCError((string)"Buchi Monitor with name \"" + BuchiMonitorName + 
@@ -788,6 +828,12 @@ namespace ESMC {
             }
             if (AQS == nullptr) {
                 throw ESMCError((string)"AQS not built to check liveness property!");
+            }
+
+            if (AQS->GetErrorStates().size() > 0 || 
+                AQS->GetDeadlockStates().size() > 0) {
+                throw ESMCError((string)"AQS contains one or more deadlocked and/or " + 
+                                "error states. Liveness checks aborted due to this!");
             }
             
             auto Monitor = it->second->As<StateBuchiAutomaton>();
@@ -838,13 +884,13 @@ namespace ESMC {
                         // Fair, turn this into a counterexample
                         // TODO
                         cout << "Found fair accepting SCC" << endl;
-                        return;
+                        return Retval;
                     }
                 }
             }
 
             cout << "No liveness violations found! :-)" << endl;
-            return;
+            return Retval;
         }
 
     } /* end namespace MC */

@@ -43,9 +43,11 @@
 #include <new>
 #include <sparse_hash_set>
 #include <sparse_hash_map>
+#include <set>
 
 #include <boost/pool/pool.hpp>
 #include <boost/pool/object_pool.hpp>
+#include <boost/functional/hash.hpp>
 
 #include "../common/FwdDecls.hpp"
 
@@ -235,8 +237,6 @@ namespace ESMC {
                                 Detail::StateVecPtrHasher,
                                 Detail::StateVecPtrEquals> SVHashSetT;
 
-        typedef PermutedPath<const StateVec*, GCmdRef> AQSPermPath;
-
         class AQStructure
         {
         private:
@@ -246,6 +246,8 @@ namespace ESMC {
             AQSEdgeSetT EmptyEdgeSet;
             boost::pool<>* EdgePool;
             LabelledTS* TheLTS;
+            set<const StateVec*> ErrorStates;
+            set<const StateVec*> DeadlockStates;
 
         public:
             AQStructure(LabelledTS* TheLTS);
@@ -263,37 +265,72 @@ namespace ESMC {
 
             LabelledTS* GetLTS() const;
 
+            // Tracking for error states
+            void AddErrorState(const StateVec* ErrorState);
+            void AddDeadlockState(const StateVec* DeadlockState);
+
+            const set<const StateVec*>& GetErrorStates() const;
+            const set<const StateVec*>& GetDeadlockStates() const;
+
             // Path finding methods
-            AQSPermPath* FindPath(const StateVec* Origin, const StateVec* Target) const;
-            AQSPermPath* FindPath(const StateVec* Origin, 
+            AQSPermPath* FindPath(const set<const StateVec*>& Origins, 
+                                  const StateVec* Target) const;
+            AQSPermPath* FindPath(const set<const StateVec*>& Origins, 
                                   const function<bool(const StateVec*)>& TargetPred) const;
-            AQSPermPath* FindPath(const StateVec* Origin,
+            AQSPermPath* FindPath(const set<const StateVec*>& Origins,
                                   const function<const StateVec*(const AQSEdgeSetT&)>&
                                   TargetEdgePred) const;
 
-            AQSPermPath* FindShortestPath(const StateVec* Origin,
+            // Find a path from one of the initial states
+            AQSPermPath* FindPath(const StateVec* Target) const;
+            AQSPermPath* FindPath(const function<bool(const StateVec*)>& TargetPred) const;
+            AQSPermPath* FindPath(const function<const StateVec*(const AQSEdgeSetT&)>&
+                                  TargetEdgePred) const;
+
+            AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
                                           const StateVec* Target) const;
-            AQSPermPath* FindShortestPath(const StateVec* Origin,
+
+            AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
                                           const function<bool(const StateVec*)>& TargetPred) const;
-            AQSPermPath* FindShortestPath(const StateVec* Origin,
+
+            AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
                                           const function<const StateVec*(const AQSEdgeSetT&)>&
                                           TargetEdgePred) const;
 
 
-            AQSPermPath* FindShortestPath(const StateVec* Origin,
+            AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
                                           const StateVec* Target,
                                           const function<u32(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
-            AQSPermPath* FindShortestPath(const StateVec* Origin,
+
+            AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
                                           const function<bool(const StateVec*)>& TargetPred,
                                           const function<u32(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
-            AQSPermPath* FindShortestPath(const StateVec* Origin,
+
+            AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
                                           const function<const StateVec*(const AQSEdgeSetT&)>& 
                                           TargetEdgePred,
                                           const function<u32(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
 
+            // Find a shortest path from one of the initial states
+            AQSPermPath* FindShortestPath(const StateVec* Target) const;
+            AQSPermPath* FindShortestPath(const function<bool(const StateVec*)>& TargetPred) const;
+            AQSPermPath* FindShortestPath(const function<const StateVec*(const AQSEdgeSetT&)>&
+                                          TargetEdgePred) const;
+
+
+            AQSPermPath* FindShortestPath(const StateVec* Target,
+                                          const function<u32(const StateVec*, const AQSEdge*)>&
+                                          CostFunction) const;
+            AQSPermPath* FindShortestPath(const function<bool(const StateVec*)>& TargetPred,
+                                          const function<u32(const StateVec*, const AQSEdge*)>&
+                                          CostFunction) const;
+            AQSPermPath* FindShortestPath(const function<const StateVec*(const AQSEdgeSetT&)>& 
+                                          TargetEdgePred,
+                                          const function<u32(const StateVec*, const AQSEdge*)>&
+                                          CostFunction) const;
         };
 
         // A bitfield structure for the status bits 

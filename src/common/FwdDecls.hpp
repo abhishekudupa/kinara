@@ -128,9 +128,16 @@ namespace ESMC {
         class RValueInterpreter;
         class LValueInterpreter;
         class AQStructure;
+        template <typename STATETYPE> 
+        class AnnotatedEdge;
+
+        typedef AnnotatedEdge<StateVec> AQSEdge;
+
         class ProductStructure;
         class ProductState;
         class StateVecPrinter;
+
+        typedef AnnotatedEdge<ProductState> ProductEdge;
         
         class BuchiAutomatonBase;
         class StateBuchiAutomaton;
@@ -142,6 +149,9 @@ namespace ESMC {
         
         // Traces
         typedef pair<LTS::GCmdRef, const StateVec*> TraceElemT;
+        template <typename STATETYPE> 
+        class PermutedPath;
+        typedef PermutedPath<StateVec> AQSPermPath;
         class TraceBase;
         class SafetyViolation;
         class DeadlockViolation;

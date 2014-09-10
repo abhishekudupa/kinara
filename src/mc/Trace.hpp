@@ -40,27 +40,32 @@
 #if !defined ESMC_TRACE_HPP_
 #define ESMC_TRACE_HPP_
 
+#include <vector>
+
 #include "../common/FwdDecls.hpp"
 
 namespace ESMC {
     namespace MC {
 
+        using LTS::LabelledTS;
+        using Symm::Canonicalizer;
+
         // A straightforward permuted path
         // where states are successors modulo some 
         // permutation
         // Assumption: nodes and edges are NOT owned by me
-        template <typename NODETYPE, typename EDGETYPE>
+        template <typename STATETYPE>
         class PermutedPath
         {
         public:
-            typedef pair<EDGETYPE, NODETYPE> PathElemType;
+            typedef AnnotatedEdge<STATETYPE>* PathElemType;
             
         private:
-            NODETYPE Origin;
+            const STATETYPE* Origin;
             vector<PathElemType> PathElems;
 
         public:
-            inline PermutedPath(NODETYPE Origin,
+            inline PermutedPath(const STATETYPE* Origin,
                                 const vector<PathElemType>& PathElems)
                 : Origin(Origin), PathElems(PathElems)
             {
@@ -72,7 +77,7 @@ namespace ESMC {
                 // Nothing here
             }
 
-            inline NODETYPE GetOrigin() const
+            inline const STATETYPE* GetOrigin() const
             {
                 return Origin;
             }
@@ -87,12 +92,14 @@ namespace ESMC {
         {
         protected:
             const StateVec* InitialState;
+            StateVecPrinter* Printer;
             
         public:
-            TraceBase(const StateVec* InitialState);
+            TraceBase(const StateVec* InitialState, StateVecPrinter* Printer);
             virtual ~TraceBase();
             
             const StateVec* GetInitialState() const;
+            StateVecPrinter* GetPrinter() const;
 
             virtual string ToString() const = 0;
 
@@ -125,6 +132,26 @@ namespace ESMC {
             {
                 return (dynamic_cast<const T*>(this) != nullptr);
             }
+
+        private:
+            static inline const StateVec* 
+            UnwindPermPath(AQSPermPath* PermPath, 
+                           LabelledTS* TheLTS,
+                           AQStructure* TheAQS, 
+                           Canonicalizer* TheCanonicalizer,
+                           vector<TraceElemT>& PathElems);
+
+        public:
+            static SafetyViolation* MakeSafetyViolation(const StateVec* ErrorState,
+                                                        LabelledTS* TheLTS,
+                                                        AQStructure* TheAQS,
+                                                        Canonicalizer* TheCanonicalizer,
+                                                        StateVecPrinter* Printer);
+            static DeadlockViolation* MakeDeadlockViolation(const StateVec* ErrorState,
+                                                            LabelledTS* TheLTS,
+                                                            AQStructure* TheAQS, 
+                                                            Canonicalizer* TheCanonicalizer,
+                                                            StateVecPrinter* Printer);
         };
 
         class SafetyViolation : public TraceBase
@@ -134,7 +161,8 @@ namespace ESMC {
 
         public:
             SafetyViolation(const StateVec* InitialState,
-                            const vector<TraceElemT>& TraceElems);
+                            const vector<TraceElemT>& TraceElems,
+                            StateVecPrinter* Printer);
             virtual ~SafetyViolation();
 
             const vector<TraceElemT>& GetTraceElems() const;
@@ -145,6 +173,7 @@ namespace ESMC {
         {
         public:
             using SafetyViolation::SafetyViolation;
+            virtual ~DeadlockViolation();
         };
 
         class LivenessViolation : public SafetyViolation
