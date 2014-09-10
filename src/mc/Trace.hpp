@@ -144,6 +144,9 @@ namespace ESMC {
                                                         LTSChecker* Checker);
             static DeadlockViolation* MakeDeadlockViolation(const StateVec* ErrorState,
                                                             LTSChecker* Checker);
+            // Accepts the root of a fair accepting (green) SCC.
+            static LivenessViolation* MakeLivenessViolation(const StateVec* SCCRoot,
+                                                            LTSChecker* Checker);
         };
 
         class SafetyViolation : public TraceBase
