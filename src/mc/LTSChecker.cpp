@@ -475,7 +475,57 @@ namespace ESMC {
             }
         }
 
-        vector<TraceBase*> LTSChecker::BuildAQS()
+        inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots)
+        {
+            deque<StateVec*> BFSQueue(Roots.begin(), Roots.end());
+            for (auto State : BFSQueue) {
+                AQS->InsertInitState(State);
+            }
+
+            while (BFSQueue.size() > 0) {
+                auto CurState = BFSQueue.front();
+                BFSQueue.pop_front();
+
+                bool Deadlocked = true;
+                const u32 NumCommands = GuardedCommands.size();
+
+                for (u32 i = 0; i < NumCommands; ++i) {
+                    auto const& Cmd = GuardedCommands[i];
+                    auto NextState = TryExecuteCommand(Cmd, CurState);
+                    if (NextState != nullptr) {
+                        u32 PermID = 0;
+                        Deadlocked = false;
+                        auto CanonNextState = TheCanonicalizer->Canonicalize(NextState, PermID);
+                        
+                        auto ExistingState = AQS->Find(CanonNextState);
+                        if (ExistingState != nullptr) {
+                            AQS->AddEdge(CurState, ExistingState, PermID, i);
+                            CanonNextState->Recycle();
+                        } else {
+                            AQS->Insert(CanonNextState);
+                            AQS->AddEdge(CurState, CanonNextState, PermID, i);
+                            BFSQueue.push_back(CanonNextState);
+
+                            // New state, check for errors;
+                            auto const& Invar = TheLTS->GetInvariant();
+                            auto Interp = Invar->ExtensionData.Interp;
+                            if (Interp->EvaluateScalar(CanonNextState) != 1) {
+                                // Again, remember this state, but continue
+                                // on with the AQS construction
+                                AQS->AddErrorState(CanonNextState);
+                            }
+                        }
+                    }
+                }
+
+                if (Deadlocked) {
+                    // State has no successors
+                    AQS->AddDeadlockState(CurState);
+                }
+            }
+        }
+
+        vector<TraceBase*> LTSChecker::BuildAQS(AQSConstructionMethod Method)
         {
             vector<TraceBase*> Retval;
 
@@ -486,6 +536,7 @@ namespace ESMC {
             AQS = new AQStructure(TheLTS);
 
             auto const& ISGens = TheLTS->GetInitStateGenerators();
+            vector<StateVec*> InitStates;
 
             for (auto const& ISGen : ISGens) {
                 auto CurState = Factory->MakeState();
@@ -498,12 +549,20 @@ namespace ESMC {
 
                 u32 CanonPerm = 0;
                 auto CanonState = TheCanonicalizer->Canonicalize(CurState, CanonPerm);
-                
-                if (AQS->Find(CanonState) == nullptr) {
-                    DoDFS(CanonState);
-                } else {
-                    CanonState->Recycle();
+                InitStates.push_back(CanonState);
+            }
+
+            if (Method == AQSConstructionMethod::DepthFirst) {
+                for (auto InitState : InitStates) {
+                    auto ExistingState = AQS->Find(InitState);
+                    if (ExistingState == nullptr) {
+                        DoDFS(InitState);
+                    } else if (ExistingState != InitState) {
+                        InitState->Recycle();
+                    }
                 }
+            } else {
+                DoBFS(InitStates);
             }
 
             cout << "AQS Built!" << endl;
@@ -512,20 +571,20 @@ namespace ESMC {
             cout << Factory->GetNumActiveStates() << " active states from state factory." << endl;
 
             // Do we have errors?
+            // We currently only report at most one error trace 
+            // and at most one deadlock trace
             auto const& ErrorStates = AQS->GetErrorStates();
             auto const& DeadlockStates = AQS->GetDeadlockStates();
 
             for (auto ErrorState : ErrorStates) {
-                auto CurTrace = TraceBase::MakeSafetyViolation(ErrorState, TheLTS, 
-                                                               AQS, TheCanonicalizer,
-                                                               Printer);
+                auto CurTrace = TraceBase::MakeSafetyViolation(ErrorState, this);
                 Retval.push_back(CurTrace);
+                break;
             }
             for (auto DeadlockState : DeadlockStates) {
-                auto CurTrace = TraceBase::MakeDeadlockViolation(DeadlockState, TheLTS, 
-                                                                 AQS, TheCanonicalizer,
-                                                                 Printer);
+                auto CurTrace = TraceBase::MakeDeadlockViolation(DeadlockState, this);
                 Retval.push_back(CurTrace);
+                break;
             }
 
             return Retval;

@@ -42,6 +42,7 @@
 #include "../symmetry/SymmCanonicalizer.hpp"
 
 #include "StateVec.hpp"
+#include "StateVecPrinter.hpp"
 #include "Trace.hpp"
 #include "AQStructure.hpp"
 #include "LTSChecker.hpp"
@@ -76,28 +77,32 @@ namespace ESMC {
 
         inline const StateVec* 
         TraceBase::UnwindPermPath(AQSPermPath* PermPath, 
-                                  LabelledTS* TheLTS,
-                                  AQStructure* TheAQS,
-                                  Canonicalizer* TheCanonicalizer,
+                                  LTSChecker* Checker,
                                   vector<TraceElemT>& PathElems)
         {
+            auto TheLTS = Checker->TheLTS;
+            auto TheCanonicalizer = Checker->TheCanonicalizer;
+
             auto const& GuardedCommands = TheLTS->GetGuardedCmds();
             auto CurUnwoundState = PermPath->GetOrigin()->Clone();
             auto UnwoundOrigin = CurUnwoundState;
             auto const& PPathElems = PermPath->GetPathElems();
             // identity permutation = 0
-            u32 PermAlongPath = 0;
+            u32 InvPermAlongPath = 0;
+
             auto PermSet = TheCanonicalizer->GetPermSet();
             
             for (auto Edge : PPathElems) {
-                auto PermIt = PermSet->Compose(PermAlongPath, Edge->GetPermutation());
-                PermAlongPath = PermIt.GetIndex();
+                auto CurInvPermIt = PermSet->GetIteratorForInv(Edge->GetPermutation());
+                auto InvPermAlongPathIt = PermSet->Compose(InvPermAlongPath, 
+                                                           CurInvPermIt.GetIndex());
+                InvPermAlongPath = InvPermAlongPathIt.GetIndex();
                 auto const& Cmd = GuardedCommands[Edge->GetGCmdIndex()];
                 auto NextPermState = Edge->GetTarget();
-                // Apply the inverse of the permutation along this path
-                // to the CurPermState to get the Current unwound state
-                auto NextUnwoundState = TheCanonicalizer->ApplyInvPermutation(NextPermState, 
-                                                                              PermAlongPath);
+
+                auto NextUnwoundState = TheCanonicalizer->ApplyPermutation(NextPermState, 
+                                                                           InvPermAlongPath);
+
                 // Now find out which command takes us from the current
                 // unwound state to the next unwound state
                 bool FoundCmd = false;
@@ -106,13 +111,14 @@ namespace ESMC {
                     if (CandidateState == nullptr) {
                         continue;
                     }
-                    if (CandidateState->Equals(*NextUnwoundState)) {
+                    auto SortedCandidateState = TheCanonicalizer->SortChans(CandidateState);
+                    CandidateState->Recycle();
+                    if (SortedCandidateState->Equals(*NextUnwoundState)) {
                         FoundCmd = true;
-                        CandidateState->Recycle();
+                        SortedCandidateState->Recycle();
                         PathElems.push_back(TraceElemT(Cmd, NextUnwoundState));
                         break;
                     }
-                    CandidateState->Recycle();
                 }
                 if (!FoundCmd) {
                     throw InternalError((string)"Unable to find a command to compute next " +
@@ -128,29 +134,23 @@ namespace ESMC {
         }
         
         SafetyViolation* TraceBase::MakeSafetyViolation(const StateVec* ErrorState, 
-                                                        LabelledTS* TheLTS, 
-                                                        AQStructure* TheAQS,
-                                                        Canonicalizer* TheCanonicalizer,
-                                                        StateVecPrinter* Printer)
+                                                        LTSChecker* Checker)
         {
             vector<TraceElemT> PathElems;
+            auto TheAQS = Checker->AQS;
             auto PPath = TheAQS->FindShortestPath(ErrorState);
-            auto UnwoundInitState = UnwindPermPath(PPath, TheLTS, TheAQS,
-                                                   TheCanonicalizer, PathElems);
-            return new SafetyViolation(UnwoundInitState, PathElems, Printer);
+            auto UnwoundInitState = UnwindPermPath(PPath, Checker, PathElems);
+            return new SafetyViolation(UnwoundInitState, PathElems, Checker->Printer);
         }
 
         DeadlockViolation* TraceBase::MakeDeadlockViolation(const StateVec* ErrorState, 
-                                                            LabelledTS* TheLTS, 
-                                                            AQStructure *TheAQS,
-                                                            Canonicalizer* TheCanonicalizer,
-                                                            StateVecPrinter* Printer)
+                                                            LTSChecker* Checker)
         {
             vector<TraceElemT> PathElems;
+            auto TheAQS = Checker->AQS;
             auto PPath = TheAQS->FindShortestPath(ErrorState);
-            auto UnwoundInitState = UnwindPermPath(PPath, TheLTS, TheAQS,
-                                                   TheCanonicalizer, PathElems);
-            return new DeadlockViolation(UnwoundInitState, PathElems, Printer);
+            auto UnwoundInitState = UnwindPermPath(PPath, Checker, PathElems);
+            return new DeadlockViolation(UnwoundInitState, PathElems, Checker->Printer);
         }
 
 
@@ -180,18 +180,21 @@ namespace ESMC {
         string SafetyViolation::ToString() const
         {
             ostringstream sstr;
-            sstr << "Trace to safety violation:" << endl;
+            sstr << "Trace to safety violation with " << TraceElems.size() 
+                 << " steps:" << endl << endl;
             sstr << "Initial State (in full)" << endl;
             sstr << "-----------------------------------------------------" << endl;
             Printer->PrintState(InitialState, sstr);
-            sstr << "-----------------------------------------------------" << endl;
-            sstr << "Trace in state deltas:" << endl << endl;
+            sstr << "-----------------------------------------------------" << endl << endl;
 
             auto PrevState = InitialState;
             for (auto const& TraceElem : TraceElems) {
-                sstr << "Fired Guarded Command:" << endl 
-                     << TraceElem.first->ToString() << endl << endl;
-                sstr << "Obtained next state:" << endl;
+                auto const& MsgType = TraceElem.first->GetMsgType();
+                auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
+                sstr << "Fired Guarded Command with label: " 
+                     << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() : 
+                         "(internal transition)") << endl;
+                sstr << "Obtained next state (delta from previous state):" << endl;
                 sstr << "-----------------------------------------------------" << endl;
                 Printer->PrintState(TraceElem.second, PrevState, sstr);
                 sstr << "-----------------------------------------------------" << endl << endl;

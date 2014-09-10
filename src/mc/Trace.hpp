@@ -136,22 +136,14 @@ namespace ESMC {
         private:
             static inline const StateVec* 
             UnwindPermPath(AQSPermPath* PermPath, 
-                           LabelledTS* TheLTS,
-                           AQStructure* TheAQS, 
-                           Canonicalizer* TheCanonicalizer,
+                           LTSChecker* Checker,
                            vector<TraceElemT>& PathElems);
 
         public:
             static SafetyViolation* MakeSafetyViolation(const StateVec* ErrorState,
-                                                        LabelledTS* TheLTS,
-                                                        AQStructure* TheAQS,
-                                                        Canonicalizer* TheCanonicalizer,
-                                                        StateVecPrinter* Printer);
+                                                        LTSChecker* Checker);
             static DeadlockViolation* MakeDeadlockViolation(const StateVec* ErrorState,
-                                                            LabelledTS* TheLTS,
-                                                            AQStructure* TheAQS, 
-                                                            Canonicalizer* TheCanonicalizer,
-                                                            StateVecPrinter* Printer);
+                                                            LTSChecker* Checker);
         };
 
         class SafetyViolation : public TraceBase

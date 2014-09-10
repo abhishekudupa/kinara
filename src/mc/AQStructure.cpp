@@ -253,6 +253,7 @@ namespace ESMC {
                     for (auto Edge : Edges) {
                         auto CurTarget = Edge->GetTarget();
                         if (VisitedStates.find(CurTarget) == VisitedStates.end()) {
+                            VisitedStates.insert(CurTarget);
                             PathPreds[CurTarget] = CurState;
                             BFSQueue.push_back(CurTarget);
                         }
@@ -264,7 +265,7 @@ namespace ESMC {
                 deque<AQSPermPath::PathElemType> ThePath;
                 auto CurTarget = ActualTarget;
 
-                while (Origins.find(const_cast<StateVec*>(CurTarget)) != Origins.end()) {
+                while (Origins.find(const_cast<StateVec*>(CurTarget)) == Origins.end()) {
                     auto Predecessor = PathPreds[CurTarget];
                     auto const& PredEdges = 
                         StateHashSet.find(const_cast<StateVec*>(Predecessor))->second;

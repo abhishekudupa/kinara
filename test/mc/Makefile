@@ -17,10 +17,13 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../src/extern/sparsehash
 
-PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple
+PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug
 
 PingPongChan_SYS_LIBS=esmc z3 rt boost_system
 PingPongChan_EXT_LIBS=boost z3 esmc
+
+PingPongChanBug_SYS_LIBS=$(PingPongChan_SYS_LIBS)
+PingPongChanBug_EXT_LIBS=$(PingPongChan_EXT_LIBS)
 
 Elevator_SYS_LIBS=esmc z3 rt boost_system
 Elevator_EXT_LIBS=boost z3 esmc
@@ -39,6 +42,7 @@ libesmc_FULL_PATH=$(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)/libesmc.so
 libesmc_MAKE_DIR=$(PROJECT_ROOT)/../../
 
 PingPongChan_OBJS=PingPongChan.o
+PingPongChanBug_OBJS=PingPongChanBug.o
 Flip_OBJS=Flip.o
 FlipSimple_OBJS=FlipSimple.o
 Elevator_OBJS=Elevator.o
@@ -48,6 +52,8 @@ PingPongChan_LIB_PATHS= \
     $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \
     $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
+
+PingPongChanBug_LIB_PATHS=$(PingPongChan_LIB_PATHS)
 
 Elevator_LIB_PATHS= \
     $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \

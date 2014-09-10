@@ -530,9 +530,12 @@ namespace ESMC {
         StateVec* Canonicalizer::ApplyPermutation(const StateVec* InputVector, u32 PermID) const
         {
             auto Retval = InputVector->Clone();
-            auto const& Perm = PermSet->GetIterator(PermID);
+            auto Perm = PermSet->GetIterator(PermID);
             for (auto Permuter : Permuters) {
                 Permuter->Permute(InputVector, Retval, Perm);
+            }
+            for (auto const& Sorter : Sorters) {
+                Sorter->Sort(Retval);
             }
             return Retval;
         }
@@ -540,9 +543,21 @@ namespace ESMC {
         StateVec* Canonicalizer::ApplyInvPermutation(const StateVec* InputVector, u32 PermID) const
         {
             auto Retval = InputVector->Clone();
-            auto const& Perm = PermSet->GetIteratorForInv(PermID);
+            auto Perm = PermSet->GetIteratorForInv(PermID);
             for (auto Permuter : Permuters) {
                 Permuter->Permute(InputVector, Retval, Perm);
+            }
+            for (auto const& Sorter : Sorters) {
+                Sorter->Sort(Retval);
+            }
+            return Retval;
+        }
+
+        StateVec* Canonicalizer::SortChans(const StateVec* InputVector) const
+        {
+            auto Retval = InputVector->Clone();
+            for (auto Sorter : Sorters) {
+                Sorter->Sort(Retval);
             }
             return Retval;
         }

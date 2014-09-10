@@ -51,6 +51,10 @@ namespace ESMC {
         using namespace ESMC::LTS;
         using ESMC::Symm::Canonicalizer;
 
+        enum class AQSConstructionMethod {
+            BreadthFirst, DepthFirst
+        };
+
         namespace Detail {
             
             class DFSStackEntry
@@ -124,7 +128,7 @@ namespace ESMC {
         class LTSChecker
         {
             friend class Detail::FairnessChecker;
-
+            friend class TraceBase;
         private:
             LabelledTS* TheLTS;
             StateFactory* Factory;
@@ -148,6 +152,8 @@ namespace ESMC {
 
             inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);
             inline void DoDFS(StateVec* Root);
+            inline void DoBFS(const vector<StateVec*>& Roots);
+
             inline void ConstructProduct(StateBuchiAutomaton* Monitor);
             inline vector<const ProductState*> GetAcceptingSCCs();
             
@@ -161,7 +167,8 @@ namespace ESMC {
             LTSChecker(LabelledTS* TheLTS);
             virtual ~LTSChecker();
 
-            vector<TraceBase*> BuildAQS();
+            vector<TraceBase*> BuildAQS(AQSConstructionMethod Method = 
+                                        AQSConstructionMethod::BreadthFirst);
             void ClearAQS();
 
             StateBuchiAutomaton* MakeStateBuchiMonitor(const string& Name, 
