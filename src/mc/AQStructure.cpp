@@ -507,6 +507,34 @@ namespace ESMC {
                                     TargetPred);
         }
 
+        AQSPermPath*
+        AQStructure::FindShortestPath(const StateVec* Target,
+                                      const function<u32(const StateVec*, const AQSEdge*)>&
+                                      CostFunction) const
+        {
+            return FindShortestPath(set<const StateVec*>(InitStates.begin(), InitStates.end()),
+                                    Target, CostFunction);
+        }
+
+        AQSPermPath*
+        AQStructure::FindShortestPath(const function<bool(const StateVec*)>& TargetPred,
+                                      const function<u32(const StateVec*, const AQSEdge*)>&
+                                      CostFunction) const
+        {
+            return FindShortestPath(set<const StateVec*>(InitStates.begin(), InitStates.end()),
+                                    TargetPred, CostFunction);
+        }
+
+        AQSPermPath*
+        AQStructure::FindShortestPath(const function<const StateVec*(const AQSEdgeSetT&)>& 
+                                      TargetEdgePred,
+                                      const function<u32(const StateVec*, const AQSEdge*)>&
+                                      CostFunction) const
+        {
+            return FindShortestPath(set<const StateVec*>(InitStates.begin(), InitStates.end()),
+                                    TargetEdgePred, CostFunction);
+        }
+
         ProductState::ProductState(const StateVec* SVPtr, u32 MonitorState,
                                    u32 IndexID, u32 NumProcesses)
             : SVPtr(SVPtr), MonitorState(MonitorState), IndexID(IndexID),
