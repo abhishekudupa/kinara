@@ -198,6 +198,30 @@ namespace ESMC {
             typedef AnnotatedEdgePtrEquals<StateVec> AQSEdgePtrEquals;
             typedef AnnotatedEdgePtrHasher<StateVec> AQSEdgePtrHasher;
 
+            // Fibonacci heap data structure
+            struct AQSFibDataT
+            {
+                const StateVec* StateVector;
+                u32 DistanceFromOrigin;
+
+                inline AQSFibDataT(const StateVec* SV, u32 DistanceFromOrigin)
+                    : StateVector(SV), DistanceFromOrigin(DistanceFromOrigin)
+                {
+                    // Nothing here
+                }
+            };
+
+            struct AQSFibDataCompare
+            {
+                // Use a > comparator, since boost fib heaps are max-heaps
+                // rather than the text-book min-heaps.
+                inline bool operator () (const AQSFibDataT& Data1, 
+                                         const AQSFibDataT& Data2) const
+                {
+                    return (Data1.DistanceFromOrigin > Data2.DistanceFromOrigin);
+                }
+            };
+
         } /* end namespace Detail */
 
         typedef AnnotatedEdge<StateVec> AQSEdge;

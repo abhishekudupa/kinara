@@ -38,6 +38,7 @@
 // Code:
 
 #include <boost/functional/hash.hpp>
+#include <boost/heap/fibonacci_heap.hpp>
 
 #include "../uflts/LabelledTS.hpp"
 #include "../uflts/LTSTransitions.hpp"
@@ -272,7 +273,15 @@ namespace ESMC {
                                       const function<u32(const StateVec*, const AQSEdge*)>&
                                       CostFunction) const
         {
-
+            if (StateHashSet.find(const_cast<StateVec*>(Origin)) == StateHashSet.end() ||
+                StateHashSet.find(const_cast<StateVec*>(Target)) == StateHashSet.end()) {
+                throw ESMCError((string)"Origin and/or Target not in AQS in " + 
+                                "call to AQStructure::FindShortestPath()");
+            }
+            
+            return FindShortestPath(Origin, 
+                                    [=] (const StateVec* SV) -> bool 
+                                    { return (SV == Target); });
         }
 
         AQSPermPath* 
@@ -281,7 +290,21 @@ namespace ESMC {
                                       const function<u32(const StateVec*, const AQSEdge*)>&
                                       CostFunction) const
         {
+            if (StateHashSet.find(const_cast<StateVec*>(Origin)) == StateHashSet.end()) {
+                throw ESMCError((string)"Origin not in AQS in " + 
+                                "call to AQStructure::FindShortestPath()");
+            }
 
+            return FindShortestPath(Origin,
+                                    [=] (const AQSEdgeSetT& Edges) -> const StateVec*
+                                    {
+                                        for (auto Edge : Edges) {
+                                            if (TargetPred(Edge->GetTarget())) {
+                                                return Edge->GetTarget();
+                                            }
+                                        }
+                                        return nullptr;
+                                    });
         }
 
         AQSPermPath* 
@@ -291,7 +314,98 @@ namespace ESMC {
                                       const function<u32(const StateVec*, const AQSEdge*)>&
                                       CostFunction) const
         {
+            using boost::heap::fibonacci_heap;
+            using Detail::AQSFibDataT;
+            using Detail::AQSFibDataCompare;
             
+            typedef boost::heap::compare<AQSFibDataCompare> FibHeapCompareT;
+            typedef fibonacci_heap<AQSFibDataT, FibHeapCompareT> FibHeapT;
+
+            FibHeapT PrioQ;
+            unordered_map<const StateVec*, FibHeapT::handle_type> StateToHandle;
+            unordered_map<const StateVec*, const StateVec*> Predecessors;
+
+            auto Handle = PrioQ.push(AQSFibDataT(Origin, 0));
+            StateToHandle[Origin] = Handle;
+            const StateVec* ActualTarget = nullptr;
+            
+            bool ReachedTarget = false;
+            while (PrioQ.size() > 0 && !ReachedTarget) {
+                auto CurStateData = PrioQ.top();
+                auto CurState = CurStateData.StateVector;
+                PrioQ.pop();
+                
+                auto const& Edges = 
+                    StateHashSet.find(const_cast<StateVec*>(CurState))->second;
+
+                ActualTarget = TargetEdgePred(Edges);
+ 
+                for (auto Edge : Edges) {
+                    u32 NewDist = CurStateData.DistanceFromOrigin + 
+                        CostFunction(CurState, Edge);
+                    auto NSVec = Edge->GetTarget();
+
+                    auto nsit = StateToHandle.find(NSVec);
+                    u32 OldDist;
+                    FibHeapT::handle_type NextStateHandle;
+
+                    if (nsit == StateToHandle.end()) {
+                        OldDist = UINT32_MAX;
+                    } else {
+                        NextStateHandle = nsit->second;
+                        OldDist = (*NextStateHandle).DistanceFromOrigin;
+                    }
+                    
+                    if (NewDist < OldDist) {
+                        if (OldDist != UINT32_MAX) {
+                            // State was already present in prio queue
+                            // just decrease the distance
+                            (*NextStateHandle).DistanceFromOrigin = NewDist;
+                            PrioQ.decrease(NextStateHandle);
+                        } else {
+                            // State wasn't present in the prio queue
+                            // insert it
+                            Handle = PrioQ.push(AQSFibDataT(NSVec, NewDist));
+                            StateToHandle[NSVec] = Handle;
+                        }
+                        // Mark predecessor
+                        Predecessors[NSVec] = CurState;
+                    }
+                    
+                    // Did we reach the desired target?
+                    if (Edge->GetTarget() == ActualTarget) {
+                        ReachedTarget = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!ReachedTarget) {
+                // WTF? The target is not reachable?
+                // Too bad then I guess.
+                return nullptr;
+            }
+
+            // assemble the path
+            deque<AQSPermPath::PathElemType> ThePath;
+            auto const& GuardedCommands = TheLTS->GetGuardedCmds();
+            auto CurTarget = ActualTarget;
+            while (CurTarget != Origin) {
+                auto Predecessor = Predecessors[CurTarget];
+                auto const& PredEdges = 
+                    StateHashSet.find(const_cast<StateVec*>(Predecessor))->second;
+                for (auto Edge : PredEdges) {
+                    if (Edge->GetTarget() == CurTarget) {
+                        auto const& Cmd = GuardedCommands[Edge->GetGCmdIndex()];
+                        ThePath.push_front(AQSPermPath::PathElemType(Cmd, CurTarget));
+                        break;
+                    }
+                }
+                CurTarget = Predecessor;
+            }
+            vector<AQSPermPath::PathElemType> PathVec(ThePath.begin(), ThePath.end());
+            auto Retval = new AQSPermPath(Origin, PathVec);
+            return Retval;
         }
 
         ProductState::ProductState(const StateVec* SVPtr, u32 MonitorState,
