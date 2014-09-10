@@ -177,7 +177,7 @@ namespace ESMC {
             return TraceElems;
         }
 
-        string SafetyViolation::ToString() const
+        string SafetyViolation::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
             sstr << "Trace to safety violation with " << TraceElems.size() 
@@ -191,9 +191,14 @@ namespace ESMC {
             for (auto const& TraceElem : TraceElems) {
                 auto const& MsgType = TraceElem.first->GetMsgType();
                 auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
-                sstr << "Fired Guarded Command with label: " 
-                     << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() : 
-                         "(internal transition)") << endl;
+                if (Verbosity < 1) {
+                    sstr << "Fired Guarded Command with label: " 
+                         << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() : 
+                             "(internal transition)") << endl;
+                } else {
+                    sstr << "Fired Guarded Command:" << endl;
+                    sstr << TraceElem.first->ToString() << endl;
+                }
                 sstr << "Obtained next state (delta from previous state):" << endl;
                 sstr << "-----------------------------------------------------" << endl;
                 Printer->PrintState(TraceElem.second, PrevState, sstr);

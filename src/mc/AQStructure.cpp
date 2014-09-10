@@ -49,7 +49,9 @@ namespace ESMC {
 
         AQStructure::AQStructure(LabelledTS* TheLTS)
             : EdgePool(new boost::pool<>(sizeof(AQSEdge))),
-              TheLTS(TheLTS)
+              TheLTS(TheLTS), ErrorState(nullptr), 
+              ErrorDepth(UINT32_MAX), DeadlockState(nullptr),
+              DeadlockDepth(UINT32_MAX)
         {
             // Nothing here
         }
@@ -64,22 +66,29 @@ namespace ESMC {
             return TheLTS;
         }
 
-        void AQStructure::AddErrorState(const StateVec* ErrorState)
+        void AQStructure::AddErrorState(const StateVec* ErrorState, u32 Depth)
         {
             if (StateHashSet.find(const_cast<StateVec*>(ErrorState)) == StateHashSet.end()) {
                 throw ESMCError((string)"State not in AQS in call to " + 
                                 "AQStructure::AddErrorState()");
             }
-            ErrorStates.insert(ErrorState);
+            if (Depth < ErrorDepth) {
+                this->ErrorState = ErrorState;
+                ErrorDepth = Depth;
+            }
         }
 
-        void AQStructure::AddDeadlockState(const StateVec* DeadlockState)
+        void AQStructure::AddDeadlockState(const StateVec* DeadlockState, u32 Depth)
         {
             if (StateHashSet.find(const_cast<StateVec*>(DeadlockState)) == StateHashSet.end()) {
                 throw ESMCError((string)"State not in AQS in call to " + 
                                 "AQStructure::AddDeadlockState()");
             }
-            DeadlockStates.insert(DeadlockState);
+
+            if (Depth < DeadlockDepth) {
+                this->DeadlockState = DeadlockState;
+                DeadlockDepth = Depth;
+            }
         }
 
         StateVec* AQStructure::Find(StateVec* SV) const
@@ -92,14 +101,14 @@ namespace ESMC {
             }
         }
 
-        const set<const StateVec*>& AQStructure::GetErrorStates() const
+        const StateVec* AQStructure::GetErrorState() const
         {
-            return ErrorStates;
+            return ErrorState;
         }
 
-        const set<const StateVec*>& AQStructure::GetDeadlockStates() const
+        const StateVec* AQStructure::GetDeadlockState() const
         {
-            return DeadlockStates;
+            return DeadlockState;
         }
 
         void AQStructure::Insert(StateVec* SV)

@@ -412,7 +412,7 @@ namespace ESMC {
                         // Remember this state, but continue on
                         // with the AQS construction, we'll report
                         // all counter-examples later
-                        AQS->AddDeadlockState(State);
+                        AQS->AddDeadlockState(State, DFSStack.size());
                     }
                     // cout << "No more successors, popping from stack!" << endl;
                     // Done exploring this state
@@ -456,7 +456,7 @@ namespace ESMC {
                     if (Interp->EvaluateScalar(CanonState) != 1) {
                         // Again, remember this state, but continue
                         // on with the AQS construction
-                        AQS->AddErrorState(CanonState);
+                        AQS->AddErrorState(CanonState, DFSStack.size());
                     }
                     continue;
 
@@ -482,7 +482,9 @@ namespace ESMC {
                 AQS->InsertInitState(State);
             }
 
+            i64 IterCount = 0;
             while (BFSQueue.size() > 0) {
+                ++IterCount;
                 auto CurState = BFSQueue.front();
                 BFSQueue.pop_front();
 
@@ -512,7 +514,9 @@ namespace ESMC {
                             if (Interp->EvaluateScalar(CanonNextState) != 1) {
                                 // Again, remember this state, but continue
                                 // on with the AQS construction
-                                AQS->AddErrorState(CanonNextState);
+                                // We only want the first one to be stored
+                                // so use itercount
+                                AQS->AddErrorState(CanonNextState, IterCount);
                             }
                         }
                     }
@@ -520,7 +524,7 @@ namespace ESMC {
 
                 if (Deadlocked) {
                     // State has no successors
-                    AQS->AddDeadlockState(CurState);
+                    AQS->AddDeadlockState(CurState, IterCount);
                 }
             }
         }
@@ -573,18 +577,16 @@ namespace ESMC {
             // Do we have errors?
             // We currently only report at most one error trace 
             // and at most one deadlock trace
-            auto const& ErrorStates = AQS->GetErrorStates();
-            auto const& DeadlockStates = AQS->GetDeadlockStates();
+            auto ErrorState = AQS->GetErrorState();
+            auto DeadlockState = AQS->GetDeadlockState();
 
-            for (auto ErrorState : ErrorStates) {
+            if (ErrorState != nullptr) {
                 auto CurTrace = TraceBase::MakeSafetyViolation(ErrorState, this);
                 Retval.push_back(CurTrace);
-                break;
             }
-            for (auto DeadlockState : DeadlockStates) {
+            if (DeadlockState != nullptr) {
                 auto CurTrace = TraceBase::MakeDeadlockViolation(DeadlockState, this);
                 Retval.push_back(CurTrace);
-                break;
             }
 
             return Retval;
@@ -889,8 +891,8 @@ namespace ESMC {
                 throw ESMCError((string)"AQS not built to check liveness property!");
             }
 
-            if (AQS->GetErrorStates().size() > 0 || 
-                AQS->GetDeadlockStates().size() > 0) {
+            if (AQS->GetErrorState() != nullptr || 
+                AQS->GetDeadlockState() != nullptr) {
                 throw ESMCError((string)"AQS contains one or more deadlocked and/or " + 
                                 "error states. Liveness checks aborted due to this!");
             }

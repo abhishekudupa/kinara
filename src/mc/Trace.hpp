@@ -101,7 +101,7 @@ namespace ESMC {
             const StateVec* GetInitialState() const;
             StateVecPrinter* GetPrinter() const;
 
-            virtual string ToString() const = 0;
+            virtual string ToString(u32 Verbosity = 0) const = 0;
 
             template <typename T>
             inline T* As()
@@ -158,7 +158,7 @@ namespace ESMC {
             virtual ~SafetyViolation();
 
             const vector<TraceElemT>& GetTraceElems() const;
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
         };
 
         class DeadlockViolation : public SafetyViolation
@@ -189,7 +189,7 @@ namespace ESMC {
             const vector<TraceElemT>& GetStem() const;
             const vector<TraceElemT>& GetLasso() const;
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity) const override;
         };
 
     } /* end namespace MC */

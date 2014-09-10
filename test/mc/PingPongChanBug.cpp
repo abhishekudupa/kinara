@@ -304,8 +304,13 @@ int main()
         for (auto const& Trace : Traces) {
             cout << Trace->ToString() << endl << endl;
         }
+        for (auto Trace : Traces) {
+            delete Trace;
+        }
+        delete Checker;
         exit(0);
     }
+
 
     auto Monitor = Checker->MakeStateBuchiMonitor("GFZero", Params, TrueExp);
     Monitor->AddState("InitState", true, false);
