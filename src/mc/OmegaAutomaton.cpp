@@ -116,6 +116,26 @@ namespace ESMC {
             ++NumStates;
         }
 
+        i32 BuchiAutomatonBase::GetStateIDForName(const string& StateName) const
+        {
+            auto it = StateNameToStateID.find(StateName);
+            if (it == StateNameToStateID.end()) {
+                throw ESMCError((string)"Unknown state name \"" + StateName + "\"" + 
+                                " referenced in Buchi monitor \"" + Name + "\"");
+            }
+            return it->second;
+        }
+
+        const string& BuchiAutomatonBase::GetStateNameForID(u32 StateID) const
+        {
+            auto it = StateIDToStateName.find(StateID);
+            if (it == StateIDToStateName.end()) {
+                throw ESMCError((string)"Unknown StateID " + to_string(StateID) + 
+                                " in referenced in Buchi monitor \"" + Name + "\"");
+            }
+            return it->second;
+        }
+
         void BuchiAutomatonBase::FreezeStates()
         {
             if (StatesFrozen) {

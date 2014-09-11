@@ -43,6 +43,7 @@
 #include "StateVec.hpp"
 #include "AQStructure.hpp"
 #include "Compiler.hpp"
+#include "OmegaAutomaton.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -222,12 +223,30 @@ namespace ESMC {
             for (auto const& Line : Lines) {
                 Out << Line << endl;
             }
-
+            auto ThePS = ProductState::ThePS;
+            auto Monitor = ThePS->GetMonitor();
             Out << "Tracked Index: " << State->GetIndexID() << endl;
-            Out << "Monitor State: " << State->GetMonitorState() << endl;
+            Out << "Monitor State: " << Monitor->GetStateNameForID(State->GetMonitorState())
+                << endl;
         }
 
+        void StateVecPrinter::PrintState(const ProductState* State,
+                                         const ProductState* Prev,
+                                         ostream& Out) const
+        {
+            auto&& Lines = PrintState(State->GetSVPtr(), Prev->GetSVPtr());
+            for (auto const& Line : Lines) {
+                Out << Line << endl;
+            }
+
+            auto ThePS = ProductState::ThePS;
+            auto Monitor = ThePS->GetMonitor();
+            Out << "Tracked Index: " << State->GetIndexID() << endl;
+            Out << "Monitor State: " << Monitor->GetStateNameForID(State->GetMonitorState())
+                << endl;            
+        }
     }
+
 } /* end namespace ESMC */
 
 // 

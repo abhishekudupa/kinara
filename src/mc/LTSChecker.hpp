@@ -51,10 +51,6 @@ namespace ESMC {
         using namespace ESMC::LTS;
         using ESMC::Symm::Canonicalizer;
 
-        enum class AQSConstructionMethod {
-            BreadthFirst, DepthFirst
-        };
-
         namespace Detail {
             
             class DFSStackEntry
@@ -105,6 +101,12 @@ namespace ESMC {
                 // not taken
                 unordered_set<const ProductState*> EnabledStates;
                 LTSChecker* Checker;
+                // A set of dots to connect to 
+                // produce a counter-example
+                // one for each tracked index.
+                // The idea is that we need at least
+                // one state from each set in a counterexample
+                vector<set<const ProductState*>> DotsToConnect;
 
             public:
                 FairnessChecker(const LTSFairSetRef& FairSet,
@@ -113,7 +115,8 @@ namespace ESMC {
                                 LTSChecker* Checker);
                 ~FairnessChecker();
                 
-                void Reset();
+                void ResetFairness();
+                void ResetFull();
                 void ProcessSCCState(const ProductState* State,
                                      const ProductEdgeSetT& Edges,
                                      u32 TrackedIndex);
@@ -162,6 +165,7 @@ namespace ESMC {
 
             inline bool CheckSCCFairness(const ProductState* SCCRoot, 
                                          vector<const ProductState*>& UnfairStates);
+            inline vector<TraceBase*> MakeFairTrace(const ProductState* SCCRoot);
 
         public:
             LTSChecker(LabelledTS* TheLTS);

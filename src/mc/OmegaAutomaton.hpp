@@ -84,6 +84,8 @@ namespace ESMC {
 
             void AddState(const string& StateName, bool Initial,
                           bool Accepting);
+            i32 GetStateIDForName(const string& StateName) const;
+            const string& GetStateNameForID(u32 StateID) const;
             virtual void FreezeStates();
             const vector<u32>& GetInitialStates() const;
             const unordered_set<u32>& GetAcceptingStates() const;

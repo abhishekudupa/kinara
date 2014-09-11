@@ -145,7 +145,7 @@ namespace ESMC {
                   ClassID(FairSet->GetEFSM()->GetClassID()),
                   GCmdsToRespondTo(SysIdxSet->GetNumTrackedIndices(), 
                                    vector<bool>(GuardedCommands.size())),
-                  Checker(Checker)
+                  Checker(Checker), DotsToConnect(NumInstances)
             {
                 const u32 NumTrackedIndices = SysIdxSet->GetNumTrackedIndices();
                 for (u32 TrackedIndex = 0; TrackedIndex < NumTrackedIndices; ++TrackedIndex) {
@@ -173,12 +173,20 @@ namespace ESMC {
                 // Nothing here
             }
 
-            void FairnessChecker::Reset()
+            void FairnessChecker::ResetFairness()
             {
+                Enabled = false;
+                Executed = false;
+                Disabled = false;
+                
+                EnabledStates.clear();
+            }
+
+            void FairnessChecker::ResetFull()
+            {
+                ResetFairness();
                 for (u32 i = 0; i < NumInstances; ++i) {
-                    Enabled = false;
-                    Executed = false;
-                    Disabled = false;
+                    DotsToConnect[i].clear();
                 }
             }
 
@@ -231,6 +239,10 @@ namespace ESMC {
                         if (EnabledStates.size() > 0) {
                             EnabledStates.clear();
                         }
+                        if (IsStrong) {
+                            DotsToConnect[InstanceID].insert(NextState);
+                        }
+
                     } else {
                         EnabledStates.insert(State);
                     }
@@ -239,6 +251,9 @@ namespace ESMC {
                 // if no commands are enabled, then we're disabled!
                 if (!AtLeastOneEnabled) {
                     Disabled = true;
+                    if (!IsStrong) {
+                        DotsToConnect[InstanceID].insert(State);
+                    }
                 }
             }
 
@@ -623,7 +638,8 @@ namespace ESMC {
         inline void LTSChecker::ConstructProduct(StateBuchiAutomaton *Monitor)
         {
             deque<ProductState*> BFSQueue;
-            ThePS = new ProductStructure(NumProcesses);
+            ThePS = new ProductStructure(NumProcesses, Monitor);
+            ProductState::ThePS = ThePS;
             auto MonIndexSet = Monitor->GetIndexSet();
             auto PermSet = TheCanonicalizer->GetPermSet();
             
@@ -730,6 +746,13 @@ namespace ESMC {
         inline bool LTSChecker::CheckSCCFairness(const ProductState *SCCRoot, 
                                                  vector<const ProductState*>& UnfairStates)
         {
+            // Reset all the fairness checkers first
+            for (auto FCheckers : FairnessCheckers) {
+                for (auto FChecker : FCheckers) {
+                    FChecker->ResetFull();
+                }
+            }
+
             const u32 IndexMax = SysIdxSet->GetNumTrackedIndices();
             for (u32 IndexID = 0; IndexID < IndexMax; ++IndexID) {
                 if (SCCRoot->IsTracked(IndexID)) {
@@ -739,7 +762,7 @@ namespace ESMC {
                 auto ClassID = SysIdxSet->GetClassID(IndexID);
                 // Reset all the fairness checkers
                 for (auto FChecker : FairnessCheckers[ClassID]) {
-                    FChecker->Reset();
+                    FChecker->ResetFairness();
                 }
 
                 // cout << "Checking fairness of SCC with tracked index " << IndexID << endl;
@@ -943,14 +966,22 @@ namespace ESMC {
                         continue;
                     } else {
                         // Fair, turn this into a counterexample
-                        // TODO
                         cout << "Found fair accepting SCC" << endl;
-                        return Retval;
+                        return MakeFairTrace(SCCRoot);
                     }
                 }
             }
 
             cout << "No liveness violations found! :-)" << endl;
+            return Retval;
+        }
+
+
+        // We have a fair scc, we need to make a fair trace now
+        inline vector<TraceBase*> LTSChecker::MakeFairTrace(const ProductState* SCCRoot)
+        {
+            vector<TraceBase*> Retval;
+            // TODO: implement me
             return Retval;
         }
 

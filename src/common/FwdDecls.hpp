@@ -119,6 +119,10 @@ namespace ESMC {
 
     namespace MC {
 
+        enum class AQSConstructionMethod {
+            BreadthFirst, DepthFirst
+        };
+
         class StateVec;
         class StateFactory;
         class LTSChecker;
@@ -149,9 +153,12 @@ namespace ESMC {
         
         // Traces
         typedef pair<LTS::GCmdRef, const StateVec*> TraceElemT;
-        template <typename STATETYPE> 
-        class PermutedPath;
+        template <typename STATETYPE> class PermutedPath;
+        // A permuted path through the annotated quotient structure
         typedef PermutedPath<StateVec> AQSPermPath;
+        // A permuted path through the (annotated) product structure
+        typedef PermutedPath<ProductState> PSPermPath;
+
         class TraceBase;
         class SafetyViolation;
         class DeadlockViolation;
@@ -160,6 +167,7 @@ namespace ESMC {
     } /* end namespace MC */
 
     namespace Symm {
+
         class PermutationSet;
         class Canonicalizer;
         class PermuterBase;

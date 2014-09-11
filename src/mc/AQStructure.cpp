@@ -184,13 +184,6 @@ namespace ESMC {
         AQStructure::FindPath(const set<const StateVec*>& Origins, 
                               const StateVec* Target) const
         {
-            for (auto const& Origin : Origins) {
-                if (StateHashSet.find(const_cast<StateVec*>(Origin)) == StateHashSet.end()) {
-                    throw ESMCError((string)"Origin state not in AQS in " + 
-                                    "call to AQStructure::FindPath()");
-                }
-            }
-
             if (StateHashSet.find(const_cast<StateVec*>(Target)) == StateHashSet.end()) {
                 throw ESMCError((string)"Target state not in AQS in " +
                                 "call to AQStructure::FindPath()");
@@ -205,13 +198,6 @@ namespace ESMC {
         AQStructure::FindPath(const set<const StateVec*>& Origins, 
                               const function<bool(const StateVec* Target)>& TargetPred) const
         {
-            for (auto const& Origin : Origins) {
-                if (StateHashSet.find(const_cast<StateVec*>(Origin)) == StateHashSet.end()) {
-                    throw ESMCError((string)"Origin not in AQS in " + 
-                                    "call to AQStructure::FindPath()");
-                }
-            }
-
             return FindPath(Origins, 
                             [=] (const AQSEdgeSetT& Edges) -> const StateVec*
                             { 
@@ -315,45 +301,12 @@ namespace ESMC {
                             TargetEdgePred);
         }
 
-        AQSPermPath*
-        AQStructure::FindShortestPath(const set<const StateVec*>& Origins, 
-                                      const StateVec* Target) const
-        {
-            // No cost function given ==> unit cost for each edge ==> BFS will do :-)
-            return FindPath(Origins, Target);
-        }
-
-        AQSPermPath*
-        AQStructure::FindShortestPath(const set<const StateVec*>& Origins, 
-                                      const function<bool(const ESMC::MC::StateVec*)>& 
-                                      TargetPred) const
-        {
-            // Again, no cost function ==> BFS
-            return FindPath(Origins, TargetPred);
-        }
-
-
-        AQSPermPath* 
-        AQStructure::FindShortestPath(const set<const StateVec*>& Origins,
-                                      const function<const StateVec*(const AQSEdgeSetT&)>&
-                                      TargetEdgePred) const
-        {
-            return FindPath(Origins, TargetEdgePred);
-        }
-
         AQSPermPath* 
         AQStructure::FindShortestPath(const set<const StateVec*>& Origins,
                                       const StateVec* Target,
                                       const function<u32(const StateVec*, const AQSEdge*)>&
                                       CostFunction) const
         {
-            for (auto Origin : Origins) {
-                if (StateHashSet.find(const_cast<StateVec*>(Origin)) == StateHashSet.end() ||
-                    StateHashSet.find(const_cast<StateVec*>(Target)) == StateHashSet.end()) {
-                    throw ESMCError((string)"Origin state not in AQS in " + 
-                                    "call to AQStructure::FindShortestPath()");
-                }
-            }
             if (StateHashSet.find(const_cast<StateVec*>(Target)) == StateHashSet.end()) {
                     throw ESMCError((string)"Target state not in AQS in " + 
                                     "call to AQStructure::FindShortestPath()");                
@@ -361,7 +314,8 @@ namespace ESMC {
             
             return FindShortestPath(Origins, 
                                     [=] (const StateVec* SV) -> bool 
-                                    { return (SV == Target); });
+                                    { return (SV == Target); },
+                                    CostFunction);
         }
 
         AQSPermPath* 
@@ -370,13 +324,6 @@ namespace ESMC {
                                       const function<u32(const StateVec*, const AQSEdge*)>&
                                       CostFunction) const
         {
-            for (auto Origin : Origins) {
-                if (StateHashSet.find(const_cast<StateVec*>(Origin)) == StateHashSet.end()) {
-                    throw ESMCError((string)"Origin not in AQS in " + 
-                                    "call to AQStructure::FindShortestPath()");
-                }
-            }
-
             return FindShortestPath(Origins,
                                     [=] (const AQSEdgeSetT& Edges) -> const StateVec*
                                     {
@@ -386,7 +333,7 @@ namespace ESMC {
                                             }
                                         }
                                         return nullptr;
-                                    });
+                                    }, CostFunction);
         }
 
         AQSPermPath* 
@@ -450,7 +397,7 @@ namespace ESMC {
                             // State was already present in prio queue
                             // just decrease the distance
                             (*NextStateHandle).DistanceFromOrigin = NewDist;
-                            PrioQ.decrease(NextStateHandle);
+                            PrioQ.increase(NextStateHandle);
                         } else {
                             // State wasn't present in the prio queue
                             // insert it
@@ -495,28 +442,6 @@ namespace ESMC {
             return Retval;
         }
 
-        AQSPermPath* 
-        AQStructure::FindShortestPath(const ESMC::MC::StateVec *Target) const
-        {
-            return FindShortestPath(set<const StateVec*>(InitStates.begin(), InitStates.end()), 
-                                    Target);
-        }
-
-        AQSPermPath* 
-        AQStructure::FindShortestPath(const function<const StateVec*(const AQSEdgeSetT&)>&
-                                      TargetEdgePred) const
-        {
-            return FindShortestPath(set<const StateVec*>(InitStates.begin(), InitStates.end()),
-                                    TargetEdgePred);
-        }
-
-        AQSPermPath* 
-        AQStructure::FindShortestPath(const function<bool (const StateVec*)> &TargetPred) const
-        {
-            return FindShortestPath(set<const StateVec*>(InitStates.begin(), InitStates.end()), 
-                                    TargetPred);
-        }
-
         AQSPermPath*
         AQStructure::FindShortestPath(const StateVec* Target,
                                       const function<u32(const StateVec*, const AQSEdge*)>&
@@ -544,6 +469,9 @@ namespace ESMC {
             return FindShortestPath(set<const StateVec*>(InitStates.begin(), InitStates.end()),
                                     TargetEdgePred, CostFunction);
         }
+
+        // static field of product structure
+        ProductStructure* ProductState::ThePS;
 
         ProductState::ProductState(const StateVec* SVPtr, u32 MonitorState,
                                    u32 IndexID, u32 NumProcesses)
@@ -702,10 +630,11 @@ namespace ESMC {
             }
         }
 
-        ProductStructure::ProductStructure(u32 NumProcesses)
+        ProductStructure::ProductStructure(u32 NumProcesses, BuchiAutomatonBase* Monitor)
             : NumProcesses(NumProcesses),
               PSPool(new boost::object_pool<ProductState>()),
-              PEPool(new boost::pool<>(sizeof(ProductEdge)))
+              PEPool(new boost::pool<>(sizeof(ProductEdge))),
+              Monitor(Monitor)
         {
             // Nothing here
         }
@@ -714,6 +643,11 @@ namespace ESMC {
         {
             delete PSPool;
             delete PEPool;
+        }
+
+        BuchiAutomatonBase* ProductStructure::GetMonitor() const
+        {
+            return Monitor;
         }
 
         ProductState* ProductStructure::AddInitialState(const StateVec *SVPtr, 
@@ -817,6 +751,304 @@ namespace ESMC {
             for (auto const& PS : PSHashSet) {
                 Func(PS.first);
             }
+        }
+
+        // Paths and shortest paths implementation
+        PSPermPath* ProductStructure::FindPath(const set<const ProductState*>& Origins, 
+                                               const ProductState* Target) const
+        {
+            if (PSHashSet.find(const_cast<ProductState*>(Target)) == PSHashSet.end()) {
+                throw ESMCError((string)"Target not in product structure in call " +
+                                "to ProductStructure::FindPath()");
+            }
+            return FindPath(Origins, 
+                            [=] (const ProductState* CurState) -> bool
+                            {
+                                return (CurState == Target);
+                            });
+        }
+
+        PSPermPath* ProductStructure::FindPath(const set<const ProductState*>& Origins,
+                                               const function<bool(const ProductState*)>&
+                                               TargetPred) const
+        {
+            return FindPath(Origins,
+                            [=] (const ProductEdgeSetT& Edges) -> const ProductState*
+                            {
+                                for (auto Edge : Edges) {
+                                    if (TargetPred(Edge->GetTarget())) {
+                                        return Edge->GetTarget();
+                                    }
+                                }
+                                return nullptr;
+                            });
+        }
+
+        PSPermPath* ProductStructure::FindPath(const set<const ProductState*>& Origins,
+                                               const function<const ProductState*
+                                               (const ProductEdgeSetT&)>&
+                                               TargetEdgePred) const
+        {
+            deque<const ProductState*> BFSQueue;
+            unordered_set<const ProductState*> VisitedStates;
+            unordered_map<const ProductState*, const ProductState*> PathPreds;
+            
+            for (auto Origin : Origins) {
+                if (PSHashSet.find(const_cast<ProductState*>(Origin)) == PSHashSet.end()) {
+                    throw ESMCError((string)"Origin not in product structure in call " +
+                                    "to ProductStructure::FindPath()");
+                }
+                VisitedStates.insert(Origin);
+                BFSQueue.push_back(Origin);
+            }
+
+            const ProductState* ActualTarget;
+            bool Found = false;
+            while (BFSQueue.size() > 0) {
+                auto CurState = BFSQueue.front();
+                BFSQueue.pop_front();
+                
+                auto const& Edges = PSHashSet.find(const_cast<ProductState*>(CurState))->second;
+                auto TargetState = TargetEdgePred(Edges);
+
+                if (TargetState != nullptr) {
+                    ActualTarget = TargetState;
+                    PathPreds[TargetState] = CurState;
+                    Found = true;
+                    break;
+                } else {
+                    for (auto Edge : Edges) {
+                        auto CurTarget = Edge->GetTarget();
+                        if (VisitedStates.find(CurTarget) == VisitedStates.end()) {
+                            VisitedStates.insert(CurTarget);
+                            PathPreds[CurTarget] = CurState;
+                            BFSQueue.push_back(CurTarget);
+                        }
+                    }
+                }
+            }
+
+            if (Found) {
+                deque<PSPermPath::PathElemType> ThePath;
+                auto CurTarget = ActualTarget;
+                
+                while (Origins.find(const_cast<ProductState*>(CurTarget)) == Origins.end()) {
+                    auto Predecessor = PathPreds[CurTarget];
+                    auto const& PredEdges = 
+                        PSHashSet.find(const_cast<ProductState*>(Predecessor))->second;
+                    for (auto Edge : PredEdges) {
+                        if (Edge->GetTarget() == CurTarget) {
+                            ThePath.push_front(Edge);
+                            break;
+                        }
+                    }
+                    CurTarget = Predecessor;
+                }
+
+                vector<PSPermPath::PathElemType> PathVec(ThePath.begin(), ThePath.end());
+                auto Retval = new PSPermPath(CurTarget, PathVec);
+                return Retval;
+            } else {
+                return nullptr;
+            }
+        }
+
+        PSPermPath* ProductStructure::FindPath(const ProductState* Target) const
+        {
+            return FindPath(set<const ProductState*>(InitialStates.begin(),
+                                                     InitialStates.end()),
+                            Target);
+        }
+
+        PSPermPath* ProductStructure::FindPath(const function<bool(const ProductState*)>& 
+                                               TargetPred) const
+        {
+            return FindPath(set<const ProductState*>(InitialStates.begin(),
+                                                     InitialStates.end()),
+                            TargetPred);
+        }
+
+        PSPermPath* ProductStructure::FindPath(const function<const ProductState*
+                                               (const ProductEdgeSetT&)>& TargetEdgePred) const
+        {
+            return FindPath(set<const ProductState*>(InitialStates.begin(),
+                                                     InitialStates.end()),
+                            TargetEdgePred);
+        }
+
+        // Actual shortest paths with cost functions            
+        PSPermPath* 
+        ProductStructure::FindShortestPath(const set<const ProductState*>& Origins,
+                                           const ProductState* Target,
+                                           const function<u32(const ProductState*, 
+                                                              const ProductEdge*)>&
+                                           CostFunction) const
+        {
+            if (PSHashSet.find(const_cast<ProductState*>(Target)) == PSHashSet.end()) {
+                throw ESMCError((string)"Origin not in ProductStructure in call to " + 
+                                "ProductStructure::FindShortestPath()");
+            }
+            return FindShortestPath(Origins,
+                                    [=] (const ProductState* CurState) -> bool
+                                    {
+                                        return (CurState == Target);
+                                    },
+                                    CostFunction);
+        }
+
+        PSPermPath* 
+        ProductStructure::FindShortestPath(const set<const ProductState*>& Origins,
+                                           const function<bool(const ProductState*)>& TargetPred,
+                                           const function<u32(const ProductState*, 
+                                                              const ProductEdge*)>&
+                                           CostFunction) const
+        {
+            return FindShortestPath(Origins,
+                                    [=] (const ProductEdgeSetT& Edges) -> const ProductState*
+                                    {
+                                        for (auto Edge : Edges) {
+                                            if (TargetPred(Edge->GetTarget())) {
+                                                return Edge->GetTarget();
+                                            }
+                                        }
+                                        return nullptr;
+                                    },
+                                    CostFunction);
+        }
+
+        PSPermPath* 
+        ProductStructure::FindShortestPath(const set<const ProductState*>& Origins,
+                                           const function<const ProductState*
+                                           (const ProductEdgeSetT&)>&
+                                           TargetEdgePred,
+                                           const function<u32(const ProductState*, 
+                                                              const ProductEdge*)>&
+                                           CostFunction) const
+        {
+            using boost::heap::fibonacci_heap;
+            using Detail::PSFibDataT;
+            using Detail::PSFibDataCompare;
+
+            typedef boost::heap::compare<PSFibDataCompare> FibHeapCompareT;
+            typedef fibonacci_heap<PSFibDataT, FibHeapCompareT> FibHeapT;
+            
+            FibHeapT PrioQ;
+            unordered_map<const ProductState*, FibHeapT::handle_type> StateToHandle;
+            unordered_map<const ProductState*, const ProductState*> Predecessors;
+
+            const ProductState* ActualTarget = nullptr;
+
+            for (auto Origin: Origins) {
+                if (PSHashSet.find(const_cast<ProductState*>(Origin)) == PSHashSet.end()) {
+                    throw ESMCError((string)"Origin not in Product Structure in call to " + 
+                                    "ProductStructure::FindShortestPath()");
+                }
+                auto Handle = PrioQ.push(PSFibDataT(Origin, 0));
+                StateToHandle[Origin] = Handle;
+            }
+
+            bool ReachedTarget = false;
+
+            while (PrioQ.size() > 0 && !ReachedTarget) {
+                auto CurStateData = PrioQ.top();
+                auto CurState = CurStateData.State;
+                PrioQ.pop();
+
+                auto const& Edges = PSHashSet.find(const_cast<ProductState*>(CurState))->second;
+                ActualTarget = TargetEdgePred(Edges);
+                
+                for (auto Edge : Edges) {
+                    u32 NewDist = CurStateData.DistanceFromOrigin + 
+                        CostFunction(CurState, Edge);
+                    auto NextState = Edge->GetTarget();
+
+                    auto NextStateIt = StateToHandle.find(NextState);
+                    u32 OldDist;
+                    FibHeapT::handle_type NextStateHandle;
+
+                    if (NextStateIt == StateToHandle.end()) {
+                        OldDist = UINT32_MAX;
+                    } else {
+                        NextStateHandle = NextStateIt->second;
+                        OldDist = (*NextStateHandle).DistanceFromOrigin;
+                    }
+
+                    if (NewDist < OldDist) {
+                        if (OldDist != UINT32_MAX) {
+                            (*NextStateHandle).DistanceFromOrigin = NewDist;
+                            PrioQ.increase(NextStateHandle);
+                        } else {
+                            auto Handle = PrioQ.push(PSFibDataT(NextState, NewDist));
+                            StateToHandle[NextState] = Handle;
+                        }
+                        Predecessors[NextState] = CurState;
+                    }
+
+                    if (Edge->GetTarget() == ActualTarget) {
+                        ReachedTarget = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!ReachedTarget) {
+                return nullptr;
+            }
+
+            deque<PSPermPath::PathElemType> ThePath;
+            auto CurTarget = ActualTarget;
+            while (Origins.find(const_cast<ProductState*>(CurTarget)) == Origins.end()) {
+                auto Predecessor = Predecessors[CurTarget];
+                auto const& PredEdges = 
+                    PSHashSet.find(const_cast<ProductState*>(Predecessor))->second;
+                for (auto Edge : PredEdges) {
+                    if (Edge->GetTarget() == CurTarget) {
+                        ThePath.push_front(Edge);
+                        break;
+                    }
+                }
+                CurTarget = Predecessor;
+            }
+
+            vector<PSPermPath::PathElemType> PathVec(ThePath.begin(), ThePath.end());
+            auto Retval = new PSPermPath(CurTarget, PathVec);
+            return Retval;
+        }
+
+        // From the initial states
+        PSPermPath* 
+        ProductStructure::FindShortestPath(const ProductState* Target,
+                                           const function<u32(const ProductState*, 
+                                                              const ProductEdge*)>&
+                                           CostFunction) const
+        {
+            return FindShortestPath(set<const ProductState*>(InitialStates.begin(),
+                                                             InitialStates.end()),
+                                    Target, CostFunction);
+        }
+
+        PSPermPath* 
+        ProductStructure::FindShortestPath(const function<bool(const ProductState*)>& TargetPred,
+                                           const function<u32(const ProductState*, 
+                                                              const ProductEdge*)>&
+                                           CostFunction) const
+        {
+            return FindShortestPath(set<const ProductState*>(InitialStates.begin(),
+                                                             InitialStates.end()),
+                                    TargetPred, CostFunction);
+        }
+
+        PSPermPath* 
+        ProductStructure::FindShortestPath(const function<const ProductState*
+                                           (const ProductEdgeSetT&)>&
+                                           TargetEdgePred,
+                                           const function<u32(const ProductState*, 
+                                                              const ProductEdge*)>&
+                                           CostFunction) const
+        {
+            return FindShortestPath(set<const ProductState*>(InitialStates.begin(),
+                                                             InitialStates.end()),
+                                    TargetEdgePred, CostFunction);
         }
 
     } /* end namespace MC */
