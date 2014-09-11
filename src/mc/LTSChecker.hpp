@@ -165,6 +165,8 @@ namespace ESMC {
 
             inline bool CheckSCCFairness(const ProductState* SCCRoot, 
                                          vector<const ProductState*>& UnfairStates);
+
+            inline unordered_set<const ProductState*> ExpandSCC(const ProductState* SCCRoot);
             inline vector<TraceBase*> MakeFairTrace(const ProductState* SCCRoot);
 
         public:

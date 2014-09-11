@@ -976,13 +976,49 @@ namespace ESMC {
             return Retval;
         }
 
+        inline unordered_set<const ProductState*>
+        LTSChecker::ExpandSCC(const ProductState* SCCRoot)
+        {
+            // A simple BFS to get all the scc nodes
+            unordered_set<const ProductState*> SCCNodes;
+            deque<const ProductState*> BFSQueue;
+            auto SCCID = SCCRoot->Status.InSCC;
+
+            BFSQueue.push_back(SCCRoot);
+            SCCNodes.insert(SCCRoot);
+
+            while (BFSQueue.size() > 0) {
+                auto CurNode = BFSQueue.front();
+                BFSQueue.pop_front();
+
+                auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurNode));
+
+                for (auto Edge : Edges) {
+                    auto Target = Edge->GetTarget();
+                    if (Target->IsInSCC(SCCID) &&
+                        SCCNodes.find(Target) == SCCNodes.end()) {
+                        SCCNodes.insert(Target);
+                        BFSQueue.push_back(Target);
+                    }
+                }
+            }
+
+            return SCCNodes;
+        }
 
         // We have a fair scc, we need to make a fair trace now
         inline vector<TraceBase*> LTSChecker::MakeFairTrace(const ProductState* SCCRoot)
         {
             vector<TraceBase*> Retval;
-            // TODO: implement me
-            return Retval;
+            auto&& ExpandedSCC = ExpandSCC(SCCRoot);
+
+            // Find a permuted path from the initial states
+            // to any node in the expanded SCC
+            auto StemPPath = ThePS->FindPath([&] (const ProductState* State) -> bool 
+                                             {
+                                                 return (ExpandedSCC.find(State) != 
+                                                         ExpandedSCC.end());
+                                             });
         }
 
     } /* end namespace MC */

@@ -128,7 +128,7 @@ int main()
     ServerOutputUpdates.push_back(new LTSAssignSimple(LastReqExp, TheLTS->MakeVal("clear", ClientIDType)));
     ServerOutputUpdates.push_back(new LTSAssignSimple(LastMsgExp, TheLTS->MakeVal("clear", RangeType)));
     auto ServerGuard = TheLTS->MakeOp(LTSOps::OpEQ, LastReqExp, ParamExp);
-    
+
     Server->AddOutputTransitions(Params, TrueExp, "SendState", "InitState", ServerGuard, 
                                  ServerOutputUpdates, "OutMsg", AckMsgType, Params, 
                                  LTSFairnessType::Strong, SplatFairnessType::Individual, 
