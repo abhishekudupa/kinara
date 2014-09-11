@@ -238,22 +238,22 @@ int main()
                                     TheLTS->MakeVar("Count", FAType));
 
     // Invariant that actually holds
-    // auto BodyExp = TheLTS->MakeOp(LTSOps::OpAND, 
-    //                               TheLTS->MakeOp(LTSOps::OpGE, 
-    //                                              ClientDotCount,
-    //                                              ZeroExp),
-    //                               TheLTS->MakeOp(LTSOps::OpLE,
-    //                                              ClientDotCount,
-    //                                              MaxExp));
-
-    // Invariant for buggy
     auto BodyExp = TheLTS->MakeOp(LTSOps::OpAND, 
                                   TheLTS->MakeOp(LTSOps::OpGE, 
                                                  ClientDotCount,
                                                  ZeroExp),
-                                  TheLTS->MakeOp(LTSOps::OpLT,
+                                  TheLTS->MakeOp(LTSOps::OpLE,
                                                  ClientDotCount,
                                                  MaxExp));
+
+    // Invariant for buggy
+    // auto BodyExp = TheLTS->MakeOp(LTSOps::OpAND, 
+    //                               TheLTS->MakeOp(LTSOps::OpGE, 
+    //                                              ClientDotCount,
+    //                                              ZeroExp),
+    //                               TheLTS->MakeOp(LTSOps::OpLT,
+    //                                              ClientDotCount,
+    //                                              MaxExp));
     
     auto QExp = TheLTS->MakeForAll({ ClientIDType }, BodyExp);
 
@@ -330,10 +330,32 @@ int main()
     Monitor->AddTransition("AcceptState", "AcceptState", NotClientCountZero);
     Monitor->Freeze();
 
+    Monitor = Checker->MakeStateBuchiMonitor("FGZero", Params, TrueExp);
+    Monitor->AddState("InitAccState", true, true);
+    Monitor->AddState("OtherState", false, false);
+    Monitor->FreezeStates();
+    
+    Monitor->AddTransition("InitAccState", "InitAccState", NotClientCountZero);
+    Monitor->AddTransition("InitAccState", "OtherState", ClientCountZero);
+    Monitor->AddTransition("OtherState", "InitAccState", NotClientCountZero);
+    Monitor->AddTransition("OtherState", "OtherState", ClientCountZero);
+
     Checker->CheckLiveness("GFZero");
+
+    Checker->CheckLiveness("FGZero");
 
     delete Checker;
 }
 
 // 
 // PingPong.cpp ends here
+
+
+
+
+
+
+
+
+
+
