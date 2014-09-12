@@ -106,7 +106,7 @@ namespace ESMC {
                 // one for each tracked index.
                 // The idea is that we need at least
                 // one state from each set in a counterexample
-                vector<set<const ProductState*>> DotsToConnect;
+                vector<unordered_set<const ProductState*>> Witnesses;
 
             public:
                 FairnessChecker(const LTSFairSetRef& FairSet,
@@ -123,6 +123,7 @@ namespace ESMC {
 
                 bool IsFair() const;
                 bool IsStrongFairness() const;
+                const vector<unordered_set<const ProductState*>>& GetWitnesses() const;
                 const unordered_set<const ProductState*>& GetEnabledStates() const;
             };
 

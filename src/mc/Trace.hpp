@@ -138,6 +138,12 @@ namespace ESMC {
             UnwindPermPath(AQSPermPath* PermPath, 
                            LTSChecker* Checker,
                            vector<TraceElemT>& PathElems);
+            
+            static inline const StateVec*
+            UnwindPermPath(PSPermPath* PermPath,
+                           LTSChecker* Checker,
+                           vector<TraceElemT>& PathElems,
+                           u32& InvPermAlongPath);
 
             static inline unordered_set<const ProductState*> 
             ExpandSCC(const ProductState* SCCRoot, LTSChecker* Checker);
@@ -189,13 +195,14 @@ namespace ESMC {
         public:
             LivenessViolation(const StateVec* InitialState,
                               const vector<TraceElemT>& Stem,
-                              const vector<TraceElemT>& Lasso);
+                              const vector<TraceElemT>& Lasso,
+                              StateVecPrinter* Printer);
             virtual ~LivenessViolation();
 
             const vector<TraceElemT>& GetStem() const;
             const vector<TraceElemT>& GetLasso() const;
 
-            virtual string ToString(u32 Verbosity) const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
         };
 
     } /* end namespace MC */

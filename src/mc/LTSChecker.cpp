@@ -145,7 +145,7 @@ namespace ESMC {
                   ClassID(FairSet->GetEFSM()->GetClassID()),
                   GCmdsToRespondTo(SysIdxSet->GetNumTrackedIndices(), 
                                    vector<bool>(GuardedCommands.size())),
-                  Checker(Checker), DotsToConnect(NumInstances)
+                  Checker(Checker), Witnesses(NumInstances)
             {
                 const u32 NumTrackedIndices = SysIdxSet->GetNumTrackedIndices();
                 for (u32 TrackedIndex = 0; TrackedIndex < NumTrackedIndices; ++TrackedIndex) {
@@ -186,7 +186,7 @@ namespace ESMC {
             {
                 ResetFairness();
                 for (u32 i = 0; i < NumInstances; ++i) {
-                    DotsToConnect[i].clear();
+                    Witnesses[i].clear();
                 }
             }
 
@@ -240,7 +240,7 @@ namespace ESMC {
                             EnabledStates.clear();
                         }
                         if (IsStrong) {
-                            DotsToConnect[InstanceID].insert(NextState);
+                            Witnesses[InstanceID].insert(NextState);
                         }
 
                     } else {
@@ -252,7 +252,7 @@ namespace ESMC {
                 if (!AtLeastOneEnabled) {
                     Disabled = true;
                     if (!IsStrong) {
-                        DotsToConnect[InstanceID].insert(State);
+                        Witnesses[InstanceID].insert(State);
                     }
                 }
             }
@@ -269,6 +269,12 @@ namespace ESMC {
             bool FairnessChecker::IsStrongFairness() const
             {
                 return IsStrong;
+            }
+
+            const vector<unordered_set<const ProductState*>>&
+            FairnessChecker::GetWitnesses() const
+            {
+                return Witnesses;
             }
 
             const unordered_set<const ProductState*>& FairnessChecker::GetEnabledStates() const

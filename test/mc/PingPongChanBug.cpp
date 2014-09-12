@@ -340,22 +340,16 @@ int main()
     Monitor->AddTransition("OtherState", "InitAccState", NotClientCountZero);
     Monitor->AddTransition("OtherState", "OtherState", ClientCountZero);
 
-    Checker->CheckLiveness("GFZero");
+    // Checker->CheckLiveness("GFZero");
 
-    Checker->CheckLiveness("FGZero");
+    Traces = Checker->CheckLiveness("FGZero");
+    
+    for (auto const& Trace : Traces) {
+        cout << Trace->ToString() << endl;
+    }
 
     delete Checker;
 }
 
 // 
 // PingPong.cpp ends here
-
-
-
-
-
-
-
-
-
-
