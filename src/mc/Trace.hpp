@@ -139,13 +139,16 @@ namespace ESMC {
                            LTSChecker* Checker,
                            vector<TraceElemT>& PathElems);
 
+            static inline unordered_set<const ProductState*> 
+            ExpandSCC(const ProductState* SCCRoot, LTSChecker* Checker);
+
         public:
             static SafetyViolation* MakeSafetyViolation(const StateVec* ErrorState,
                                                         LTSChecker* Checker);
             static DeadlockViolation* MakeDeadlockViolation(const StateVec* ErrorState,
                                                             LTSChecker* Checker);
             // Accepts the root of a fair accepting (green) SCC.
-            static LivenessViolation* MakeLivenessViolation(const StateVec* SCCRoot,
+            static LivenessViolation* MakeLivenessViolation(const ProductState* SCCRoot,
                                                             LTSChecker* Checker);
         };
 

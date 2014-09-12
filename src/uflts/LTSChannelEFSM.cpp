@@ -94,7 +94,8 @@ namespace ESMC {
             InitUpdates.push_back(new LTSAssignSimple(CountExp, Mgr->MakeVal("0", CountType)));
             InitUpdates.push_back(new LTSAssignSimple(ArrayExp, Mgr->MakeVal("clear", ArrayType)));
             if (Lossy) {
-                InitUpdates.push_back(new LTSAssignSimple(LastMsgExp, Mgr->MakeVal("clear", ValType)));
+                InitUpdates.push_back(new LTSAssignSimple(LastMsgExp, 
+                                                          Mgr->MakeVal("clear", ValType)));
             }
             InitUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                       Mgr->MakeVal("ChanInitState", StateType)));
@@ -170,7 +171,7 @@ namespace ESMC {
                                                    MessageType);
             } else {
                 vector<LTSAssignRef> Step2Updates;
-                Step2Updates.push_back(new LTSAssignSimple(LastMsgExp, IndexExp));
+                Step2Updates.push_back(new LTSAssignSimple(IndexExp, LastMsgExp));
                 Step2Updates.push_back(new LTSAssignSimple(CountExp,
                                                            Mgr->MakeExpr(LTSOps::OpADD,
                                                                          CountExp, OneExp)));

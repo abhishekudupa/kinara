@@ -75,6 +75,38 @@ namespace ESMC {
             return Printer;
         }
 
+        inline unordered_set<const ProductState*>
+        TraceBase::ExpandSCC(const ProductState* SCCRoot, LTSChecker* Checker)
+        {
+            auto ThePS = Checker->ThePS;
+
+            // A simple BFS to get all the scc nodes
+            unordered_set<const ProductState*> SCCNodes;
+            deque<const ProductState*> BFSQueue;
+            auto SCCID = SCCRoot->Status.InSCC;
+
+            BFSQueue.push_back(SCCRoot);
+            SCCNodes.insert(SCCRoot);
+
+            while (BFSQueue.size() > 0) {
+                auto CurNode = BFSQueue.front();
+                BFSQueue.pop_front();
+
+                auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurNode));
+
+                for (auto Edge : Edges) {
+                    auto Target = Edge->GetTarget();
+                    if (Target->IsInSCC(SCCID) &&
+                        SCCNodes.find(Target) == SCCNodes.end()) {
+                        SCCNodes.insert(Target);
+                        BFSQueue.push_back(Target);
+                    }
+                }
+            }
+
+            return SCCNodes;
+        }
+
         inline const StateVec* 
         TraceBase::UnwindPermPath(AQSPermPath* PermPath, 
                                   LTSChecker* Checker,
@@ -151,6 +183,12 @@ namespace ESMC {
             auto PPath = TheAQS->FindShortestPath(ErrorState);
             auto UnwoundInitState = UnwindPermPath(PPath, Checker, PathElems);
             return new DeadlockViolation(UnwoundInitState, PathElems, Checker->Printer);
+        }
+
+        LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot, 
+                                                            LTSChecker *Checker)
+        {
+            
         }
 
 

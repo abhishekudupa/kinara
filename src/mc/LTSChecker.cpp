@@ -451,17 +451,31 @@ namespace ESMC {
                 // cout << "--------------------------------------------------------" << endl;
                 // Printer->PrintState(NextState, cout);
                 // cout << "--------------------------------------------------------" << endl;
+                // auto TempNextState = NextState->Clone();
                 
                 u32 PermID;
                 auto CanonState = TheCanonicalizer->Canonicalize(NextState, PermID);
-                // auto CanonState = NextState;
+
+                // cout << "Canonicalized Next State:" << endl;
+                // cout << "--------------------------------------------------------" << endl;
+                // if (CanonState->Equals(*TempNextState)) {
+                //     cout << "Canonicalized state is the same as uncanonicalized state!" 
+                //          << endl;
+                // } else {
+                //     Printer->PrintState(CanonState, cout);
+                // }
+                // cout << "--------------------------------------------------------" << endl;
+                // TempNextState->Recycle();
+                
                 
                 auto ExistingState = AQS->Find(CanonState);
 
                 if (ExistingState == nullptr) {
 
                     AQS->Insert(CanonState);
+
                     // cout << "Pushed new successor onto stack." << endl;
+
                     AQS->AddEdge(State, CanonState, PermID, LastFired);
                     DFSStack.push(DFSStackEntry(CanonState));
 
@@ -507,6 +521,10 @@ namespace ESMC {
                 const u32 NumCommands = GuardedCommands.size();
 
                 for (u32 i = 0; i < NumCommands; ++i) {
+
+                    // Clear out the message buffer before continuing
+                    CurState->ClearMsgBuffer();
+
                     auto const& Cmd = GuardedCommands[i];
                     auto NextState = TryExecuteCommand(Cmd, CurState);
                     if (NextState != nullptr) {
@@ -519,6 +537,14 @@ namespace ESMC {
                             AQS->AddEdge(CurState, ExistingState, PermID, i);
                             CanonNextState->Recycle();
                         } else {
+
+                            // cout << "New State:" << endl;
+                            // cout << "-------------------------------------------------------"
+                            //      << endl;
+                            // Printer->PrintState(CanonNextState, cout);
+                            // cout << "-------------------------------------------------------"
+                            //      << endl;                                
+
                             AQS->Insert(CanonNextState);
                             AQS->AddEdge(CurState, CanonNextState, PermID, i);
                             BFSQueue.push_back(CanonNextState);
@@ -967,58 +993,15 @@ namespace ESMC {
                     } else {
                         // Fair, turn this into a counterexample
                         cout << "Found fair accepting SCC" << endl;
-                        return MakeFairTrace(SCCRoot);
+                        auto Trace = TraceBase::MakeLivenessViolation(SCCRoot, this);
+                        Retval.push_back(Trace);
+                        return Retval;
                     }
                 }
             }
 
             cout << "No liveness violations found! :-)" << endl;
             return Retval;
-        }
-
-        inline unordered_set<const ProductState*>
-        LTSChecker::ExpandSCC(const ProductState* SCCRoot)
-        {
-            // A simple BFS to get all the scc nodes
-            unordered_set<const ProductState*> SCCNodes;
-            deque<const ProductState*> BFSQueue;
-            auto SCCID = SCCRoot->Status.InSCC;
-
-            BFSQueue.push_back(SCCRoot);
-            SCCNodes.insert(SCCRoot);
-
-            while (BFSQueue.size() > 0) {
-                auto CurNode = BFSQueue.front();
-                BFSQueue.pop_front();
-
-                auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurNode));
-
-                for (auto Edge : Edges) {
-                    auto Target = Edge->GetTarget();
-                    if (Target->IsInSCC(SCCID) &&
-                        SCCNodes.find(Target) == SCCNodes.end()) {
-                        SCCNodes.insert(Target);
-                        BFSQueue.push_back(Target);
-                    }
-                }
-            }
-
-            return SCCNodes;
-        }
-
-        // We have a fair scc, we need to make a fair trace now
-        inline vector<TraceBase*> LTSChecker::MakeFairTrace(const ProductState* SCCRoot)
-        {
-            vector<TraceBase*> Retval;
-            auto&& ExpandedSCC = ExpandSCC(SCCRoot);
-
-            // Find a permuted path from the initial states
-            // to any node in the expanded SCC
-            auto StemPPath = ThePS->FindPath([&] (const ProductState* State) -> bool 
-                                             {
-                                                 return (ExpandedSCC.find(State) != 
-                                                         ExpandedSCC.end());
-                                             });
         }
 
     } /* end namespace MC */

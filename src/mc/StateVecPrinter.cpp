@@ -227,6 +227,7 @@ namespace ESMC {
             auto Monitor = ThePS->GetMonitor();
             Out << "Tracked Index: " << State->GetIndexID() << endl;
             Out << "Monitor State: " << Monitor->GetStateNameForID(State->GetMonitorState())
+                << (Monitor->IsAccepting(State->GetMonitorState()) ? " (accepting)" : "")
                 << endl;
         }
 
@@ -243,7 +244,8 @@ namespace ESMC {
             auto Monitor = ThePS->GetMonitor();
             Out << "Tracked Index: " << State->GetIndexID() << endl;
             Out << "Monitor State: " << Monitor->GetStateNameForID(State->GetMonitorState())
-                << endl;            
+                << (Monitor->IsAccepting(State->GetMonitorState()) ? " (accepting)" : "")
+                << endl;
         }
     }
 
