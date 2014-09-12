@@ -187,7 +187,7 @@ namespace ESMC {
                                                        "ChanInitState", 
                                                        "LossDecideState",
                                                        Guard, 
-                                                       Updates, 
+                                                       NoCountUpdates, 
                                                        InMsgName, 
                                                        MessageType,
                                                        MessageType);
@@ -198,7 +198,7 @@ namespace ESMC {
                                                        "ChanInitState", 
                                                        "LossDecideState",
                                                        TrueExp, 
-                                                       Updates, 
+                                                       NoCountUpdates,
                                                        InMsgName, 
                                                        MessageType,
                                                        MessageType);
