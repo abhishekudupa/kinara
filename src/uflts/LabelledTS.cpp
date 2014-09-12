@@ -733,7 +733,7 @@ namespace ESMC {
             if (IncludePrimed) {
                 auto PrimedName = Name + "'";
                 NamedTypes[PrimedName] = MsgTypes[PrimedName] = 
-                    Mgr->MakeType<ExprRecordType>(Name, Members);
+                    Mgr->MakeType<ExprRecordType>(PrimedName, Members);
                 TypeToPrimed[MsgTypes[Name]] = MsgTypes[PrimedName];
             }
 
