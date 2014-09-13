@@ -179,10 +179,13 @@ namespace ESMC {
             auto TheCanonicalizer = Checker->TheCanonicalizer;
 
             auto const& GuardedCommands = TheLTS->GetGuardedCmds();
-            auto CurUnwoundState = PermPath->GetOrigin()->GetSVPtr()->Clone();
-            auto UnwoundOrigin = CurUnwoundState;
-            auto const& PPathElems = PermPath->GetPathElems();
+
             u32 InvPermAlongPath = InvPermAlongPathOut;
+            auto InitPermState = PermPath->GetOrigin()->GetSVPtr();
+            auto InitUnwoundState = 
+                TheCanonicalizer->ApplyPermutation(InitPermState, InvPermAlongPath);
+            auto CurUnwoundState = InitUnwoundState;
+            auto const& PPathElems = PermPath->GetPathElems();
 
             auto PermSet = TheCanonicalizer->GetPermSet();
 
@@ -192,8 +195,26 @@ namespace ESMC {
                                                            CurInvPermIt.GetIndex());
                 InvPermAlongPath = InvPermAlongPathIt.GetIndex();
                 auto NextPermState = Edge->GetTarget()->GetSVPtr();
+
+                // cout << "Permuted state:" << endl;
+                // cout << "----------------------------------------------" << endl;
+                // Checker->Printer->PrintState(NextPermState, cout);
+                // cout << endl;
+                // cout << "----------------------------------------------" << endl;
+                
                 auto NextUnwoundState = TheCanonicalizer->ApplyPermutation(NextPermState, 
                                                                            InvPermAlongPath);
+
+                // cout << "Trying to find a command that takes state:" << endl;
+                // cout << "----------------------------------------------" << endl;
+                // Checker->Printer->PrintState(CurUnwoundState, cout);
+                // cout << endl;
+                // cout << "----------------------------------------------" << endl;
+                // cout << "to state:" << endl;
+                // cout << "----------------------------------------------" << endl;
+                // Checker->Printer->PrintState(NextUnwoundState, cout);
+                // cout << endl;
+                // cout << "----------------------------------------------" << endl << endl;
 
                 bool FoundCmd = false;
                 for (auto const& Cmd : GuardedCommands) {
@@ -221,7 +242,7 @@ namespace ESMC {
             }
             
             InvPermAlongPathOut = InvPermAlongPath;
-            return UnwoundOrigin;
+            return InitUnwoundState;
         }
         
         SafetyViolation* TraceBase::MakeSafetyViolation(const StateVec* ErrorState, 
@@ -258,6 +279,8 @@ namespace ESMC {
 
             u32 InvPermAlongPath = 0;
             vector<TraceElemT> StemPathElems;
+
+            cout << "Unwinding Stem..." << endl << endl;
             auto UnwoundOrigin = UnwindPermPath(StemPPath, Checker, 
                                                 StemPathElems, InvPermAlongPath);
             vector<TraceElemT> LoopPathElems;
@@ -315,6 +338,7 @@ namespace ESMC {
                         LoopStates.insert(Edge->GetTarget());
                     }
 
+                    cout << "Unwinding Loop Segment..." << endl << endl;
                     // Unwind this segment
                     (void)UnwindPermPath(PPathSegment, Checker, 
                                          PathSegmentElems, 
@@ -335,6 +359,8 @@ namespace ESMC {
                 auto LoopBackPSegment = ThePS->FindPath(Origins, LoopStartState);
                 
                 // unwind
+                cout << "Unwinding Loop Back Path Segment..." << endl << endl;
+
                 (void)UnwindPermPath(LoopBackPSegment, Checker, 
                                      LoopBackElems, InvPermAlongPath);
                 LoopPathElems.insert(LoopPathElems.end(), LoopBackElems.begin(),
