@@ -252,6 +252,7 @@ namespace ESMC {
             auto TheAQS = Checker->AQS;
             auto PPath = TheAQS->FindShortestPath(ErrorState);
             auto UnwoundInitState = UnwindPermPath(PPath, Checker, PathElems);
+            delete PPath;
             return new SafetyViolation(UnwoundInitState, PathElems, Checker->Printer);
         }
 
@@ -261,6 +262,7 @@ namespace ESMC {
             vector<TraceElemT> PathElems;
             auto TheAQS = Checker->AQS;
             auto PPath = TheAQS->FindShortestPath(ErrorState);
+            delete PPath;
             auto UnwoundInitState = UnwindPermPath(PPath, Checker, PathElems);
             return new DeadlockViolation(UnwoundInitState, PathElems, Checker->Printer);
         }
@@ -280,12 +282,14 @@ namespace ESMC {
             u32 InvPermAlongPath = 0;
             vector<TraceElemT> StemPathElems;
 
-            cout << "Unwinding Stem..." << endl << endl;
+            // cout << "Unwinding Stem..." << endl << endl;
             auto UnwoundOrigin = UnwindPermPath(StemPPath, Checker, 
                                                 StemPathElems, InvPermAlongPath);
             vector<TraceElemT> LoopPathElems;
 
             auto LoopStartState = StemPPath->GetPathElems().back()->GetTarget();
+            delete StemPPath;
+
             unordered_set<const ProductState*> LoopStates;
             
             auto const& FCheckersByClass = Checker->FairnessCheckers;
@@ -338,15 +342,17 @@ namespace ESMC {
                         LoopStates.insert(Edge->GetTarget());
                     }
 
-                    cout << "Unwinding Loop Segment..." << endl << endl;
+                    // cout << "Unwinding Loop Segment..." << endl << endl;
                     // Unwind this segment
                     (void)UnwindPermPath(PPathSegment, Checker, 
                                          PathSegmentElems, 
                                          InvPermAlongPath);
+                    
                     LoopPathElems.insert(LoopPathElems.end(), PathSegmentElems.begin(),
                                          PathSegmentElems.end());
                     // Update the last state
                     LastStateSoFar = PPathSegment->GetPathElems().back()->GetTarget();
+                    delete PPathSegment;
                 }
             }
 
@@ -359,10 +365,12 @@ namespace ESMC {
                 auto LoopBackPSegment = ThePS->FindPath(Origins, LoopStartState);
                 
                 // unwind
-                cout << "Unwinding Loop Back Path Segment..." << endl << endl;
+                // cout << "Unwinding Loop Back Path Segment..." << endl << endl;
 
                 (void)UnwindPermPath(LoopBackPSegment, Checker, 
                                      LoopBackElems, InvPermAlongPath);
+                delete LoopBackPSegment;
+
                 LoopPathElems.insert(LoopPathElems.end(), LoopBackElems.begin(),
                                      LoopBackElems.end());
             }
