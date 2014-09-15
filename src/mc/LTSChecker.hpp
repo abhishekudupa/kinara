@@ -40,6 +40,8 @@
 #if !defined ESMC_LTS_CHECKER_HPP_
 #define ESMC_LTS_CHECKER_HPP_
 
+#include <boost/functional/hash.hpp>
+
 #include "../common/FwdDecls.hpp"
 #include "../uflts/LTSTypes.hpp"
 
@@ -77,6 +79,19 @@ namespace ESMC {
                 void SetLastFired(i64 NewLastFired);
             };
 
+            class PStatePEdgePairHasher
+            {
+            public:
+                inline u64 
+                operator () (const pair<const ProductState*, const ProductEdge*>& ThePair) const
+                {
+                    u64 Retval = 0;
+                    boost::hash_combine(Retval, ThePair.first);
+                    boost::hash_combine(Retval, ThePair.second);
+                    return Retval;
+                }
+            };
+
             class FairnessChecker
             {
             private:
@@ -88,9 +103,9 @@ namespace ESMC {
                 // The system index set
                 SystemIndexSet* SysIdxSet;
                 // Status bits
-                bool Enabled;
-                bool Executed;
-                bool Disabled;
+                vector<bool> Enabled;
+                vector<bool> Executed;
+                vector<bool> Disabled;
                 // The class (process class) id that this
                 // fairness belongs to
                 u32 ClassID;
@@ -101,12 +116,6 @@ namespace ESMC {
                 // not taken
                 unordered_set<const ProductState*> EnabledStates;
                 LTSChecker* Checker;
-                // A set of dots to connect to 
-                // produce a counter-example
-                // one for each tracked index.
-                // The idea is that we need at least
-                // one state from each set in a counterexample
-                vector<unordered_set<const ProductState*>> Witnesses;
 
             public:
                 FairnessChecker(const LTSFairSetRef& FairSet,
@@ -123,7 +132,9 @@ namespace ESMC {
 
                 bool IsFair() const;
                 bool IsStrongFairness() const;
-                const vector<unordered_set<const ProductState*>>& GetWitnesses() const;
+                bool IsEnabled(u32 InstanceID) const;
+                bool IsDisabled(u32 InstanceID) const;
+                bool IsExecuted(u32 InstanceID) const;
                 const unordered_set<const ProductState*>& GetEnabledStates() const;
             };
 

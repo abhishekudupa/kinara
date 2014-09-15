@@ -38,6 +38,7 @@
 // Code:
 
 #include <algorithm>
+#include <sparse_hash_set>
 
 #include "../uflts/LTSTransitions.hpp"
 #include "../uflts/LabelledTS.hpp"
@@ -267,6 +268,16 @@ namespace ESMC {
             return new DeadlockViolation(UnwoundInitState, PathElems, Checker->Printer);
         }
 
+        inline vector<TraceElemT>
+        TraceBase::UnwoundBFS(const ProductState *Root, u32& InvPermAlongPath, 
+                              const unordered_set<const ProductState*>& Bounds, 
+                              const function<const ProductState*(const ProductState*, 
+                                                                 const ProductEdge*)>&
+                              TargetEdgePred)
+        {
+            deque<const ProductState*> BFSQueue;
+        }
+
         LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot, 
                                                             LTSChecker *Checker)
         {
@@ -296,89 +307,94 @@ namespace ESMC {
             auto SysIdxSet = Checker->SysIdxSet;
 
             auto LastStateSoFar = LoopStartState;
-            const u32 MaxSysIdx = SysIdxSet->GetNumTrackedIndices();
-            for (u32 Idx = 0; Idx < MaxSysIdx; ++Idx) {
-                auto ClassID = SysIdxSet->GetClassID(Idx);
-                auto InstanceID = SysIdxSet->GetIndexForClassID(Idx, ClassID);
-                for (auto FChecker : FCheckersByClass[ClassID]) {
-                    vector<TraceElemT> PathSegmentElems;
-                    // Connect the path to some state that satisfies
-                    // this fairness requirement
-                    auto const& AllWitnesses = FChecker->GetWitnesses();
-                    auto const& Targets = AllWitnesses[InstanceID];
+            // const u32 MaxSysIdx = SysIdxSet->GetNumTrackedIndices();
+            // for (u32 Idx = 0; Idx < MaxSysIdx; ++Idx) {
 
-                    if (Targets.size() == 0) {
-                        // No witnesses need to be connected
-                        // i.e., this is a strong fairness requirement
-                        // but none of the guarded commands are actually enabled 
-                        // anywhere in the SCC
-                        continue;
-                    }
+            //     auto ClassID = SysIdxSet->GetClassID(Idx);
+            //     auto InstanceID = SysIdxSet->GetIndexForClassID(Idx, ClassID);
 
-                    // Have we already covered one or more targets?
-                    auto AlreadySat = any_of(LoopStates.begin(), LoopStates.end(), 
-                                             [&] (const ProductState* State) -> bool
-                                             {
-                                                 return (Targets.find(State) != 
-                                                         Targets.end());
-                                             });
-                    if (AlreadySat) {
-                        continue;
-                    }
+            //     for (auto FChecker : FCheckersByClass[ClassID]) {
+
+            //         vector<TraceElemT> PathSegmentElems;
+            //         // Connect the path to some state that satisfies
+            //         // this fairness requirement
+            //         auto const& AllWitnesses = FChecker->GetWitnesses();
+            //         auto const& Targets = AllWitnesses[InstanceID];
+
+            //         if (Targets.size() == 0) {
+            //             // No witnesses need to be connected
+            //             // i.e., this is a strong fairness requirement
+            //             // but none of the guarded commands are actually enabled 
+            //             // anywhere in the SCC
+            //             continue;
+            //         }
+
+            //         // Have we already covered one or more targets?
+            //         auto AlreadySat = any_of(LoopStates.begin(), LoopStates.end(), 
+            //                                  [&] (const ProductState* State) -> bool
+            //                                  {
+            //                                      return (Targets.find(State) != 
+            //                                              Targets.end());
+            //                                  });
+            //         if (AlreadySat) {
+            //             continue;
+            //         }
     
-                    // Not already satisfied
-                    set<const ProductState*> Origins;
-                    Origins.insert(LastStateSoFar);
-                    auto PPathSegment = 
-                        ThePS->FindPath(Origins,
-                                        [&] (const ProductState* State) -> bool
-                                        {
-                                            return (Targets.find(State) != 
-                                                    Targets.end());
-                                        });
+            //         // Not already satisfied
+            //         set<const ProductState*> Origins;
+            //         Origins.insert(LastStateSoFar);
+            //         auto PPathSegment = 
+            //             ThePS->FindPath(Origins,
+            //                             [&] (const ProductState* State) -> bool
+            //                             {
+            //                                 return (Targets.find(State) != 
+            //                                         Targets.end());
+            //                             });
 
-                    auto const& PPathSegmentEdges = PPathSegment->GetPathElems();
-                    for (auto Edge : PPathSegmentEdges) {
-                        LoopStates.insert(Edge->GetTarget());
-                    }
+            //         auto const& PPathSegmentEdges = PPathSegment->GetPathElems();
+            //         for (auto Edge : PPathSegmentEdges) {
+            //             LoopStates.insert(Edge->GetTarget());
+            //         }
 
-                    // cout << "Unwinding Loop Segment..." << endl << endl;
-                    // Unwind this segment
-                    (void)UnwindPermPath(PPathSegment, Checker, 
-                                         PathSegmentElems, 
-                                         InvPermAlongPath);
+            //         // cout << "Unwinding Loop Segment..." << endl << endl;
+            //         // Unwind this segment
+            //         (void)UnwindPermPath(PPathSegment, Checker, 
+            //                              PathSegmentElems, 
+            //                              InvPermAlongPath);
                     
-                    LoopPathElems.insert(LoopPathElems.end(), PathSegmentElems.begin(),
-                                         PathSegmentElems.end());
-                    // Update the last state
-                    LastStateSoFar = PPathSegment->GetPathElems().back()->GetTarget();
-                    delete PPathSegment;
-                }
-            }
+            //         LoopPathElems.insert(LoopPathElems.end(), PathSegmentElems.begin(),
+            //                              PathSegmentElems.end());
+            //         // Update the last state
+            //         LastStateSoFar = PPathSegment->GetPathElems().back()->GetTarget();
+            //         delete PPathSegment;
+            //     }
+            // }
 
-            // Okay! We've satisfied all the fairness requirements!
-            // Just loop back to the original state
-            if (LastStateSoFar != LoopStartState) {
-                vector<TraceElemT> LoopBackElems;
-                set<const ProductState*> Origins;
-                Origins.insert(LastStateSoFar);
-                auto LoopBackPSegment = ThePS->FindPath(Origins, LoopStartState);
+            // // Okay! We've satisfied all the fairness requirements!
+            // // Just loop back to the original state
+            // if (LastStateSoFar != LoopStartState) {
+            //     vector<TraceElemT> LoopBackElems;
+            //     set<const ProductState*> Origins;
+            //     Origins.insert(LastStateSoFar);
+            //     auto LoopBackPSegment = ThePS->FindPath(Origins, LoopStartState);
                 
-                // unwind
-                // cout << "Unwinding Loop Back Path Segment..." << endl << endl;
+            //     // unwind
+            //     // cout << "Unwinding Loop Back Path Segment..." << endl << endl;
 
-                (void)UnwindPermPath(LoopBackPSegment, Checker, 
-                                     LoopBackElems, InvPermAlongPath);
-                delete LoopBackPSegment;
+            //     (void)UnwindPermPath(LoopBackPSegment, Checker, 
+            //                          LoopBackElems, InvPermAlongPath);
+            //     delete LoopBackPSegment;
 
-                LoopPathElems.insert(LoopPathElems.end(), LoopBackElems.begin(),
-                                     LoopBackElems.end());
-            }
+            //     LoopPathElems.insert(LoopPathElems.end(), LoopBackElems.begin(),
+            //                          LoopBackElems.end());
+            // }
 
-            // DONE! construct the return value
-            auto Retval = new LivenessViolation(UnwoundOrigin, StemPathElems,
-                                                LoopPathElems, Checker->Printer);
-            return Retval;
+            // // DONE! construct the return value
+            // auto Retval = new LivenessViolation(UnwoundOrigin, StemPathElems,
+            //                                     LoopPathElems, Checker->Printer);
+            // return Retval;
+
+            return nullptr;
         }
 
 

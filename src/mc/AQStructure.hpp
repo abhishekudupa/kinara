@@ -282,14 +282,17 @@ namespace ESMC {
                                   const StateVec* Target) const;
             AQSPermPath* FindPath(const set<const StateVec*>& Origins, 
                                   const function<bool(const StateVec*)>& TargetPred) const;
+            // On edges
             AQSPermPath* FindPath(const set<const StateVec*>& Origins,
-                                  const function<const StateVec*(const AQSEdgeSetT&)>&
+                                  const function<const StateVec*(const StateVec*, 
+                                                                 const AQSEdge*)>&
                                   TargetEdgePred) const;
 
             // Find a path from one of the initial states
             AQSPermPath* FindPath(const StateVec* Target) const;
             AQSPermPath* FindPath(const function<bool(const StateVec*)>& TargetPred) const;
-            AQSPermPath* FindPath(const function<const StateVec*(const AQSEdgeSetT&)>&
+            AQSPermPath* FindPath(const function<const StateVec*(const StateVec*,
+                                                                 const AQSEdge*)>&
                                   TargetEdgePred) const;
 
             // Shortest path without cost functions
@@ -313,7 +316,8 @@ namespace ESMC {
                                           CostFunction) const;
 
             AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
-                                          const function<const StateVec*(const AQSEdgeSetT&)>& 
+                                          const function<const StateVec*(const StateVec*,
+                                                                         const AQSEdge*)>& 
                                           TargetEdgePred,
                                           const function<u32(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
@@ -325,7 +329,8 @@ namespace ESMC {
             AQSPermPath* FindShortestPath(const function<bool(const StateVec*)>& TargetPred,
                                           const function<u32(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
-            AQSPermPath* FindShortestPath(const function<const StateVec*(const AQSEdgeSetT&)>& 
+            AQSPermPath* FindShortestPath(const function<const StateVec*(const StateVec*,
+                                                                         const AQSEdge*)>& 
                                           TargetEdgePred,
                                           const function<u32(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
@@ -509,12 +514,14 @@ namespace ESMC {
             PSPermPath* FindPath(const set<const ProductState*>& Origins,
                                  const function<bool(const ProductState*)>& TargetPred) const;
             PSPermPath* FindPath(const set<const ProductState*>& Origins,
-                                 const function<const ProductState*(const ProductEdgeSetT&)>&
+                                 const function<const ProductState*(const ProductState*,
+                                                                    const ProductEdge*)>&
                                  TargetEdgePred) const;
             // From the initial states
             PSPermPath* FindPath(const ProductState* Target) const;
             PSPermPath* FindPath(const function<bool(const ProductState*)>& TargetPred) const;
-            PSPermPath* FindPath(const function<const ProductState*(const ProductEdgeSetT&)>&
+            PSPermPath* FindPath(const function<const ProductState*(const ProductState*,
+                                                                    const ProductEdge*)>&
                                  TargetEdgePred) const;
 
             // Shortest paths without cost functions = BFS = FindPath
@@ -536,7 +543,8 @@ namespace ESMC {
                                                             const ProductEdge*)>&
                                          CostFunction) const;
             PSPermPath* FindShortestPath(const set<const ProductState*>& Origins,
-                                         const function<const ProductState*(const ProductEdgeSetT&)>&
+                                         const function<const ProductState*(const ProductState*,
+                                                                            const ProductEdge*)>&
                                          TargetEdgePred,
                                          const function<u32(const ProductState*, 
                                                             const ProductEdge*)>&
@@ -550,7 +558,8 @@ namespace ESMC {
                                          const function<u32(const ProductState*, 
                                                             const ProductEdge*)>&
                                          CostFunction) const;
-            PSPermPath* FindShortestPath(const function<const ProductState*(const ProductEdgeSetT&)>&
+            PSPermPath* FindShortestPath(const function<const ProductState*(const ProductState*,
+                                                                            const ProductEdge*)>&
                                          TargetEdgePred,
                                          const function<u32(const ProductState*, 
                                                             const ProductEdge*)>&

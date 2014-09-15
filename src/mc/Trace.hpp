@@ -145,6 +145,15 @@ namespace ESMC {
                            vector<TraceElemT>& PathElems,
                            u32& InvPermAlongPath);
 
+            static inline vector<TraceElemT> 
+            UnwoundBFS(const ProductState* Root,
+                       u32& InvPermAlongPath,
+                       const unordered_set<const ProductState*>& Bounds,
+                       const function<const ProductState*(const ProductState*,
+                                                          const ProductEdge*)>&
+                       TargetEdgePred);
+                                                        
+
             static inline unordered_set<const ProductState*> 
             ExpandSCC(const ProductState* SCCRoot, LTSChecker* Checker);
 

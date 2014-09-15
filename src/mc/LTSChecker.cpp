@@ -140,12 +140,12 @@ namespace ESMC {
                                              LTSChecker* Checker)
                 : FairSet(FairSet), NumInstances(FairSet->GetNumInstances()),
                   IsStrong(FairSet->GetFairnessType() == FairSetFairnessType::Strong),
-                  SysIdxSet(SysIdxSet), Enabled(false), 
-                  Executed(false), Disabled(false),
+                  SysIdxSet(SysIdxSet), Enabled(false, NumInstances), 
+                  Executed(false, NumInstances), Disabled(false, NumInstances),
                   ClassID(FairSet->GetEFSM()->GetClassID()),
                   GCmdsToRespondTo(SysIdxSet->GetNumTrackedIndices(), 
                                    vector<bool>(GuardedCommands.size())),
-                  Checker(Checker), Witnesses(NumInstances)
+                  Checker(Checker)
             {
                 const u32 NumTrackedIndices = SysIdxSet->GetNumTrackedIndices();
                 for (u32 TrackedIndex = 0; TrackedIndex < NumTrackedIndices; ++TrackedIndex) {
@@ -175,19 +175,17 @@ namespace ESMC {
 
             void FairnessChecker::ResetFairness()
             {
-                Enabled = false;
-                Executed = false;
-                Disabled = false;
-                
+                for (u32 i = 0; i < NumInstances; ++i) {
+                    Enabled[i] = false;
+                    Executed[i] = false;
+                    Disabled[i] = false;
+                }
                 EnabledStates.clear();
             }
 
             void FairnessChecker::ResetFull()
             {
                 ResetFairness();
-                for (u32 i = 0; i < NumInstances; ++i) {
-                    Witnesses[i].clear();
-                }
             }
 
             void FairnessChecker::ProcessSCCState(const ProductState* State,
@@ -222,7 +220,7 @@ namespace ESMC {
                     // cout << "Marking as Enabled, because command "
                     //      << GCmdIndex << " is enabled" << endl;
 
-                    Enabled = true;
+                    Enabled[InstanceID] = true;
                     AtLeastOneEnabled = true;
                     
                     if (NextState->IsInSCC(SCCID)) {
@@ -235,14 +233,10 @@ namespace ESMC {
                         // PermSet->Print(Edge->GetPermutation(), cout);
                         // cout << endl;
 
-                        Executed = true;
+                        Executed[InstanceID] = true;
                         if (EnabledStates.size() > 0) {
                             EnabledStates.clear();
                         }
-                        if (IsStrong) {
-                            Witnesses[InstanceID].insert(NextState);
-                        }
-
                     } else {
                         EnabledStates.insert(State);
                     }
@@ -250,19 +244,26 @@ namespace ESMC {
 
                 // if no commands are enabled, then we're disabled!
                 if (!AtLeastOneEnabled) {
-                    Disabled = true;
-                    if (!IsStrong) {
-                        Witnesses[InstanceID].insert(State);
-                    }
+                    Disabled[InstanceID] = true;
                 }
             }
 
             bool FairnessChecker::IsFair() const
             {
                 if (IsStrong) {
-                    return (!Enabled || Executed);
+                    for (u32 i = 0; i < NumInstances; ++i) {
+                        if (Enabled[i] && !Executed[i]) {
+                            return false;
+                        }
+                    }
+                    return true;
                 } else {
-                    return (Disabled || Executed);
+                    for (u32 i = 0; i < NumInstances; ++i) {
+                        if (!Disabled[i] && !Executed[i]) {
+                            return false;
+                        }
+                    }
+                    return true;
                 }
             }
 
@@ -271,10 +272,19 @@ namespace ESMC {
                 return IsStrong;
             }
 
-            const vector<unordered_set<const ProductState*>>&
-            FairnessChecker::GetWitnesses() const
+            bool FairnessChecker::IsEnabled(u32 InstanceID) const
             {
-                return Witnesses;
+                return Enabled[InstanceID];
+            }
+
+            bool FairnessChecker::IsExecuted(u32 InstanceID) const
+            {
+                return Executed[InstanceID];
+            }
+
+            bool FairnessChecker::IsDisabled(u32 InstanceID) const
+            {
+                return Disabled[InstanceID];
             }
 
             const unordered_set<const ProductState*>& FairnessChecker::GetEnabledStates() const
@@ -792,10 +802,6 @@ namespace ESMC {
                 }
 
                 auto ClassID = SysIdxSet->GetClassID(IndexID);
-                // Reset all the fairness checkers
-                for (auto FChecker : FairnessCheckers[ClassID]) {
-                    FChecker->ResetFairness();
-                }
 
                 // cout << "Checking fairness of SCC with tracked index " << IndexID << endl;
                 DoThreadedBFS(SCCRoot, IndexID);
