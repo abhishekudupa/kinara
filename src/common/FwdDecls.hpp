@@ -153,6 +153,8 @@ namespace ESMC {
         
         // Traces
         typedef pair<LTS::GCmdRef, const StateVec*> TraceElemT;
+        typedef pair<LTS::GCmdRef, const ProductState*> PSTraceElemT;
+
         template <typename STATETYPE> class PermutedPath;
         // A permuted path through the annotated quotient structure
         typedef PermutedPath<StateVec> AQSPermPath;

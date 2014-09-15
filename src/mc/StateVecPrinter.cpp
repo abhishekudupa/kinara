@@ -223,12 +223,9 @@ namespace ESMC {
             for (auto const& Line : Lines) {
                 Out << Line << endl;
             }
-            auto ThePS = ProductState::ThePS;
-            auto Monitor = ThePS->GetMonitor();
+
             Out << "Tracked Index: " << State->GetIndexID() << endl;
-            Out << "Monitor State: " << Monitor->GetStateNameForID(State->GetMonitorState())
-                << (Monitor->IsAccepting(State->GetMonitorState()) ? " (accepting)" : "")
-                << endl;
+            Out << "Monitor State: " << State->GetMonitorState() << endl;
         }
 
         void StateVecPrinter::PrintState(const ProductState* State,
@@ -240,10 +237,41 @@ namespace ESMC {
                 Out << Line << endl;
             }
 
-            auto ThePS = ProductState::ThePS;
+            Out << "Tracked Index: " << State->GetIndexID() << endl;
+            Out << "Monitor State: " << State->GetMonitorState() << endl;
+        }
+
+        void StateVecPrinter::PrintState(const ProductState* State, 
+                                         const ProductStructure* ThePS, 
+                                         ostream& Out) const
+        {
+            auto&& Lines = PrintState(State->GetSVPtr());
+            for (auto const& Line : Lines) {
+                Out << Line << endl;
+            }
+
             auto Monitor = ThePS->GetMonitor();
             Out << "Tracked Index: " << State->GetIndexID() << endl;
-            Out << "Monitor State: " << Monitor->GetStateNameForID(State->GetMonitorState())
+            Out << "Monitor State: " << 
+                Monitor->GetStateNameForID(State->GetMonitorState())
+                << (Monitor->IsAccepting(State->GetMonitorState()) ? " (accepting)" : "")
+                << endl;
+        }
+
+        void StateVecPrinter::PrintState(const ProductState* State, 
+                                         const ProductState* Prev, 
+                                         const ProductStructure* ThePS,
+                                         ostream& Out) const
+        {
+            auto&& Lines = PrintState(State->GetSVPtr(), Prev->GetSVPtr());
+            for (auto const& Line : Lines) {
+                Out << Line << endl;
+            }
+
+            auto Monitor = ThePS->GetMonitor();
+            Out << "Tracked Index: " << State->GetIndexID() << endl;
+            Out << "Monitor State: " << 
+                Monitor->GetStateNameForID(State->GetMonitorState())
                 << (Monitor->IsAccepting(State->GetMonitorState()) ? " (accepting)" : "")
                 << endl;
         }

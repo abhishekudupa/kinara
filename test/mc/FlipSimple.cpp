@@ -56,7 +56,7 @@ int main()
 {
     auto TheLTS = new LabelledTS();
 
-    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 3);
+    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 5);
     auto BoolType = TheLTS->MakeBoolType();
     auto ParamExp = TheLTS->MakeVar("ClientID", ClientIDType);
     vector<ExpT> Params = { ParamExp };

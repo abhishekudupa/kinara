@@ -47,6 +47,8 @@
 #include "../mc/StateVec.hpp"
 #include "../mc/StateVecPrinter.hpp"
 #include "../mc/Compiler.hpp"
+#include "../mc/AQStructure.hpp"
+#include "../mc/IndexSet.hpp"
 
 #include "SymmCanonicalizer.hpp"
 
@@ -62,6 +64,8 @@ namespace ESMC {
         using ESMC::Exprs::ExprSymmetricType;
         using ESMC::LTS::LTSExtensionT;
         using ESMC::LTS::LTSTypeExtensionT;
+        using ESMC::MC::ProductState;
+        using ESMC::MC::ProcessIndexSet;
 
         // Use explicit permutations upto this size
         const u32 MaxExplicitSize = 1024;
@@ -538,6 +542,21 @@ namespace ESMC {
                 Sorter->Sort(Retval);
             }
             return Retval;
+        }
+
+        ProductState* Canonicalizer::ApplyPermutation(const ProductState *InputPS, 
+                                                      u32 PermID, 
+                                                      const ProcessIndexSet* ProcIdxSet) const
+        {
+            auto InputSV = InputPS->GetSVPtr();
+            auto InputTracked = InputPS->GetIndexID();
+
+            auto PermSV = ApplyPermutation(InputSV, PermID);
+            auto ThePermIt = PermSet->GetIterator(PermID);
+            auto ThePerm = ThePermIt.GetPerm();
+            auto PermTracked = ProcIdxSet->Permute(InputTracked, ThePerm);
+            return new ProductState(PermSV, InputPS->GetMonitorState(),
+                                    PermTracked, 0);
         }
 
         StateVec* Canonicalizer::ApplyInvPermutation(const StateVec* InputVector, u32 PermID) const

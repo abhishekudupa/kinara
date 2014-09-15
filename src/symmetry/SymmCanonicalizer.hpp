@@ -55,6 +55,8 @@ namespace ESMC {
         using ESMC::LTS::LabelledTS;
         using ESMC::LTS::ExpT;
         using ESMC::MC::StateVecPrinter;
+        using ESMC::MC::ProductState;
+        using ESMC::MC::ProcessIndexSet;
 
         extern const u32 MaxExplicitSize;
 
@@ -195,6 +197,8 @@ namespace ESMC {
             
             StateVec* Canonicalize(const StateVec* InputVector, u32& PermID) const;
             StateVec* ApplyPermutation(const StateVec* InputVector, u32 PermID) const;
+            ProductState* ApplyPermutation(const ProductState* InputPS, u32 PermID,
+                                           const ProcessIndexSet* ProcIdxSet) const;
             StateVec* ApplyInvPermutation(const StateVec* InputVector, u32 PermID) const;
             StateVec* SortChans(const StateVec* InputVector) const;
             PermutationSet* GetPermSet() const;

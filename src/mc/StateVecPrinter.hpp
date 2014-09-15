@@ -91,9 +91,18 @@ namespace ESMC {
                             const StateVec* PrevStateVector,
                             ostream& Out) const;
 
-            void PrintState(const ProductState* State, ostream& Out) const;
+            void PrintState(const ProductState* State, 
+                            ostream& Out) const;
             void PrintState(const ProductState* State, 
                             const ProductState* Prev, ostream& Out) const;
+
+            void PrintState(const ProductState* State, 
+                            const ProductStructure* ThePS, ostream& Out) const;
+            void PrintState(const ProductState* State, 
+                            const ProductState* Prev, 
+                            const ProductStructure* ThePS,
+                            ostream& Out) const;
+
         };
 
     } /* end namespace MC */

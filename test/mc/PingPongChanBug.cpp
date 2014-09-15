@@ -51,6 +51,7 @@
 #include "../../src/uflts/LTSTransitions.hpp"
 #include "../../src/mc/LTSChecker.hpp"
 #include "../../src/mc/OmegaAutomaton.hpp"
+#include "../../src/mc/Trace.hpp"
 
 using namespace ESMC;
 using namespace LTS;
@@ -61,7 +62,7 @@ int main()
 {
     auto TheLTS = new LabelledTS();
 
-    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 2);
+    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 3);
     auto ParamExp = TheLTS->MakeVar("ClientID", ClientIDType);
     vector<ExpT> Params = { ParamExp };
     auto TrueExp = TheLTS->MakeTrue();

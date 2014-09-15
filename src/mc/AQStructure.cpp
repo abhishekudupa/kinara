@@ -43,6 +43,7 @@
 #include "../uflts/LTSTransitions.hpp"
 
 #include "AQStructure.hpp"
+#include "Trace.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -472,9 +473,6 @@ namespace ESMC {
             return FindShortestPath(set<const StateVec*>(InitStates.begin(), InitStates.end()),
                                     TargetEdgePred, CostFunction);
         }
-
-        // static field of product structure
-        ProductStructure* ProductState::ThePS;
 
         ProductState::ProductState(const StateVec* SVPtr, u32 MonitorState,
                                    u32 IndexID, u32 NumProcesses)

@@ -270,6 +270,7 @@ namespace ESMC {
                 return;
             }
             Frozen = true;
+            u32 GCmdCounter = 0;
             
             // We now compute the product
             // which will be represented as a 
@@ -310,6 +311,7 @@ namespace ESMC {
                 auto&& CPTrans = CrossProduct<LTSTransRef>(TransForCP.begin(), TransForCP.end());
                 for (auto const& CPElem : CPTrans) {                    
                     GuardedCommands.push_back(MakeGuardedCommand(CPElem));
+                    GuardedCommands.back()->SetCmdID(GCmdCounter++);
                 }
             }
 
@@ -334,6 +336,7 @@ namespace ESMC {
                                                          ExprTypeRef::NullPtr,
                                                          -1, ActualFairSet);
                     GuardedCommands.push_back(CurGCmd);
+                    GuardedCommands.back()->SetCmdID(GCmdCounter++);
                 }
             }
 

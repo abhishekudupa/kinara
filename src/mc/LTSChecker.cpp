@@ -54,6 +54,7 @@
 #include "AQStructure.hpp"
 #include "OmegaAutomaton.hpp"
 #include "IndexSet.hpp"
+#include "Trace.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -140,11 +141,12 @@ namespace ESMC {
                                              LTSChecker* Checker)
                 : FairSet(FairSet), NumInstances(FairSet->GetNumInstances()),
                   IsStrong(FairSet->GetFairnessType() == FairSetFairnessType::Strong),
-                  SysIdxSet(SysIdxSet), Enabled(false, NumInstances), 
-                  Executed(false, NumInstances), Disabled(false, NumInstances),
+                  SysIdxSet(SysIdxSet), Enabled(NumInstances, NumInstances), 
+                  Executed(NumInstances, false), Disabled(NumInstances, false),
                   ClassID(FairSet->GetEFSM()->GetClassID()),
                   GCmdsToRespondTo(SysIdxSet->GetNumTrackedIndices(), 
                                    vector<bool>(GuardedCommands.size())),
+                  GCmdIDsToRespondTo(NumInstances),
                   Checker(Checker)
             {
                 const u32 NumTrackedIndices = SysIdxSet->GetNumTrackedIndices();
@@ -161,6 +163,7 @@ namespace ESMC {
                             if (FairObj->GetFairnessSet() == FairSet &&
                                 FairObj->GetInstanceID() == (u32)InstanceID) {
                                 GCmdsToRespondTo[TrackedIndex][i] = true;
+                                GCmdIDsToRespondTo[InstanceID].insert(i);
                             }
                         }
                         ++i;
@@ -290,6 +293,11 @@ namespace ESMC {
             const unordered_set<const ProductState*>& FairnessChecker::GetEnabledStates() const
             {
                 return EnabledStates;
+            }
+
+            const unordered_set<u32>& FairnessChecker::GetCmdIDsToRespondTo(u32 InstanceID) const
+            {
+                return GCmdIDsToRespondTo[InstanceID];
             }
 
         } /* end namespace Detail */
@@ -681,7 +689,6 @@ namespace ESMC {
         {
             deque<ProductState*> BFSQueue;
             ThePS = new ProductStructure(NumProcesses, Monitor);
-            ProductState::ThePS = ThePS;
             auto MonIndexSet = Monitor->GetIndexSet();
             auto PermSet = TheCanonicalizer->GetPermSet();
             

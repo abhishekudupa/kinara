@@ -51,6 +51,7 @@
 #include "LTSChecker.hpp"
 #include "StateVecPrinter.hpp"
 #include "IndexSet.hpp"
+#include "OmegaAutomaton.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -58,57 +59,20 @@ namespace ESMC {
         using LTS::LabelledTS;
         using Symm::Canonicalizer;
 
-        TraceBase::TraceBase(const StateVec* InitialState, StateVecPrinter* Printer)
-            : InitialState(InitialState), Printer(Printer)
+        TraceBase::TraceBase(StateVecPrinter* Printer)
+            : Printer(Printer)
         {
             // Nothing here
         }
 
         TraceBase::~TraceBase()
         {
-            
-        }
-
-        const StateVec* TraceBase::GetInitialState() const
-        {
-            return InitialState;
+            // Nothing here
         }
 
         StateVecPrinter* TraceBase::GetPrinter() const
         {
             return Printer;
-        }
-
-        inline unordered_set<const ProductState*>
-        TraceBase::ExpandSCC(const ProductState* SCCRoot, LTSChecker* Checker)
-        {
-            auto ThePS = Checker->ThePS;
-
-            // A simple BFS to get all the scc nodes
-            unordered_set<const ProductState*> SCCNodes;
-            deque<const ProductState*> BFSQueue;
-            auto SCCID = SCCRoot->Status.InSCC;
-
-            BFSQueue.push_back(SCCRoot);
-            SCCNodes.insert(SCCRoot);
-
-            while (BFSQueue.size() > 0) {
-                auto CurNode = BFSQueue.front();
-                BFSQueue.pop_front();
-
-                auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurNode));
-
-                for (auto Edge : Edges) {
-                    auto Target = Edge->GetTarget();
-                    if (Target->IsInSCC(SCCID) &&
-                        SCCNodes.find(Target) == SCCNodes.end()) {
-                        SCCNodes.insert(Target);
-                        BFSQueue.push_back(Target);
-                    }
-                }
-            }
-
-            return SCCNodes;
         }
 
         inline const StateVec* 
@@ -168,26 +132,24 @@ namespace ESMC {
             return UnwoundOrigin;
         }
 
-
-        // TODO: Templatize this whole mess sometime to avoid 
-        // duplicated code
-        inline const StateVec*
-        TraceBase::UnwindPermPath(PSPermPath* PermPath, LTSChecker* Checker,
-                                  vector<TraceElemT>& PathElems,
+        inline const ProductState*
+        TraceBase::UnwindPermPath(PSPermPath* PermPath, LTSChecker* Checker, 
+                                  vector<PSTraceElemT> &PathElems,
                                   u32& InvPermAlongPathOut)
         {
-            auto TheLTS = Checker->TheLTS;
             auto TheCanonicalizer = Checker->TheCanonicalizer;
+            auto const& GuardedCommands = Checker->GuardedCommands;
+            auto Origin = PermPath->GetOrigin();
+            auto ThePS = Checker->ThePS;
+            auto Monitor = ThePS->GetMonitor();
+            auto ProcIdxSet = Monitor->GetIndexSet();
 
-            auto const& GuardedCommands = TheLTS->GetGuardedCmds();
-
-            u32 InvPermAlongPath = InvPermAlongPathOut;
-            auto InitPermState = PermPath->GetOrigin()->GetSVPtr();
-            auto InitUnwoundState = 
-                TheCanonicalizer->ApplyPermutation(InitPermState, InvPermAlongPath);
-            auto CurUnwoundState = InitUnwoundState;
+            auto CurUnwoundState = TheCanonicalizer->ApplyPermutation(Origin, 
+                                                                      InvPermAlongPathOut, 
+                                                                      ProcIdxSet);
+            auto UnwoundOrigin = CurUnwoundState;
             auto const& PPathElems = PermPath->GetPathElems();
-
+            u32 InvPermAlongPath = InvPermAlongPathOut;
             auto PermSet = TheCanonicalizer->GetPermSet();
 
             for (auto Edge : PPathElems) {
@@ -195,55 +157,266 @@ namespace ESMC {
                 auto InvPermAlongPathIt = PermSet->Compose(InvPermAlongPath, 
                                                            CurInvPermIt.GetIndex());
                 InvPermAlongPath = InvPermAlongPathIt.GetIndex();
-                auto NextPermState = Edge->GetTarget()->GetSVPtr();
+                auto NextPermPS = Edge->GetTarget();
 
-                // cout << "Permuted state:" << endl;
-                // cout << "----------------------------------------------" << endl;
-                // Checker->Printer->PrintState(NextPermState, cout);
-                // cout << endl;
-                // cout << "----------------------------------------------" << endl;
-                
-                auto NextUnwoundState = TheCanonicalizer->ApplyPermutation(NextPermState, 
-                                                                           InvPermAlongPath);
-
-                // cout << "Trying to find a command that takes state:" << endl;
-                // cout << "----------------------------------------------" << endl;
-                // Checker->Printer->PrintState(CurUnwoundState, cout);
-                // cout << endl;
-                // cout << "----------------------------------------------" << endl;
-                // cout << "to state:" << endl;
-                // cout << "----------------------------------------------" << endl;
-                // Checker->Printer->PrintState(NextUnwoundState, cout);
-                // cout << endl;
-                // cout << "----------------------------------------------" << endl << endl;
-
+                auto NextUnwoundPS = TheCanonicalizer->ApplyPermutation(NextPermPS,
+                                                                        InvPermAlongPath,
+                                                                        ProcIdxSet);
+                // find out which command takes us here
                 bool FoundCmd = false;
                 for (auto const& Cmd : GuardedCommands) {
-                    auto CandidateState = TryExecuteCommand(Cmd, CurUnwoundState);
-                    if (CandidateState == nullptr) {
+                    auto CandidateSV = TryExecuteCommand(Cmd, CurUnwoundState->GetSVPtr());
+                    if (CandidateSV == nullptr) {
                         continue;
                     }
-                    auto SortedCandidateState = TheCanonicalizer->SortChans(CandidateState);
-                    CandidateState->Recycle();
-                    if (SortedCandidateState->Equals(*NextUnwoundState)) {
+                    
+                    auto SortedCandidateSV = TheCanonicalizer->SortChans(CandidateSV);
+                    CandidateSV->Recycle();
+
+                    if (SortedCandidateSV->Equals(*(NextUnwoundPS->GetSVPtr()))) {
                         FoundCmd = true;
-                        SortedCandidateState->Recycle();
-                        PathElems.push_back(TraceElemT(Cmd, NextUnwoundState));
+                        SortedCandidateSV->Recycle();
+                        PathElems.push_back(PSTraceElemT(Cmd, NextUnwoundPS));
                         break;
                     }
                 }
 
                 if (!FoundCmd) {
                     throw InternalError((string)"Unable to find a command to compute next " +
-                                        "unwound state.\nAt: " + __FILE__ + ":" + 
+                                        "unwound product state.\nAt: " + __FILE__ + ":" + 
                                         to_string(__LINE__));
                 }
 
-                CurUnwoundState = NextUnwoundState;
+                CurUnwoundState = NextUnwoundPS;
             }
-            
-            InvPermAlongPathOut = InvPermAlongPath;
-            return InitUnwoundState;
+            return UnwoundOrigin;
+        }
+
+        // static methods for liveness traces
+        inline unordered_set<const ProductState*>
+        TraceBase::ExpandSCC(const ProductState* SCCRoot, LTSChecker* Checker)
+        {
+            auto ThePS = Checker->ThePS;
+
+            // A simple BFS to get all the scc nodes
+            unordered_set<const ProductState*> SCCNodes;
+            deque<const ProductState*> BFSQueue;
+            auto SCCID = SCCRoot->Status.InSCC;
+
+            BFSQueue.push_back(SCCRoot);
+            SCCNodes.insert(SCCRoot);
+
+            while (BFSQueue.size() > 0) {
+                auto CurNode = BFSQueue.front();
+                BFSQueue.pop_front();
+
+                auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurNode));
+
+                for (auto Edge : Edges) {
+                    auto Target = Edge->GetTarget();
+                    if (Target->IsInSCC(SCCID) &&
+                        SCCNodes.find(Target) == SCCNodes.end()) {
+                        SCCNodes.insert(Target);
+                        BFSQueue.push_back(Target);
+                    }
+                }
+            }
+
+            return SCCNodes;
+        }
+
+        inline pair<const ProductState*, const ProductState*>
+        TraceBase::DoUnwoundBFS(const ProductState* Root, const LTSChecker* Checker, 
+                                u32& InvPermAlongPathOut,
+                                const function<bool(u32, const ProductState*)>& MatchPred,
+                                vector<PSTraceElemT>& PathElems, 
+                                const unordered_set<const ProductState*>& Bounds)
+        {
+            auto ThePS = Checker->ThePS;
+            auto TheCanonicalizer = Checker->TheCanonicalizer;
+            auto PermSet = TheCanonicalizer->GetPermSet();
+            auto Monitor = ThePS->GetMonitor();
+            auto ProcIdxSet = Monitor->GetIndexSet();
+            auto const& GuardedCmds = Checker->GuardedCommands;
+            const u32 NumGuardedCmds = GuardedCmds.size();
+
+            deque<Detail::PSPermPairT> BFSQueue;
+            Detail::PSPermSetT VisitedStates;
+            Detail::UnwoundPredMapT PredMap;
+
+            auto InvPermAlongPath = InvPermAlongPathOut;
+            auto OriginPair = make_pair(Root, InvPermAlongPath);
+            VisitedStates.insert(OriginPair);
+            BFSQueue.push_back(OriginPair);
+
+            bool ReachedTarget = false;
+            Detail::PSPermPairT TargetPSPerm;
+
+            while (BFSQueue.size() > 0 && !ReachedTarget) {
+                auto CurPair = BFSQueue.front();
+                BFSQueue.pop_front();
+
+                auto CurPermPS = CurPair.first;
+                auto CurPermIndex = CurPair.second;
+
+                auto CurUnwoundPS = TheCanonicalizer->ApplyPermutation(CurPermPS, 
+                                                                       CurPermIndex, 
+                                                                       ProcIdxSet);
+                auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurPermPS));
+                
+                for (auto Edge : Edges) {
+                    auto NextPermPS = Edge->GetTarget();
+                    
+                    if (Bounds.find(NextPermPS) == Bounds.end()) {
+                        // Not part of the scc, ignore
+                        continue;
+                    }
+                    
+                    auto EdgePermIndex = Edge->GetPermutation();
+                    auto EdgeInvPermIt = PermSet->GetIteratorForInv(EdgePermIndex);
+                    auto NextPermIt = PermSet->Compose(CurPermIndex, EdgeInvPermIt.GetIndex());
+                    auto NextPermIndex = NextPermIt.GetIndex();
+                    
+                    auto NextPair = make_pair(NextPermPS, NextPermIndex);
+                    if (VisitedStates.find(NextPair) != VisitedStates.end()) {
+                        // Already visited
+                        continue;
+                    }
+
+                    VisitedStates.insert(NextPair);
+                    BFSQueue.push_back(NextPair);
+
+                    auto NextUnwoundPS = TheCanonicalizer->ApplyPermutation(NextPermPS,
+                                                                            NextPermIndex,
+                                                                            ProcIdxSet);
+
+                    // Find out which command takes us from the current 
+                    // unwound product state to the next unwound product 
+                    // state
+                    bool FoundCmd = false;
+                    for (u32 i = 0; i < NumGuardedCmds; ++i) {
+                        auto const& Cmd = GuardedCmds[i];
+                        auto CandidateSV = TryExecuteCommand(Cmd, CurUnwoundPS->GetSVPtr());
+                        if (CandidateSV == nullptr) {
+                            continue;
+                        }
+
+                        auto SortedCandidateSV = TheCanonicalizer->SortChans(CandidateSV);
+                        CandidateSV->Recycle();
+
+                        if (SortedCandidateSV->Equals(*(NextUnwoundPS->GetSVPtr()))) {
+                            FoundCmd = true;
+                            SortedCandidateSV->Recycle();
+                            PredMap[NextPair] = make_pair(i, CurPair);
+
+                            if (MatchPred(i, NextUnwoundPS)) {
+                                ReachedTarget = true;
+                                TargetPSPerm = NextPair;
+                            }
+                            break;
+                        }
+                    }
+
+                    // Delete the unwound product state, we'll recreate it 
+                    // later anyway
+                    NextUnwoundPS->GetSVPtr()->Recycle();
+                    delete NextUnwoundPS;
+
+                    if (!FoundCmd) {
+                        throw InternalError((string)"Unable to find a command to compute next " +
+                                            "unwound product state.\nAt: " + __FILE__ + ":" + 
+                                            to_string(__LINE__));
+                    }
+
+                    if (ReachedTarget) {
+                        break;
+                    }
+                }
+
+                // Delete the current unwound product state as well
+                CurUnwoundPS->GetSVPtr()->Recycle();
+                delete CurUnwoundPS;
+            }
+
+            // We now need to assemble a path from the predecessors
+            auto CurPair = TargetPSPerm;
+            auto it = PredMap.find(CurPair);
+            auto CurPermPS = CurPair.first;
+            auto CurPerm = CurPair.second;
+            auto CurUnwoundPS = TheCanonicalizer->ApplyPermutation(CurPermPS, CurPerm,
+                                                                   ProcIdxSet);
+            InvPermAlongPathOut = CurPerm;
+
+            vector<PSTraceElemT> RTraceElems;
+            while (it != PredMap.end()) {
+                // Unwind the pred state
+                auto UnwoundEdge = it->second;
+                auto PredStatePerm = UnwoundEdge.second;
+                auto CmdID = UnwoundEdge.first;
+                auto PredPermPS = PredStatePerm.first;
+                auto PredPerm = PredStatePerm.second;
+
+                auto UnwoundPredPS = TheCanonicalizer->ApplyPermutation(PredPermPS, PredPerm,
+                                                                        ProcIdxSet);
+                RTraceElems.push_back(PSTraceElemT(GuardedCmds[CmdID], CurUnwoundPS));
+                it = PredMap.find(PredStatePerm);
+                CurUnwoundPS = UnwoundPredPS;
+            }
+
+            PathElems.clear();
+            PathElems.insert(PathElems.end(), RTraceElems.rbegin(), RTraceElems.rend());
+            return (make_pair(CurUnwoundPS, TargetPSPerm.first));
+        }
+
+        inline bool 
+        TraceBase::CheckFairnessSat(const vector<PSTraceElemT>& PathSoFar, 
+                                    const Detail::FairnessChecker* FChecker,
+                                    const vector<GCmdRef>& GuardedCmds,
+                                    u32 InstanceID)
+        {
+            if (FChecker->IsStrongFairness()) {
+                if (!FChecker->IsEnabled(InstanceID)) {
+                    return true;
+                } else {
+                    auto const& SatCmds = FChecker->GetCmdIDsToRespondTo(InstanceID);
+                    for (auto const& TraceElem : PathSoFar) {
+                        if (SatCmds.find(TraceElem.first->GetCmdID()) != SatCmds.end()) {
+                            return true;
+                        }
+                    }
+                    return false;
+                }
+            } else {
+                if (!FChecker->IsDisabled(InstanceID)) {
+                    auto const& SatCmds = FChecker->GetCmdIDsToRespondTo(InstanceID);
+                    for (auto const& TraceElem : PathSoFar) {
+                        if (SatCmds.find(TraceElem.first->GetCmdID()) != SatCmds.end()) {
+                            return true;
+                        }
+                    }
+                    return false;                    
+                } else {
+                    auto const& SatCmds = FChecker->GetCmdIDsToRespondTo(InstanceID);
+                    for (auto const& TraceElem : PathSoFar) {
+                        auto PS = TraceElem.second;
+                        bool FoundOne = false;
+                        for (auto SatCmd : SatCmds) {
+                            auto NS = TryExecuteCommand(GuardedCmds[SatCmd], 
+                                                        PS->GetSVPtr());
+                            if (NS != nullptr) {
+                                NS->Recycle();
+                                FoundOne = true;
+                                break;
+                            }
+                        }
+                        if (!FoundOne) {
+                            return true;
+                        }
+                    }
+
+                    return false;
+                }
+            }
         }
         
         SafetyViolation* TraceBase::MakeSafetyViolation(const StateVec* ErrorState, 
@@ -263,138 +436,121 @@ namespace ESMC {
             vector<TraceElemT> PathElems;
             auto TheAQS = Checker->AQS;
             auto PPath = TheAQS->FindShortestPath(ErrorState);
-            delete PPath;
             auto UnwoundInitState = UnwindPermPath(PPath, Checker, PathElems);
+            delete PPath;
             return new DeadlockViolation(UnwoundInitState, PathElems, Checker->Printer);
         }
 
-        inline vector<TraceElemT>
-        TraceBase::UnwoundBFS(const ProductState *Root, u32& InvPermAlongPath, 
-                              const unordered_set<const ProductState*>& Bounds, 
-                              const function<const ProductState*(const ProductState*, 
-                                                                 const ProductEdge*)>&
-                              TargetEdgePred)
-        {
-            deque<const ProductState*> BFSQueue;
-        }
-
         LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot, 
-                                                            LTSChecker *Checker)
+                                                            LTSChecker* Checker)
         {
-            auto&& ExpandedSCC = ExpandSCC(SCCRoot, Checker);
             auto ThePS = Checker->ThePS;
+            auto const& GuardedCmds = Checker->GuardedCommands;
 
+            auto&& SCCNodes = ExpandSCC(SCCRoot, Checker);
+            u32 InvPermAlongPath = 0;
+            
+            // Find a path from the initial state to one of the SCC nodes
             auto StemPPath = ThePS->FindPath([&] (const ProductState* State) -> bool
                                              {
-                                                 return (ExpandedSCC.find(State) != 
-                                                         ExpandedSCC.end());
+                                                 return (SCCNodes.find(State) != 
+                                                         SCCNodes.end());
                                              });
+            vector<PSTraceElemT> StemPath;
+            auto InitState = UnwindPermPath(StemPPath, Checker, StemPath, InvPermAlongPath);
 
-            u32 InvPermAlongPath = 0;
-            vector<TraceElemT> StemPathElems;
+            auto StartOfLoop = StemPath.back().second;
+            auto CurEndOfPath = StemPPath->GetPathElems().back()->GetTarget();
 
-            // cout << "Unwinding Stem..." << endl << endl;
-            auto UnwoundOrigin = UnwindPermPath(StemPPath, Checker, 
-                                                StemPathElems, InvPermAlongPath);
-            vector<TraceElemT> LoopPathElems;
-
-            auto LoopStartState = StemPPath->GetPathElems().back()->GetTarget();
             delete StemPPath;
 
-            unordered_set<const ProductState*> LoopStates;
-            
-            auto const& FCheckersByClass = Checker->FairnessCheckers;
-            auto SysIdxSet = Checker->SysIdxSet;
+            auto const& AllFCheckers = Checker->FairnessCheckers;
+            vector<PSTraceElemT> PathSoFar;
 
-            auto LastStateSoFar = LoopStartState;
-            // const u32 MaxSysIdx = SysIdxSet->GetNumTrackedIndices();
-            // for (u32 Idx = 0; Idx < MaxSysIdx; ++Idx) {
-
-            //     auto ClassID = SysIdxSet->GetClassID(Idx);
-            //     auto InstanceID = SysIdxSet->GetIndexForClassID(Idx, ClassID);
-
-            //     for (auto FChecker : FCheckersByClass[ClassID]) {
-
-            //         vector<TraceElemT> PathSegmentElems;
-            //         // Connect the path to some state that satisfies
-            //         // this fairness requirement
-            //         auto const& AllWitnesses = FChecker->GetWitnesses();
-            //         auto const& Targets = AllWitnesses[InstanceID];
-
-            //         if (Targets.size() == 0) {
-            //             // No witnesses need to be connected
-            //             // i.e., this is a strong fairness requirement
-            //             // but none of the guarded commands are actually enabled 
-            //             // anywhere in the SCC
-            //             continue;
-            //         }
-
-            //         // Have we already covered one or more targets?
-            //         auto AlreadySat = any_of(LoopStates.begin(), LoopStates.end(), 
-            //                                  [&] (const ProductState* State) -> bool
-            //                                  {
-            //                                      return (Targets.find(State) != 
-            //                                              Targets.end());
-            //                                  });
-            //         if (AlreadySat) {
-            //             continue;
-            //         }
-    
-            //         // Not already satisfied
-            //         set<const ProductState*> Origins;
-            //         Origins.insert(LastStateSoFar);
-            //         auto PPathSegment = 
-            //             ThePS->FindPath(Origins,
-            //                             [&] (const ProductState* State) -> bool
-            //                             {
-            //                                 return (Targets.find(State) != 
-            //                                         Targets.end());
-            //                             });
-
-            //         auto const& PPathSegmentEdges = PPathSegment->GetPathElems();
-            //         for (auto Edge : PPathSegmentEdges) {
-            //             LoopStates.insert(Edge->GetTarget());
-            //         }
-
-            //         // cout << "Unwinding Loop Segment..." << endl << endl;
-            //         // Unwind this segment
-            //         (void)UnwindPermPath(PPathSegment, Checker, 
-            //                              PathSegmentElems, 
-            //                              InvPermAlongPath);
+            for (auto const& FCheckers : AllFCheckers) {
+                for (auto FChecker : FCheckers) {
+                    const u32 NumInstances = FChecker->NumInstances;
                     
-            //         LoopPathElems.insert(LoopPathElems.end(), PathSegmentElems.begin(),
-            //                              PathSegmentElems.end());
-            //         // Update the last state
-            //         LastStateSoFar = PPathSegment->GetPathElems().back()->GetTarget();
-            //         delete PPathSegment;
-            //     }
-            // }
+                    for (u32 InstanceID = 0; InstanceID < NumInstances; ++InstanceID) {
+                        // Check if this fairness is already satisfied
+                        auto AlreadySat = CheckFairnessSat(PathSoFar, FChecker, 
+                                                           GuardedCmds, InstanceID);
+                        if (AlreadySat) {
+                            continue;
+                        }
 
-            // // Okay! We've satisfied all the fairness requirements!
-            // // Just loop back to the original state
-            // if (LastStateSoFar != LoopStartState) {
-            //     vector<TraceElemT> LoopBackElems;
-            //     set<const ProductState*> Origins;
-            //     Origins.insert(LastStateSoFar);
-            //     auto LoopBackPSegment = ThePS->FindPath(Origins, LoopStartState);
-                
-            //     // unwind
-            //     // cout << "Unwinding Loop Back Path Segment..." << endl << endl;
+                        vector<PSTraceElemT> CurElems;
+                        function<bool(u32, const ProductState*)> MatchPred;
+                        auto const& SatCmds = FChecker->GetCmdIDsToRespondTo(InstanceID);
+                        // extend this path
+                        if (FChecker->IsStrongFairness()) {
+                            if (FChecker->IsEnabled(InstanceID)) {
+                                MatchPred = 
+                                    [&] (u32 CmdID, const ProductState* State) -> bool
+                                    {
+                                        return (SatCmds.find(CmdID) != SatCmds.end());
+                                    };
+                            }
+                            // if not then, we're trivially satisfied
+                        } else {
+                            if (!FChecker->IsDisabled(InstanceID)) {
+                                MatchPred = 
+                                    [&] (u32 CmdID, const ProductState* State) -> bool
+                                    {
+                                        return (SatCmds.find(CmdID) != SatCmds.end());
+                                    };
 
-            //     (void)UnwindPermPath(LoopBackPSegment, Checker, 
-            //                          LoopBackElems, InvPermAlongPath);
-            //     delete LoopBackPSegment;
+                            } else {
+                                MatchPred =
+                                    [&] (u32 CmdID, const ProductState* State) -> bool
+                                    {
+                                        for (auto SatCmdID : SatCmds) {
+                                            auto NS = TryExecuteCommand(GuardedCmds[SatCmdID], 
+                                                                        State->GetSVPtr());
+                                            if (NS != nullptr) {
+                                                NS->Recycle();
+                                                return false;
+                                            }
+                                        }
+                                        return true;
+                                    };
+                            }
+                        }
 
-            //     LoopPathElems.insert(LoopPathElems.end(), LoopBackElems.begin(),
-            //                          LoopBackElems.end());
-            // }
+                        auto CurPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath, 
+                                                    MatchPred, CurElems, SCCNodes);
 
-            // // DONE! construct the return value
-            // auto Retval = new LivenessViolation(UnwoundOrigin, StemPathElems,
-            //                                     LoopPathElems, Checker->Printer);
-            // return Retval;
+                        CurPair.first->GetSVPtr()->Recycle();
+                        delete CurPair.first;
 
-            return nullptr;
+                        CurEndOfPath = CurPair.second;
+                        PathSoFar.insert(PathSoFar.end(), CurElems.begin(), CurElems.end());
+                    }
+                }
+            }
+
+            vector<PSTraceElemT> LoopBack;
+            // Now connect this path back to the original state
+            auto FinalPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
+                                          [&] (u32 CmdID, const ProductState* State) -> bool
+                                          {
+                                              auto SVPtr1 = State->GetSVPtr();
+                                              auto SVPtr2 = StartOfLoop->GetSVPtr();
+                                              return (SVPtr1->Equals(*SVPtr2) &&
+                                                      State->GetMonitorState() ==
+                                                      StartOfLoop->GetMonitorState() &&
+                                                      State->GetIndexID() == 
+                                                      StartOfLoop->GetIndexID());
+                                          },
+                                          LoopBack, SCCNodes);
+
+            FinalPair.first->GetSVPtr()->Recycle();
+            delete FinalPair.first;
+
+            PathSoFar.insert(PathSoFar.end(), LoopBack.begin(), LoopBack.end());
+            
+            return (new LivenessViolation(InitState, StemPath, PathSoFar,
+                                          Checker->Printer, ThePS));
         }
 
 
@@ -403,7 +559,7 @@ namespace ESMC {
         SafetyViolation::SafetyViolation(const StateVec* InitialState,
                                          const vector<TraceElemT>& TraceElems,
                                          StateVecPrinter* Printer)
-            : TraceBase(InitialState, Printer), TraceElems(TraceElems)
+            : TraceBase(Printer), InitialState(InitialState), TraceElems(TraceElems)
         {
             // Nothing here
         }
@@ -457,42 +613,62 @@ namespace ESMC {
             return sstr.str();
         }
 
+        DeadlockViolation::DeadlockViolation(const StateVec* InitialState,
+                                             const vector<TraceElemT>& TraceElems,
+                                             StateVecPrinter* Printer)
+            : SafetyViolation(InitialState, TraceElems, Printer)
+        {
+            // Nothing here
+        }
+
         DeadlockViolation::~DeadlockViolation()
         {
             // Nothing here
         }
 
         // Implementation of LivenessViolation
-        LivenessViolation::LivenessViolation(const StateVec* InitialState,
-                                             const vector<TraceElemT>& StemElems,
-                                             const vector<TraceElemT>& LoopElems,
-                                             StateVecPrinter* Printer)
-            : SafetyViolation(InitialState, StemElems, Printer), 
-              LoopElems(LoopElems)
+        LivenessViolation::LivenessViolation(const ProductState* InitialState,
+                                             const vector<PSTraceElemT>& StemElems,
+                                             const vector<PSTraceElemT>& LoopElems,
+                                             StateVecPrinter* Printer,
+                                             const ProductStructure* ThePS)
+            : TraceBase(Printer), InitialState(InitialState), ThePS(ThePS),
+              StemPath(StemElems), LoopPath(LoopElems)
         {
             // Nothing here
         }
-
+        
+        // We assume that all statevectors are cloned
+        // and the product states are free to be deleted
         LivenessViolation::~LivenessViolation()
         {
-            for (auto const& LoopElem : LoopElems) {
-                LoopElem.second->Recycle();
+            InitialState->GetSVPtr()->Recycle();
+            delete InitialState;
+
+            for (auto const& StemElem: StemPath) {
+                StemElem.second->GetSVPtr()->Recycle();
+                delete StemElem.second;
+            }
+
+            for (auto const& LoopElem : LoopPath) {
+                LoopElem.second->GetSVPtr()->Recycle();
+                delete LoopElem.second;
             }
         }
 
         string LivenessViolation::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
-            sstr << "Trace to Liveness violation with " << TraceElems.size()
-                 << " steps in stem and " << LoopElems.size() << " steps in the loop:" 
-                 << endl << endl;
+            sstr << "Trace to liveness violation with " << StemPath.size()
+                 << " steps in the stem and " << LoopPath.size() 
+                 << " steps in the loop:" << endl;
             sstr << "Initial State (in full)" << endl;
             sstr << "-----------------------------------------------------" << endl;
-            Printer->PrintState(InitialState, sstr);
+            Printer->PrintState(InitialState, ThePS, sstr);
             sstr << "-----------------------------------------------------" << endl << endl;
-
+            
             auto PrevState = InitialState;
-            for (auto const& TraceElem : TraceElems) {
+            for (auto const& TraceElem : StemPath) {
                 auto const& MsgType = TraceElem.first->GetMsgType();
                 auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
                 if (Verbosity < 1) {
@@ -505,40 +681,40 @@ namespace ESMC {
                 }
                 sstr << "Obtained next state (delta from previous state):" << endl;
                 sstr << "-----------------------------------------------------" << endl;
-                Printer->PrintState(TraceElem.second, PrevState, sstr);
-                sstr << "-----------------------------------------------------" << endl << endl;
-                PrevState = TraceElem.second;
-            }
-
-            sstr << "Last state of the stem, also first state of loop (in full):" << endl;
-            sstr << "-----------------------------------------------------" << endl;
-            Printer->PrintState(PrevState, sstr);
-            sstr << "-----------------------------------------------------" << endl << endl;
-
-            for (auto const& TraceElem : LoopElems) {
-                auto const& MsgType = TraceElem.first->GetMsgType();
-                auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
-                if (Verbosity < 1) {
-                    sstr << "Fired Guarded Command with label: " 
-                         << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() : 
-                             "(internal transition)") << endl;
-                } else {
-                    sstr << "Fired Guarded Command:" << endl;
-                    sstr << TraceElem.first->ToString() << endl;
-                }
-                sstr << "Obtained next state (delta from previous state):" << endl;
-                sstr << "-----------------------------------------------------" << endl;
-                Printer->PrintState(TraceElem.second, PrevState, sstr);
+                Printer->PrintState(TraceElem.second, PrevState, ThePS, sstr);
                 sstr << "-----------------------------------------------------" << endl << endl;
                 PrevState = TraceElem.second;                
             }
 
-            sstr << "Loop back state of the loop, same as first state of " 
-                 << "the loop above (in full):" << endl;
+            sstr << "First state of the loop (in full), which is same as last state of " 
+                 << "the stem printed above:" << endl;
             sstr << "-----------------------------------------------------" << endl;
-            Printer->PrintState(PrevState, sstr);
+            Printer->PrintState(PrevState, ThePS, sstr);
             sstr << "-----------------------------------------------------" << endl << endl;
+            
+            for (auto const& TraceElem : LoopPath) {
+                auto const& MsgType = TraceElem.first->GetMsgType();
+                auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
+                if (Verbosity < 1) {
+                    sstr << "Fired Guarded Command with label: " 
+                         << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() : 
+                             "(internal transition)") << endl;
+                } else {
+                    sstr << "Fired Guarded Command:" << endl;
+                    sstr << TraceElem.first->ToString() << endl;
+                }
+                sstr << "Obtained next state (delta from previous state):" << endl;
+                sstr << "-----------------------------------------------------" << endl;
+                Printer->PrintState(TraceElem.second, PrevState, ThePS, sstr);
+                sstr << "-----------------------------------------------------" << endl << endl;
+                PrevState = TraceElem.second;
+            }
 
+            sstr << "Loop back state, same as first state of loop above (in full):"
+                 << endl;
+            sstr << "-----------------------------------------------------" << endl;
+            Printer->PrintState(PrevState, ThePS, sstr);
+            sstr << "-----------------------------------------------------" << endl << endl;
             return sstr.str();
         }
 

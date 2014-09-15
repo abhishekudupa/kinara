@@ -41,6 +41,8 @@
 #define ESMC_TRACE_HPP_
 
 #include <vector>
+#include <boost/functional/hash.hpp>
+#include <unordered_set>
 
 #include "../common/FwdDecls.hpp"
 
@@ -49,6 +51,33 @@ namespace ESMC {
 
         using LTS::LabelledTS;
         using Symm::Canonicalizer;
+
+        namespace Detail {
+
+            class FairnessChecker;
+
+            class PSPermPairHasher
+            {
+            public:
+                inline u64 operator () (const pair<const ProductState*, u32>& ThePair) const
+                {
+                    u64 Retval = 0;
+                    boost::hash_combine(Retval, ThePair.first);
+                    boost::hash_combine(Retval, ThePair.second);
+                    return Retval;
+                }
+            };
+
+            typedef pair<const ProductState*, u32> PSPermPairT;
+            // for storing unwound states
+            typedef unordered_set<PSPermPairT, PSPermPairHasher> PSPermSetT;
+            typedef pair<u32, PSPermPairT> UnwoundEdgeT;
+            // For storing unwound edges
+            // unwound(first) <-- unwound(second.second) with command (second.first)
+            typedef unordered_map<PSPermPairT, UnwoundEdgeT,
+                                  PSPermPairHasher> UnwoundPredMapT;
+
+        } /* end namespace detail */
 
         // A straightforward permuted path
         // where states are successors modulo some 
@@ -91,14 +120,12 @@ namespace ESMC {
         class TraceBase 
         {
         protected:
-            const StateVec* InitialState;
             StateVecPrinter* Printer;
             
         public:
-            TraceBase(const StateVec* InitialState, StateVecPrinter* Printer);
+            TraceBase(StateVecPrinter* Printer);
             virtual ~TraceBase();
             
-            const StateVec* GetInitialState() const;
             StateVecPrinter* GetPrinter() const;
 
             virtual string ToString(u32 Verbosity = 0) const = 0;
@@ -139,23 +166,32 @@ namespace ESMC {
                            LTSChecker* Checker,
                            vector<TraceElemT>& PathElems);
             
-            static inline const StateVec*
+            static inline const ProductState*
             UnwindPermPath(PSPermPath* PermPath,
                            LTSChecker* Checker,
-                           vector<TraceElemT>& PathElems,
+                           vector<PSTraceElemT>& PathElems,
                            u32& InvPermAlongPath);
 
-            static inline vector<TraceElemT> 
-            UnwoundBFS(const ProductState* Root,
-                       u32& InvPermAlongPath,
-                       const unordered_set<const ProductState*>& Bounds,
-                       const function<const ProductState*(const ProductState*,
-                                                          const ProductEdge*)>&
-                       TargetEdgePred);
-                                                        
-
-            static inline unordered_set<const ProductState*> 
+            static inline unordered_set<const ProductState*>
             ExpandSCC(const ProductState* SCCRoot, LTSChecker* Checker);
+
+            // returns a pair of states:
+            // 1. The state corresponding to the unwinding of the root state
+            // 2. The permuted state in the product structure corresponding 
+            //    to the last unwound state in the path (for subsequent calls to 
+            //    DoUnwoundBFS)
+            static inline pair<const ProductState*, const ProductState*>
+            DoUnwoundBFS(const ProductState* Root, 
+                         const LTSChecker* Checker,
+                         u32& InvPermAlongPathOut,
+                         const function<bool(u32, const ProductState*)>& MatchPred,
+                         vector<PSTraceElemT>& PathElems,
+                         const unordered_set<const ProductState*>& Bounds);
+
+            static inline bool CheckFairnessSat(const vector<PSTraceElemT>& PathSoFar,
+                                                const Detail::FairnessChecker* FChecker,
+                                                const vector<GCmdRef>& GuardedCmds,
+                                                u32 InstanceID);
 
         public:
             static SafetyViolation* MakeSafetyViolation(const StateVec* ErrorState,
@@ -169,47 +205,57 @@ namespace ESMC {
 
         class SafetyViolation : public TraceBase
         {
+            friend class TraceBase;
+
         protected:
+            const StateVec* InitialState;
             vector<TraceElemT> TraceElems;
 
-        public:
             SafetyViolation(const StateVec* InitialState,
                             const vector<TraceElemT>& TraceElems,
                             StateVecPrinter* Printer);
-            virtual ~SafetyViolation();
 
+        public:
+            virtual ~SafetyViolation();
+            const StateVec* GetInitialState() const;
             const vector<TraceElemT>& GetTraceElems() const;
             virtual string ToString(u32 Verbosity = 0) const override;
         };
 
         class DeadlockViolation : public SafetyViolation
         {
+            friend class TraceBase;
+
+        protected:
+            DeadlockViolation(const StateVec* InitialState,
+                              const vector<TraceElemT>& TraceElems,
+                              StateVecPrinter* Printer);
         public:
-            using SafetyViolation::SafetyViolation;
             virtual ~DeadlockViolation();
         };
 
-        class LivenessViolation : public SafetyViolation
+        class LivenessViolation : public TraceBase
         {
+            friend class TraceBase;
+
         private:
-            // The loop begins from the last state in the TraceElems
-            // i.e., the first element in the vector LoopElems
-            // represents the command to be executed from the 
-            // last state in the stem (TraceElems), and the state resulting 
-            // from that
-            // The last state in LoopElems is the same as the last state in
-            // the stem (TraceElems)
-            vector<TraceElemT> LoopElems;
+            const ProductState* InitialState;
+            const ProductStructure* ThePS;
+            vector<PSTraceElemT> StemPath;
+            vector<PSTraceElemT> LoopPath;
+
+            LivenessViolation(const ProductState* InitialState,
+                              const vector<PSTraceElemT>& Stem,
+                              const vector<PSTraceElemT>& Lasso,
+                              StateVecPrinter* Printer,
+                              const ProductStructure* ThePS);
 
         public:
-            LivenessViolation(const StateVec* InitialState,
-                              const vector<TraceElemT>& Stem,
-                              const vector<TraceElemT>& Lasso,
-                              StateVecPrinter* Printer);
             virtual ~LivenessViolation();
 
-            const vector<TraceElemT>& GetStem() const;
-            const vector<TraceElemT>& GetLasso() const;
+            const ProductState* GetInitialState() const;
+            const vector<PSTraceElemT>& GetStem() const;
+            const vector<PSTraceElemT>& GetLoop() const;
 
             virtual string ToString(u32 Verbosity = 0) const override;
         };

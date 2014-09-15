@@ -94,6 +94,8 @@ namespace ESMC {
 
             class FairnessChecker
             {
+                friend class ESMC::MC::TraceBase;
+
             private:
                 LTSFairSetRef FairSet;
                 // How many instances do I have
@@ -112,6 +114,9 @@ namespace ESMC {
                 // Guarded commands I need to respond to
                 // for each tracked index
                 vector<vector<bool>> GCmdsToRespondTo;
+                // Same info as above, but in the form of 
+                // sets
+                vector<unordered_set<u32>> GCmdIDsToRespondTo;
                 // Set of states where I'm enabled, but 
                 // not taken
                 unordered_set<const ProductState*> EnabledStates;
@@ -136,6 +141,7 @@ namespace ESMC {
                 bool IsDisabled(u32 InstanceID) const;
                 bool IsExecuted(u32 InstanceID) const;
                 const unordered_set<const ProductState*>& GetEnabledStates() const;
+                const unordered_set<u32>& GetCmdIDsToRespondTo(u32 InstanceID) const;
             };
 
         } /* end namespace Detail */

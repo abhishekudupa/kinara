@@ -52,7 +52,6 @@
 #include "../common/FwdDecls.hpp"
 
 #include "StateVec.hpp"
-#include "Trace.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -370,8 +369,6 @@ namespace ESMC {
             mutable i32 LowLink;
             mutable vector<bool> TrackingBits;
 
-            static ProductStructure* ThePS;
-
         public:
             ProductState(const StateVec* SVPtr, u32 MonitorState,
                          u32 IndexID, u32 NumProcesses);
@@ -432,6 +429,17 @@ namespace ESMC {
                                          const ProductState* Ptr2) const
                 {
                     return (*Ptr1 == *Ptr2);
+                }
+            };
+
+            class ProductStatePtrFullEquals
+            {
+                inline bool operator () (const ProductState* Ptr1, 
+                                         const ProductState* Ptr2) const
+                {
+                    return (Ptr1->GetMonitorState() == Ptr2->GetMonitorState() &&
+                            Ptr1->GetIndexID() == Ptr2->GetIndexID() &&
+                            Ptr1->GetSVPtr()->Equals(*(Ptr2->GetSVPtr())));
                 }
             };
 

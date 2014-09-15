@@ -213,6 +213,7 @@ namespace ESMC {
             i32 MsgTypeID;
             vector<LTSFairObjRef> FairnessObjs;
             vector<LTSFairSetRef> FairnessSets;
+            mutable u32 CmdID;
 
         public:
             LTSGuardedCommand(const ExpT& Guard,
@@ -227,6 +228,8 @@ namespace ESMC {
             i32 GetMsgTypeID() const;
             const vector<LTSFairObjRef>& GetFairnessObjs() const;
             const vector<LTSFairSetRef>& GetFairnessSets() const;
+            u32 GetCmdID() const;
+            void SetCmdID(u32 CmdID) const;
             string ToString() const;
         };
 

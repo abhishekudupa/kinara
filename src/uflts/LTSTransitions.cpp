@@ -284,6 +284,16 @@ namespace ESMC {
             FairnessSets.insert(FairnessSets.begin(), FairSets.begin(), FairSets.end());
         }
 
+        u32 LTSGuardedCommand::GetCmdID() const
+        {
+            return CmdID;
+        }
+
+        void LTSGuardedCommand::SetCmdID(u32 CmdID) const
+        {
+            this->CmdID = CmdID;
+        }
+
         LTSGuardedCommand::~LTSGuardedCommand()
         {
             // Nothing here
