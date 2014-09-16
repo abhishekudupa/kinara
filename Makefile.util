@@ -38,6 +38,8 @@ FLEX=flex
 
 default: debug
 
+all: eopt eoptlto debug
+
 opt:
 	@echo "Building opt flavor..."
 	@OPTFLAGS="-O2" BUILD_SUFFIX=opt $(MAKE) --no-print-directory toplevel
@@ -60,7 +62,7 @@ eprof:
 
 optlto:
 	@echo "Building optlto flavor..."
-	@OPTFLAGS="-O2 -flto -flto-compression-level=9" BUILD_SUFFIX=opt $(MAKE) --no-print-directory toplevel
+	@OPTFLAGS="-O2 -flto -flto-compression-level=9" BUILD_SUFFIX=lto $(MAKE) --no-print-directory toplevel
 
 proflto:
 	@echo "Building proflto flavor..."
@@ -68,7 +70,7 @@ proflto:
 
 eoptlto:
 	@echo "Building eoptlto flavor..."
-	@OPTFLAGS="-O3 -flto -flto-compression-level=9" LTO_BUILD="yes" BUILD_SUFFIX=opt $(MAKE) --no-print-directory toplevel
+	@OPTFLAGS="-O3 -flto -flto-compression-level=9" LTO_BUILD="yes" BUILD_SUFFIX=lto $(MAKE) --no-print-directory toplevel
 
 eproflto:
 	@echo "Building eproflto flavor..."
@@ -76,7 +78,7 @@ eproflto:
 
 fulllto:
 	@echo "Building fulllto flavor..."
-	@OPTFLAGS="-O3 -pg -flto -flto-compression-level=9" LTO_BUILD="yes" FULL_LTO_BUILD="yes" BUILD_SUFFIX=opt $(MAKE) --no-print-directory toplevel
+	@OPTFLAGS="-O3 -pg -flto -flto-compression-level=9" LTO_BUILD="yes" FULL_LTO_BUILD="yes" BUILD_SUFFIX=lto $(MAKE) --no-print-directory toplevel
 
 fullltoprof:
 	@echo "Building fullltoprof flavor..."
@@ -205,12 +207,15 @@ clean:
 	rm -rf $(BASE_OBJ_DIR)/debug/*
 	rm -rf $(BASE_OBJ_DIR)/opt/*
 	rm -rf $(BASE_OBJ_DIR)/prof/*
+	rm -rf $(BASE_OBJ_DIR)/lto/*
 	rm -rf $(BASE_LIB_DIR)/debug/*
 	rm -rf $(BASE_LIB_DIR)/opt/*
 	rm -rf $(BASE_LIB_DIR)/prof/*
+	rm -rf $(BASE_LIB_DIR)/lto/*
 	rm -rf $(BASE_BIN_DIR)/debug/*
 	rm -rf $(BASE_BIN_DIR)/opt/*
 	rm -rf $(BASE_BIN_DIR)/prof/*
+	rm -rf $(BASE_BIN_DIR)/lto/*
 
 distclean: clean
 	$(foreach lib,$(PROJECT_EXT_LIBS), \
