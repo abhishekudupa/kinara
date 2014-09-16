@@ -105,6 +105,8 @@ namespace ESMC {
         class DetEFSM;
 
         template <typename E> class LTSTermSemantizer;
+        class LTSLoweredContext;
+        typedef CSmartPtr<LTSLoweredContext> LTSLCRef;
 
         class LTSAssignBase;
         class LTSAssignSimple;

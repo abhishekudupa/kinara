@@ -41,6 +41,16 @@
 #if !defined ESMC_LTS_TERM_SEMANTICIZER_HPP_
 #define ESMC_LTS_TERM_SEMANTICIZER_HPP_
 
+#include <unordered_map>
+#include <set>
+#include <vector>
+#include <z3.h>
+#include <map>
+
+#include <boost/algorithm/string.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/multiprecision/cpp_int.hpp>
+
 #include "../common/FwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
@@ -50,14 +60,6 @@
 #include "../expr/Expressions.hpp"
 #include "../expr/ExprTypes.hpp"
 
-#include <boost/algorithm/string.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/multiprecision/cpp_int.hpp>
-
-#include <unordered_map>
-#include <set>
-#include <vector>
-#include <z3.h>
 
 namespace ESMC {
     namespace LTS {
@@ -98,6 +100,7 @@ namespace ESMC {
             static const i64 OpTemporalF = 1022;
             static const i64 OpTemporalG = 1023;
         };
+
 
         namespace Detail {
             using namespace ESMC::Exprs;
@@ -150,6 +153,8 @@ namespace ESMC {
                 operator Z3_ast () const;
                 Z3_ast GetAST() const;
                 const Z3Ctx& GetCtx() const;
+
+                static Z3Expr NullExpr;
             };
 
             class Z3Sort
@@ -185,8 +190,41 @@ namespace ESMC {
                 operator Z3_sort () const;
                 Z3_sort GetSort() const;
                 const Z3Ctx& GetCtx() const;
-            };
 
+                static Z3Sort NullSort;
+            };
+        } /* end namespace Detail */
+
+        using namespace Detail;
+        using namespace Exprs;
+
+        // A context class for remembering type info
+        // etc about lowered expressions, so that if and when
+        // the lowered expressions are raised, we can give them
+        // appropriate types
+        class LTSLoweredContext : public RefCountable
+        {
+        private:
+            mutable map<ExprTypeRef, Z3Sort> LTSTypeToSort;
+            mutable map<string, ExprTypeRef> VarNameToLTSType;
+            Z3Ctx Ctx;
+            mutable vector<Z3Expr> Assumptions;
+
+        public:
+            LTSLoweredContext();
+            virtual ~LTSLoweredContext();
+
+            const Z3Sort& GetZ3Sort(const ExprTypeRef& LTSType) const;
+            void AddZ3Sort(const ExprTypeRef& LTSType, const Z3Sort& Sort) const;
+            const ExprTypeRef& GetLTSType(const string& VarName) const;
+            void AddLTSType(const string& VarName, const ExprTypeRef& LTSType) const;
+            void AddAssumption(const Z3Expr& Assumption) const;
+            const vector<Z3Expr>& GetAssumptions() const;
+            void ClearAssumptions() const;
+            const Z3Ctx& GetZ3Ctx() const;
+        };
+
+        namespace Detail {
 
             template <typename E, template <typename> class S>
             class TypeChecker : public ExpressionVisitorBase<E, S>
@@ -310,32 +348,20 @@ namespace ESMC {
                                       const ExprTypeRef& IntType);
             };
 
-            // A context object for lowered expressions
-            // so we can reconstruct the types accurately
-            // when called upon to raise the expression
-
-            // All we need to remember is the mapping from 
-            // ground terms (variables) to the higher level types
-
-            typedef CSmartPtr<map<string, ExprTypeRef>> LTSTermExprCtxT;
-
             template <typename E, template <typename> class S>
             class Lowerer : public ExpressionVisitorBase<E, S>
             {
             private:
-                map<ExprTypeRef, Z3Sort> TypeToSort;
                 const UFID2TypeMapT& UFMap;
                 vector<Z3Expr> ExpStack;
-                Z3Ctx Ctx;
-                LTSTermExprCtxT& ExpCtx;
                 typedef Expr<E, S> ExpT;
-                vector<Z3Expr> Assumptions;
+                LTSLCRef LTSCtx;
 
                 inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp);
                 inline const Z3Sort& LowerType(const ExprTypeRef& Type);
 
             public:
-                Lowerer(const UFID2TypeMapT& UFMap, LTSTermExprCtxT& ExpCtx);
+                Lowerer(const UFID2TypeMapT& UFMap, const LTSLCRef& LTSCtx);
                 virtual ~Lowerer();
 
                 inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
@@ -348,7 +374,7 @@ namespace ESMC {
                 inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
                                                                Exp) override;
                 
-                static inline ExpT Do(const ExpT& Exp, LTSTermExprCtxT& ExpCtx);
+                static inline ExpT Do(const ExpT& Exp, const LTSLCRef& LTSCtx);
             };
 
             // Implementation of type checker
@@ -1101,7 +1127,8 @@ namespace ESMC {
 
             template <typename E, template <typename> class S>
             static inline vector<Expr<E, S>> PurgeBool(const vector<Expr<E, S>>& ExpVec, 
-                                                       const bool Value, const ExprTypeRef& BoolType)
+                                                       const bool Value, 
+                                                       const ExprTypeRef& BoolType)
             {
                 vector<Expr<E, S>> Retval;
                 const string PurgeString = Value ? "true" : "false";
@@ -1340,8 +1367,9 @@ namespace ESMC {
                     if (CheckAllConstant(SimpChildren)) {
                         i64 SumVal = 0;
                         for (auto const& Exp : SimpChildren) {
-                            auto Val = boost::lexical_cast<i64>(Exp->template 
-                                                                SAs<ConstExpression>()->GetConstValue());
+                            auto Val = 
+                                boost::lexical_cast<i64>(Exp->template 
+                                                         SAs<ConstExpression>()->GetConstValue());
                             SumVal += Val;
                         }
                         ExpStack.push_back(Mgr->MakeVal(to_string(SumVal), IntType));
@@ -1357,10 +1385,11 @@ namespace ESMC {
 
                 case LTSOps::OpSUB:
                     if (CheckAllConstant(SimpChildren)) {
-                        i64 DiffVal = (boost::lexical_cast<i64>(SimpChildren[0]->template
-                                                                SAs<ConstExpression>()->GetConstValue()) -
-                                       boost::lexical_cast<i64>(SimpChildren[1]->template 
-                                                                SAs<ConstExpression>()->GetConstValue()));
+                        i64 DiffVal = 
+                            (boost::lexical_cast<i64>(SimpChildren[0]->template
+                                                      SAs<ConstExpression>()->GetConstValue()) -
+                             boost::lexical_cast<i64>(SimpChildren[1]->template 
+                                                      SAs<ConstExpression>()->GetConstValue()));
                         ExpStack.push_back(Mgr->MakeVal(to_string(DiffVal), IntType));
                     } else {
                         if (SimpChildren[1]->template As<ConstExpression>() != nullptr &&
@@ -1388,8 +1417,9 @@ namespace ESMC {
                     if (CheckAllConstant(SimpChildren)) {
                         i64 ProdVal = 1;
                         for (auto const& Exp : SimpChildren) {
-                            auto Val = boost::lexical_cast<i64>(Exp->template 
-                                                                SAs<ConstExpression>()->GetConstValue());
+                            auto Val = 
+                                boost::lexical_cast<i64>(Exp->template 
+                                                         SAs<ConstExpression>()->GetConstValue());
                             ProdVal *= Val;
                         }
                         ExpStack.push_back(Mgr->MakeVal(to_string(ProdVal), IntType));
@@ -1412,22 +1442,25 @@ namespace ESMC {
                     if (CheckAllConstant(SimpChildren)) {
                         i64 DivVal;
                         if (OpCode == LTSOps::OpDIV) {
-                            DivVal = (boost::lexical_cast<i64>(SimpChildren[0]->template 
-                                                               SAs<ConstExpression>()->GetConstValue()) /
-                                      boost::lexical_cast<i64>(SimpChildren[1]->template
-                                                               SAs<ConstExpression>()->GetConstValue()));
+                            DivVal = 
+                                (boost::lexical_cast<i64>(SimpChildren[0]->template 
+                                                          SAs<ConstExpression>()->GetConstValue()) /
+                                 boost::lexical_cast<i64>(SimpChildren[1]->template
+                                                          SAs<ConstExpression>()->GetConstValue()));
                         } else {
-                            DivVal = (boost::lexical_cast<i64>(SimpChildren[0]->template 
-                                                               SAs<ConstExpression>()->GetConstValue()) %
-                                      boost::lexical_cast<i64>(SimpChildren[1]->template
-                                                               SAs<ConstExpression>()->GetConstValue()));
+                            DivVal = 
+                                (boost::lexical_cast<i64>(SimpChildren[0]->template 
+                                                          SAs<ConstExpression>()->GetConstValue()) %
+                                 boost::lexical_cast<i64>(SimpChildren[1]->template
+                                                          SAs<ConstExpression>()->GetConstValue()));
                             
                         }
                         ExpStack.push_back(Mgr->MakeVal(to_string(DivVal), IntType));
                     } else {
                         if (SimpChildren[1]->template As<ConstExpression>() != nullptr) {
-                            auto Val = boost::lexical_cast<i64>(SimpChildren[1]->template 
-                                                                SAs<ConstExpression>()->GetConstValue());
+                            auto Val = 
+                                boost::lexical_cast<i64>(SimpChildren[1]->template 
+                                                         SAs<ConstExpression>()->GetConstValue());
                             if (Val == 0) {
                                 throw ExprTypeError("Division by zero during simplification");
                             } else if (Val == 1) {
@@ -1448,10 +1481,12 @@ namespace ESMC {
                 case LTSOps::OpLT:
                 case LTSOps::OpLE:
                     if (CheckAllConstant(SimpChildren)) {
-                        auto Val1 = boost::lexical_cast<i64>(SimpChildren[0]->template
-                                                             SAs<ConstExpression>()->GetConstValue());
-                        auto Val2 = boost::lexical_cast<i64>(SimpChildren[1]->template
-                                                             SAs<ConstExpression>()->GetConstValue());
+                        auto Val1 = 
+                            boost::lexical_cast<i64>(SimpChildren[0]->template
+                                                     SAs<ConstExpression>()->GetConstValue());
+                        auto Val2 = 
+                            boost::lexical_cast<i64>(SimpChildren[1]->template
+                                                     SAs<ConstExpression>()->GetConstValue());
                         string ResString;
                         if (OpCode == LTSOps::OpGT) {
                             ResString = Val1 > Val2 ? "true" : "false"; 
@@ -1519,8 +1554,8 @@ namespace ESMC {
 
             // Implementation of Lowerer
             template <typename E, template <typename> class S>
-            Lowerer<E, S>::Lowerer(const UFID2TypeMapT& UFMap, LTSTermExprCtxT& ExpCtx)
-                : UFMap(UFMap), Ctx(new Z3CtxWrapper())
+            Lowerer<E, S>::Lowerer(const UFID2TypeMapT& UFMap, const LTSLCRef& LTSCtx)
+                : UFMap(UFMap), LTSCtx(LTSCtx)
             {
                 // Nothing here
             }
@@ -1535,9 +1570,10 @@ namespace ESMC {
             inline const Z3Sort&
             Lowerer<E, S>::LowerType(const ExprTypeRef& Type)
             {
-                auto it = TypeToSort.find(Type);
-                if (it != TypeToSort.end()) {
-                    return it->second;
+                auto Ctx = LTSCtx->GetZ3Ctx();
+                auto CachedSort = LTSCtx->GetZ3Sort(Type);
+                if (CachedSort != Z3Sort::NullSort) {
+                    return CachedSort;
                 }
 
                 Z3Sort LoweredSort;
@@ -1634,8 +1670,8 @@ namespace ESMC {
                                     "\" into a Z3 type. Perhaps it's unbounded?");
                 }
 
-                TypeToSort[Type] = LoweredSort;
-                return TypeToSort[Type];
+                LTSCtx->AddZ3Sort(Type, LoweredSort);
+                return LTSCtx->GetZ3Sort(Type);
             }
 
             template <typename E, template <typename> class S>
@@ -1644,7 +1680,11 @@ namespace ESMC {
             {
                 auto const& Type = Exp->GetVarType();
                 auto const& Name = Exp->GetVarName();
-                (*ExpCtx)[Name] = Type;
+                if (LTSCtx->GetLTSType(Name) == ExprTypeRef::NullPtr) {
+                    LTSCtx->AddLTSType(Name, Type);
+                }
+
+                auto Ctx = LTSCtx->GetZ3Ctx();
 
                 auto LoweredType = LowerType(Type);
                 auto Z3Sym = Z3_mk_string_symbol(*Ctx, Name.c_str());
@@ -1666,7 +1706,7 @@ namespace ESMC {
                     AndArgs[0] = LowExp;
                     AndArgs[1] = HighExp;
 
-                    Assumptions.push_back(Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs)));
+                    LTSCtx->AddAssumption(Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs)));
                     delete[] AndArgs;
                 }
 
@@ -1679,6 +1719,7 @@ namespace ESMC {
             {
                 auto const& Type = Exp->GetConstType();
                 auto const& Val = Exp->GetConstValue();
+                auto Ctx = LTSCtx->GetZ3Ctx();
 
                 if (Type->template Is<ExprIntType>()) {
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_numeral(*Ctx, Val.c_str(), 
@@ -1722,6 +1763,7 @@ namespace ESMC {
             {
                 ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
                 const u32 NumChildren = Exp->GetChildren().size();
+                auto Ctx = LTSCtx->GetZ3Ctx();
 
                 auto LoweredChildren = new Z3_ast[NumChildren];
                 vector<Z3Expr> LChildren;
@@ -1839,7 +1881,6 @@ namespace ESMC {
         public:
             typedef LTSOps Ops;
             typedef Exprs::Expr<E, ESMC::LTS::LTSTermSemanticizer> ExpT;
-            typedef Detail::LTSTermExprCtxT ExprContextT;
             typedef Detail::Z3Expr LExpT;
             typedef Exprs::ExprTypeRef TypeT;
             static const TypeT InvalidType;
@@ -1857,9 +1898,8 @@ namespace ESMC {
                                                      const vector<TypeT>& DomTypes,
                                                      const TypeT& RangeType);
 
-            // Functions which DO NOT have an implementation
             inline ExpT RaiseExpr(const LExpT& LExp);
-            inline LExpT LowerExpr(const ExpT& Exp, ExprContextT& ExpCtx);
+            inline LExpT LowerExpr(const ExpT& Exp, const LTSLCRef& ExpCtx);
             inline ExpT ElimQuantifiers(const ExpT& Exp);
         };
 
@@ -1976,7 +2016,7 @@ namespace ESMC {
 
         template <typename E>
         inline typename LTSTermSemanticizer<E>::LExpT
-        LTSTermSemanticizer<E>::LowerExpr(const ExpT& Exp, ExprContextT& ExprCtx)
+        LTSTermSemanticizer<E>::LowerExpr(const ExpT& Exp, const LTSLCRef& LTSCtx)
         {
             throw ESMCError((string)"LowerExpr() not implemented in LTSTermSemanticizer");
         }

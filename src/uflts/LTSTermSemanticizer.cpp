@@ -136,6 +136,8 @@ namespace ESMC {
             }
 
             // Implementation of Z3Expr
+            Z3Expr Z3Expr::NullExpr;
+
             Z3Expr::Z3Expr()
                 : Ctx(Z3Ctx::NullPtr), AST(nullptr)
             {
@@ -220,6 +222,8 @@ namespace ESMC {
             }
 
             // implementation of Z3Sort
+            Z3Sort Z3Sort::NullSort;
+
             Z3Sort::Z3Sort()
                 : Ctx(Z3Ctx::NullPtr), Sort(nullptr)
             {
@@ -336,6 +340,81 @@ namespace ESMC {
             }
 
         } /* end namespace Detail */
+
+        // The LTSLoweredContext implementation
+        
+        using namespace Detail;
+
+        LTSLoweredContext::LTSLoweredContext()
+            : Ctx(new Z3CtxWrapper())
+        {
+            // Nothing here
+        }
+
+        LTSLoweredContext::~LTSLoweredContext()
+        {
+            // Nothing here
+        }
+
+        const Z3Sort& LTSLoweredContext::GetZ3Sort(const ExprTypeRef& LTSType) const
+        {
+            auto it = LTSTypeToSort.find(LTSType);
+            if (it == LTSTypeToSort.end()) {
+                return Z3Sort::NullSort;
+            } else {
+                return it->second;
+            }
+        }
+
+        void LTSLoweredContext::AddZ3Sort(const ExprTypeRef& LTSType, 
+                                          const Z3Sort& Sort) const
+        {
+            if (GetZ3Sort(LTSType) != Z3Sort::NullSort) {
+                throw ExprTypeError((string)"Z3 sort for type \"" + LTSType->ToString() + 
+                                    "\" already exists");
+            }
+            LTSTypeToSort[LTSType] = Sort;
+        }
+
+        const ExprTypeRef& LTSLoweredContext::GetLTSType(const string& VarName) const
+        {
+            auto it = VarNameToLTSType.find(VarName);
+            if (it == VarNameToLTSType.end()) {
+                return ExprTypeRef::NullPtr;
+            } else {
+                return it->second;
+            }
+        }
+
+        void LTSLoweredContext::AddLTSType(const string& VarName, const ExprTypeRef& LTSType) const
+        {
+            if (GetLTSType(VarName) != ExprTypeRef::NullPtr) {
+                throw ExprTypeError((string)"Error, variable named \"" + VarName + "\"" + 
+                                    " has already been registed with a type in the context!");
+            } 
+            VarNameToLTSType[VarName] = LTSType;
+        }
+
+        void LTSLoweredContext::AddAssumption(const Z3Expr& Assumption) const
+        {
+            Assumptions.push_back(Assumption);
+        }
+
+        const vector<Z3Expr>& LTSLoweredContext::GetAssumptions() const
+        {
+            return Assumptions;
+        }
+
+        void LTSLoweredContext::ClearAssumptions() const
+        {
+            Assumptions.clear();
+        }
+
+        const Z3Ctx& LTSLoweredContext::GetZ3Ctx() const
+        {
+            return Ctx;
+        }
+        
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
