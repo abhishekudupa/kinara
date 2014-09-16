@@ -4,3 +4,9 @@
 [submodule "src/boost-local"]
 	path = src/extern/boost-local
 	url = acggrid01.seas.upenn.edu:/mnt/eclipse/acg/users/audupa/work/gitroot/boost-local
+[submodule "thirdparty/z3-4.3.1"]
+	path = thirdparty/z3-4.3.1
+	url = acggrid01.seas.upenn.edu:/home1/a/audupa/work/gitroot/z3-4.3.1.git
+[submodule "thirdparty/boost-local"]
+	path = thirdparty/boost-local
+	url = acggrid01.seas.upenn.edu:/home1/a/audupa/work/gitroot/boost-local
