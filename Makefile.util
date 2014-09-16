@@ -38,7 +38,7 @@ FLEX=flex
 
 default: debug
 
-all: eopt eoptlto debug
+all: eoptlto eopt debug
 
 opt:
 	@echo "Building opt flavor..."
