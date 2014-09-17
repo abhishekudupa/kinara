@@ -222,19 +222,34 @@ namespace ESMC {
         
             // Downcasts
             template <template <typename, template <typename> class> class U>
-            inline U<E, S>* As();
+            inline U<E, S>* As()
+            {
+                return dynamic_cast<U<E, S>*>(this);
+            }
 
             template <template <typename, template <typename> class> class U> 
-            inline const U<E, S>* As() const;
+            inline const U<E, S>* As() const
+            {
+                return dynamic_cast<const U<E, S>*>(this);
+            }
 
             template <template <typename, template <typename> class> class U> 
-            inline U<E, S>* SAs();
+            inline U<E, S>* SAs()
+            {
+                return static_cast<U<E, S>*>(this);
+            }
 
             template <template <typename, template <typename> class> class U> 
-            inline const U<E, S>* SAs() const;
+            inline const U<E, S>* SAs() const
+            {
+                return static_cast<const U<E, S>*>(this);
+            }
 
             template <template <typename, template <typename> class> class U>
-            inline bool Is() const;
+            inline bool Is() const
+            {
+                return (dynamic_cast<const U<E, S>*>(this) != nullptr);
+            }
         };
 
         // Specialization for extension lists
@@ -283,16 +298,34 @@ namespace ESMC {
         
             // Downcasts
             template <template <typename, template <typename> class> class U>
-            inline U<ExtListT, S>* As();
+            inline U<ExtListT, S>* As()
+            {
+                return dynamic_cast<U<ExtListT, S>*>(this);
+            }
 
             template <template <typename, template <typename> class> class U> 
-            inline const U<ExtListT, S>* As() const;
+            inline const U<ExtListT, S>* As() const
+            {
+                return dynamic_cast<const U<ExtListT, S>*>(this);
+            }
 
             template <template <typename, template <typename> class> class U> 
-            inline U<ExtListT, S>* SAs();
+            inline U<ExtListT, S>* SAs()
+            {
+                return static_cast<U<ExtListT, S>*>(this);
+            }
 
             template <template <typename, template <typename> class> class U> 
-            inline const U<ExtListT, S>* SAs() const;
+            inline const U<ExtListT, S>* SAs() const
+            {
+                return static_cast<const U<ExtListT, S>*>(this);
+            }
+
+            template <template <typename, template <typename> class> class U> 
+            inline bool Is() const
+            {
+                return (dynamic_cast<const U<ExtListT, S>*>(this) != nullptr);
+            }            
 
             // Extension list accessors and manipulators
             template <typename U>
@@ -935,71 +968,6 @@ namespace ESMC {
         }
 
 
-        // Implementation of down casts
-        template <typename E, template <typename> class S>
-        template <template <typename, template <typename> class> class U>
-        inline U<E, S>* ExpressionBase<E, S>::As()
-        {
-            return dynamic_cast<U<E, S>*>(this);
-        }
-
-        template <typename E, template <typename> class S> 
-        template <template <typename, template <typename> class> class U>
-        inline const U<E, S>* ExpressionBase<E, S>::As() const
-        {
-            return dynamic_cast<const U<E, S>*>(this);
-        }
-
-        template <typename E, template <typename> class S> 
-        template <template <typename, template <typename> class> class U>
-        inline U<E, S>* ExpressionBase<E, S>::SAs()
-        {
-            return static_cast<U<E, S>*>(this);
-        }
-
-        template <typename E, template <typename> class S> 
-        template <template <typename, template <typename> class> class U>
-        inline const U<E, S>* ExpressionBase<E, S>::SAs() const
-        {
-            return static_cast<const U<E, S>*>(this);
-        }
-
-        template <typename E, template <typename> class S> 
-        template <template <typename, template <typename> class> class U>
-        inline bool ExpressionBase<E, S>::Is() const
-        {
-            return (this->template As<U>() != nullptr);
-        }
-        
-
-        template <template <typename> class S>
-        template <template <typename, template <typename> class> class U>
-        inline U<ExtListT, S>* ExpressionBase<ExtListT, S>::As()
-        {
-            return dynamic_cast<U<ExtListT, S>*>(this);
-        }
-
-        template <template <typename> class S> 
-        template <template <typename, template <typename> class> class U>
-        inline const U<ExtListT, S>* ExpressionBase<ExtListT, S>::As() const
-        {
-            return dynamic_cast<const U<ExtListT, S>*>(this);
-        }
-
-        template <template <typename> class S> 
-        template <template <typename, template <typename> class> class U>
-        inline U<ExtListT, S>* ExpressionBase<ExtListT, S>::SAs()
-        {
-            return static_cast<U<ExtListT, S>*>(this);
-        }
-
-        template <template <typename> class S> 
-        template <template <typename, template <typename> class> class U>
-        inline const U<ExtListT, S>* ExpressionBase<ExtListT, S>::SAs() const
-        {
-            return static_cast<const U<ExtListT, S>*>(this);
-        }
-
         // ExpressionBase implementation
         template <typename E, template <typename> class S>
         inline ExpressionBase<E, S>::ExpressionBase(ExprMgr<E, S>* Manager,
@@ -1302,7 +1270,7 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline i32 ConstExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
         {
-            auto OtherAsConst = Other->template As<ConstExpression>();
+            auto OtherAsConst = Other->template As<ESMC::Exprs::ConstExpression>();
             // All other exp types > ConstExpression
             if (OtherAsConst == nullptr) {
                 return -1;
@@ -1368,7 +1336,7 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline i32 VarExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
         {
-            auto OtherAsVar = Other->template As<VarExpression>();
+            auto OtherAsVar = Other->template As<ESMC::Exprs::VarExpression>();
             auto OtherAsConst = Other->template As<ConstExpression>();
             // ConstExpression < VarExpression
             if (OtherAsConst != nullptr) {
@@ -1445,7 +1413,7 @@ namespace ESMC {
                 (Other->template As<VarExpression>() != nullptr)) {
                 return 1;
             }
-            auto OtherAsBound = Other->template As<BoundVarExpression>();
+            auto OtherAsBound = Other->template As<ESMC::Exprs::BoundVarExpression>();
             // VarExpression < BoundVarExpression
             if (OtherAsBound == nullptr) {
                 return -1;
@@ -1516,7 +1484,7 @@ namespace ESMC {
                 (Other->template As<BoundVarExpression>() != nullptr)) {
                 return 1;
             } 
-            auto OtherAsOp = Other->template As<OpExpression>();
+            auto OtherAsOp = Other->template As<ESMC::Exprs::OpExpression>();
             if (OtherAsOp == nullptr) {
                 return -1;
             }
@@ -1546,7 +1514,7 @@ namespace ESMC {
             if (this->Hash() != Other->Hash()) {
                 return false;
             }
-            auto OtherAsOp = Other->template As<OpExpression>();
+            auto OtherAsOp = Other->template As<ESMC::Exprs::OpExpression>();
             if (OtherAsOp == nullptr) {
                 return false;
             }
@@ -1680,7 +1648,7 @@ namespace ESMC {
                 (Other->template As<OpExpression>() != nullptr)) {
                 return 1;
             }
-            auto OtherAsExists = Other->template As<EQuantifiedExpression>();
+            auto OtherAsExists = Other->template As<ESMC::Exprs::EQuantifiedExpression>();
             if (OtherAsExists == nullptr) {
                 return -1;
             }
@@ -1694,7 +1662,7 @@ namespace ESMC {
             if (this->Hash() != Other->Hash()) {
                 return false;
             }
-            auto OtherAsExists = Other->template As<EQuantifiedExpression>();
+            auto OtherAsExists = Other->template As<ESMC::Exprs::EQuantifiedExpression>();
             if (OtherAsExists == nullptr) {
                 return false;
             }
@@ -1745,7 +1713,7 @@ namespace ESMC {
                 (Other->template As<EQuantifiedExpression>() != nullptr)) {
                 return 1;
             }
-            auto OtherAsForall = Other->template As<AQuantifiedExpression>();
+            auto OtherAsForall = Other->template As<ESMC::Exprs::AQuantifiedExpression>();
             // In case we decide to add more expression types
             if (OtherAsForall != nullptr) {
                 return -1;
@@ -1760,7 +1728,7 @@ namespace ESMC {
             if (this->Hash() != Other->Hash()) {
                 return false;
             }
-            auto OtherAsForAll = Other->template As<EQuantifiedExpression>();
+            auto OtherAsForAll = Other->template As<ESMC::Exprs::EQuantifiedExpression>();
             if (OtherAsForAll == nullptr) {
                 return false;
             }

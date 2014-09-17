@@ -203,6 +203,7 @@ namespace ESMC {
             StateVec* SortChans(const StateVec* InputVector) const;
             PermutationSet* GetPermSet() const;
             bool StatesEquivalent(const StateVec* SV1, const StateVec* SV2) const;
+            StateVecPrinter* GetPrinter() const;
         };
         
     } /* end namespace Symm */

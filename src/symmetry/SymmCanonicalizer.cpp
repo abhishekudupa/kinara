@@ -598,6 +598,11 @@ namespace ESMC {
             return Retval;
         }
 
+        StateVecPrinter* Canonicalizer::GetPrinter() const
+        {
+            return Printer;
+        }
+
     } /* end namespace Symm */
 } /* end namespace ESMC */
 

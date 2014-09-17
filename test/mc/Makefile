@@ -1,4 +1,4 @@
-PROJECT_NAME=ltstests
+PROJECT_NAME=mctests
 PROJECT_ROOT=$(realpath .)
 BASE_OBJ_DIR=$(PROJECT_ROOT)/obj
 BASE_LIB_DIR=$(PROJECT_ROOT)/lib
@@ -6,7 +6,7 @@ BASE_BIN_DIR=$(PROJECT_ROOT)/bin
 BASE_GEN_DIR=$(PROJECT_ROOT)
 BASE_SRC_DIR=$(PROJECT_ROOT)
 
-CXX=g++
+CXX=clang++
 
 ifeq "x$(CXX)" "xg++"
 CXXFLAGS+=-Wno-unused-local-typedefs
@@ -82,18 +82,18 @@ ABP_LIB_PATHS= \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
 ABP_generated_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \
-    $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
+    $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \
+    $(PROJECT_ROOT)/../../thirdparty/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
 Fischer_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \
-    $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
+    $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \
+    $(PROJECT_ROOT)/../../thirdparty/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
 LeaderElection_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../src/extern/z3-4.3.1/install \
-    $(PROJECT_ROOT)/../../src/extern/boost-local/boost_install/lib \
+    $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \
+    $(PROJECT_ROOT)/../../thirdparty/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
 Flip_LIB_PATHS= \

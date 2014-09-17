@@ -6,7 +6,7 @@ BASE_BIN_DIR=$(PROJECT_ROOT)/bin
 BASE_GEN_DIR=$(PROJECT_ROOT)/gen
 BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
-CXX=g++
+CXX?=g++
 
 CXXFLAGS=-std=c++11 -Wall -pedantic -fopenmp -pipe
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/z3-4.3.1/src/api

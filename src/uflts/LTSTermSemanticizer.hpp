@@ -1571,7 +1571,7 @@ namespace ESMC {
             Lowerer<E, S>::LowerType(const ExprTypeRef& Type)
             {
                 auto Ctx = LTSCtx->GetZ3Ctx();
-                auto CachedSort = LTSCtx->GetZ3Sort(Type);
+                auto const& CachedSort = LTSCtx->GetZ3Sort(Type);
                 if (CachedSort != Z3Sort::NullSort) {
                     return CachedSort;
                 }
@@ -1600,7 +1600,7 @@ namespace ESMC {
                     auto Z3EnumSort = Z3_mk_enumeration_sort(*Ctx, Z3TypeName, NumConsts,
                                                              ConstNames, ConstFuncs, ConstTests);
 
-                    LoweredSort = Z3Sort(*Ctx, Z3EnumSort);
+                    LoweredSort = Z3Sort(Ctx, Z3EnumSort);
                     LoweredSort.AddFuncDecls(NumConsts, ConstFuncs);
                     LoweredSort.AddFuncDecls(NumConsts, ConstTests);
                     
@@ -1621,7 +1621,7 @@ namespace ESMC {
                     auto Z3EnumSort = Z3_mk_enumeration_sort(*Ctx, Z3TypeName, NumConsts,
                                                              ConstNames, ConstFuncs, ConstTests);
 
-                    LoweredSort = Z3Sort(*Ctx, Z3EnumSort);
+                    LoweredSort = Z3Sort(Ctx, Z3EnumSort);
                     LoweredSort.AddFuncDecls(NumConsts, ConstFuncs);
                     LoweredSort.AddFuncDecls(NumConsts, ConstTests);
                     
@@ -1649,7 +1649,7 @@ namespace ESMC {
                                                       FieldNames, FieldSorts, 
                                                       &Constructor, ProjFuncs);
                     
-                    LoweredSort = Z3Sort(*Ctx, Z3RecSort);
+                    LoweredSort = Z3Sort(Ctx, Z3RecSort);
                     LoweredSort.AddFuncDecl(Constructor);
                     LoweredSort.AddFuncDecls(NumFields, ProjFuncs);
 
@@ -1663,7 +1663,7 @@ namespace ESMC {
                     auto LoweredIdxSort = LowerType(TypeAsArr->GetIndexType());
                     auto LoweredValSort = LowerType(TypeAsArr->GetValueType());
                     auto Z3ArrSort = Z3_mk_array_sort(*Ctx, LoweredIdxSort, LoweredValSort);
-                    LoweredSort = Z3Sort(*Ctx, Z3ArrSort);
+                    LoweredSort = Z3Sort(Ctx, Z3ArrSort);
 
                 } else {
                     throw ESMCError((string)"Cannot lower type \"" + Type->ToString() + 

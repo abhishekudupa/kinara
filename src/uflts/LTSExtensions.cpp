@@ -45,8 +45,6 @@
 namespace ESMC {
     namespace LTS {
 
-        const u32 ZeroPageSize = 4096;
-
         LTSExtensionT::LTSExtensionT()
             : IsMsg(false), Offset(-1), 
               ConstCompiled(false), 
