@@ -62,27 +62,27 @@ eprof:
 
 optlto:
 	@echo "Building optlto flavor..."
-	@OPTFLAGS="-O2 -flto" BUILD_SUFFIX=lto $(MAKE) --no-print-directory toplevel
+	@OPTFLAGS="-O2 -flto -flto-compression-level=9" BUILD_SUFFIX=lto $(MAKE) --no-print-directory toplevel
 
 proflto:
 	@echo "Building proflto flavor..."
-	@OPTFLAGS="-O2 -pg -flto" LTO_BUILD="yes" BUILD_SUFFIX=prof $(MAKE) --no-print-directory toplevel
+	@OPTFLAGS="-O2 -pg -flto -flto-compression-level=9" LTO_BUILD="yes" BUILD_SUFFIX=prof $(MAKE) --no-print-directory toplevel
 
 eoptlto:
 	@echo "Building eoptlto flavor..."
-	@OPTFLAGS="-ggdb3 -O3 -flto" LTO_BUILD="yes" BUILD_SUFFIX=lto $(MAKE) --no-print-directory toplevel
+	@OPTFLAGS="-O3 -flto -flto-compression-level=9" LTO_BUILD="yes" BUILD_SUFFIX=lto $(MAKE) --no-print-directory toplevel
 
 eproflto:
 	@echo "Building eproflto flavor..."
-	@OPTFLAGS="-O3 -pg -flto" LTO_BUILD="yes" BUILD_SUFFIX=prof $(MAKE) --no-print-directory toplevel
+	@OPTFLAGS="-O3 -pg -flto -flto-compression-level=9" LTO_BUILD="yes" BUILD_SUFFIX=prof $(MAKE) --no-print-directory toplevel
 
 fulllto:
 	@echo "Building fulllto flavor..."
-	@OPTFLAGS="-O3 -pg -flto" LTO_BUILD="yes" FULL_LTO_BUILD="yes" BUILD_SUFFIX=lto $(MAKE) --no-print-directory toplevel
+	@OPTFLAGS="-O3 -pg -flto -flto-compression-level=9" LTO_BUILD="yes" FULL_LTO_BUILD="yes" BUILD_SUFFIX=lto $(MAKE) --no-print-directory toplevel
 
 fullltoprof:
 	@echo "Building fullltoprof flavor..."
-	@OPTFLAGS="-O3 -pg -flto" LTO_BUILD="yes" FULL_LTO_BUILD="yes" BUILD_SUFFIX=prof $(MAKE) --no-print-directory toplevel
+	@OPTFLAGS="-O3 -pg -flto -flto-compression-level=9" LTO_BUILD="yes" FULL_LTO_BUILD="yes" BUILD_SUFFIX=prof $(MAKE) --no-print-directory toplevel
 
 
 OBJ_DIR=$(BASE_OBJ_DIR)/$(BUILD_SUFFIX)

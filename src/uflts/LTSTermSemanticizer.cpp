@@ -239,11 +239,15 @@ namespace ESMC {
             }
 
             Z3Sort::Z3Sort(const Z3Sort& Other)
-                : Ctx(Other.Ctx), Sort(Other.Sort)
+                : Ctx(Other.Ctx), Sort(Other.Sort), 
+                  FuncDecls(Other.FuncDecls)
             {
                 if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
                     Z3_inc_ref(*Ctx, Z3_sort_to_ast(*Ctx, Sort));
-                }                
+                }
+                for (auto const& FuncDecl : FuncDecls) {
+                    Z3_inc_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl.second));
+                }
             }
 
             Z3Sort::Z3Sort(Z3Sort&& Other)
@@ -251,6 +255,7 @@ namespace ESMC {
             {
                 swap(Ctx, Other.Ctx);
                 swap(Sort, Other.Sort);
+                swap(FuncDecls, Other.FuncDecls);
             }
 
             Z3Sort::~Z3Sort()
@@ -296,6 +301,7 @@ namespace ESMC {
             {
                 swap(Ctx, Other.Ctx);
                 swap(Sort, Other.Sort);
+                swap(FuncDecls, Other.FuncDecls);
                 return *this;
             }
 
@@ -397,10 +403,32 @@ namespace ESMC {
 
         void LTSLoweredContext::AddAssumption(const Z3Expr& Assumption) const
         {
-            Assumptions.push_back(Assumption);
+            Assumptions.back().push_back(Assumption);
+        }
+
+        void LTSLoweredContext::AddAssumptionGlobal(const Z3Expr &Assumption) const
+        {
+            Assumptions.front().push_back(Assumption);
+        }
+
+        void LTSLoweredContext::PushAssumptionScope() const
+        {
+            Assumptions.push_back(vector<Z3Expr>());
+        }
+
+        vector<Z3Expr> LTSLoweredContext::PopAssumptionScope() const
+        {
+            auto&& Scope = Assumptions.back();
+            Assumptions.pop_back();
+            return Scope;
         }
 
         const vector<Z3Expr>& LTSLoweredContext::GetAssumptions() const
+        {
+            return Assumptions.back();
+        }
+
+        const vector<vector<Z3Expr>>& LTSLoweredContext::GetAllAssumptions() const
         {
             return Assumptions;
         }

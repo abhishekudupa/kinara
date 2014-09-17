@@ -556,6 +556,7 @@ namespace ESMC {
             SemT* Sem;
             ExpCacheT ExpCache;
             TypeCacheT TypeCache;
+            unordered_map<string, TypeT> NamedTypes;
 
             ExprTypeRef BoolType;
             ExprTypeRef IntType;
@@ -578,6 +579,8 @@ namespace ESMC {
             
             template<typename T, typename... ArgTypes>
             inline TypeT MakeType(ArgTypes&&... Args);
+            
+            inline TypeT GetNamedType(const string& Name) const;
 
             inline TypeT InstantiateType(const TypeT& ParamType,
                                          const vector<ExpT>& ParamValues);
@@ -1786,7 +1789,37 @@ namespace ESMC {
         {
             auto Retval = TypeCache.Get<T>(forward<ArgTypes>(Args)...);
             Retval->GetOrSetTypeID();
+            string TypeName = "";
+            if (Retval->template Is<ExprRecordType>()) {
+                TypeName = Retval->template SAs<ExprRecordType>()->GetName();
+            } else if (Retval->template Is<ExprEnumType>()) {
+                TypeName = Retval->template SAs<ExprEnumType>()->GetName();
+            } else if (Retval->template Is<ExprSymmetricType>()) {
+                TypeName = Retval->template SAs<ExprSymmetricType>()->GetName();
+            } else if (Retval->template Is<ExprParametricType>()) {
+                TypeName = Retval->template SAs<ExprParametricType>()->GetName();
+            }
+
+            if (TypeName != "") {
+                if (NamedTypes.find(TypeName) != NamedTypes.end()) {
+                    throw ExprTypeError((string)"A type named \"" + TypeName + "\" already " + 
+                                        "exists in the system!");
+                }
+                NamedTypes[TypeName] = Retval;
+            }
             return Retval;
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::TypeT
+        ExprMgr<E, S>::GetNamedType(const string& Name) const
+        {
+            auto it = NamedTypes.find(Name);
+            if (it == NamedTypes.end()) {
+                return TypeT::NullPtr;
+            } else {
+                return it->second;
+            }
         }
 
         template <typename E, template <typename> class S>

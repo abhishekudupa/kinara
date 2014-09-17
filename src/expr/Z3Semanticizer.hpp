@@ -1170,8 +1170,8 @@ namespace ESMC {
                     {
                         auto it = UFMap.find(OpCode);
                         if (it == UFMap.end()) {
-                            throw InternalError((string)"Unknown op " + to_string(OpCode) + " At: " + 
-                                                __FILE__ + ":" + to_string(__LINE__));
+                            throw InternalError((string)"Unknown op " + to_string(OpCode) + 
+                                                " At: " + __FILE__ + ":" + to_string(__LINE__));
                         }
                         
                         auto const& Desc = it->second;
@@ -1185,7 +1185,8 @@ namespace ESMC {
                         }
                         auto RangeSort = LowerType(RangeType);
                         auto FuncSym = Z3_mk_string_symbol(*Ctx, Name.c_str());
-                        auto FuncDecl = Z3_mk_func_decl(*Ctx, FuncSym, NumArgs, DomSorts, RangeSort);
+                        auto FuncDecl = Z3_mk_func_decl(*Ctx, FuncSym, NumArgs, 
+                                                        DomSorts, RangeSort);
                         Z3_inc_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl));
 
                         ExpStack.push_back(Z3Expr(Ctx, Z3_mk_app(*Ctx, FuncDecl, 
