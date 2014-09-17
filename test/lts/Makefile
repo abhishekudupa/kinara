@@ -6,7 +6,7 @@ BASE_BIN_DIR=$(PROJECT_ROOT)/bin
 BASE_GEN_DIR=$(PROJECT_ROOT)
 BASE_SRC_DIR=$(PROJECT_ROOT)
 
-CXX=g++
+CXX?=g++
 
 ifeq "x$(CXX)" "xg++"
 CXXFLAGS+=-Wno-unused-local-typedefs
