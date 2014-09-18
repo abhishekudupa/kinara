@@ -354,7 +354,7 @@ namespace ESMC {
         LTSLoweredContext::LTSLoweredContext()
             : Ctx(new Z3CtxWrapper())
         {
-            // Nothing here
+            Assumptions.push_back(AssumptionSetT());
         }
 
         LTSLoweredContext::~LTSLoweredContext()
@@ -403,32 +403,34 @@ namespace ESMC {
 
         void LTSLoweredContext::AddAssumption(const Z3Expr& Assumption) const
         {
-            Assumptions.back().push_back(Assumption);
+            Assumptions.back().insert(Assumption);
         }
 
         void LTSLoweredContext::AddAssumptionGlobal(const Z3Expr &Assumption) const
         {
-            Assumptions.front().push_back(Assumption);
+            Assumptions.front().insert(Assumption);
         }
 
         void LTSLoweredContext::PushAssumptionScope() const
         {
-            Assumptions.push_back(vector<Z3Expr>());
+            Assumptions.push_back(AssumptionSetT());
         }
 
-        vector<Z3Expr> LTSLoweredContext::PopAssumptionScope() const
+        LTSLoweredContext::AssumptionSetT 
+        LTSLoweredContext::PopAssumptionScope() const
         {
             auto&& Scope = Assumptions.back();
             Assumptions.pop_back();
             return Scope;
         }
 
-        const vector<Z3Expr>& LTSLoweredContext::GetAssumptions() const
+        const LTSLoweredContext::AssumptionSetT& LTSLoweredContext::GetAssumptions() const
         {
             return Assumptions.back();
         }
 
-        const vector<vector<Z3Expr>>& LTSLoweredContext::GetAllAssumptions() const
+        const vector<LTSLoweredContext::AssumptionSetT>& 
+        LTSLoweredContext::GetAllAssumptions() const
         {
             return Assumptions;
         }
@@ -441,6 +443,18 @@ namespace ESMC {
         const Z3Ctx& LTSLoweredContext::GetZ3Ctx() const
         {
             return Ctx;
+        }
+
+        ostream& operator << (const Detail::Z3Expr& Expr, ostream& Out) 
+        {
+            Out << Expr.ToString();
+            return Out;
+        }
+
+        ostream& operator << (const Detail::Z3Sort& Sort, ostream& Out) 
+        {
+            Out << Sort.ToString();
+            return Out;
         }
         
     } /* end namespace LTS */

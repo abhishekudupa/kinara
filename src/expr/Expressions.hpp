@@ -2105,7 +2105,7 @@ namespace ESMC {
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::RaiseExpr(const LExpT& LExp, ArgTypes&&... Args)
         {
-            auto Retval = Sem->RaiseExpr(LExp, forward<ArgTypes>(Args)...);
+            auto Retval = Sem->RaiseExpr(this, LExp, forward<ArgTypes>(Args)...);
             return Retval;
         }
         

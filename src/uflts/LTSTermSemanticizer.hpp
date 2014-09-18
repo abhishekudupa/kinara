@@ -166,8 +166,16 @@ namespace ESMC {
 
                 static Z3Expr NullExpr;
             };
-            
 
+            class Z3ExprHasher
+            {
+            public:
+                inline u64 operator () (const Z3Expr& Expr) const
+                {
+                    return Expr.Hash();
+                }
+            };
+            
             class Z3Sort
             {
             protected:
@@ -215,11 +223,14 @@ namespace ESMC {
         // appropriate types
         class LTSLoweredContext : public RefCountable
         {
+        public:
+            typedef unordered_set<Z3Expr, Z3ExprHasher> AssumptionSetT;
+
         private:
             mutable map<ExprTypeRef, Z3Sort> LTSTypeToSort;
             mutable map<string, ExprTypeRef> VarNameToLTSType;
             Z3Ctx Ctx;
-            mutable vector<vector<Z3Expr>> Assumptions;
+            mutable vector<AssumptionSetT> Assumptions;
 
         public:
             LTSLoweredContext();
@@ -231,11 +242,11 @@ namespace ESMC {
             const ExprTypeRef& GetLTSType(const string& VarName) const;
             void AddLTSType(const string& VarName, const ExprTypeRef& LTSType) const;
             void PushAssumptionScope() const;
-            vector<Z3Expr> PopAssumptionScope() const;
+            AssumptionSetT PopAssumptionScope() const;
             void AddAssumption(const Z3Expr& Assumption) const;
             void AddAssumptionGlobal(const Z3Expr& Assumption) const;
-            const vector<Z3Expr>& GetAssumptions() const;
-            const vector<vector<Z3Expr>>& GetAllAssumptions() const;
+            const AssumptionSetT& GetAssumptions() const;
+            const vector<AssumptionSetT>& GetAllAssumptions() const;
             void ClearAssumptions() const;
             const Z3Ctx& GetZ3Ctx() const;
         };
@@ -390,8 +401,8 @@ namespace ESMC {
                 inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
                                                                Exp) override;
                 
-                static inline ExpT Do(const ExpT& Exp, const UFID2TypeMapT& UFMap,
-                                      const LTSLCRef& LTSCtx);
+                static inline Z3Expr Do(const ExpT& Exp, const UFID2TypeMapT& UFMap,
+                                        const LTSLCRef& LTSCtx);
             };
 
             // a class to raise lowered expressions back up
@@ -1603,7 +1614,7 @@ namespace ESMC {
             // Implementation of Lowerer
             template <typename E, template <typename> class S>
             Lowerer<E, S>::Lowerer(const UFID2TypeMapT& UFMap, const LTSLCRef& LTSCtx)
-                : UFMap(UFMap), LTSCtx(LTSCtx)
+                : ExpressionVisitorBase<E, S>("LTSZ3Lowerer"), UFMap(UFMap), LTSCtx(LTSCtx)
             {
                 // Nothing here
             }
@@ -1736,7 +1747,7 @@ namespace ESMC {
 
                 auto LoweredType = LowerType(Type);
                 auto Z3Sym = Z3_mk_string_symbol(*Ctx, Name.c_str());
-                Z3Expr LoweredExpr(*Ctx, Z3_mk_const(Z3Sym, LoweredType));
+                Z3Expr LoweredExpr(Ctx, Z3_mk_const(*Ctx, Z3Sym, LoweredType));
 
                 if (Type->template Is<ExprRangeType>()) {
                     auto TypeAsRange = Type->template SAs<ExprRangeType>();
@@ -1788,7 +1799,7 @@ namespace ESMC {
                     // enum constants are unqualified
                     auto const& LoweredType = LowerType(Type);
                     auto TypeAsEnum = Type->template SAs<ExprEnumType>();
-                    string QualifiedVal = TypeAsEnum->GetName + "::" + Val;
+                    string QualifiedVal = TypeAsEnum->GetName() + "::" + Val;
                     auto Decl = LoweredType.GetFuncDecl(QualifiedVal);
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_app(*Ctx, Decl, 0, nullptr)));
                 } else {
@@ -1841,14 +1852,14 @@ namespace ESMC {
                 auto OpCode = Exp->GetOpCode();
 
                 auto LoweredChildren = new Z3_ast[NumChildren];
-                vector<Z3Expr> LChildren;
+                vector<Z3Expr> LChildren(NumChildren);
                 
                 if (OpCode != LTSOps::OpField) {
                     ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
                     
                     for (u32 i = 0; i < NumChildren; ++i) {
-                        LoweredChildren[NumChildren - i - i] = 
-                            LChildren[NumChildren - i - 1] = ExpStack.back();
+                        LChildren[NumChildren - i - 1] = ExpStack.back();
+                        LoweredChildren[NumChildren - i - 1] = ExpStack.back();
                         ExpStack.pop_back();
                     }
                 }
@@ -1963,7 +1974,7 @@ namespace ESMC {
                     auto FuncType = it->second->template As<Exprs::ExprFuncType>();
                     auto const& DomainTypes = FuncType->GetArgTypes();
                     const u32 DomainSize = DomainTypes.size();
-                    Z3Sort* DomainSorts = new Z3Sort[DomainSize];
+                    Z3_sort* DomainSorts = new Z3_sort[DomainSize];
                     for (u32 i = 0; i < DomainSize; ++i) {
                         DomainSorts[i] = LowerType(DomainTypes[i]);
                     }
@@ -2027,6 +2038,10 @@ namespace ESMC {
                 // Get the assumptions made
                 auto&& Assumptions = LTSCtx->PopAssumptionScope();
                 Z3_ast* AndArgs = new Z3_ast[Assumptions.size()];
+                u32 i = 0;
+                for (auto const& Assumption : Assumptions) {
+                    AndArgs[i++] = Assumption;
+                }
                 auto AssumptionLExp = Z3Expr(Ctx, Z3_mk_and(*Ctx, Assumptions.size(),
                                                             AndArgs));
                 delete[] AndArgs;
@@ -2077,7 +2092,7 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            inline typename Lowerer<E, S>::ExpT
+            inline Z3Expr
             Lowerer<E, S>::Do(const ExpT& Exp, const UFID2TypeMapT& UFMap,
                               const LTSLCRef& LTSCtx)
             {
@@ -2085,16 +2100,17 @@ namespace ESMC {
                 Lowerer TheLowerer(UFMap, LTSCtx);
                 Exp->Accept(&TheLowerer);
                 // Add in the assumptions
-                auto&& Assumptions = LTSCtx->PopAssumptionScope();
-                const u32 NumAssumptions = Assumptions.size();
-                Z3_ast* AndArgs = new Z3_ast[NumAssumptions + 1];
-                for (u32 i = 0; i < NumAssumptions; ++i) {
-                    AndArgs[i] = Assumptions[i];
-                }
-                AndArgs[NumAssumptions] = TheLowerer.ExpStack.back();
+                // auto&& Assumptions = LTSCtx->PopAssumptionScope();
+                // const u32 NumAssumptions = Assumptions.size();
+                // Z3_ast* AndArgs = new Z3_ast[NumAssumptions + 1];
+                // for (u32 i = 0; i < NumAssumptions; ++i) {
+                //     AndArgs[i] = Assumptions[i];
+                // }
+                // AndArgs[NumAssumptions] = TheLowerer.ExpStack.back();
                 
-                auto Retval = Z3Expr(Ctx, Z3_mk_and(*Ctx, NumAssumptions + 1, AndArgs));
-                delete[] AndArgs;
+                // auto Retval = Z3Expr(Ctx, Z3_mk_and(*Ctx, NumAssumptions + 1, AndArgs));
+                // delete[] AndArgs;
+                auto Retval = TheLowerer.ExpStack.back();
                 return Retval;
             }
 
@@ -2294,7 +2310,7 @@ namespace ESMC {
                              const LTSLCRef& LTSCtx, MgrT* Mgr)
             {
                 Raiser TheRaiser(UFNameToIDMap, LTSCtx, Mgr);
-                auto Retval = TheRaiser->RaiseExpr(LExp);
+                auto Retval = TheRaiser.RaiseExpr(LExp);
                 return Retval;
             }
 
@@ -2446,7 +2462,7 @@ namespace ESMC {
         inline typename LTSTermSemanticizer<E>::LExpT
         LTSTermSemanticizer<E>::LowerExpr(const ExpT& Exp, const LTSLCRef& LTSCtx)
         {
-            return Lowerer<E, ESMC::LTS::LTSTermSemanticizer>::Do(Exp, LTSCtx);
+            return Lowerer<E, ESMC::LTS::LTSTermSemanticizer>::Do(Exp, UFMap, LTSCtx);
         }
 
         template <typename E>
@@ -2517,6 +2533,9 @@ namespace ESMC {
             return false;
         }
 
+        extern ostream& operator << (const Detail::Z3Expr& Expr, ostream& Out);
+        extern ostream& operator << (const Detail::Z3Sort& Sort, ostream& Out);
+        
         
     } /* end namespace LTS */
 } /* end namespace ESMC */
