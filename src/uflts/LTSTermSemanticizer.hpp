@@ -166,6 +166,7 @@ namespace ESMC {
 
                 static Z3Expr NullExpr;
             };
+            
 
             class Z3Sort
             {
@@ -2335,7 +2336,7 @@ namespace ESMC {
 
             inline ExpT RaiseExpr(MgrType* Mgr, const LExpT& LExp, const LTSLCRef& LTSCtx);
             inline LExpT LowerExpr(const ExpT& Exp, const LTSLCRef& ExpCtx);
-            inline ExpT ElimQuantifiers(const ExpT& Exp);
+            inline ExpT ElimQuantifiers(MgrType* Mgr, const ExpT& Exp);
         };
 
         
@@ -2450,9 +2451,45 @@ namespace ESMC {
 
         template <typename E>
         inline typename LTSTermSemanticizer<E>::ExpT
-        LTSTermSemanticizer<E>::ElimQuantifiers(const ExpT& Exp)
+        LTSTermSemanticizer<E>::ElimQuantifiers(MgrType* Mgr, const ExpT& Exp)
         {
-            throw ESMCError((string)"ElimQuantifiers() not implemented in LTSTermSemanticizer");
+            LTSLCRef LTSCtx = new LTSLoweredContext();
+
+            auto LExp = LowerExpr(Exp, LTSCtx);
+            auto Ctx = LTSCtx->GetZ3Ctx();
+
+            auto QE = Z3_mk_tactic(*Ctx, "qe");
+            Z3_tactic_inc_ref(*Ctx, QE);
+
+            auto Goal = Z3_mk_goal(*Ctx, true, false, false);
+            Z3_goal_inc_ref(*Ctx, Goal);
+            Z3_goal_assert(*Ctx, Goal, LExp);
+
+            auto Res = Z3_tactic_apply(*Ctx, QE, Goal);
+            Z3_goal_dec_ref(*Ctx, Goal);
+            Z3_tactic_dec_ref(*Ctx, QE);
+
+            Z3_apply_result_inc_ref(*Ctx, Res);
+
+            vector<ExpT> RaisedExprs;
+            
+            auto NumGoals = Z3_apply_result_get_num_subgoals(*Ctx, Res);
+            for (u32 i = 0; i < NumGoals; ++i) {
+                auto CurGoal = Z3_apply_result_get_subgoal(*Ctx, Res, i);
+                auto NumExprs = Z3_goal_size(*Ctx, CurGoal);
+                for (u32 j = 0; j < NumExprs; j++) {
+                    auto CurFormula = Z3_goal_formula(*Ctx, CurGoal, j);
+                    Detail::Z3Expr CurExpr = Detail::Z3Expr(Ctx, CurFormula);
+                    RaisedExprs.push_back(RaiseExpr(CurExpr, LTSCtx));
+                }
+            }
+
+            Z3_apply_result_dec_ref(*Ctx, Res);
+            if (RaisedExprs.size() == 1) {
+                return RaisedExprs[0];
+            } else {
+                return Mgr->MakeExpr(LTSOps::OpAND, RaisedExprs);
+            }
         }
 
         template<typename E>
