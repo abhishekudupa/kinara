@@ -28,7 +28,7 @@ messages {
                 FwdGetSMsg[c][d][a] of CacheIDType;
 
                 foreach c2 in CacheIDType (!= c2 c) {
-                    InvAckMsg[c][d][a] of ValueType;
+                    InvAckMsg[c][d][a] of unit;
                 }
 
                 UnblockSMsg[c][d][a] of unit;
@@ -52,7 +52,7 @@ messages {
                 FwdGetXMsg'[c][d][a] of CacheIDType;
 
                 foreach c2 in CacheIDType (!= c c2) {
-                    InvAckMsg'[c][c2][d][a] of ValueType;
+                    InvAckMsg'[c][c2][d][a] of unit;
                 }
 
                 WBAckMsg'[c][d][a] of unit;
@@ -383,7 +383,7 @@ automaton Cache[c][d][a] with compassion
         C_II on FwdGetXMsg'[c][d][a] (c2) { FwdToCache := c2; } -> 
         send InvAckMsg[c][FwdToCache][d][a] -> C_I;
 
-        C_II on FwdGetSMsg'[c][d][a] (_) -> I;
+        C_II on FwdGetSMsg'[c][d][a] (_) -> C_I;
     }
 }
 
