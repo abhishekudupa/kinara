@@ -235,6 +235,7 @@ namespace ESMC {
                         // cout << endl << "With permutation:" << endl << endl;
                         // PermSet->Print(Edge->GetPermutation(), cout);
                         // cout << endl;
+                        cout << "Found Fair State" << endl;
 
                         Executed[InstanceID] = true;
                         if (EnabledStates.size() > 0) {

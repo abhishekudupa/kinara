@@ -1790,14 +1790,10 @@ namespace ESMC {
             auto Retval = TypeCache.Get<T>(forward<ArgTypes>(Args)...);
             Retval->GetOrSetTypeID();
             string TypeName = "";
-            if (Retval->template Is<ExprRecordType>()) {
-                TypeName = Retval->template SAs<ExprRecordType>()->GetName();
-            } else if (Retval->template Is<ExprEnumType>()) {
+            if (Retval->template Is<ExprEnumType>()) {
                 TypeName = Retval->template SAs<ExprEnumType>()->GetName();
             } else if (Retval->template Is<ExprSymmetricType>()) {
                 TypeName = Retval->template SAs<ExprSymmetricType>()->GetName();
-            } else if (Retval->template Is<ExprParametricType>()) {
-                TypeName = Retval->template SAs<ExprParametricType>()->GetName();
             }
 
             if (TypeName != "") {
