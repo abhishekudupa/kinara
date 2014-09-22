@@ -67,7 +67,11 @@ namespace ESMC {
     typedef int32_t i32;
     typedef uint32_t u32;
     typedef int64_t i64;
+#ifdef __APPLE__
+    typedef size_t u64;
+#else
     typedef uint64_t u64;
+#endif
 
     class InternalError : public exception
     {

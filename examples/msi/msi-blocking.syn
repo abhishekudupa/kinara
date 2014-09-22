@@ -28,7 +28,7 @@ messages {
                 FwdGetSMsg[c][d][a] of CacheIDType;
 
                 foreach c2 in CacheIDType (!= c2 c) {
-                    InvAckMsg[c][d][a] of unit;
+                    InvAckMsg[c][c2][d][a] of unit;
                 }
 
                 UnblockSMsg[c][d][a] of unit;
@@ -99,11 +99,11 @@ channelautomaton RspChannel[c][d][a] with compassion
     capacity = NumCaches;
 
     messages {
-        InvAckMsg[c][d][a];
         WBAckMsg[c][d][a];
         DataMsgD2C[c][d][a];
         foreach c2 in CacheIDType {
             DataMsgC2C[c2][c][d][a];
+            InvAckMsg[c2][c][d][a];
         }
     }
 }
@@ -428,6 +428,9 @@ automaton Directory[d][a] with compassion
             FwdGetXMsg[c][d][a];
             FwdGetSMsg[c][d][a];
             DataMsgD2C[c][d][a];
+
+            // Christos: not sure about the following
+            WBAckMsg[c][d][a];
         }
     }
 
