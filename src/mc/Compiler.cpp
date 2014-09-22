@@ -110,12 +110,12 @@ namespace ESMC {
                     return;
                 } else {
                     Exp->ExtensionData.ConstCompiled = true;
-                    Exp->ExtensionData.ConstVal = 0;
+                    Exp->ExtensionData.ConstVal = UndefValue;
                     return;
                 }
             }
             
-            auto Val = Type->As<ExprScalarType>()->ConstToVal(ConstVal) + 1;
+            auto Val = Type->As<ExprScalarType>()->ConstToVal(ConstVal);
             Exp->ExtensionData.ConstVal = Val;
             Exp->ExtensionData.ConstCompiled = true;
         }
@@ -155,7 +155,7 @@ namespace ESMC {
                     ValueSize = Align(ValueSize, ValueSize);
                     Exp->ExtensionData.Offset = 
                         Children[0]->ExtensionData.Offset + 
-                        (ValueSize * (Children[1]->ExtensionData.ConstVal - 1));
+                        (ValueSize * (Children[1]->ExtensionData.ConstVal));
                     return;
                 }
             }
@@ -217,10 +217,12 @@ namespace ESMC {
                     Compiler->RegisterInterp(Ext.Interp);
                 } else {
                     auto TypeAsScalar = Type->As<ExprScalarType>();
-                    i64 Low = 0;
-                    i64 High = TypeAsScalar->GetCardinality() - 1;
-                    Ext.Interp = 
-                        new CompiledConstInterpreter(Type->GetByteSize(), Ext.ConstVal, Low, High);
+                    if (!TypeAsScalar->Is<ExprIntType>()) {
+                        Ext.Interp = 
+                            new CompiledConstInterpreter(Type->GetByteSize(), Ext.ConstVal);
+                    } else {
+                        Ext.Interp = new CompiledConstInterpreter(4, Ext.ConstVal);
+                    }
                     Compiler->RegisterInterp(Ext.Interp);
                 }
                 return;
@@ -422,11 +424,8 @@ namespace ESMC {
             }
         }
         
-        CompiledConstInterpreter::CompiledConstInterpreter(u32 Size, i64 Value,
-                                                           i64 Low, i64 High)
-            : RValueInterpreter(true, Size), Value(Value), Ptr(nullptr),
-              Low(Low), High(High)
-
+        CompiledConstInterpreter::CompiledConstInterpreter(u32 Size, i64 Value)
+            : RValueInterpreter(true, Size), Value(Value), Ptr(nullptr)
         {
             // Nothing here
         }
@@ -445,11 +444,7 @@ namespace ESMC {
         i64 CompiledConstInterpreter::EvaluateScalar(const StateVec *StateVector) const
         {
             if (Scalar) {
-                if (Value == 0) {
-                    return UndefValue;
-                } else {
-                    return Value + Low - 1;
-                }
+                return Value;
             }
             throw InternalError((string)"EvaluateScalar() called on non-scalar type");
         }
@@ -461,16 +456,6 @@ namespace ESMC {
             } else {
                 return Ptr;
             }
-        }
-
-        i64 CompiledConstInterpreter::GetLow() const
-        {
-            return Low;
-        }
-
-        i64 CompiledConstInterpreter::GetHigh() const
-        {
-            return High;
         }
 
         CompiledLValueInterpreter::CompiledLValueInterpreter(u32 Size, bool Msg, 
@@ -594,9 +579,8 @@ namespace ESMC {
                 auto EvalValue = SubInterps[i]->EvaluateScalar(StateVector);
                 if (EvalValue == UndefValue) {
                     throw ESMCError((string)"Undefined value used in computation");
-                } else {
-                    SubEvals[i] = EvalValue;
                 }
+                SubEvals[i] = EvalValue;
             }
         }
 

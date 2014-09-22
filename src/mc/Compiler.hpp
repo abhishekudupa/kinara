@@ -149,18 +149,14 @@ namespace ESMC {
         private:
             i64 Value;
             u08* Ptr;
-            i64 Low;
-            i64 High;
             
         public:
-            CompiledConstInterpreter(u32 Size, i64 Value, i64 Low, i64 High);
+            CompiledConstInterpreter(u32 Size, i64 Value);
             CompiledConstInterpreter(u32 Size, u08* Ptr);
             virtual ~CompiledConstInterpreter();
 
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
-            i64 GetLow() const;
-            i64 GetHigh() const;
         };
 
         class CompiledLValueInterpreter : public LValueInterpreter

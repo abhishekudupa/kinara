@@ -497,9 +497,10 @@ namespace ESMC {
                     Exp->SetType(Exp->GetConstType());
                 } else if(ActType->template As<ExprRangeType>() != nullptr ||
                           ActType->template As<ExprIntType>() != nullptr) {
-                    if (!boost::algorithm::all(ConstVal, boost::algorithm::is_digit())) {
-                        throw ExprTypeError((string)"Invalid value " + ConstVal);
-                    }
+                    // if (!boost::algorithm::all(ConstVal, boost::algorithm::is_digit())) {
+                    //     throw ExprTypeError((string)"Invalid value " + ConstVal);
+                    // }
+                    // Commented out the check above, lexical cast should handle it!
                     boost::multiprecision::cpp_int Val = 0;
                     Val = boost::lexical_cast<boost::multiprecision::cpp_int>(ConstVal);
                     if (ActType->template As<ExprRangeType>() != nullptr) {
@@ -700,7 +701,7 @@ namespace ESMC {
                                 [&] (const ExprTypeRef& i) -> bool 
                                 { return CheckTypeCompat(i, IntType); })) {
                         throw ExprTypeError((string)"add/sub/mul ops need integer arguments");
-                    }                    
+                    }
                     Exp->SetType(IntType);
                     break;
                 }

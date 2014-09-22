@@ -235,7 +235,6 @@ namespace ESMC {
                         // cout << endl << "With permutation:" << endl << endl;
                         // PermSet->Print(Edge->GetPermutation(), cout);
                         // cout << endl;
-                        cout << "Found Fair State" << endl;
 
                         Executed[InstanceID] = true;
                         if (EnabledStates.size() > 0) {
@@ -308,7 +307,7 @@ namespace ESMC {
         // Extern helper function definitions
         void ApplyUpdates(const vector<LTSAssignRef>& Updates, 
                           const StateVec* InputState, 
-                          StateVec *OutputState)
+                          StateVec* OutputState)
         {
             for (auto const& Update : Updates) {
                 auto const& LHS = Update->GetLHS();
@@ -612,10 +611,10 @@ namespace ESMC {
                 auto CurState = Factory->MakeState();
                 ApplyUpdates(ISGen, ZeroState, CurState);
 
-                // cout << "Initial State:" << endl;
-                // cout << "--------------------------------------------------------" << endl;
-                // Printer->PrintState(CurState, cout);
-                // cout << "--------------------------------------------------------" << endl;
+                cout << "Initial State:" << endl;
+                cout << "--------------------------------------------------------" << endl;
+                Printer->PrintState(CurState, cout);
+                cout << "--------------------------------------------------------" << endl;
 
                 u32 CanonPerm = 0;
                 auto CanonState = TheCanonicalizer->Canonicalize(CurState, CanonPerm);
