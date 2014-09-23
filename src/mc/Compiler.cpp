@@ -233,12 +233,11 @@ namespace ESMC {
                 i64 High = INT64_MAX;
                 
                 auto TypeAsRange = Type->As<Exprs::ExprRangeType>();
+                auto TypeAsScalar = Type->As<Exprs::ExprScalarType>();
                 if (TypeAsRange != nullptr) {
                     Low = TypeAsRange->GetLow();
                     High = TypeAsRange->GetHigh();
-                } 
-                auto TypeAsScalar = Type->As<Exprs::ExprScalarType>();
-                if (TypeAsScalar != nullptr) {
+                } else if (TypeAsScalar != nullptr) {
                     Low = 0;
                     High = TypeAsScalar->GetCardinality() - 1;
                 }
@@ -336,11 +335,16 @@ namespace ESMC {
                 if (TypeAsRange != nullptr) {
                     Low = TypeAsRange->GetLow();
                     High = TypeAsRange->GetHigh();
+                } else if (Type->Is<Exprs::ExprScalarType>()) {
+                    Low = 0;
+                    High = Type->GetCardinality() - 1;
                 }
+
                 if (!SubInterps[0]->Is<LValueInterpreter>()) {
                     throw InternalError((string)"Expected an LValueInterpreter.\nAt: " +
                                         __FILE__ + ":" + to_string(__LINE__));
                 }
+
                 auto ArrayType = Children[0]->GetType()->SAs<Exprs::ExprArrayType>();
                 u32 TotalSize = ArrayType->GetByteSize();
                 u32 ElemSize = TotalSize / ArrayType->GetIndexType()->GetCardinality();
@@ -350,9 +354,9 @@ namespace ESMC {
                                                   SubInterps[1],
                                                   ElemSize,
                                                   Low, High);
-
             }
                 break;
+
             case LTSOps::OpField: {
                 i64 Low = 0;
                 i64 High = INT64_MAX;
@@ -361,8 +365,7 @@ namespace ESMC {
                 if (TypeAsRange != nullptr) {
                     Low = TypeAsRange->GetLow();
                     High = TypeAsRange->GetHigh();
-                }
-                if (Type->Is<Exprs::ExprScalarType>()) {
+                } else if (Type->Is<Exprs::ExprScalarType>()) {
                     Low = 0;
                     High = Type->GetCardinality() - 1;
                 }
@@ -376,6 +379,7 @@ namespace ESMC {
                                                   Ext.FieldOffset,
                                                   Low, High);
             }
+                break;
 
             default:
                 throw UnimplementedException("Uninterpreted Function Interpretations",
