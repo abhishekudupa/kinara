@@ -165,8 +165,10 @@ class Model(model.Model):
         for a in self.readers[channel]:
             for _, _, data in a.edges(data=True):
                 if data['kind'] == 'input' and channel == data['channel'] and len(data['update']) > 0:
-                    lhs, _ = data['update'][0]
-                    variables.add(lhs)
+                    for update in data['update']:
+                        lhs, rhs = update
+                        if channel in z3p.variables_in_expression(rhs):
+                            variables.add(lhs)
         return list(variables)
 
     def reading_variables_for_channel_field(self, channel_field):
@@ -177,8 +179,10 @@ class Model(model.Model):
         for a in self.readers[channel]:
             for _, _, data in a.edges(data=True):
                 if data['kind'] == 'input' and channel == data['channel'] and len(data['update']) > 0:
-                    lhs, _ = data['update'][field_num]
-                    variables.add(lhs)
+                    for update in data['update']:
+                        lhs, rhs = update
+                        if channel_field in util.selects_in_expression(rhs):
+                            variables.add(lhs)
         return list(variables)
 
     def __str__(self):
@@ -203,13 +207,18 @@ class Model(model.Model):
                    z3p.Z3_OP_GT: "LTSOps::OpGT",
                    z3p.Z3_OP_GE: "LTSOps::OpGE",
                    z3p.Z3_OP_EQ: "LTSOps::OpEQ",
+                   z3p.Z3_OP_AND: "LTSOps::OpAND",
                    z3p.Z3_OP_ADD: "LTSOps::OpADD",
-                   z3p.Z3_OP_MOD: "LTSOps::OpMOD"}
+                   z3p.Z3_OP_MOD: "LTSOps::OpMOD",
+                   z3p.Z3_OP_SUB: "LTSOps::OpSUB"}
         if e.decl().kind() in ops_map:
             return 'TheLTS->MakeOp({}, {}, {})'.format(ops_map[e.decl().kind()], e1, e2)
         elif e.decl().kind() == z3p.Z3_OP_DISTINCT:
             eq_e = 'TheLTS->MakeOp(LTSOps::OpEQ, {}, {})'.format(e1, e2)
             return 'TheLTS->MakeOp(LTSOps::OpNOT, {})'.format(eq_e)
+        else:
+            raise NotImplementedError("can't translate expression {} with {}".format(e, e.num_args()))
+
 
     def translate_channel_reference(self, channel_reference):
         ret_val = 'TheLTS->MakeOp(LTSOps::OpField, {}PortExp, TheLTS->MakeVar("Field{}", TheLTS->MakeFieldAccessType()))'
@@ -238,7 +247,10 @@ class Model(model.Model):
                 for index, expression in enumerate(channel_expressions):
                     updates.append((channel[index], expression))
             else:
-                updates.append((channel, channel_expressions[0]))
+                if channel.sort() != util.UNIT_SORT:
+                    updates.append((channel, channel_expressions[0]))
+                else:
+                    updates.append((channel, z3p.IntVal(0)))
         new_data['updates'] = self.translate_updates(updates)
         if data['kind'] in ['input', 'output']:
             new_data['channel'] = to_camel_case(channel.decl().name()) + 'Port'
@@ -269,6 +281,8 @@ class Model(model.Model):
             return self.translate_binary_expression(e)
         elif e.num_args() == 3:
             return self.translate_ternary_expreession(e)
+        else:
+            raise NotImplementedError("can't translate expression {} with {}".format(e, e.num_args()))
 
     def translate_ternary_expreession(self, e):
         assert e.decl().kind() == z3p.Z3_OP_ITE
@@ -281,6 +295,12 @@ class Model(model.Model):
         e0 = self.translate_expression(e.arg(0))
         if e.decl().kind() == z3p.Z3_OP_NOT:
             return 'TheLTS->MakeOp(LTSOps::OpNOT, {})'.format(e0)
+        elif e.decl().kind() == z3p.Z3_OP_UMINUS:
+            assert z3p.is_int_value(e.arg(0))
+            return 'TheLTS->MakeVal("{i}", TheLTS->MakeRangeType({i}, {i}))'.format(i='-{}'.format(e.arg(0)))
+        else:
+            raise NotImplementedError("can't translate expression {} with {}".format(e, e.num_args()))
+
 
     def translate_update(self, update):
         lhs, rhs = update

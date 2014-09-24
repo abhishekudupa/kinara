@@ -193,7 +193,7 @@ class SymbolicAutomaton(networkx.MultiDiGraph):
         self.initials = {}
         for v, value in zip(self.variables, self.initial_values):
             self.initials[v] = value
-        assert len(self.variables) == len(self.initial_values), "# of initial values should match # of variables"
+        assert len(self.variables) == len(self.initial_values), "# of initial values should match # of variables: variables {}, initials: {}".format(self.variables, self.initial_values)
 
         self.variable_initial_value = dict(zip([str(v) for v in self.variables],
                                                self.initial_values))
@@ -211,9 +211,14 @@ class SymbolicAutomaton(networkx.MultiDiGraph):
             # if it is an input transition, there is no expression for the message to send
             if len(transition) == 6:
                 name, source, channel, guard, update, target = transition
+                assert channel not in self.output_channels, "Output channel {} used in input transition {}".format(channel, transition)
+                kind = 'input'
             # output transitions
             elif len(transition) == 7:
                 name, source, channel, channel_expression, guard, update, target = transition
+                assert channel not in self.input_channels, "Input channel {} used in output transition {}".format(channel, transition)
+                kind = 'output'
+
             # internal transitios
             elif len(transition) == 5:
                 name, source, guard, update, target = transition
@@ -222,15 +227,10 @@ class SymbolicAutomaton(networkx.MultiDiGraph):
             assert (channel in self.input_channels or
                     channel in self.output_channels or
                     channel is None), transition
-            if channel is not None:
-                if len(channel_expression) == 0:
-                    kind = 'input'
-                else:
-                    kind = 'output'
-            else:
+            if channel is None:
                 kind = 'internal'
             if name is None:
-                name = 't_{}'.format(self.number_of_edges)
+                name = 't_{}'.format(self.number_of_edges())
             self.add_edge(source, target,
                           channel=channel,
                           channel_expression=channel_expression,
@@ -259,7 +259,7 @@ class SymbolicAutomaton(networkx.MultiDiGraph):
             assert isinstance(variable_range, tuple) and len(variable_range) == 2
             assert isinstance(variable_range[0], int)
             assert isinstance(variable_range[1], int)
-            assert variable_range[0] < variable_range[1]
+            assert variable_range[0] <= variable_range[1]
         for output_channel_or_field, output_channel_range in self.output_channel_ranges.items():
             if not z3p.is_const(output_channel_or_field) and output_channel_or_field.decl().kind() == z3p.Z3_OP_SELECT:
                 assert output_channel_or_field.arg(0) in self.output_channels
@@ -421,31 +421,8 @@ class SymbolicAutomaton(networkx.MultiDiGraph):
         return (variables, ufunctions)
 
 
-if __name__ == '__main__':
-    """Pass the module path and the function to call in the module
-    and as a result I will draw the automaton.
-    """
-    import argparse
-    import os
-    import sys
+import main
 
-    parser = argparse.ArgumentParser(description='Draw automaton.')
-    parser.add_argument('module_path', help='python module file that contains automaton function')
-    parser.add_argument('automaton_function', help='function in module that creates automaton')
-    parser.add_argument('--transition_labels', '-t', action='store_true', help='add transition labels')
-    args = parser.parse_args()
-    module = util.import_module(args.module_path)
-    if module is None:
-        sys.stderr.write('File {} does not exist.\n'.format(args.module_path))
-        parser.print_help()
-        sys.exit(1)
-    try:
-        function = getattr(module, args.automaton_function)
-    except AttributeError:
-        sys.stderr.write('Function {} was not found in {}\n'.format(args.automaton_function, args.module_path))
-        parser.print_help()
-        sys.exit(1)
-    automaton = function()
-    automaton.draw(transition_labels=args.transition_labels)
-    print 'Automaton {} written in tmp/temp.png'.format(automaton)
-    os.system('open {}'.format(util.absolute_filename_in_tmp('temp.png')))
+
+if __name__ == '__main__':
+    main.automaton_main()

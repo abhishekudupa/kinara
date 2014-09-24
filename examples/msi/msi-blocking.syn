@@ -330,7 +330,9 @@ automaton Cache[c][d][a] with compassion
         { AckCounter := (- AckCounter NumAcks); DataBlk := v; } -> C_SM;
         if (= AckCounter NumAcks)
         { AckCounter := 0; DataBlk := v; } -> 
-        send UnblockEMsg[c][d][a] { DataBlk := PendingStore; PendingStore := undef; } -> C_M;
+        send UnblockEMsg[c][d][a] { DataBlk := PendingStore; PendingStore := undef; } ->
+        send STAckMsg[c][d][a]? ->
+        C_M;
 
         foreach c2 in CacheIDType (!= c2 c) {
             C_IM on InvAckMsg[c2][c][d][a] { AckCounter := (+ AckCounter 1); } -> C_IM;
@@ -341,7 +343,7 @@ automaton Cache[c][d][a] with compassion
         
         // Transitions from C_SM on Rsp Events
         C_SM on FwdGetXMsg'[c][d][a] (c2) { FwdToCache := c2; } -> 
-        send InvAckMsg[c][FwdToCache][d][a] {} -> C_SM;
+        send InvAckMsg[c][FwdToCache][d][a] {} -> C_IM;
 
         // Case where data comes from dir ==> Must wait for acks
         C_SM on DataMsgD2C'[c][d][a] (v, NumAcks)
@@ -491,7 +493,9 @@ automaton Directory[d][a] with compassion
             send DataMsgD2C[ActiveId][d][a] (DataBlk, 0) -> D_BUSY;
 
             // Transitions from PENDING_UNBLOCK_E
-            D_PENDING_UNBLOCK_E on UnblockEMsg'[c][d][a] { Sharers[c] := false; Owner := undef; } -> D_I;
+            D_PENDING_UNBLOCK_E on UnblockEMsg'[c][d][a] { Sharers[c] := false; Owner := undef; } 
+            ?? -> WBAckMsg[c][d][a]
+            -> D_I;
         }
     }
 }
