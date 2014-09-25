@@ -17,7 +17,8 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/sparsehash
 
-PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP ABP_generated MSI_generated Fischer LeaderElection
+PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP \
+	ABP_generated MSI MSI_generated Fischer LeaderElection
 
 PingPongChan_SYS_LIBS=esmc z3 rt boost_system
 PingPongChan_EXT_LIBS=boost z3 esmc
@@ -43,6 +44,9 @@ ABP_generated_EXT_LIBS=boost z3 esmc
 MSI_generated_SYS_LIBS=esmc z3 rt boost_system
 MSI_generated_EXT_LIBS=boost z3 esmc
 
+MSI_SYS_LIBS=esmc z3 rt boost_system
+MSI_EXT_LIBS=boost z3 esmc
+
 Fischer_SYS_LIBS=esmc z3 rt boost_system
 Fischer_EXT_LIBS=boost z3 esmc
 
@@ -66,6 +70,7 @@ ABP_generated_OBJS=ABP_generated.o
 MSI_generated_OBJS=MSI_generated.o
 Fischer_OBJS=Fischer.o
 LeaderElection_OBJS=LeaderElection.o
+MSI_OBJS=MSI.o
 
 
 PingPongChan_LIB_PATHS= \
@@ -94,6 +99,8 @@ MSI_generated_LIB_PATHS= \
     $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \
     $(PROJECT_ROOT)/../../thirdparty/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
+
+MSI_LIB_PATHS=$(MSI_generated_LIB_PATHS)
 
 Fischer_LIB_PATHS= \
     $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \

@@ -1,5 +1,6 @@
 PingPong
 PingPongChan
+PingPongChanBug
 TestChan
 SemTest
 Elevator
@@ -10,3 +11,4 @@ ABP_generated
 MSI_generated
 Fischer
 LeaderElection
+MSI
