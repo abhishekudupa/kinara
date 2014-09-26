@@ -837,6 +837,8 @@ namespace ESMC {
                 if (QExpr->GetType() != BoolType) {
                     throw ExprTypeError("Body of quantified expression needs to be boolean");
                 }
+                
+                Exp->SetType(BoolType);
                 ScopeStack.pop_back();
                 return;
             }

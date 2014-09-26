@@ -580,7 +580,8 @@ namespace ESMC {
             }
 
             auto ArrayType = Mgr->MakeType<ExprRecordType>(Name, RecordMembers);
-            for (auto const& Param : Params) {
+            vector<ExpT> RevParams(Params.rbegin(), Params.rend());
+            for (auto const& Param : RevParams) {
                 ArrayType = Mgr->MakeType<ExprArrayType>(Param->GetType(), ArrayType);
             }
             StateVarType = ArrayType;

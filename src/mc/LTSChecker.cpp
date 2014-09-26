@@ -343,6 +343,9 @@ namespace ESMC {
         LTSChecker::LTSChecker(LabelledTS* TheLTS)
             : TheLTS(TheLTS), AQS(nullptr), ThePS(nullptr)
         {
+            // Freeze the LTS in any case
+            TheLTS->Freeze();
+
             Compiler = new LTSCompiler();
             Compiler->CompileLTS(TheLTS);
             Factory = new StateFactory(TheLTS->StateVectorSize,
