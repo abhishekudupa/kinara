@@ -298,6 +298,8 @@ namespace ESMC {
                     }
                 }
 
+                const bool HasOutput = (TransForCP.size() > 0);
+
                 // Now get the input transitions on all EFSMs
                 for (auto const& NameEFSM : AllEFSMs) {
                     auto EFSM = NameEFSM.second;
@@ -306,6 +308,13 @@ namespace ESMC {
                         TransForCP.insert(TransForCP.end(), InputTrans.begin(),
                                           InputTrans.end());
                     }
+                }
+
+                if (TransForCP.size() > 0 && !HasOutput) {
+                    throw ESMCError((string)"Message type \"" + 
+                                    MType->SAs<ExprRecordType>()->GetName() + 
+                                    "\" is the output of no EFSM but is used as an " +
+                                    "input to one or more EFSMs");
                 }
 
                 auto&& CPTrans = CrossProduct<LTSTransRef>(TransForCP.begin(), TransForCP.end());

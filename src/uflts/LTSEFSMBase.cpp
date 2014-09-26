@@ -435,8 +435,8 @@ namespace ESMC {
                     }
                     
                     auto NewAsgn = 
-                        new LTSAssignSimple(Mgr->Substitute(SubstMap, PUpdate->GetLHS()),
-                                            Mgr->Substitute(SubstMap, PUpdate->GetRHS()));
+                        new LTSAssignSimple(Mgr->Substitute(LocalSubstMap, PUpdate->GetLHS()),
+                                            Mgr->Substitute(LocalSubstMap, PUpdate->GetRHS()));
                     Retval.push_back(NewAsgn);
                 }
             }

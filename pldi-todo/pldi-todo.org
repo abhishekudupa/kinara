@@ -1,0 +1,8 @@
+* Middle layer
+** Model checking with uninterpreted functions (audupa)
+** Generalization of counter-examples (audupa)
+** Write up (formalize) the generalization algorithm in the previous step, counter-examples --> constraints (audupa/rmukund)
+
+* Top layer
+** Formalization of the top level algorithm (stergiou)
+
