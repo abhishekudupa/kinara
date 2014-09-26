@@ -983,6 +983,7 @@ namespace ESMC {
             ConstructProduct(Monitor);
 
             bool FixPoint = false;
+            set<const ProductState*> AllUnfairStates;
 
             while (!FixPoint) {
                 FixPoint = true;
@@ -995,12 +996,14 @@ namespace ESMC {
                     UnfairStates.clear();
                     auto IsFair = CheckSCCFairness(SCCRoot, UnfairStates);
                     if (!IsFair && UnfairStates.size() > 0) {
+                        AllUnfairStates.insert(UnfairStates.begin(), 
+                                               UnfairStates.end());
                         // Not fair, due to a strong fairness
                         FixPoint = false;
                         // Mark all states as being unexplored
                         ThePS->ClearAllMarkings();
                         cout << "Deleting unfair states..." << endl;
-                        for (auto UnfairState : UnfairStates) {
+                        for (auto UnfairState : AllUnfairStates) {
                             UnfairState->MarkDeleted();
                         }
                         // Redo SCCs
