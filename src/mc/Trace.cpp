@@ -533,9 +533,9 @@ namespace ESMC {
 
             // audupa: DEBUG
             
-            auto TempLV = new LivenessViolation(InitState, StemPath, PathSoFar,
-                                                Checker->Printer, ThePS);
-            cout << TempLV->ToString() << endl << endl;
+            // auto TempLV = new LivenessViolation(InitState, StemPath, PathSoFar,
+            //                                     Checker->Printer, ThePS);
+            // cout << TempLV->ToString() << endl << endl;
 
             // audupa: DEBUG END
 
