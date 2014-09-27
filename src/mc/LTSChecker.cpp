@@ -333,7 +333,10 @@ namespace ESMC {
         {
             auto const& Guard = Cmd->GetGuard();
             auto GuardInterp = Guard->ExtensionData.Interp;
-            if (GuardInterp->EvaluateScalar(InputState) == 0) {
+            auto Res = GuardInterp->EvaluateScalarNE(InputState);
+            if (Res == UndefValue) {
+                throw ESMCError((string)"Undefined value obtained while evaluating guard");
+            } else if (Res == 0) {
                 return nullptr;
             } else {
                 return ExecuteCommand(Cmd, InputState);
@@ -422,8 +425,10 @@ namespace ESMC {
         {
             while(++LastFired < NumGuardedCmds) {
                 auto const& Guard = GuardedCommands[LastFired]->GetGuard();
-                auto GRes = Guard->ExtensionData.Interp->EvaluateScalar(State);
-                if (GRes != 0) {
+                auto GRes = Guard->ExtensionData.Interp->EvaluateScalarNE(State);
+                if (GRes == UndefValue) {
+                    throw ESMCError((string)"Undefined value obtained when evaluating guard");
+                } else if (GRes != 0) {
                     return GuardedCommands[LastFired];
                 }
             }
@@ -509,9 +514,10 @@ namespace ESMC {
                     // This is a new state, check for error
                     auto const& Invar = TheLTS->GetInvariant();
                     auto Interp = Invar->ExtensionData.Interp;
-                    if (Interp->EvaluateScalar(CanonState) != 1) {
-                        // Again, remember this state, but continue
-                        // on with the AQS construction
+                    auto InvarRes = Interp->EvaluateScalarNE(CanonState);
+                    if (InvarRes == UndefValue) {
+                        throw ESMCError((string)"Obtained undefined value when evaluating invariant");
+                    } else if (InvarRes == 0) {
                         AQS->AddErrorState(CanonState, DFSStack.size());
                     }
                     continue;
@@ -579,7 +585,10 @@ namespace ESMC {
                             // New state, check for errors;
                             auto const& Invar = TheLTS->GetInvariant();
                             auto Interp = Invar->ExtensionData.Interp;
-                            if (Interp->EvaluateScalar(CanonNextState) != 1) {
+                            auto InvarRes = Interp->EvaluateScalarNE(CanonNextState);
+                            if (InvarRes == UndefValue) {
+                                throw ESMCError((string)"Undefined value obtained in evaluation of invariant");
+                            } else if (InvarRes == 0) {
                                 // Again, remember this state, but continue
                                 // on with the AQS construction
                                 // We only want the first one to be stored

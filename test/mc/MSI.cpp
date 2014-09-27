@@ -74,13 +74,13 @@ int main()
     auto ValueType = TheLTS->MakeSymmType("ValueType", NumValues);
     auto AddressType = TheLTS->MakeSymmType("AddressType", NumAddresses);
 
-    auto CacheParam = TheLTS->MakeVar("Cache", CacheIDType);
-    auto CacheParam1 = TheLTS->MakeVar("Cache1", CacheIDType);
-    auto CacheParam2 = TheLTS->MakeVar("Cache2", CacheIDType);
+    auto CacheParam = TheLTS->MakeVar("CacheID", CacheIDType);
+    auto CacheParam1 = TheLTS->MakeVar("CacheID1", CacheIDType);
+    auto CacheParam2 = TheLTS->MakeVar("CacheID2", CacheIDType);
 
-    auto DirParam = TheLTS->MakeVar("Directory", DirIDType);
-    auto AddressParam = TheLTS->MakeVar("Address", AddressType);
-    auto ValueParam = TheLTS->MakeVar("Value", ValueType);
+    auto DirParam = TheLTS->MakeVar("DirID", DirIDType);
+    auto AddressParam = TheLTS->MakeVar("AddressID", AddressType);
+    auto ValueParam = TheLTS->MakeVar("ValueID", ValueType);
 
     auto AckType = TheLTS->MakeRangeType(-((i64)NumCaches), NumCaches);
     auto FAType = TheLTS->MakeFieldAccessType();
@@ -1207,6 +1207,70 @@ int main()
     auto DirDotOwner = TheLTS->MakeOp(LTSOps::OpField, DirStateVar, 
                                       TheLTS->MakeVar("Owner", FAType));
     
+    // Initial state for coherence monitor
+    InitUpdates.push_back(new LTSAssignParam({ DirParam, AddressParam }, TrueExp, CMDotState, 
+                                             TheLTS->MakeVal("InitialState", 
+                                                             CMDotState->GetType())));
+    InitUpdates.push_back(new LTSAssignParam({ DirParam, AddressParam }, TrueExp, 
+                                             CMDotActualLastValue, ValueParam));
+    InitUpdates.push_back(new LTSAssignParam({ DirParam, AddressParam }, TrueExp,
+                                             CMDotLastSeenValue, 
+                                             TheLTS->MakeVal("clear", 
+                                                             CMDotLastSeenValue->GetType())));
+    // Initial state for environment
+    InitUpdates.push_back(new LTSAssignParam(CacheParams, TrueExp,
+                                             EnvDotState, 
+                                             TheLTS->MakeVal("InitialState", 
+                                                              EnvDotState->GetType())));
+    InitUpdates.push_back(new LTSAssignParam(CacheParams, TrueExp,
+                                             EnvDotPendingStoreValue,
+                                             TheLTS->MakeVal("clear", ValueType)));
+    InitUpdates.push_back(new LTSAssignParam(CacheParams, TrueExp, 
+                                             EnvDotLastSeenStoreValue, 
+                                             TheLTS->MakeVal("clear", ValueType)));
+
+    // Initial state for the caches
+    InitUpdates.push_back(new LTSAssignParam(CacheParams, TrueExp,
+                                             CacheDotState, 
+                                             TheLTS->MakeVal("C_I", 
+                                                             CacheDotState->GetType())));
+    InitUpdates.push_back(new LTSAssignParam(CacheParams, TrueExp, 
+                                             CacheDotData,
+                                             TheLTS->MakeVal("clear", ValueType)));
+    InitUpdates.push_back(new LTSAssignParam(CacheParams, TrueExp,
+                                             CacheDotAckCounter,
+                                             TheLTS->MakeVal("0", AckType)));
+    InitUpdates.push_back(new LTSAssignParam(CacheParams, TrueExp,
+                                             CacheDotPendingWrite,
+                                             TheLTS->MakeVal("clear", ValueType)));
+    InitUpdates.push_back(new LTSAssignParam(CacheParams, TrueExp,
+                                             CacheDotFwdToCache,
+                                             TheLTS->MakeVal("clear", CacheIDType)));
+    
+    // Initial state for the directory
+    InitUpdates.push_back(new LTSAssignParam({ DirParam, AddressParam }, TrueExp,
+                                             DirDotState, 
+                                             TheLTS->MakeVal("D_I", DirDotState->GetType())));
+    InitUpdates.push_back(new LTSAssignParam({ DirParam, AddressParam }, TrueExp, 
+                                             DirDotData, ValueParam));
+    InitUpdates.push_back(new LTSAssignParam({ DirParam, AddressParam }, TrueExp, 
+                                             DirDotActiveID, 
+                                             TheLTS->MakeVal("clear", CacheIDType)));
+    InitUpdates.push_back(new LTSAssignParam({ DirParam, AddressParam }, TrueExp, 
+                                             DirDotNumSharers,
+                                             TheLTS->MakeVal("0", NumSharersType)));
+    InitUpdates.push_back(new LTSAssignParam({ DirParam, AddressParam }, TrueExp,
+                                             DirDotOwner,
+                                             TheLTS->MakeVal("clear", CacheIDType)));
+    InitUpdates.push_back(new LTSAssignParam({ CacheParam, DirParam, AddressParam }, TrueExp, 
+                                             TheLTS->MakeOp(LTSOps::OpIndex, 
+                                                            DirDotSharers, 
+                                                            CacheParam),
+                                             TheLTS->MakeFalse()));
+    InitStates.push_back(new LTSInitState({ ValueParam }, TrueExp, InitUpdates));
+    
+    TheLTS->AddInitStates(InitStates);
+    TheLTS->Freeze();
     
     auto const& StateVectorVars = TheLTS->GetStateVectorVars();
 

@@ -85,6 +85,9 @@ namespace ESMC {
 
             virtual i64 EvaluateScalar(const StateVec* StateVector) const = 0;
             virtual const u08* Evaluate(const StateVec* StateVector) const = 0;
+            // Non-exception versions
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const = 0;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const = 0;
 
             static void MakeInterpreter(const ExpT& Exp, LTSCompiler* Compiler);
 
@@ -157,6 +160,9 @@ namespace ESMC {
 
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class CompiledLValueInterpreter : public LValueInterpreter
@@ -175,6 +181,9 @@ namespace ESMC {
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
             
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
+
             virtual void WriteScalar(i64 Value, StateVec* StateVector) const override;
             virtual void Write(const u08* Ptr, StateVec* StateVector) const override;
         };
@@ -202,6 +211,9 @@ namespace ESMC {
 
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class NOTInterpreter : public OpInterpreter
@@ -212,6 +224,9 @@ namespace ESMC {
 
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class ITEInterpreter : public OpInterpreter
@@ -222,6 +237,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class ORInterpreter : public OpInterpreter
@@ -232,6 +250,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
 
@@ -243,6 +264,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class IMPLIESInterpreter : public OpInterpreter
@@ -253,6 +277,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class IFFInterpreter : public OpInterpreter
@@ -263,6 +290,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class XORInterpreter : public OpInterpreter
@@ -273,6 +303,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class ADDInterpreter : public OpInterpreter
@@ -283,6 +316,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class SUBInterpreter : public OpInterpreter
@@ -293,6 +329,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
         
         class MINUSInterpreter : public OpInterpreter
@@ -303,6 +342,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
         
         class MULInterpreter : public OpInterpreter
@@ -313,6 +355,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class DIVInterpreter : public OpInterpreter
@@ -323,6 +368,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class MODInterpreter : public OpInterpreter
@@ -333,6 +381,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class GTInterpreter : public OpInterpreter
@@ -343,6 +394,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
         
 
@@ -354,6 +408,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class LTInterpreter : public OpInterpreter
@@ -364,6 +421,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
         
         class LEInterpreter : public OpInterpreter
@@ -374,6 +434,9 @@ namespace ESMC {
             
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
         };
 
         class IndexInterpreter : public LValueInterpreter
@@ -394,6 +457,9 @@ namespace ESMC {
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
 
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
+
             virtual void WriteScalar(i64 Value, StateVec* StateVector) const override;
             virtual void Write(const u08* Ptr, StateVec* StateVector) const override;
         };
@@ -413,6 +479,9 @@ namespace ESMC {
 
             virtual i64 EvaluateScalar(const StateVec* StateVector) const override;
             virtual const u08* Evaluate(const StateVec* StateVector) const override;
+
+            virtual i64 EvaluateScalarNE(const StateVec* StateVector) const override;
+            virtual const u08* EvaluateNE(const StateVec* StateVector) const override;
 
             virtual void WriteScalar(i64 Value, StateVec* StateVector) const override;
             virtual void Write(const u08* Ptr, StateVec* StateVector) const override;

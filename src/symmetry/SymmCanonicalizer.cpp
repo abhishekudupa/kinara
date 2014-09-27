@@ -192,11 +192,12 @@ namespace ESMC {
                 // Arr[n] |-> pn
                 auto NewOutStateVector = OutStateVector->Clone();
                 
-                for (u32 i = TypeOffset; i < TypeOffset + PermSize; ++i) {
+                for (u32 i = 0; i < PermSize; ++i) {
+                    u32 j = i + TypeOffset;
                     const u08* SrcBasePtr = NewOutStateVector->GetStateBuffer();
                     u08* DstBasePtr = OutStateVector->GetStateBuffer();
                     
-                    u32 CurPutPos = Permutation[i];
+                    u32 CurPutPos = Permutation[j];
                     const u08* SrcPtr = (SrcBasePtr + Offset + (ElemSize * i));
                     u08* DstPtr = (DstBasePtr + Offset + (ElemSize * CurPutPos));
                     memcpy(DstPtr, SrcPtr, ElemSize);
@@ -496,6 +497,7 @@ namespace ESMC {
                     // Printer->PrintState(WorkingStateVec, cout);
                     // cout << "-----------------------------------------" << endl;
                 }
+
                 for (auto Sorter : Sorters) {
                     Sorter->Sort(WorkingStateVec);
                 }

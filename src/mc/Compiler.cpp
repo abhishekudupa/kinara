@@ -453,6 +453,11 @@ namespace ESMC {
             throw InternalError((string)"EvaluateScalar() called on non-scalar type");
         }
 
+        i64 CompiledConstInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            return EvaluateScalar(StateVector);
+        }
+
         const u08* CompiledConstInterpreter::Evaluate(const StateVec *StateVector) const
         {
             if (Scalar) {
@@ -460,6 +465,11 @@ namespace ESMC {
             } else {
                 return Ptr;
             }
+        }
+
+        const u08* CompiledConstInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            return Evaluate(StateVector);
         }
 
         CompiledLValueInterpreter::CompiledLValueInterpreter(u32 Size, bool Msg, 
@@ -505,6 +515,11 @@ namespace ESMC {
             }
         }
 
+        i64 CompiledLValueInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            return EvaluateScalar(StateVector);
+        }
+
         const u08* CompiledLValueInterpreter::Evaluate(const StateVec* StateVector) const
         {
             if (Msg) {
@@ -512,6 +527,11 @@ namespace ESMC {
             } else {
                 return (StateVector->GetStateBuffer() + Offset);
             }
+        }
+
+        const u08* CompiledLValueInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            return Evaluate(StateVector);
         }
 
         void CompiledLValueInterpreter::WriteScalar(i64 Value, StateVec* StateVector) const 
@@ -606,13 +626,37 @@ namespace ESMC {
                 auto SubEval2 = SubInterps[1]->EvaluateScalar(StateVector);
                 return (SubEval1 == SubEval2);
             } else {
-                return memcmp(SubInterps[0]->Evaluate(StateVector),
-                              SubInterps[1]->Evaluate(StateVector),
-                              SubInterps[0]->GetSize());
+                return (memcmp(SubInterps[0]->Evaluate(StateVector),
+                               SubInterps[1]->Evaluate(StateVector),
+                               SubInterps[0]->GetSize()) == 0);
+            }
+        }
+
+        i64 EQInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            if (SubInterps[0]->IsScalar()) {
+                auto SubEval1 = SubInterps[0]->EvaluateScalarNE(StateVector);
+                auto SubEval2 = SubInterps[1]->EvaluateScalarNE(StateVector);
+                return (SubEval1 == SubEval2);
+            } else {
+                auto SubPtr1 = SubInterps[0]->EvaluateNE(StateVector);
+                auto SubPtr2 = SubInterps[0]->EvaluateNE(StateVector);
+                if (SubPtr1 == nullptr && SubPtr2 == nullptr) {
+                    return 1;
+                } else if (SubPtr1 == nullptr || SubPtr2 == nullptr) {
+                    return 0;
+                } else {
+                    return (memcmp(SubPtr1, SubPtr2, SubInterps[0]->GetSize()) == 0);
+                }
             }
         }
 
         const u08* EQInterpreter::Evaluate(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* EQInterpreter::EvaluateNE(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
         }
@@ -635,7 +679,22 @@ namespace ESMC {
             return (SubEvals[0] == 0);
         }
 
+        i64 NOTInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            auto SubEval = SubInterps[0]->EvaluateScalarNE(StateVector);
+            if (SubEval == UndefValue) {
+                return UndefValue;
+            } else {
+                return (SubEval == 0 ? 1 : 0);
+            }
+        }
+
         const u08* NOTInterpreter::Evaluate(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* NOTInterpreter::EvaluateNE(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
         }
@@ -661,6 +720,22 @@ namespace ESMC {
             return (SubEvals[0] != 0 ? SubEvals[1] : SubEvals[2]);
         }
 
+        i64 ITEInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            if (!Scalar) {
+                throw InternalError((string)"EvaluateScalar() called on non-scalar type");
+            }
+            auto PredEval = SubInterps[0]->EvaluateScalarNE(StateVector);
+            if (PredEval == UndefValue) {
+                return UndefValue;
+            }
+            else if (PredEval != 0) {
+                return SubInterps[1]->EvaluateScalarNE(StateVector);
+            } else {
+                return SubInterps[2]->EvaluateScalarNE(StateVector);
+            }
+        }
+
         const u08* ITEInterpreter::Evaluate(const StateVec *StateVector) const
         {
             if (Scalar) {
@@ -670,6 +745,22 @@ namespace ESMC {
             return (SubInterps[0]->EvaluateScalar(StateVector) != 0 ? 
                     SubInterps[1]->Evaluate(StateVector) : 
                     SubInterps[2]->Evaluate(StateVector));
+        }
+
+        const u08* ITEInterpreter::EvaluateNE(const StateVec *StateVector) const
+        {
+            if (Scalar) {
+                throw InternalError((string)"Evaluate() called on scalar type");
+            }
+            
+            auto PredEval = SubInterps[0]->EvaluateScalarNE(StateVector);
+            if (PredEval == UndefValue) {
+                return nullptr;
+            } else if (PredEval != 0) {
+                return SubInterps[1]->EvaluateNE(StateVector);
+            } else {
+                return SubInterps[2]->EvaluateNE(StateVector);
+            }
         }
 
         ORInterpreter::ORInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -694,9 +785,33 @@ namespace ESMC {
             return 0;
         }
 
+        i64 ORInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            bool Exception = false;
+            for (u32 i = 0; i < NumSubInterps; ++i) {
+                auto CurValue = SubInterps[i]->EvaluateScalarNE(StateVector);
+                if (CurValue != UndefValue && CurValue != 0) {
+                    return 1;
+                } else if (CurValue == UndefValue) {
+                    Exception = true;
+                }
+            }
+
+            if (Exception) {
+                return UndefValue;
+            } else {
+                return 0;
+            }
+        }
+
         const u08* ORInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* ORInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
         ANDInterpreter::ANDInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -721,9 +836,33 @@ namespace ESMC {
             return 1;
         }
 
+        i64 ANDInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            bool Exception = false;
+            for (u32 i = 0; i < NumSubInterps; ++i) {
+                auto CurEval = SubInterps[i]->EvaluateScalarNE(StateVector);
+                if (CurEval == 0) {
+                    return 0;
+                } else if (CurEval == UndefValue) {
+                    Exception = true;
+                }
+            }
+
+            if (Exception) {
+                return UndefValue;
+            } else {
+                return 1;
+            }
+        }
+
         const u08* ANDInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* ANDInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
         IMPLIESInterpreter::IMPLIESInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -743,9 +882,35 @@ namespace ESMC {
             return (SubEvals[0] == 0 || SubEvals[1] != 0);
         }
 
+        i64 IMPLIESInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            auto SubEval0 = SubInterps[0]->EvaluateScalarNE(StateVector);
+            auto SubEval1 = SubInterps[1]->EvaluateScalarNE(StateVector);
+
+            bool Exception = false;
+            if (SubEval0 == UndefValue || SubEval1 == UndefValue) {
+                Exception = true;
+            }
+            if (SubEval0 != UndefValue && SubEval0 == 0) {
+                return 1;
+            } else if (SubEval1 != UndefValue && SubEval1 != 0) {
+                return 1;
+            } else if (Exception) {
+                return UndefValue;
+            } else {
+                return 0;
+            }
+        }
+        
+
         const u08* IMPLIESInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* IMPLIESInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
         IFFInterpreter::IFFInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -765,9 +930,23 @@ namespace ESMC {
             return (SubEvals[0] == SubEvals[1]);
         }
 
+        i64 IFFInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            auto SubEval0 = SubInterps[0]->EvaluateScalarNE(StateVector);
+            auto SubEval1 = SubInterps[1]->EvaluateScalarNE(StateVector);
+
+            return (SubEval0 == SubEval1);
+        }
+
+
         const u08* IFFInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* IFFInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
         XORInterpreter::XORInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -787,9 +966,22 @@ namespace ESMC {
             return (SubEvals[0] != SubEvals[1]);
         }
 
+        i64 XORInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            auto SubEval0 = SubInterps[0]->EvaluateScalarNE(StateVector);
+            auto SubEval1 = SubInterps[1]->EvaluateScalarNE(StateVector);
+            
+            return (SubEval0 != SubEval1);
+        }
+
         const u08* XORInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* XORInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
         ADDInterpreter::ADDInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -813,9 +1005,28 @@ namespace ESMC {
             return Retval;
         }
 
+        i64 ADDInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            i64 Retval = 0;
+            for (u32 i = 0; i < NumSubInterps; ++i) {
+                auto CurSubEval = SubInterps[i]->EvaluateScalarNE(StateVector);
+                if (CurSubEval == UndefValue) {
+                    return UndefValue;
+                }
+                Retval += CurSubEval;
+            }
+            return Retval;
+        }
+
+
         const u08* ADDInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* ADDInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
         SUBInterpreter::SUBInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -845,9 +1056,31 @@ namespace ESMC {
             return Retval;
         }
 
+        i64 SUBInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            i64 Retval = 0;
+            for (u32 i = 0; i < NumSubInterps; ++i) {
+                auto CurSubEval = SubInterps[i]->EvaluateScalarNE(StateVector);
+                if (CurSubEval == UndefValue) {
+                    return UndefValue;
+                }
+                if (i == 0) {
+                    Retval = CurSubEval;
+                } else {
+                    Retval -= CurSubEval;
+                }
+            }
+            return Retval;
+        }
+
         const u08* SUBInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* SUBInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
         
         MINUSInterpreter::MINUSInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -869,9 +1102,24 @@ namespace ESMC {
             return Retval;
         }
 
+        i64 MINUSInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            auto SubEval = SubInterps[0]->EvaluateScalarNE(StateVector);
+            if (SubEval == UndefValue) {
+                return UndefValue;
+            } else {
+                return (-SubEval);
+            }
+        }
+
         const u08* MINUSInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* MINUSInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
         MULInterpreter::MULInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -895,9 +1143,28 @@ namespace ESMC {
             return Retval;
         }
 
+        i64 MULInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            i64 Retval = 1;
+            for (u32 i = 0; i < NumSubInterps; ++i) {
+                auto CurSubEval = SubInterps[i]->EvaluateScalarNE(StateVector);
+                if (CurSubEval == UndefValue) {
+                    return UndefValue;
+                }
+                Retval *= CurSubEval;
+            }
+
+            return Retval;
+        }
+
         const u08* MULInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* MULInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
         
         DIVInterpreter::DIVInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -917,9 +1184,26 @@ namespace ESMC {
             return (SubEvals[0] / SubEvals[1]);
         }
 
+        i64 DIVInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            auto SubEval0 = SubInterps[0]->EvaluateScalarNE(StateVector);
+            auto SubEval1 = SubInterps[1]->EvaluateScalarNE(StateVector);
+            
+            if (SubEval0 == UndefValue || SubEval1 == UndefValue) {
+                return UndefValue;
+            } else {
+                return SubEval0 / SubEval1;
+            }
+        }
+
         const u08* DIVInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* DIVInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
         MODInterpreter::MODInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -939,9 +1223,26 @@ namespace ESMC {
             return (SubEvals[0] % SubEvals[1]);
         }
 
+        i64 MODInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            auto SubEval0 = SubInterps[0]->EvaluateScalarNE(StateVector);
+            auto SubEval1 = SubInterps[1]->EvaluateScalarNE(StateVector);
+
+            if (SubEval0 == UndefValue || SubEval1 == UndefValue) {
+                return UndefValue;
+            } else {
+                return (SubEval0 % SubEval1);
+            }
+        }
+
         const u08* MODInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* MODInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
         GTInterpreter::GTInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -961,9 +1262,26 @@ namespace ESMC {
             return (SubEvals[0] > SubEvals[1]);
         }
 
+        i64 GTInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            auto SubEval0 = SubInterps[0]->EvaluateScalarNE(StateVector);
+            auto SubEval1 = SubInterps[1]->EvaluateScalarNE(StateVector);
+            
+            if (SubEval0 == UndefValue || SubEval1 == UndefValue) {
+                return UndefValue;
+            } else {
+                return (SubEval0 > SubEval1);
+            }
+        }
+
         const u08* GTInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* GTInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
         
         GEInterpreter::GEInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -983,9 +1301,27 @@ namespace ESMC {
             return (SubEvals[0] >= SubEvals[1]);
         }
 
+        i64 GEInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            auto SubEval0 = SubInterps[0]->EvaluateScalarNE(StateVector);
+            auto SubEval1 = SubInterps[1]->EvaluateScalarNE(StateVector);
+            
+            if (SubEval0 == UndefValue || SubEval1 == UndefValue) {
+                return UndefValue;
+            } else {
+                return (SubEval0 >= SubEval1);
+            }
+        }
+
+
         const u08* GEInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* GEInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
         LTInterpreter::LTInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -1005,9 +1341,27 @@ namespace ESMC {
             return (SubEvals[0] < SubEvals[1]);
         }
 
+        i64 LTInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            auto SubEval0 = SubInterps[0]->EvaluateScalarNE(StateVector);
+            auto SubEval1 = SubInterps[1]->EvaluateScalarNE(StateVector);
+            
+            if (SubEval0 == UndefValue || SubEval1 == UndefValue) {
+                return UndefValue;
+            } else {
+                return (SubEval0 < SubEval1);
+            }
+        }
+
+
         const u08* LTInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* LTInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
         LEInterpreter::LEInterpreter(const vector<RValueInterpreter*>& SubInterps)
@@ -1027,9 +1381,26 @@ namespace ESMC {
             return (SubEvals[0] <= SubEvals[1]);
         }
 
+        i64 LEInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            auto SubEval0 = SubInterps[0]->EvaluateScalarNE(StateVector);
+            auto SubEval1 = SubInterps[1]->EvaluateScalarNE(StateVector);
+            
+            if (SubEval0 == UndefValue || SubEval1 == UndefValue) {
+                return UndefValue;
+            } else {
+                return (SubEval0 <= SubEval1);
+            }
+        }
+
         const u08* LEInterpreter::Evaluate(const StateVec* StateVector) const
         {
             throw InternalError((string)"Evaluate() called on scalar type");
+        }
+
+        const u08* LEInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
         IndexInterpreter::IndexInterpreter(u32 Size, bool Msg, bool IsScalar,
@@ -1060,8 +1431,42 @@ namespace ESMC {
             }
             Offset *= ElemSize;
             
-            const u08* DstPtr = ArrayInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + 
-                Offset;
+            const u08* DstPtr = 
+                ArrayInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + Offset;
+
+            i64 RawVal = 0;
+            if (Size == 1) {
+                RawVal = *DstPtr;
+            } else if (Size == 2) {
+                RawVal = *((u16*)(DstPtr));
+            } else {
+                RawVal = *((u32*)(DstPtr));
+            }
+
+            if (RawVal == 0) {
+                return UndefValue;
+            } else {
+                return RawVal - 1 + Low;
+            }
+        }
+
+        i64 IndexInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            if (!Scalar) {
+                throw ESMCError((string)"EvaluateScalar() called on non-scalar type");
+            }
+            i64 Offset = IndexInterp->EvaluateScalarNE(StateVector);
+            if (Offset == UndefValue) {
+                return UndefValue;
+            }
+            Offset *= ElemSize;
+            
+            const u08* DstPtr = 
+                ArrayInterp->SAs<LValueInterpreter>()->EvaluateNE(StateVector) + Offset;
+
+            if (DstPtr == nullptr) {
+                return UndefValue;
+            }
 
             i64 RawVal = 0;
             if (Size == 1) {
@@ -1091,6 +1496,21 @@ namespace ESMC {
             Offset *= ElemSize;
 
             const u08* DstPtr = ArrayInterp->Evaluate(StateVector) + Offset;
+            return DstPtr;
+        }
+
+        const u08* IndexInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            if (Scalar) {
+                throw ESMCError((string)"Evaluate() called on scalar type");
+            }
+            i64 Offset = IndexInterp->EvaluateScalarNE(StateVector);
+            if (Offset == UndefValue) {
+                return nullptr;
+            }
+            Offset *= ElemSize;
+
+            const u08* DstPtr = ArrayInterp->EvaluateNE(StateVector) + Offset;
             return DstPtr;
         }
 
@@ -1183,12 +1603,56 @@ namespace ESMC {
             }
         }
 
+        i64 FieldInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            if (!Scalar) {
+                throw ESMCError((string)"EvaluateScalar() called on non-scalar type");
+            }
+
+            const u08* DstPtr = 
+                RecInterp->SAs<LValueInterpreter>()->EvaluateNE(StateVector);
+
+            if (DstPtr == nullptr) {
+                return UndefValue;
+            }
+
+            DstPtr += FieldOffset;
+
+            i64 RawVal = 0;
+            if (Size == 1) {
+                RawVal = (*DstPtr);
+            } else if (Size == 2) {
+                RawVal = *((u16*)(DstPtr));
+            } else {
+                RawVal = *((u32*)(DstPtr));
+            }
+
+            if (RawVal == 0) {
+                return UndefValue;
+            } else {
+                return RawVal + Low - 1;
+            }
+        }
+
         const u08* FieldInterpreter::Evaluate(const StateVec* StateVector) const
         {
             if (Scalar) {
                 throw ESMCError((string)"Evaluate() called on scalar type");
             }
             return (RecInterp->SAs<LValueInterpreter>()->Evaluate(StateVector) + FieldOffset);
+        }
+
+        const u08* FieldInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            if (Scalar) {
+                throw ESMCError((string)"Evaluate() called on scalar type");
+            }
+            auto Retval = RecInterp->SAs<LValueInterpreter>()->EvaluateNE(StateVector);
+            if (Retval == nullptr) {
+                return nullptr;
+            } else {
+                return (Retval + FieldOffset);
+            }
         }
 
         void FieldInterpreter::WriteScalar(i64 Value, StateVec* StateVector) const

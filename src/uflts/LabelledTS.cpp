@@ -456,8 +456,8 @@ namespace ESMC {
                         u32 PermTypeID = UMType->GetTypeIDForMemberType(PermType);
                         MsgCanonMap[CurMTypeID][CurPermIndex] = PermTypeID;
 
-                        cout << CurMType->ToString() << " -> " << PermType->ToString()
-                             << " on permutation " << Symm::PermToString(CurPerm) << endl;
+                        // cout << CurMType->ToString() << " -> " << PermType->ToString()
+                        //      << " on permutation " << Symm::PermToString(CurPerm) << endl;
                     }
                 }
             }
