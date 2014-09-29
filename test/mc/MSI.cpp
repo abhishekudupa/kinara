@@ -1421,14 +1421,49 @@ int main()
     auto MonCacheDotStateEQIS = Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
                                                 Monitor->MakeVal("C_IS", 
                                                                  MonCacheDotState->GetType()));
-    auto MonCacheDotStateNEQS = Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
-                                                Monitor->MakeVal("C_S", 
-                                                                 MonCacheDotState->GetType()));
-    MonCacheDotStateNEQS = Monitor->MakeOp(LTSOps::OpNOT, MonCacheDotStateNEQS);
+    auto MonCacheDotStateEQS = Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
+                                               Monitor->MakeVal("C_S", 
+                                                                MonCacheDotState->GetType()));
+    auto MonCacheDotStateNEQS = Monitor->MakeOp(LTSOps::OpNOT, MonCacheDotStateEQS);
 
     Monitor->AddTransition("Initial", "Initial", TrueExp);
     Monitor->AddTransition("Initial", "Accepting", MonCacheDotStateEQIS);
     Monitor->AddTransition("Accepting", "Accepting", MonCacheDotStateNEQS);
+    Monitor->Freeze();
+
+
+    Monitor = Checker->MakeStateBuchiMonitor("STLiveness", CacheParams, TrueExp);
+    Monitor->AddState("Initial", true, false);
+    Monitor->AddState("Accepting", false, true);
+
+    Monitor->FreezeStates();
+    MonCacheDotState = Monitor->MakeOp(LTSOps::OpIndex, 
+                                       Monitor->MakeVar("Cache", CacheType),
+                                       CacheParam);
+    MonCacheDotState = Monitor->MakeOp(LTSOps::OpIndex, MonCacheDotState,
+                                       DirParam);
+    MonCacheDotState = Monitor->MakeOp(LTSOps::OpIndex, MonCacheDotState,
+                                       AddressParam);
+    MonCacheDotState = Monitor->MakeOp(LTSOps::OpField, MonCacheDotState,
+                                       TheLTS->MakeVar("state", FAType));
+
+    auto MonCacheDotStateEQIM = Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
+                                                    Monitor->MakeVal("C_IM", 
+                                                                     MonCacheDotState->GetType()));
+    auto MonCacheDotStateEQSM =  Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
+                                                    Monitor->MakeVal("C_SM", 
+                                                                     MonCacheDotState->GetType()));
+    auto MonCacheDotStateEQSMIM = Monitor->MakeOp(LTSOps::OpOR, MonCacheDotStateEQSM,
+                                                  MonCacheDotStateEQIM);
+
+    auto MonCacheDotStateNEQM = Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
+                                                Monitor->MakeVal("C_M", 
+                                                                 MonCacheDotState->GetType()));
+    MonCacheDotStateNEQM = Monitor->MakeOp(LTSOps::OpNOT, MonCacheDotStateNEQM);
+
+    Monitor->AddTransition("Initial", "Initial", TrueExp);
+    Monitor->AddTransition("Initial", "Accepting", MonCacheDotStateEQSMIM);
+    Monitor->AddTransition("Accepting", "Accepting", MonCacheDotStateNEQM);
     Monitor->Freeze();
 
     auto&& Traces = Checker->BuildAQS();
@@ -1443,6 +1478,34 @@ int main()
     for (auto const& Trace : LiveTraces) {
         cout << Trace->ToString() << endl << endl;
     }
+
+    cout << "Checking Liveness Property \"STLiveness\"..." << endl;
+    auto&& LiveTraces2 = Checker->CheckLiveness("STLiveness");
+
+    for (auto const& Trace : LiveTraces2) {
+        cout << Trace->ToString() << endl << endl;
+    }
+
+    // These lines below check a property that is false
+
+    // auto BugMon = Monitor = Checker->MakeStateBuchiMonitor("FGShared", CacheParams, TrueExp);
+    // BugMon->AddState("Initial", true, true);
+    // BugMon->AddState("OtherState", false, false);
+    // BugMon->FreezeStates();
+
+    // BugMon->AddTransition("Initial", "Initial", MonCacheDotStateNEQS);
+    // BugMon->AddTransition("Initial", "OtherState", MonCacheDotStateEQS);
+    // BugMon->AddTransition("OtherState", "OtherState", MonCacheDotStateEQS);
+    // BugMon->AddTransition("OtherState", "Initial", MonCacheDotStateNEQS);
+    
+    // BugMon->Freeze();
+
+    // cout << "Checking Liveness Property \"FGShared\"" << endl;
+    // auto&& BugTraces = Checker->CheckLiveness("FGShared");
+    
+    // for (auto const& Trace : BugTraces) {
+    //     cout << Trace->ToString() << endl << endl;
+    // }
     
     delete Checker;
 }
