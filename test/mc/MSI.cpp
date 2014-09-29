@@ -371,6 +371,9 @@ int main()
 
     Updates.push_back(new LTSAssignSimple(LastSeenStoreValueExp, 
                                           TheLTS->MakeVal("clear", ValueType)));
+    Updates.push_back(new LTSAssignSimple(PendingStoreExp, 
+                                          TheLTS->MakeVal("clear", ValueType)));
+
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, PendingStoreExp, LastSeenStoreValueExp);
     EnvEFSM->AddInternalTransition("DecideState", "InitialState", Guard, Updates);
     EnvEFSM->AddInternalTransition("DecideState", "ErrorState", 
@@ -435,13 +438,11 @@ int main()
     CacheEFSM->AddVariable("AckCounter", AckType);
     CacheEFSM->AddVariable("PendingWrite", ValueType);
     CacheEFSM->AddVariable("FwdToCache", CacheIDType);
-    CacheEFSM->AddVariable("AcksToWaitFor", AckType);
 
     auto CacheDataExp = TheLTS->MakeVar("Data", ValueType);
     auto CacheAckCountExp = TheLTS->MakeVar("AckCounter", AckType);
     auto CachePendingWriteExp = TheLTS->MakeVar("PendingWrite", ValueType);
     auto CacheFwdToCacheExp = TheLTS->MakeVar("FwdToCache", CacheIDType);
-    auto CacheAcksToWaitForExp = TheLTS->MakeVar("AcksToWaitFor", AckType);
 
     CacheEFSM->FreezeVars();
     vector<ExpT> CacheParams = { CacheParam, DirParam, AddressParam };
@@ -620,6 +621,9 @@ int main()
     Updates.push_back(new LTSAssignSimple(DataMsgC2COutDotData, CacheDataExp));
     Updates.push_back(new LTSAssignSimple(CacheFwdToCacheExp,
                                           TheLTS->MakeVal("clear", CacheIDType)));
+    Updates.push_back(new LTSAssignSimple(CacheDataExp,
+                                          TheLTS->MakeVal("clear", ValueType)));
+
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheFwdToCacheExp, CacheParam1);
     CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1, "C_M_FWDX", "C_I", Guard, Updates, 
                                     "OutMsg", DataMsgC2CType, 
@@ -792,7 +796,6 @@ int main()
                                   TheLTS->GetNamedType("WBAckMsgType'"), CacheParams);
 
     // C_II on FwdGetXMsg'
-
     CacheEFSM->AddInputTransition("C_II", "C_II_SENDACK", TrueExp, Updates, "InMsg",
                                   TheLTS->GetNamedType("FwdGetXMsgType'"), CacheParams);
 
@@ -1060,9 +1063,10 @@ int main()
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, DirActiveIDExp, CacheParam);
     Updates.push_back(new LTSAssignSimple(DirNumSharersExp, 
                                           TheLTS->MakeVal("0", NumSharersType)));
-    Updates.push_back(new LTSAssignSimple(TheLTS->MakeOp(LTSOps::OpIndex,
-                                                         DirSharersExp, DirActiveIDExp),
-                                          TheLTS->MakeFalse()));
+    Updates.push_back(new LTSAssignParam({ CacheParam2 }, TrueExp, 
+                                         TheLTS->MakeOp(LTSOps::OpIndex,
+                                                        DirSharersExp, CacheParam2),
+                                         TheLTS->MakeFalse()));
     Updates.push_back(new LTSAssignSimple(DirActiveIDExp, 
                                           TheLTS->MakeVal("clear", CacheIDType)));
     Updates.push_back(new LTSAssignSimple(DirOwnerExp,
@@ -1120,6 +1124,8 @@ int main()
     Updates.push_back(new LTSAssignSimple(DirOwnerExp, DirActiveIDExp));
     Updates.push_back(new LTSAssignSimple(DirNumSharersExp, TheLTS->MakeVal("1", NumSharersType)));
     Updates.push_back(new LTSAssignSimple(DirActiveIDExp, TheLTS->MakeVal("clear", CacheIDType)));
+    Updates.push_back(new LTSAssignSimple(DirDataExp, TheLTS->MakeVal("clear", ValueType)));
+
     DirEFSM->AddInputTransitions({ CacheParam }, TrueExp, "D_BUSY",
                                  "D_M", TrueExp, Updates,
                                  "InMsg", TheLTS->GetNamedType("UnblockXMsgType'"),
