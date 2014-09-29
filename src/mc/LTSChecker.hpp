@@ -171,6 +171,10 @@ namespace ESMC {
             map<string, StateBuchiAutomaton*> StateBuchiAutomata;
             map<string, MsgBuchiAutomaton*> MsgBuchiAutomata;
 
+            StateVec* ExceptionState;
+            MCExceptionType ExceptionType;
+            u32 ExceptionCmdID;
+
             inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);
             inline void DoDFS(StateVec* Root);
             inline void DoBFS(const vector<StateVec*>& Roots);

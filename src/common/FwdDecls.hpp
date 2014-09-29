@@ -167,6 +167,7 @@ namespace ESMC {
         class SafetyViolation;
         class DeadlockViolation;
         class LivenessViolation;
+        class MCExceptionTrace;
 
     } /* end namespace MC */
 

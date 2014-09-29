@@ -544,7 +544,7 @@ namespace ESMC {
                 RawValue = 0;
             }
             else if (Value < Low || Value > High) {
-                throw ESMCError((string)"Out of bounds write detected");
+                throw MCException(MCExceptionType::MCOOBWRITE, 0);
             } else {
                 RawValue = Value - Low + 1;
             }
@@ -602,7 +602,7 @@ namespace ESMC {
             for (u32 i = 0; i < NumSubInterps; ++i) {
                 auto EvalValue = SubInterps[i]->EvaluateScalar(StateVector);
                 if (EvalValue == UndefValue) {
-                    throw ESMCError((string)"Undefined value used in computation");
+                    throw MCException(MCExceptionType::MCUNDEFVALUE, 0);
                 }
                 SubEvals[i] = EvalValue;
             }
@@ -1427,7 +1427,7 @@ namespace ESMC {
             }
             i64 Offset = IndexInterp->EvaluateScalar(StateVector);
             if (Offset == UndefValue) {
-                throw ESMCError((string)"Undefined value used in index expression");
+                throw MCException(MCExceptionType::MCUNDEFVALUE, 0);
             }
             Offset *= ElemSize;
             
@@ -1491,7 +1491,7 @@ namespace ESMC {
             }
             i64 Offset = IndexInterp->EvaluateScalar(StateVector);
             if (Offset == UndefValue) {
-                throw ESMCError((string)"Undefined value used in index expression");
+                throw MCException(MCExceptionType::MCUNDEFVALUE, 0);
             }
             Offset *= ElemSize;
 
@@ -1522,7 +1522,7 @@ namespace ESMC {
 
             i64 Offset = IndexInterp->EvaluateScalar(StateVector);
             if (Offset == UndefValue) {
-                throw ESMCError((string)"Undefined value used in index expression");
+                throw MCException(MCExceptionType::MCUNDEFVALUE, 0);
             }
             Offset *= ElemSize;
             
@@ -1534,7 +1534,7 @@ namespace ESMC {
             if (Value == UndefValue) {
                 RawVal = 0;
             } else if (Value < Low || Value > High) {
-                throw ESMCError((string)"Out of bound write detected");
+                throw MCException(MCExceptionType::MCOOBWRITE, 0);
             } else {
                 RawVal = Value - Low + 1;
             }
@@ -1552,7 +1552,7 @@ namespace ESMC {
         {
             i64 Offset = IndexInterp->EvaluateScalar(StateVector);
             if (Offset == UndefValue) {
-                throw ESMCError((string)"Undefined value used in index expression");
+                throw MCException(MCExceptionType::MCUNDEFVALUE, 0);
             }
             Offset *= ElemSize;
 
@@ -1665,7 +1665,7 @@ namespace ESMC {
             if (Value == UndefValue) {
                 RawVal = 0;
             } else if (Value < Low || Value > High) {
-                throw ESMCError((string)"Out of bounds write detected");
+                throw MCException(MCExceptionType::MCOOBWRITE, 0);
             } else {
                 RawVal = Value - Low + 1;
             }

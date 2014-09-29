@@ -151,6 +151,50 @@ namespace ESMC {
         }
     };
 
+    enum class MCExceptionType {
+        MCOOBWRITE, MCUNDEFVALUE
+    };
+
+    class MCException : public exception
+    {
+    private:
+        MCExceptionType ExceptionType;
+        string ExceptionString;
+        u32 CmdID;
+
+    public:
+        inline MCException(MCExceptionType ExceptionType,
+                           u32 CmdID)
+            : ExceptionType(ExceptionType), CmdID(CmdID)
+        {
+            if (ExceptionType == MCExceptionType::MCOOBWRITE) {
+                ExceptionString = "Out Of Bounds Write";
+            } else {
+                ExceptionString = "Undefined value in computation";
+            }
+        }
+
+        inline virtual ~MCException() throw()
+        {
+            // Nothing here
+        }
+
+        inline MCExceptionType GetType() const
+        {
+            return ExceptionType;
+        }
+
+        inline u32 GetCmdID() const
+        {
+            return CmdID;
+        }
+
+        inline const char* what() const throw () override
+        {
+            return (ExceptionString.c_str());
+        }
+    };
+
 } /* end namespace ESMC */
     
 #endif /* ESMC_TYPES_HPP_ */

@@ -323,6 +323,7 @@ namespace ESMC {
                                  const StateVec* InputState)
         {
             auto Retval = InputState->Clone();
+            Retval->ClearMsgBuffer();
             auto const& Updates = Cmd->GetUpdates();
             ApplyUpdates(Updates, InputState, Retval);
             return Retval;
@@ -344,7 +345,8 @@ namespace ESMC {
         }
 
         LTSChecker::LTSChecker(LabelledTS* TheLTS)
-            : TheLTS(TheLTS), AQS(nullptr), ThePS(nullptr)
+            : TheLTS(TheLTS), AQS(nullptr), ThePS(nullptr),
+              ExceptionState(nullptr)
         {
             // Freeze the LTS in any case
             TheLTS->Freeze();
@@ -427,7 +429,7 @@ namespace ESMC {
                 auto const& Guard = GuardedCommands[LastFired]->GetGuard();
                 auto GRes = Guard->ExtensionData.Interp->EvaluateScalarNE(State);
                 if (GRes == UndefValue) {
-                    throw ESMCError((string)"Undefined value obtained when evaluating guard");
+                    throw MCException(MCExceptionType::MCUNDEFVALUE, (u32)LastFired);
                 } else if (GRes != 0) {
                     return GuardedCommands[LastFired];
                 }
@@ -437,6 +439,8 @@ namespace ESMC {
 
         inline void LTSChecker::DoDFS(StateVec *Root)
         {
+            ExceptionState = nullptr;
+            
             stack<DFSStackEntry> DFSStack;
             AQS->InsertInitState(Root);
             DFSStack.push(DFSStackEntry(Root));
@@ -452,33 +456,35 @@ namespace ESMC {
 
                 auto& LastFired = CurEntry.GetLastFired();
                 bool Deadlocked = (LastFired == -1);
-                auto const& Cmd = GetNextEnabledCmd(State, LastFired);
+                StateVec* NextState = nullptr;
 
-                if (Cmd == GCmdRef::NullPtr) {
-                    if (Deadlocked) {
-                        // Remember this state, but continue on
-                        // with the AQS construction, we'll report
-                        // all counter-examples later
-                        AQS->AddDeadlockState(State, DFSStack.size());
+                try {
+                    auto const& Cmd = GetNextEnabledCmd(State, LastFired);
+                    
+                    if (Cmd == GCmdRef::NullPtr) {
+                        if (Deadlocked) {
+                            // Remember this state, but continue on
+                            // with the AQS construction, we'll report
+                            // all counter-examples later
+                            AQS->AddDeadlockState(State, DFSStack.size());
+                        }
+                        // cout << "No more successors, popping from stack!" << endl;
+                        // Done exploring this state
+                        DFSStack.pop();
+                        continue;
                     }
-                    // cout << "No more successors, popping from stack!" << endl;
-                    // Done exploring this state
-                    DFSStack.pop();
-                    continue;
-                }
-
-                // Clear out the message buffer before continuing
-                State->ClearMsgBuffer();
                 
-                // Successors remain to be explored
-                auto const& Updates = Cmd->GetUpdates();
-                auto NextState = State->Clone();
+                    // Successors remain to be explored
+                    NextState = ExecuteCommand(Cmd, State);
+                } catch (const MCException& Exc) {
+                    ExceptionState = State;
+                    ExceptionType = Exc.GetType();
+                    ExceptionCmdID = LastFired;
+                    return;
+                }
 
                 // cout << "Firing guarded command:" << endl;
                 // cout << Cmd->ToString() << endl;
-
-                ApplyUpdates(Updates, State, NextState);
-
                 // cout << "Got Next State (Uncanonicalized):" << endl;
                 // cout << "--------------------------------------------------------" << endl;
                 // Printer->PrintState(NextState, cout);
@@ -539,6 +545,7 @@ namespace ESMC {
 
         inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots)
         {
+            ExceptionState = nullptr;
             deque<StateVec*> BFSQueue(Roots.begin(), Roots.end());
             for (auto State : BFSQueue) {
                 AQS->InsertInitState(State);
@@ -555,11 +562,19 @@ namespace ESMC {
 
                 for (u32 i = 0; i < NumCommands; ++i) {
 
-                    // Clear out the message buffer before continuing
-                    CurState->ClearMsgBuffer();
-
                     auto const& Cmd = GuardedCommands[i];
-                    auto NextState = TryExecuteCommand(Cmd, CurState);
+
+                    StateVec* NextState = nullptr;
+
+                    try {
+                        NextState = TryExecuteCommand(Cmd, CurState);
+                    } catch (const MCException& Exc) {
+                        ExceptionState = CurState;
+                        ExceptionType = Exc.GetType();
+                        ExceptionCmdID = Exc.GetCmdID();
+                        return;
+                    }
+
                     if (NextState != nullptr) {
                         u32 PermID = 0;
                         Deadlocked = false;
@@ -621,6 +636,7 @@ namespace ESMC {
 
             for (auto const& ISGen : ISGens) {
                 auto CurState = Factory->MakeState();
+                CurState->ClearMsgBuffer();
                 ApplyUpdates(ISGen, ZeroState, CurState);
 
                 cout << "Initial State:" << endl;
@@ -644,6 +660,15 @@ namespace ESMC {
                 }
             } else {
                 DoBFS(InitStates);
+            }
+
+            // Did we hit an exception while building AQS?
+            if (ExceptionState != nullptr) {
+                auto CurTrace = 
+                    TraceBase::MakeMCExceptionTrace(ExceptionState, ExceptionType, 
+                                                    ExceptionCmdID, this);
+                Retval.push_back(CurTrace);
+                return Retval;
             }
 
             cout << "AQS Built!" << endl;

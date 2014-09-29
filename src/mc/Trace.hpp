@@ -198,6 +198,11 @@ namespace ESMC {
                                                         LTSChecker* Checker);
             static DeadlockViolation* MakeDeadlockViolation(const StateVec* ErrorState,
                                                             LTSChecker* Checker);
+            static MCExceptionTrace* MakeMCExceptionTrace(const StateVec* ErrorState,
+                                                          MCExceptionType ExceptionType,
+                                                          u32 CmdID,
+                                                          LTSChecker* Checker);
+
             // Accepts the root of a fair accepting (green) SCC.
             static LivenessViolation* MakeLivenessViolation(const ProductState* SCCRoot,
                                                             LTSChecker* Checker);
@@ -232,6 +237,26 @@ namespace ESMC {
                               StateVecPrinter* Printer);
         public:
             virtual ~DeadlockViolation();
+        };
+
+        class MCExceptionTrace : public SafetyViolation
+        {
+            friend class TraceBase;
+
+        private:
+            MCExceptionType ExceptionType;
+            u32 CmdID;
+
+        protected:
+            MCExceptionTrace(const StateVec* InitialState,
+                             const vector<TraceElemT>& TraceElems,
+                             MCExceptionType ExceptionType,
+                             u32 CmdID,
+                             StateVecPrinter* Printer);
+
+        public:
+            virtual ~MCExceptionTrace();
+            virtual string ToString(u32 Verbosity = 0) const override;
         };
 
         class LivenessViolation : public TraceBase
