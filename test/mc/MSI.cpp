@@ -1400,9 +1400,47 @@ int main()
     }
 
     auto Checker = new LTSChecker(TheLTS);
+
+    // Create the liveness monitors
+
+    auto Monitor = Checker->MakeStateBuchiMonitor("LDLiveness", CacheParams, TrueExp);
+    Monitor->AddState("Initial", true, false);
+    Monitor->AddState("Accepting", false, true);
+
+    Monitor->FreezeStates();
+    auto MonCacheDotState = Monitor->MakeOp(LTSOps::OpIndex, 
+                                            Monitor->MakeVar("Cache", CacheType),
+                                            CacheParam);
+    MonCacheDotState = Monitor->MakeOp(LTSOps::OpIndex, MonCacheDotState,
+                                       DirParam);
+    MonCacheDotState = Monitor->MakeOp(LTSOps::OpIndex, MonCacheDotState,
+                                       AddressParam);
+    MonCacheDotState = Monitor->MakeOp(LTSOps::OpField, MonCacheDotState,
+                                       TheLTS->MakeVar("state", FAType));
+
+    auto MonCacheDotStateEQIS = Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
+                                                Monitor->MakeVal("C_IS", 
+                                                                 MonCacheDotState->GetType()));
+    auto MonCacheDotStateNEQS = Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
+                                                Monitor->MakeVal("C_S", 
+                                                                 MonCacheDotState->GetType()));
+    MonCacheDotStateNEQS = Monitor->MakeOp(LTSOps::OpNOT, MonCacheDotStateNEQS);
+
+    Monitor->AddTransition("Initial", "Initial", TrueExp);
+    Monitor->AddTransition("Initial", "Accepting", MonCacheDotStateEQIS);
+    Monitor->AddTransition("Accepting", "Accepting", MonCacheDotStateNEQS);
+    Monitor->Freeze();
+
     auto&& Traces = Checker->BuildAQS();
 
     for (auto const& Trace : Traces) {
+        cout << Trace->ToString() << endl << endl;
+    }
+
+    cout << "Checking Liveness Property \"LDLiveness\"..." << endl;
+    auto&& LiveTraces = Checker->CheckLiveness("LDLiveness");
+
+    for (auto const& Trace : LiveTraces) {
         cout << Trace->ToString() << endl << endl;
     }
     
