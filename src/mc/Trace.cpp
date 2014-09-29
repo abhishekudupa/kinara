@@ -42,6 +42,9 @@
 
 #include "../uflts/LTSTransitions.hpp"
 #include "../uflts/LabelledTS.hpp"
+#include "../uflts/LTSFairnessSet.hpp"
+#include "../uflts/LTSAutomaton.hpp"
+#include "../uflts/LTSEFSMBase.hpp"
 #include "../symmetry/SymmCanonicalizer.hpp"
 
 #include "StateVec.hpp"
@@ -497,6 +500,7 @@ namespace ESMC {
                     const u32 NumInstances = FChecker->NumInstances;
                     
                     for (u32 InstanceID = 0; InstanceID < NumInstances; ++InstanceID) {
+
                         // Check if this fairness is already satisfied
                         auto AlreadySat = CheckFairnessSat(PathSoFar, FChecker, 
                                                            GuardedCmds, InstanceID);

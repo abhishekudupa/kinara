@@ -133,7 +133,6 @@ namespace ESMC {
                 LastFired = NewLastFired;
             }
 
-            
             // Fairness Checker implementation
             FairnessChecker::FairnessChecker(const LTSFairSetRef& FairSet,
                                              SystemIndexSet* SysIdxSet,
@@ -141,13 +140,17 @@ namespace ESMC {
                                              LTSChecker* Checker)
                 : FairSet(FairSet), NumInstances(FairSet->GetNumInstances()),
                   IsStrong(FairSet->GetFairnessType() == FairSetFairnessType::Strong),
-                  SysIdxSet(SysIdxSet), Enabled(NumInstances, NumInstances), 
-                  Executed(NumInstances, false), Disabled(NumInstances, false),
+                  SysIdxSet(SysIdxSet), Enabled(false), 
+                  Executed(false), Disabled(false),
                   ClassID(FairSet->GetEFSM()->GetClassID()),
                   GCmdsToRespondTo(SysIdxSet->GetNumTrackedIndices(), 
                                    vector<bool>(GuardedCommands.size())),
                   GCmdIDsToRespondTo(NumInstances),
-                  Checker(Checker)
+                  Checker(Checker),
+                  EnabledPerInstance(NumInstances, false),
+                  ExecutedPerInstance(NumInstances, false),
+                  DisabledPerInstance(NumInstances, false)
+
             {
                 const u32 NumTrackedIndices = SysIdxSet->GetNumTrackedIndices();
                 for (u32 TrackedIndex = 0; TrackedIndex < NumTrackedIndices; ++TrackedIndex) {
@@ -178,17 +181,20 @@ namespace ESMC {
 
             void FairnessChecker::ResetFairness()
             {
-                for (u32 i = 0; i < NumInstances; ++i) {
-                    Enabled[i] = false;
-                    Executed[i] = false;
-                    Disabled[i] = false;
-                }
+                Enabled = false;
+                Disabled = false;
+                Executed = false;
                 EnabledStates.clear();
             }
 
             void FairnessChecker::ResetFull()
             {
                 ResetFairness();
+                for (u32 i = 0; i < NumInstances; ++i) {
+                    EnabledPerInstance[i] = false;
+                    DisabledPerInstance[i] = false;
+                    ExecutedPerInstance[i] = false;
+                }
             }
 
             void FairnessChecker::ProcessSCCState(const ProductState* State,
@@ -223,7 +229,8 @@ namespace ESMC {
                     // cout << "Marking as Enabled, because command "
                     //      << GCmdIndex << " is enabled" << endl;
 
-                    Enabled[InstanceID] = true;
+                    Enabled = true;
+                    EnabledPerInstance[InstanceID] = true;
                     AtLeastOneEnabled = true;
                     
                     if (NextState->IsInSCC(SCCID)) {
@@ -236,7 +243,8 @@ namespace ESMC {
                         // PermSet->Print(Edge->GetPermutation(), cout);
                         // cout << endl;
 
-                        Executed[InstanceID] = true;
+                        Executed = true;
+                        ExecutedPerInstance[InstanceID] = true;
                         if (EnabledStates.size() > 0) {
                             EnabledStates.clear();
                         }
@@ -247,26 +255,17 @@ namespace ESMC {
 
                 // if no commands are enabled, then we're disabled!
                 if (!AtLeastOneEnabled) {
-                    Disabled[InstanceID] = true;
+                    Disabled = true;
+                    DisabledPerInstance[InstanceID] = true;
                 }
             }
 
             bool FairnessChecker::IsFair() const
             {
                 if (IsStrong) {
-                    for (u32 i = 0; i < NumInstances; ++i) {
-                        if (Enabled[i] && !Executed[i]) {
-                            return false;
-                        }
-                    }
-                    return true;
+                    return (!Enabled || Executed);
                 } else {
-                    for (u32 i = 0; i < NumInstances; ++i) {
-                        if (!Disabled[i] && !Executed[i]) {
-                            return false;
-                        }
-                    }
-                    return true;
+                    return (Disabled || Executed);
                 }
             }
 
@@ -275,19 +274,34 @@ namespace ESMC {
                 return IsStrong;
             }
 
+            bool FairnessChecker::IsEnabled() const
+            {
+                return Enabled;
+            }
+
+            bool FairnessChecker::IsExecuted() const
+            {
+                return Executed;
+            }
+
+            bool FairnessChecker::IsDisabled() const
+            {
+                return Disabled;
+            }
+
             bool FairnessChecker::IsEnabled(u32 InstanceID) const
             {
-                return Enabled[InstanceID];
+                return EnabledPerInstance[InstanceID];
             }
 
             bool FairnessChecker::IsExecuted(u32 InstanceID) const
             {
-                return Executed[InstanceID];
+                return ExecutedPerInstance[InstanceID];
             }
 
             bool FairnessChecker::IsDisabled(u32 InstanceID) const
             {
-                return Disabled[InstanceID];
+                return DisabledPerInstance[InstanceID];
             }
 
             const unordered_set<const ProductState*>& FairnessChecker::GetEnabledStates() const
@@ -522,7 +536,8 @@ namespace ESMC {
                     auto Interp = Invar->ExtensionData.Interp;
                     auto InvarRes = Interp->EvaluateScalarNE(CanonState);
                     if (InvarRes == UndefValue) {
-                        throw ESMCError((string)"Obtained undefined value when evaluating invariant");
+                        throw ESMCError((string)"Obtained undefined value when " + 
+                                        "evaluating invariant");
                     } else if (InvarRes == 0) {
                         AQS->AddErrorState(CanonState, DFSStack.size());
                     }
@@ -602,7 +617,8 @@ namespace ESMC {
                             auto Interp = Invar->ExtensionData.Interp;
                             auto InvarRes = Interp->EvaluateScalarNE(CanonNextState);
                             if (InvarRes == UndefValue) {
-                                throw ESMCError((string)"Undefined value obtained in evaluation of invariant");
+                                throw ESMCError((string)"Undefined value obtained in " + 
+                                                "evaluation of invariant");
                             } else if (InvarRes == 0) {
                                 // Again, remember this state, but continue
                                 // on with the AQS construction
@@ -832,7 +848,6 @@ namespace ESMC {
         inline bool LTSChecker::CheckSCCFairness(const ProductState *SCCRoot, 
                                                  vector<const ProductState*>& UnfairStates)
         {
-            // Reset all the fairness checkers first
             for (auto FCheckers : FairnessCheckers) {
                 for (auto FChecker : FCheckers) {
                     FChecker->ResetFull();
@@ -841,8 +856,16 @@ namespace ESMC {
 
             const u32 IndexMax = SysIdxSet->GetNumTrackedIndices();
             for (u32 IndexID = 0; IndexID < IndexMax; ++IndexID) {
+
                 if (SCCRoot->IsTracked(IndexID)) {
                     continue;
+                }
+
+                // Reset all the fairness checkers first
+                for (auto FCheckers : FairnessCheckers) {
+                    for (auto FChecker : FCheckers) {
+                        FChecker->ResetFairness();
+                    }
                 }
 
                 auto ClassID = SysIdxSet->GetClassID(IndexID);
@@ -1028,7 +1051,11 @@ namespace ESMC {
                 auto&& SCCRoots = GetAcceptingSCCs();
                 // Check if each of the SCCs are fair
                 vector<const ProductState*> UnfairStates;
-                cout << "Checking Fairness of SCCs..." << endl;
+                if (SCCRoots.size() > 0) {
+                    cout << "Checking Fairness of SCCs..." << endl;
+                } else {
+                    cout << "No accepting SCCs!" << endl;
+                }
                 for (auto SCCRoot : SCCRoots) {
                     UnfairStates.clear();
                     auto IsFair = CheckSCCFairness(SCCRoot, UnfairStates);

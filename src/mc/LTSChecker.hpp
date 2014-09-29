@@ -95,6 +95,7 @@ namespace ESMC {
             class FairnessChecker
             {
                 friend class ESMC::MC::TraceBase;
+                friend class ESMC::MC::LTSChecker;
 
             private:
                 LTSFairSetRef FairSet;
@@ -105,9 +106,9 @@ namespace ESMC {
                 // The system index set
                 SystemIndexSet* SysIdxSet;
                 // Status bits
-                vector<bool> Enabled;
-                vector<bool> Executed;
-                vector<bool> Disabled;
+                bool Enabled;
+                bool Executed;
+                bool Disabled;
                 // The class (process class) id that this
                 // fairness belongs to
                 u32 ClassID;
@@ -121,6 +122,12 @@ namespace ESMC {
                 // not taken
                 unordered_set<const ProductState*> EnabledStates;
                 LTSChecker* Checker;
+
+                // Info about how various fairnesses were
+                // satisfied
+                vector<bool> EnabledPerInstance;
+                vector<bool> ExecutedPerInstance;
+                vector<bool> DisabledPerInstance;
 
             public:
                 FairnessChecker(const LTSFairSetRef& FairSet,
@@ -137,9 +144,14 @@ namespace ESMC {
 
                 bool IsFair() const;
                 bool IsStrongFairness() const;
+                bool IsEnabled() const;
+                bool IsDisabled() const;
+                bool IsExecuted() const;
+
                 bool IsEnabled(u32 InstanceID) const;
                 bool IsDisabled(u32 InstanceID) const;
                 bool IsExecuted(u32 InstanceID) const;
+
                 const unordered_set<const ProductState*>& GetEnabledStates() const;
                 const unordered_set<u32>& GetCmdIDsToRespondTo(u32 InstanceID) const;
             };
