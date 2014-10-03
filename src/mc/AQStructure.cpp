@@ -231,7 +231,7 @@ namespace ESMC {
                 BFSQueue.push_back(Origin);
             }
 
-            const StateVec* ActualTarget;
+            const StateVec* ActualTarget = nullptr;
             bool Found = false;
             while (BFSQueue.size() > 0 && !Found) {
                 auto CurState = BFSQueue.front();
@@ -805,7 +805,7 @@ namespace ESMC {
                 BFSQueue.push_back(Origin);
             }
 
-            const ProductState* ActualTarget;
+            const ProductState* ActualTarget = nullptr;
             bool Found = false;
             while (BFSQueue.size() > 0 && !Found) {
                 auto CurState = BFSQueue.front();
