@@ -51,8 +51,7 @@ namespace ESMC {
                                  const vector<ExpT>& Params, 
                                  const ExpT& Constraint,
                                  LTSFairnessType Fairness)
-            : AutomatonBase(TheLTS, Name, Params, Constraint),
-              EFSMBase(TheLTS, Name, Params, Constraint, Fairness)
+              : EFSMBase(TheLTS, Name, Params, Constraint, Fairness)
         {
             // Nothing here
         }
@@ -65,8 +64,7 @@ namespace ESMC {
         DetEFSM::DetEFSM(LabelledTS* TheLTS, const string& Name,
                          const vector<ExpT>& Params, const ExpT& Constraint,
                          LTSFairnessType Fairness)
-            : AutomatonBase(TheLTS, Name, Params, Constraint),
-              EFSMBase(TheLTS, Name, Params, Constraint, Fairness)
+            : EFSMBase(TheLTS, Name, Params, Constraint, Fairness)
         {
             // Nothing here
         }

@@ -50,7 +50,7 @@ namespace ESMC {
     namespace LTS {
 
 
-        class EFSMBase : public virtual AutomatonBase
+        class EFSMBase : public AutomatonBase
         {
             friend class LabelledTS;
             friend class LTSProcessFairnessGroup;

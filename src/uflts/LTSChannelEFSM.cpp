@@ -51,8 +51,7 @@ namespace ESMC {
                                  const vector<ExpT>& Params, const ExpT& Constraint,
                                  u32 Capacity, bool Lossy, bool Ordered, bool Duplicating,
                                  bool Blocking, LTSFairnessType Fairness)
-              : AutomatonBase(TheLTS, Name, Params, Constraint), 
-                EFSMBase(TheLTS, Name, Params, Constraint, Fairness),
+              : EFSMBase(TheLTS, Name, Params, Constraint, Fairness),
                 Capacity(Capacity), Lossy(Lossy), Ordered(Ordered),
                 Duplicating(Duplicating), Blocking(Blocking)
         {
