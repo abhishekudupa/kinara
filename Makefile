@@ -43,7 +43,6 @@ esmc_LIB_PATHS= \
 	$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/lib \
 	$(PROJECT_ROOT)/lib/$(BUILD_SUFFIX)
 
-
 PROJECT_LIBS=esmc
 
 libesmc_OBJS= \
