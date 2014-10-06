@@ -1186,7 +1186,7 @@ int main()
     Updates.push_back(new LTSAssignSimple(DirDataExp, DataMsgC2DInDotData));
     // Updates.push_back(new LTSAssignSimple(DirActiveIDExp, TheLTS->MakeVal("clear", CacheIDType)));
     DirEFSM->AddInputTransitions({ CacheParam }, TrueExp,
-                                 "D_BUSY", "D_BUSY", TrueExp, Updates, "InMsg", 
+                                 "D_BUSY", "D_S", TrueExp, Updates, "InMsg",
                                  TheLTS->GetNamedType("DataMsgC2DType'"), 
                                  { CacheParam, DirParam, AddressParam });
     Updates.clear();
