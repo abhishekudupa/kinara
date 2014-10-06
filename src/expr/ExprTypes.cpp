@@ -624,7 +624,7 @@ namespace ESMC {
                 return 1;
             }
             auto OtherAsSym = OtherAsPtr->As<ExprSymmetricType>();
-            if (OtherAsPtr == nullptr) {
+            if (OtherAsSym == nullptr) {
                 return -1;
             }
             if (OtherAsSym->Name > Name) {
