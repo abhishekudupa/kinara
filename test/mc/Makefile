@@ -18,7 +18,9 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/sparsehash
 
 PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP \
-	ABP_generated MSI MSI_generated Fischer LeaderElection Dijkstra4
+	ABP_generated MSI MSI_generated Fischer LeaderElection Dijkstra4 MSI_no_busy_data_no_pending_unblock_e \
+	MSIC2D
+
 
 PingPongChan_SYS_LIBS=esmc z3 rt boost_system
 PingPongChan_EXT_LIBS=boost z3 esmc
@@ -47,6 +49,12 @@ MSI_generated_EXT_LIBS=boost z3 esmc
 MSI_SYS_LIBS=esmc z3 rt boost_system
 MSI_EXT_LIBS=boost z3 esmc
 
+MSIC2D_SYS_LIBS=$(MSI_SYS_LIBS)
+MSIC2D_EXT_LIBS=$(MSI_EXT_LIBS)
+
+MSI_no_busy_data_no_pending_unblock_e_SYS_LIBS=esmc z3 rt boost_system
+MSI_no_busy_data_no_pending_unblock_e_EXT_LIBS=boost z3 esmc
+
 Fischer_SYS_LIBS=esmc z3 rt boost_system
 Fischer_EXT_LIBS=boost z3 esmc
 
@@ -74,6 +82,8 @@ MSI_generated_OBJS=MSI_generated.o
 Fischer_OBJS=Fischer.o
 LeaderElection_OBJS=LeaderElection.o
 MSI_OBJS=MSI.o
+MSIC2D_OBJS=MSIC2D.o
+MSI_no_busy_data_no_pending_unblock_e_OBJS=MSI_no_busy_data_no_pending_unblock_e.o
 Dijkstra4_OBJS=Dijkstra4.o
 
 PingPongChan_LIB_PATHS= \
@@ -104,6 +114,12 @@ MSI_generated_LIB_PATHS= \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
 MSI_LIB_PATHS=$(MSI_generated_LIB_PATHS)
+MSIC2D_LIB_PATHS=$(MSI_LIB_PATHS)
+
+MSI_no_busy_data_no_pending_unblock_e_LIB_PATHS= \
+    $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \
+    $(PROJECT_ROOT)/../../thirdparty/boost-local/boost_install/lib \
+    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
 Fischer_LIB_PATHS= \
     $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \
