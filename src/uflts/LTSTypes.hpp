@@ -111,6 +111,7 @@ namespace ESMC {
         typedef Exprs::ExprTypeRef ExprTypeRef;
         typedef Exprs::Expr<LTSExtensionT, LTSTermSemanticizer> ExpT;
         typedef Exprs::ExprMgr<LTSExtensionT, LTSTermSemanticizer> MgrT;
+        typedef typename LTSTermSemanticizer<LTSExtensionT>::LExpT LExpT;
         typedef Exprs::ExpressionVisitorBase<LTSExtensionT, LTSTermSemanticizer> VisitorBaseT;
 
         typedef Exprs::VarExpression<LTSExtensionT, LTSTermSemanticizer> VarExpT;

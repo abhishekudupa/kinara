@@ -671,10 +671,10 @@ namespace ESMC {
                 if (Arg->As<ExprFuncType>() != nullptr) {
                     throw ESMCError("Function types cannot have function types as params");
                 }
-                // if (!Arg->Is<ExprScalarType>()) {
-                //     throw ESMCError((string)"Only function types with scalar domain types " + 
-                //                     "are currenly supported");
-                // }
+                if (!Arg->Is<ExprScalarType>()) {
+                    throw ESMCError((string)"Only function types with scalar domain types " + 
+                                    "are currenly supported");
+                }
             }
         }
 
