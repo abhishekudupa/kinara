@@ -1,0 +1,73 @@
+#include "../../src/uflts/LabelledTS.hpp"
+#include "../../src/uflts/LTSEFSM.hpp"
+#include "../../src/uflts/LTSChannelEFSM.hpp"
+#include "../../src/uflts/LTSAssign.hpp"
+#include "../../src/uflts/LTSTransitions.hpp"
+#include "../../src/mc/LTSChecker.hpp"
+
+using namespace ESMC;
+using namespace LTS;
+using namespace Exprs;
+using namespace MC;
+
+
+int main()
+{{
+    auto TheLTS = new LabelledTS();
+
+{channel_definitions}
+
+    TheLTS->FreezeMsgs();
+
+{automata_definitions}
+
+    TheLTS->FreezeAutomata();
+    vector<LTSAssignRef> InitUpdates;
+
+{initial_updates}
+
+    TheLTS->AddInitStates({{new LTSInitState({{ }}, TheLTS->MakeTrue(), InitUpdates)}});
+
+{invariants}
+
+    TheLTS->Freeze();
+
+    auto const& StateVectorVars = TheLTS->GetStateVectorVars();
+
+    cout << "LTS Vars:" << endl;
+    for (auto const& Var : StateVectorVars) {{
+        cout << Var->ToString() << " : " << endl;
+        cout << Var->GetType()->ToString() << endl;
+    }}
+
+    cout << "State vector size is " << TheLTS->GetStateVectorSize() << " bytes." << endl;
+    cout << "Guarded Commands:" << endl;
+    auto const& GCmds = TheLTS->GetGuardedCmds();
+    for (auto const& GCmd : GCmds) {{
+        cout << GCmd->ToString() << endl;
+    }}
+
+    cout << "Initial State Generators:" << endl;
+    auto const& InitStateGens = TheLTS->GetInitStateGenerators();
+    for (auto const& InitStateGen : InitStateGens) {{
+        cout << "InitState {{" << endl;
+        for (auto const& Update : InitStateGen) {{
+            cout << "    " << Update->ToString() << endl;
+        }}
+        cout << "}}" << endl;
+    }}
+
+    cout << "Invariant:" << endl;
+    cout << TheLTS->GetInvariant() << endl;
+
+    cout << "Channel Buffer variables to sort:" << endl;
+    for (auto const& BufferExp : TheLTS->GetChanBuffersToSort()) {{
+        cout << BufferExp.first->ToString() << endl;
+        cout << BufferExp.second->ToString() << endl;
+    }}
+
+    auto Checker = new LTSChecker(TheLTS);
+    Checker->BuildAQS();
+
+    delete Checker;
+}}
