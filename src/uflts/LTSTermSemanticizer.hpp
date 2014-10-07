@@ -1240,6 +1240,7 @@ namespace ESMC {
                 return false;
             }
 
+
             template <typename E, template <typename> class S>
             static inline bool HasBool(const vector<Expr<E, S>>& ExpVec, 
                                        const bool Value, const ExprTypeRef& BoolType)
@@ -1254,6 +1255,39 @@ namespace ESMC {
                 }
 
                 return false;
+            }
+
+            template <typename E, template <typename> class S>
+            static inline bool AllOfOp(const vector<Expr<E, S>>& ExpVec,
+                                       i64 OpCode)
+            {
+                return all_of(ExpVec.begin(), ExpVec.end(),
+                              [&] (const Expr<E, S>& Exp) -> bool
+                              {
+                                  auto ExpAsOp = Exp->template As<OpExpression>();
+                                  if (ExpAsOp != nullptr) {
+                                      return (ExpAsOp->GetOpCode() == OpCode);
+                                  }
+                                  return false;
+                              });
+            }
+
+            template <typename E, template <typename> class S>
+            static inline vector<Expr<E, S>> 
+            GetAllChildren(const vector<Expr<E, S>>& ExpVec)
+            {
+                vector<Expr<E, S>> Retval;
+                for (auto const& Exp : ExpVec) {
+                    auto ExpAsOp = Exp->template As<OpExpression>();
+                    if (ExpAsOp == nullptr) {
+                        throw InternalError((string)"Attempted to flatten non-op " + 
+                                            "expression.\nAt: " + __FILE__ + ":" + 
+                                            to_string(__LINE__));
+                    }
+                    auto const& Children = ExpAsOp->GetChildren();
+                    Retval.insert(Retval.end(), Children.begin(), Children.end());
+                }
+                return Retval;
             }
 
             template <typename E, template <typename> class S>
@@ -1339,6 +1373,9 @@ namespace ESMC {
                             ExpStack.push_back(Mgr->MakeVal("false", BoolType));
                         } else if (RedChildren.size() == 1) {
                             ExpStack.push_back(RedChildren[0]);
+                        } else if (AllOfOp(RedChildren, LTSOps::OpOR)) {
+                            auto&& FlattenedChildren = GetAllChildren(RedChildren);
+                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
                             ExpStack.push_back(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
                         }
@@ -1354,6 +1391,9 @@ namespace ESMC {
                             ExpStack.push_back(Mgr->MakeVal("true", BoolType));
                         } else if (RedChildren.size() == 1) {
                             ExpStack.push_back(RedChildren[0]);
+                        } else if (AllOfOp(RedChildren, LTSOps::OpAND)) {
+                            auto&& FlattenedChildren = GetAllChildren(RedChildren);
+                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
                             ExpStack.push_back(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
                         }
@@ -1439,6 +1479,9 @@ namespace ESMC {
                         auto&& RedChildren = PurgeInt(SimpChildren, 0);
                         if (RedChildren.size() == 1) {
                             ExpStack.push_back(RedChildren[0]);
+                        } else if (AllOfOp(RedChildren, LTSOps::OpADD)) {
+                            auto&& FlattenedChildren = GetAllChildren(RedChildren);
+                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
                             ExpStack.push_back(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
                         }
@@ -1458,6 +1501,9 @@ namespace ESMC {
                             boost::lexical_cast<i64>(SimpChildren[1]->template 
                                                      SAs<ConstExpression>()->GetConstValue()) == 0) {
                             ExpStack.push_back(SimpChildren[0]);
+                        } else if (AllOfOp(SimpChildren, LTSOps::OpSUB)) {
+                            auto&& FlattenedChildren = GetAllChildren(SimpChildren);
+                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
                             ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                         }
@@ -1492,6 +1538,10 @@ namespace ESMC {
                             auto&& RedChildren = PurgeInt(SimpChildren, 1);
                             if (RedChildren.size() == 1) {
                                 ExpStack.push_back(RedChildren[0]);
+                            } else if (AllOfOp(RedChildren, LTSOps::OpMUL)) {
+                                auto&& FlattenedChildren = GetAllChildren(RedChildren);
+                                ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, 
+                                                             ExtData));
                             } else {
                                 ExpStack.push_back(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
                             }
