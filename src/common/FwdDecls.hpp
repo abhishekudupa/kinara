@@ -183,6 +183,24 @@ namespace ESMC {
 
     } /* end namespace Symm */
 
+    namespace TP {
+        
+        class Z3Object;
+        class Z3CtxWrapper;
+        class Z3Expr;
+        class Z3Sort;
+        class Z3Model;
+        class Z3Solver;
+
+        typedef CSmartPtr<Z3CtxWrapper> Z3Ctx;
+        
+        class TheoremProver;
+        class Z3TheoremProver;
+        
+        typedef CSmartPtr<TheoremProver> TPRef;
+        
+    } /* end namespace TP */
+
     // UID Generators
     class UIDGenerator;
 

@@ -60,6 +60,7 @@
 #include "../expr/SemanticizerUtils.hpp"
 #include "../expr/Expressions.hpp"
 #include "../expr/ExprTypes.hpp"
+#include "../tpinterface/Z3Objects.hpp"
 
 
 namespace ESMC {
@@ -113,6 +114,7 @@ namespace ESMC {
         }
 
         namespace Detail {
+
             using namespace ESMC::Exprs;
             extern const unordered_map<i64, string> OpCodeToNameMap;
             extern const string BoundVarPrefix;
@@ -120,101 +122,10 @@ namespace ESMC {
 
             typedef unordered_map<i64, ExprTypeRef> UFID2TypeMapT;
 
-            // A wrapper for ref counting Z3 contexts
-            class Z3CtxWrapper : public RefCountable
-            {
-            private:
-                Z3_context Ctx;
-
-            public:
-                Z3CtxWrapper(Z3_context Ctx);
-                Z3CtxWrapper();
-                virtual ~Z3CtxWrapper();
-
-                operator Z3_context () const;
-                Z3_context GetCtx() const;
-            };
-
-            typedef SmartPtr<Z3CtxWrapper> Z3Ctx;
-
-            class Z3Expr
-            {
-            protected:
-                Z3Ctx Ctx;
-
-            private:
-                Z3_ast AST;
-            
-            public:
-                Z3Expr();
-                Z3Expr(const Z3Expr& Other);
-                Z3Expr(Z3Ctx Ctx, Z3_ast AST);
-                Z3Expr(Z3Expr&& Other);
-                virtual ~Z3Expr();
-
-                Z3Expr& operator = (Z3Expr Other);
-                bool operator == (const Z3Expr& Other) const;
-            
-                string ToString() const;
-                u64 Hash() const;
-
-
-                // unsafe! use only if you know what you're doing
-                operator Z3_ast () const;
-                Z3_ast GetAST() const;
-                const Z3Ctx& GetCtx() const;
-
-                static Z3Expr NullExpr;
-            };
-
-            class Z3ExprHasher
-            {
-            public:
-                inline u64 operator () (const Z3Expr& Expr) const
-                {
-                    return Expr.Hash();
-                }
-            };
-            
-            class Z3Sort
-            {
-            protected:
-                Z3Ctx Ctx;
-                
-            private:
-                Z3_sort Sort;
-                mutable unordered_map<string, Z3_func_decl> FuncDecls;
-
-            public:
-                Z3Sort();
-                Z3Sort(const Z3Sort& Other);
-                Z3Sort(Z3Ctx Ctx, Z3_sort Sort);
-                Z3Sort(Z3Sort&& Other);
-                virtual ~Z3Sort();
-
-                // Helper to add ref counted func decls
-                // as in the case for enums and records
-                void AddFuncDecl(Z3_func_decl Decl) const;
-                void AddFuncDecls(u32 NumDecls, Z3_func_decl* Decls) const;
-
-                Z3_func_decl GetFuncDecl(const string& Name) const;
-
-                Z3Sort& operator = (Z3Sort Other);
-                bool operator == (const Z3Sort& Other) const;
-
-                string ToString() const;
-                u64 Hash() const;
-
-                // unsafe! for internal use only
-                operator Z3_sort () const;
-                Z3_sort GetSort() const;
-                const Z3Ctx& GetCtx() const;
-
-                static Z3Sort NullSort;
-            };
         } /* end namespace Detail */
 
         using namespace Detail;
+        using namespace TP;
         using namespace Exprs;
 
         // A context class for remembering type info
@@ -227,13 +138,14 @@ namespace ESMC {
             typedef unordered_set<Z3Expr, Z3ExprHasher> AssumptionSetT;
 
         private:
-            mutable map<ExprTypeRef, Z3Sort> LTSTypeToSort;
+            mutable unordered_map<ExprTypeRef, Z3Sort> LTSTypeToSort;
             mutable map<string, ExprTypeRef> VarNameToLTSType;
             Z3Ctx Ctx;
             mutable vector<AssumptionSetT> Assumptions;
 
         public:
             LTSLoweredContext();
+            LTSLoweredContext(const Z3Ctx& Ctx);
             virtual ~LTSLoweredContext();
 
             const Z3Sort& GetZ3Sort(const ExprTypeRef& LTSType) const;
@@ -2386,7 +2298,7 @@ namespace ESMC {
         public:
             typedef LTSOps Ops;
             typedef Exprs::Expr<E, ESMC::LTS::LTSTermSemanticizer> ExpT;
-            typedef Detail::Z3Expr LExpT;
+            typedef Z3Expr LExpT;
             typedef Exprs::ExprTypeRef TypeT;
             static const TypeT InvalidType;
 
@@ -2548,7 +2460,7 @@ namespace ESMC {
                 auto NumExprs = Z3_goal_size(*Ctx, CurGoal);
                 for (u32 j = 0; j < NumExprs; j++) {
                     auto CurFormula = Z3_goal_formula(*Ctx, CurGoal, j);
-                    Detail::Z3Expr CurExpr = Detail::Z3Expr(Ctx, CurFormula);
+                    Z3Expr CurExpr(Ctx, CurFormula);
                     RaisedExprs.push_back(RaiseExpr(CurExpr, LTSCtx));
                 }
             }
@@ -2586,8 +2498,8 @@ namespace ESMC {
             return false;
         }
 
-        extern ostream& operator << (const Detail::Z3Expr& Expr, ostream& Out);
-        extern ostream& operator << (const Detail::Z3Sort& Sort, ostream& Out);
+        extern ostream& operator << (const Z3Expr& Expr, ostream& Out);
+        extern ostream& operator << (const Z3Sort& Sort, ostream& Out);
         
         
     } /* end namespace LTS */

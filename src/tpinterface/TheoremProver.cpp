@@ -42,7 +42,228 @@
 namespace ESMC {
     namespace TP {
 
+        TheoremProver::TheoremProver(const string& Name)
+            : Name(Name)
+        {
+            AssertionStack.push(vector<ExpT>());
+        }
 
+        TheoremProver::~TheoremProver()
+        {
+            // Nothing here
+        }
+
+        TPResult TheoremProver::GetLastSolveResult() const
+        {
+            return LastSolveResult;
+        }
+
+        const string& TheoremProver::GetName() const 
+        {
+            return Name;
+        }
+
+        void TheoremProver::ClearSolution() const
+        {
+            LastSolveResult = TPResult::UNKNOWN;
+        }
+
+        void TheoremProver::Push() const
+        {
+            AssertionStack.push(vector<ExpT>());
+        }
+
+        vector<ExpT> TheoremProver::Pop() const
+        {
+            auto Retval = AssertionStack.top();
+            AssertionStack.pop();
+            return Retval;
+        }
+
+        void TheoremProver::Pop(u32 NumScopes) const
+        {
+            for (u32 i = 0; i < NumScopes; ++i) {
+                Pop();
+            }
+        }
+
+        void TheoremProver::Assert(const ExpT& Assertion) const
+        {
+            AssertionStack.top().push_back(Assertion);
+        }
+
+        void TheoremProver::Assert(const vector<ExpT>& Assertions) const
+        {
+            for (auto const& Assertion : Assertions) {
+                AssertionStack.top().push_back(Assertion);
+            }
+        }
+
+        
+        // Z3TheoremProver implementation
+        Z3TheoremProver::Z3TheoremProver()
+            : TheoremProver("Z3TheoremProver"),
+              Ctx(new Z3CtxWrapper()), TheModel(Z3Model::NullModel),
+              Solver(Ctx), FlashSolver(Ctx)
+        {
+            // Push the default scope on
+            Z3_solver_push(*Ctx, Solver);
+        }
+
+        Z3TheoremProver::Z3TheoremProver(const Z3Ctx& Ctx)
+            : TheoremProver("Z3TheoremProver"),
+              Ctx(Ctx), TheModel(Z3Model::NullModel),
+              Solver(Ctx), FlashSolver(Ctx)
+        {
+            // Push the default scope on
+            Z3_solver_push(*Ctx, Solver);
+        }
+        
+        Z3TheoremProver::~Z3TheoremProver()
+        {
+            // Nothing here
+        }
+
+        void Z3TheoremProver::ClearSolution() const 
+        {
+            TheoremProver::ClearSolution();
+            TheModel = Z3Model::NullModel;
+        }
+
+        void Z3TheoremProver::Push() const 
+        {
+            Z3_solver_push(*Ctx, Solver);
+            TheoremProver::Push();
+        }
+
+        vector<ExpT> Z3TheoremProver::Pop() const
+        {
+            Z3_solver_pop(*Ctx, Solver, 1);
+            return TheoremProver::Pop();
+        }
+
+        void Z3TheoremProver::Pop(u32 NumScopes) const
+        {
+            Z3_solver_pop(*Ctx, Solver, NumScopes);
+            TheoremProver::Pop(NumScopes);
+        }
+
+        void Z3TheoremProver::Assert(const ExpT& Assertion) const
+        {
+            TheoremProver::Assert(Assertion);
+            auto Mgr = Assertion->GetMgr();
+            LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
+            Z3_solver_assert(*Ctx, Solver, Mgr->LowerExpr(Assertion, LTSCtx));
+            
+            // Assert the constraints from the lowered context as well
+            auto const& Assumptions = LTSCtx->GetAllAssumptions();
+            for (auto const& AssumptionSet : Assumptions) {
+                for (auto const& Assumption : AssumptionSet) {
+                    Z3_solver_assert(*Ctx, Solver, Assumption);
+                }
+            }
+        }
+
+        void Z3TheoremProver::Assert(const vector<ExpT>& Assertions) const
+        {
+            for (auto const& Assertion : Assertions) {
+                Assert(Assertion);
+            }
+        }
+
+        TPResult Z3TheoremProver::CheckSat() const
+        {
+            auto Res = Z3_solver_check(*Ctx, Solver);
+            if (Res == Z3_L_FALSE) {
+                LastSolveResult = TPResult::UNSATISFIABLE;
+            } else if (Res == Z3_L_TRUE) {
+                LastSolveResult = TPResult::SATISFIABLE;
+            } else {
+                LastSolveResult = TPResult::UNKNOWN;
+            }
+            LastSolveWasFlash = false;
+            TheModel = Z3Model::NullModel;
+            return LastSolveResult;
+        }
+
+        TPResult Z3TheoremProver::CheckSat(const ExpT& Assertion) const
+        {
+            auto Mgr = Assertion->GetMgr();
+            Z3_solver_push(*Ctx, FlashSolver);
+            LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
+            Z3_solver_assert(*Ctx, FlashSolver, Mgr->LowerExpr(Assertion, LTSCtx));
+            
+            auto const& Assumptions = LTSCtx->GetAllAssumptions();
+            for (auto const& AssumptionSet : Assumptions) {
+                for (auto const& Assumption : AssumptionSet) {
+                    Z3_solver_assert(*Ctx, FlashSolver, Assumption);
+                }
+            }
+
+            auto Res = Z3_solver_check(*Ctx, Solver);
+            if (Res == Z3_L_FALSE) {
+                LastSolveResult = TPResult::UNSATISFIABLE;
+            } else if (Res == Z3_L_TRUE) {
+                LastSolveResult = TPResult::SATISFIABLE;
+            } else {
+                LastSolveResult = TPResult::UNKNOWN;
+            }
+            LastSolveWasFlash = true;
+            TheModel = Z3Model::NullModel;
+            return LastSolveResult;
+        }
+        
+        ExpT Z3TheoremProver::Evaluate(const ExpT& Exp) const
+        {
+            if (LastSolveResult != TPResult::SATISFIABLE) {
+                throw ESMCError((string)"Z3TheoremProver::Evaluate() called, but " + 
+                                "last solve was not satisfiable. No model to evaluate " + 
+                                "expression over!");
+            }
+
+            auto ExpType = Exp->GetType();
+            if (!ExpType->Is<Exprs::ExprScalarType>()) {
+                throw ESMCError((string)"Z3TheoremProver::Evaluate() called " + 
+                                "on non-scalar typed expression. This is not " + 
+                                "currently supported!");
+            }
+
+            // Get the model if not already done
+            if (TheModel == Z3Model::NullModel) {
+                TheModel = Z3Model(Ctx, Z3_solver_get_model(*Ctx, 
+                                                         (LastSolveWasFlash ? 
+                                                          FlashSolver : Solver)));
+            }
+
+            auto Mgr = Exp->GetMgr();
+            
+            LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
+            auto LoweredExpr = Mgr->LowerExpr(Exp, LTSCtx);
+            Z3_ast OutAst = nullptr;
+            auto EvalRes = Z3_model_eval(*Ctx, TheModel, LoweredExpr, true, &OutAst);
+            if (EvalRes == Z3_FALSE) {
+                throw ESMCError((string)"Could not evaluate the expression in the model.\n" + 
+                                "Expression: " + Exp->ToString());
+            }
+            Z3Expr EvalLExpr(Ctx, OutAst);
+            return Mgr->RaiseExpr(EvalLExpr, LTSCtx);
+        }
+
+        const Z3Model& Z3TheoremProver::GetModel() const
+        {
+            return TheModel;
+        }
+
+        const Z3Ctx& Z3TheoremProver::GetCtx() const
+        {
+            return Ctx;
+        }
+
+        const Z3Solver& Z3TheoremProver::GetSolver() const
+        {
+            return Solver;
+        }
+        
     } /* end namespace TP */
 } /* end namespace ESMC */
 

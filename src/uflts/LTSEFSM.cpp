@@ -37,6 +37,8 @@
 
 // Code:
 
+#include "../tpinterface/TheoremProver.hpp"
+
 #include "LTSEFSM.hpp"
 #include "LTSUtils.hpp"
 #include "LabelledTS.hpp"
@@ -46,6 +48,8 @@
 
 namespace ESMC {
     namespace LTS {
+
+        using namespace ESMC::TP;
 
         GeneralEFSM::GeneralEFSM(LabelledTS* TheLTS, const string& Name,
                                  const vector<ExpT>& Params, 
@@ -75,99 +79,17 @@ namespace ESMC {
             // Nothing here
         }
 
-        void DetEFSM::AddInputTransition(const string& InitState,
-                                         const string& FinalState,
-                                         const ExpT& Guard,
-                                         const vector<LTSAssignRef>& Updates,
-                                         const string& MessageName,
-                                         const ExprTypeRef& MessageType,
-                                         const vector<ExpT>& MessageParams)
+        // Overriden to check determinism
+        void DetEFSM::Freeze()
         {
-            // TODO: Check for determinism
-            EFSMBase::AddInputTransition(InitState, FinalState, Guard, 
-                                         Updates, MessageName, MessageType, 
-                                         MessageParams);
-        }
-
-        void DetEFSM::AddInputTransitions(const vector<ExpT>& TransParams,
-                                          const ExpT& Constraint,
-                                          const string& InitState,
-                                          const string& FinalState,
-                                          const ExpT& Guard,
-                                          const vector<LTSAssignRef>& Updates,
-                                          const string& MessageName,
-                                          const ExprTypeRef& MessageType,
-                                          const vector<ExpT>& MessageParams)
-        {
-            // TODO: Check for determinism
-            EFSMBase::AddInputTransitions(TransParams, Constraint,
-                                          InitState, FinalState, Guard,
-                                          Updates, MessageName, MessageType,
-                                          MessageParams);
-        }
-
-        void DetEFSM::AddOutputTransition(const string& InitState,
-                                          const string& FinalState,
-                                          const ExpT& Guard,
-                                          const vector<LTSAssignRef>& Updates,
-                                          const string& MessageName,
-                                          const ExprTypeRef& MessageType,
-                                          const vector<ExpT>& MessageParams,
-                                          const set<string>& AddToFairnessSets)
-        {
-            // TODO: Check for determinism
-            EFSMBase::AddOutputTransition(InitState, FinalState, Guard,
-                                          Updates, MessageName, MessageType,
-                                          MessageParams, AddToFairnessSets);
-        }
-
-        void DetEFSM::AddOutputTransitions(const vector<ExpT>& TransParams, 
-                                           const ExpT& Constraint, 
-                                           const string& InitState, 
-                                           const string& FinalState, 
-                                           const ExpT &Guard, 
-                                           const vector<LTSAssignRef>& Updates, 
-                                           const string& MessageName, 
-                                           const ExprTypeRef& MessageType, 
-                                           const vector<ExpT>& MessageParams, 
-                                           LTSFairnessType FairnessKind,
-                                           SplatFairnessType SplatFairness,
-                                           const string& SplatFairnessName)
-        {
-            // TODO: Check for determinism
-            EFSMBase::AddOutputTransitions(TransParams, Constraint, InitState, 
-                                           FinalState, Guard, Updates, MessageName, 
-                                           MessageType, MessageParams, 
-                                           FairnessKind, SplatFairness, 
-                                           SplatFairnessName);
-        }
-
-        void DetEFSM::AddInternalTransition(const string& InitState,
-                                            const string& FinalState,
-                                            const ExpT& Guard,
-                                            const vector<LTSAssignRef>& Updates,
-                                            const set<string>& AddToFairnessSets)
-        {
-            // TODO: Check for determinism
-            EFSMBase::AddInternalTransition(InitState, FinalState, Guard, 
-                                            Updates, AddToFairnessSets);
-        }
-
-        void DetEFSM::AddInternalTransitions(const vector<ExpT>& TransParams,
-                                             const ExpT& Constraint,
-                                             const string& InitState,
-                                             const string& FinalState,
-                                             const ExpT& Guard,
-                                             const vector<LTSAssignRef>& Updates,
-                                             LTSFairnessType FairnessKind,
-                                             SplatFairnessType SplatFairness,
-                                             const string& SplatFairnessName)
-        {
-            // TODO: Check for determinism
-            EFSMBase::AddInternalTransitions(TransParams, Constraint, InitState, 
-                                             FinalState, Guard, Updates, 
-                                             FairnessKind, SplatFairness, 
-                                             SplatFairnessName);
+            EFSMBase::Freeze();
+            
+            // Check for determinism now on each of the EFSMs
+            auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
+            for (auto const& ParamInst : ParamInsts) {
+                auto const& Transitions = Transitions[ParamInst];
+                
+            }
         }
         
     } /* end namespace LTS */

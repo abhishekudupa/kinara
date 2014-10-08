@@ -49,70 +49,20 @@
 #include "../containers/RefCountable.hpp"
 #include "../uflts/LTSTypes.hpp"
 #include "../uflts/LTSTermSemanticizer.hpp"
+#include "../containers/SmartPtr.hpp"
+
+#include "Z3Objects.hpp"
 
 namespace ESMC {
     namespace TP {
 
         using ESMC::LTS::ExpT;
         using ESMC::LTS::LExpT;
-        using ESMC::LTS::Detail::Z3Ctx;
 
         enum class TPResult {
             SATISFIABLE, UNSATISFIABLE, UNKNOWN
         };
 
-        class Z3Solver
-        {
-        protected:
-            Z3Ctx Ctx;
-            
-        private:
-            Z3_solver Solver;
-            
-        public:
-            Z3Solver();
-            Z3Solver(const Z3Solver& Other);
-            Z3Solver(Z3Ctx Ctx, Z3_solver Solver);
-            Z3Solver(Z3Ctx Ctx);
-            Z3Solver(Z3Solver&& Other);
-            virtual ~Z3Solver();
-
-            Z3Solver& operator = (Z3Solver Other);
-            bool operator == (const Z3Solver& Other) const;
-
-            string ToString() const;
-            
-            operator Z3_solver () const;
-            Z3_solver GetSolver() const;
-
-            static Z3Solver NullSolver;
-        };
-
-        class Z3Model
-        {
-        protected:
-            Z3Ctx Ctx;
-           
-        private:
-            Z3_model Model;
-
-        public:
-            Z3Model();
-            Z3Model(const Z3Model& Other);
-            Z3Model(Z3Ctx Ctx, Z3_model Model);
-            Z3Model(Z3Model&& Other);
-            virtual ~Z3Model();
-
-            Z3Model& operator = (Z3Model Other);
-            bool operator == (const Z3Model& Other) const;
-
-            string ToString() const;
-
-            operator Z3_model () const;
-            Z3_model GetModel() const;
-
-            static Z3Model NullModel;
-        };
 
         class TheoremProver : public RefCountable
         {
@@ -120,30 +70,100 @@ namespace ESMC {
             string Name;
 
         protected:
-            stack<vector<ExpT>> AssertionStack;
-            Z3Model TheModel;
-            TPResult LastSolveResult;
+            mutable stack<vector<ExpT>> AssertionStack;
+            mutable TPResult LastSolveResult;
 
         public:
             TheoremProver(const string& Name);
             virtual ~TheoremProver();
+
+            TPResult GetLastSolveResult() const;
+            const string& GetName() const;
+
+            virtual void ClearSolution() const;
             
-            virtual void Push();
+            virtual void Push() const;
             virtual vector<ExpT> Pop() const;
             virtual void Pop(u32 NumScopes) const;
 
-            virtual void Assert(const ExpT& Assertion);
-            virtual void Assert(const vector<ExpT>& Assertions);
+            virtual void Assert(const ExpT& Assertion) const;
+            virtual void Assert(const vector<ExpT>& Assertions) const;
             
-            virtual TPResult CheckSat() const;
-            virtual TPResult CheckValidity() const;
-
+            virtual TPResult CheckSat() const = 0;
             // Ignores all the assertions on the stack
-            virtual TPResult CheckSat(const ExpT& Assertion) const;
-            virtual TPResult CheckValidity(const ExpT& Assertion) const;
+            virtual TPResult CheckSat(const ExpT& Assertion) const = 0;
 
-            virtual ExpT Evaluate(const ExpT& Exp) const;
-            virtual
+            // Evaluates only scalar typed expressions
+            virtual ExpT Evaluate(const ExpT& Exp) const = 0;
+
+            template <typename T, typename... ArgTypes>
+            static inline TPRef MakeProver(ArgTypes&&... Args)
+            {
+                TPRef Retval = new T(forward<ArgTypes>(Args)...);
+                return Retval;
+            }
+
+            template <typename T> 
+            inline T* As()
+            {
+                return dynamic_cast<T*>(this);
+            }
+
+            template <typename T>
+            inline const T* As() const
+            {
+                return dynamic_cast<const T*>(this);
+            }
+
+            template <typename T> 
+            inline T* SAs()
+            {
+                return static_cast<T*>(this);
+            }
+
+            template <typename T>
+            inline const T* SAs() const
+            {
+                return static_cast<const T*>(this);
+            }
+            
+            template <typename T>
+            inline bool Is() const 
+            {
+                return (dynamic_cast<const T*>(this) != nullptr);
+            }
+        };
+
+        class Z3TheoremProver : public TheoremProver
+        {
+        private:
+            Z3Ctx Ctx;
+            mutable Z3Model TheModel;
+            Z3Solver Solver;
+            Z3Solver FlashSolver;
+            mutable bool LastSolveWasFlash;
+
+        public:
+            Z3TheoremProver();
+            Z3TheoremProver(const Z3Ctx& Ctx);
+            virtual ~Z3TheoremProver();
+
+            virtual void ClearSolution() const override;
+            virtual void Push() const override;
+            virtual vector<ExpT> Pop() const override;
+            virtual void Pop(u32 NumScopes) const override;
+            
+            virtual void Assert(const ExpT& Assertion) const override;
+            virtual void Assert(const vector<ExpT>& Assertions) const override;
+
+            virtual TPResult CheckSat() const override;
+            virtual TPResult CheckSat(const ExpT& Assertion) const override;
+
+            virtual ExpT Evaluate(const ExpT& Exp) const override;
+
+            const Z3Model& GetModel() const;
+            const Z3Ctx& GetCtx() const;
+            const Z3Solver& GetSolver() const;
         };
 
     } /* end namespace TP */

@@ -25,6 +25,7 @@ PROJECT_MODULES= \
 	main \
 	mc \
 	symmetry \
+	tpinterface \
 	uflts \
 	utils \
 
@@ -70,8 +71,10 @@ libesmc_OBJS= \
 	StateVecPrinter.o \
 	SymbolTable.o \
 	SymmCanonicalizer.o \
+	TheoremProver.o \
 	Trace.o \
 	UIDGenerator.o \
+	Z3Objects.o \
 	ZeroPage.o \
 
 

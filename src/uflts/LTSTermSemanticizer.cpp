@@ -103,256 +103,21 @@ namespace ESMC {
                   { LTSOps::OpLT, "<" },
                   { LTSOps::OpLE, "<=" } };
 
-            // implementation of Z3 context wrapper
-            Z3CtxWrapper::Z3CtxWrapper(Z3_context Ctx)
-                : Ctx(Ctx)
-            {
-                // Nothing here
-            }
-
-            Z3CtxWrapper::Z3CtxWrapper()
-            {
-                auto Cfg = Z3_mk_config();
-                Ctx = Z3_mk_context_rc(Cfg);
-                Z3_del_config(Cfg);
-            }
-
-            Z3CtxWrapper::~Z3CtxWrapper()
-            {
-                if (Ctx != nullptr) {
-                    Z3_del_context(Ctx);
-                    Ctx = nullptr;
-                }
-            }
-
-            Z3CtxWrapper::operator Z3_context () const
-            {
-                return Ctx;
-            }
-
-            Z3_context Z3CtxWrapper::GetCtx() const
-            {
-                return Ctx;
-            }
-
-            // Implementation of Z3Expr
-            Z3Expr Z3Expr::NullExpr;
-
-            Z3Expr::Z3Expr()
-                : Ctx(Z3Ctx::NullPtr), AST(nullptr)
-            {
-                // Nothing here
-            }
-
-            Z3Expr::Z3Expr(const Z3Expr& Other)
-                : Ctx(Other.Ctx), AST(Other.AST)
-            {
-                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
-                    Z3_inc_ref(*Ctx, AST);
-                }
-            }
-
-            Z3Expr::Z3Expr(Z3Ctx Ctx, Z3_ast AST)
-                : Ctx(Ctx), AST(AST)
-            {
-                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
-                    Z3_inc_ref(*Ctx, AST);
-                }
-            }
-
-            Z3Expr::Z3Expr(Z3Expr&& Other)
-                : Ctx(Z3Ctx::NullPtr), AST(nullptr)
-            {
-                swap(Ctx, Other.Ctx);
-                swap(AST, Other.AST);
-            }
-
-            Z3Expr::~Z3Expr()
-            {
-                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
-                    Z3_dec_ref(*Ctx, AST);
-                }
-            }
-
-            Z3Expr& Z3Expr::operator = (Z3Expr Other)
-            {
-                swap(Ctx, Other.Ctx);
-                swap(AST, Other.AST);
-                return *this;
-            }
-
-            bool Z3Expr::operator == (const Z3Expr& Other) const
-            {
-                return ((Ctx != Z3Ctx::NullPtr) && (Other.Ctx != Z3Ctx::NullPtr) &&
-                        (Ctx == (Other.Ctx)) && 
-                        (Z3_is_eq_ast(*Ctx, AST, Other.AST)));
-            }
-
-            string Z3Expr::ToString() const
-            {
-                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
-                    return Z3_ast_to_string(*Ctx, AST);
-                } else {
-                    return "nullexpr";
-                }
-            }
-
-            u64 Z3Expr::Hash() const
-            {
-                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
-                    return (Z3_get_ast_hash(*Ctx, AST));
-                } else {
-                    return 0;
-                }
-            }
-
-            Z3Expr::operator Z3_ast() const
-            {
-                return AST;
-            }
-
-            Z3_ast Z3Expr::GetAST() const
-            {
-                return AST;
-            }
-
-            const Z3Ctx& Z3Expr::GetCtx() const
-            {
-                return Ctx;
-            }
-
-            // implementation of Z3Sort
-            Z3Sort Z3Sort::NullSort;
-
-            Z3Sort::Z3Sort()
-                : Ctx(Z3Ctx::NullPtr), Sort(nullptr)
-            {
-                // Nothing here
-            }
-
-            Z3Sort::Z3Sort(Z3Ctx Ctx, Z3_sort Sort)
-                : Ctx(Ctx), Sort(Sort)
-            {
-                if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
-                    Z3_inc_ref(*Ctx, Z3_sort_to_ast(*Ctx, Sort));
-                }
-            }
-
-            Z3Sort::Z3Sort(const Z3Sort& Other)
-                : Ctx(Other.Ctx), Sort(Other.Sort), 
-                  FuncDecls(Other.FuncDecls)
-            {
-                if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
-                    Z3_inc_ref(*Ctx, Z3_sort_to_ast(*Ctx, Sort));
-                }
-                for (auto const& FuncDecl : FuncDecls) {
-                    Z3_inc_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl.second));
-                }
-            }
-
-            Z3Sort::Z3Sort(Z3Sort&& Other)
-                : Ctx(Z3Ctx::NullPtr), Sort(nullptr)
-            {
-                swap(Ctx, Other.Ctx);
-                swap(Sort, Other.Sort);
-                swap(FuncDecls, Other.FuncDecls);
-            }
-
-            Z3Sort::~Z3Sort()
-            {
-                if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
-                    Z3_dec_ref(*Ctx, Z3_sort_to_ast(*Ctx, Sort));
-                }
-                for (auto const& FuncDecl : FuncDecls) {
-                    Z3_dec_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl.second));
-                }
-                FuncDecls.clear();
-            }
-
-            void Z3Sort::AddFuncDecl(Z3_func_decl Decl) const
-            {
-                Z3_inc_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, Decl));
-                string Name(Z3_get_symbol_string(*Ctx, Z3_get_decl_name(*Ctx, Decl)));
-                auto it = FuncDecls.find(Name);
-                if (it != FuncDecls.end()) {
-                    Z3_dec_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, it->second));
-                }
-                FuncDecls[Name] = Decl;
-            }
-
-            void Z3Sort::AddFuncDecls(u32 NumDecls, Z3_func_decl *Decls) const
-            {
-                for (u32 i = 0; i < NumDecls; ++i) {
-                    AddFuncDecl(Decls[i]);
-                }
-            }
-            
-            Z3_func_decl Z3Sort::GetFuncDecl(const string& Name) const
-            {
-                auto it = FuncDecls.find(Name);
-                if (it == FuncDecls.end()) {
-                    throw ESMCError((string)"Request to get function decl \"" + 
-                                    Name + "\" which does not exist in Z3Sort");
-                }
-                return it->second;
-            }
-
-            Z3Sort& Z3Sort::operator = (Z3Sort Other)
-            {
-                swap(Ctx, Other.Ctx);
-                swap(Sort, Other.Sort);
-                swap(FuncDecls, Other.FuncDecls);
-                return *this;
-            }
-
-            bool Z3Sort::operator == (const Z3Sort& Other) const
-            {
-                return ((Ctx != Z3Ctx::NullPtr) && (Other.Ctx != Z3Ctx::NullPtr) &&
-                        (Ctx == Other.Ctx) && 
-                        (Z3_is_eq_sort(*Ctx, Sort, Other.Sort)));
-            }
-
-            string Z3Sort::ToString() const
-            {
-                if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
-                    return Z3_sort_to_string(*Ctx, Sort);
-                } else {
-                    return "nullsort";
-                }
-            }
-
-            u64 Z3Sort::Hash() const
-            {
-                if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
-                    return Z3_get_ast_hash(*Ctx, Z3_sort_to_ast(*Ctx, Sort));
-                } else {
-                    return 0;
-                }
-            }
-
-            Z3Sort::operator Z3_sort () const
-            {
-                return Sort;
-            }
-
-            Z3_sort Z3Sort::GetSort() const
-            {
-                return Sort;
-            }
-
-            const Z3Ctx& Z3Sort::GetCtx() const
-            {
-                return Ctx;
-            }
-
         } /* end namespace Detail */
 
         // The LTSLoweredContext implementation
         
         using namespace Detail;
+        using namespace TP;
 
         LTSLoweredContext::LTSLoweredContext()
             : Ctx(new Z3CtxWrapper())
+        {
+            Assumptions.push_back(AssumptionSetT());
+        }
+
+        LTSLoweredContext::LTSLoweredContext(const Z3Ctx& Ctx)
+            : Ctx(Ctx)
         {
             Assumptions.push_back(AssumptionSetT());
         }
@@ -445,13 +210,13 @@ namespace ESMC {
             return Ctx;
         }
 
-        ostream& operator << (const Detail::Z3Expr& Expr, ostream& Out) 
+        ostream& operator << (const Z3Expr& Expr, ostream& Out) 
         {
             Out << Expr.ToString();
             return Out;
         }
 
-        ostream& operator << (const Detail::Z3Sort& Sort, ostream& Out) 
+        ostream& operator << (const Z3Sort& Sort, ostream& Out) 
         {
             Out << Sort.ToString();
             return Out;

@@ -61,70 +61,18 @@ namespace ESMC {
 
         class DetEFSM : public EFSMBase
         {
+        private:
+            
+            
         public:
             DetEFSM(LabelledTS* TheLTS, const string& Name,
                     const vector<ExpT>& Params, const ExpT& Constraint,
                     LTSFairnessType Fairness = LTSFairnessType::None);
 
             virtual ~DetEFSM();
-
-            virtual void AddInputTransition(const string& InitState,
-                                            const string& FinalState,
-                                            const ExpT& Guard,
-                                            const vector<LTSAssignRef>& Updates,
-                                            const string& MessageName,
-                                            const ExprTypeRef& MessageType,
-                                            const vector<ExpT>& MessageParams) override;
-
-            virtual void AddInputTransitions(const vector<ExpT>& TransParams,
-                                             const ExpT& Constraint,
-                                             const string& InitState,
-                                             const string& FinalState,
-                                             const ExpT& Guard,
-                                             const vector<LTSAssignRef>& Updates,
-                                             const string& MessageName,
-                                             const ExprTypeRef& MessageType,
-                                             const vector<ExpT>& MessageParams) override;
-
-            virtual void AddOutputTransition(const string& InitState,
-                                             const string& FinalState,
-                                             const ExpT& Guard,
-                                             const vector<LTSAssignRef>& Updates,
-                                             const string& MessageName,
-                                             const ExprTypeRef& MessageType,
-                                             const vector<ExpT>& MessageParams,
-                                             const set<string>& AddToFairnessSets = 
-                                             set<string>()) override;
-
-            virtual void AddOutputTransitions(const vector<ExpT>& TransParams,
-                                              const ExpT& Constraint,
-                                              const string& InitState,
-                                              const string& FinalState,
-                                              const ExpT& Guard,
-                                              const vector<LTSAssignRef>& Updates,
-                                              const string& MessageName,
-                                              const ExprTypeRef& MessageType,
-                                              const vector<ExpT>& MessageParams,
-                                              LTSFairnessType FairnessKind,
-                                              SplatFairnessType SplatFairness,
-                                              const string& SplatFairnessName) override;
-
-            virtual void AddInternalTransition(const string& InitState,
-                                               const string& FinalState,
-                                               const ExpT& Guard,
-                                               const vector<LTSAssignRef>& Updates,
-                                               const set<string>& AddToFairnessSets = 
-                                               set<string>()) override;
-
-            virtual void AddInternalTransitions(const vector<ExpT>& TransParams,
-                                                const ExpT& Constraint,
-                                                const string& InitState,
-                                                const string& FinalState,
-                                                const ExpT& Guard,
-                                                const vector<LTSAssignRef>& Updates,
-                                                LTSFairnessType FairnessKind,
-                                                SplatFairnessType SplatFairness,
-                                                const string& SplatFairnessName) override;
+            
+            // Override freeze to check for determinism
+            virtual void Freeze() override;
         };
 
     } /* end namespace LTS */
