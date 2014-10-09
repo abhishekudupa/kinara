@@ -49,7 +49,6 @@
 namespace ESMC {
     namespace LTS {
 
-
         class EFSMBase : public AutomatonBase
         {
             friend class LabelledTS;
@@ -150,9 +149,7 @@ namespace ESMC {
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const set<string>& AddToFairnessSets);
-                                          
-                                          
-            
+
         public:
             EFSMBase(LabelledTS* TheLTS, const string& Name,
                      const vector<ExpT>& Params, const ExpT& Constraint,

@@ -114,6 +114,16 @@ namespace ESMC {
 
         typedef CSmartPtr<LTSAssignBase> LTSAssignRef;
 
+        class AutomatonTransitionBase;
+        class LTSTransitionBase;
+        class LTSTransitionInput;
+        class LTSTransitionOutput;
+        class LTSTransitionInternal;
+        class LTSInitState;
+
+        typedef CSmartPtr<LTSTransitionBase> LTSTransRef;
+        typedef CSmartPtr<LTSInitState> InitStateRef;
+
         class LTSGuardedCommand;        
         typedef CSmartPtr<LTSGuardedCommand> GCmdRef;
 

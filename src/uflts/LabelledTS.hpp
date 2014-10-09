@@ -196,10 +196,30 @@ namespace ESMC {
 
             const ExprTypeRef& GetPrimedType(const ExprTypeRef& Type) const;
 
+            template <typename T, typename... ArgTypes>
+            inline EFSMBase* 
+            MakeEFSM(const string& Name, const vector<ExpT>& Params,
+                     const ExpT& Constraint, LTSFairnessType Fairness,
+                     ArgTypes&&... Args)
+            {
+                AssertMsgsFrozen();
+                AssertAutomataNotFrozen();
+                if (AllEFSMs.find(Name) != AllEFSMs.end()) {
+                    throw ESMCError((string)"A machine named \"" + Name + "\" has already " +
+                                    "been created in the LTS");
+                }
+
+                auto Retval = new T(this, Name, Params, Constraint, Fairness);
+                AllEFSMs[Name] = Retval;
+                ActualEFSMs[Name] = Retval;
+                return Retval;
+            }
+
             EFSMBase* MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
                                   const ExpT& Constraint, LTSFairnessType Fairness);
             EFSMBase* MakeDetEFSM(const string& Name, const vector<ExpT>& Params,
                                   const ExpT& Constraint, LTSFairnessType Fairness);
+            vector<EFSMBase*> GetEFSMs(const function<bool(const EFSMBase*)>& MatchPred) const;
 
             ChannelEFSM* MakeChannel(const string& Name, const vector<ExpT>& Params,
                                      const ExpT& Constraint, u32 Capacity, 

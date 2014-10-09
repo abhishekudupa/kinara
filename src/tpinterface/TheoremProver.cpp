@@ -188,10 +188,13 @@ namespace ESMC {
 
         TPResult Z3TheoremProver::CheckSat(const ExpT& Assertion) const
         {
+            Z3_solver_reset(*Ctx, FlashSolver);
+
             auto Mgr = Assertion->GetMgr();
-            Z3_solver_push(*Ctx, FlashSolver);
             LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
-            Z3_solver_assert(*Ctx, FlashSolver, Mgr->LowerExpr(Assertion, LTSCtx));
+            auto LoweredAssertion = Mgr->LowerExpr(Assertion, LTSCtx);
+
+            Z3_solver_assert(*Ctx, FlashSolver, LoweredAssertion);
             
             auto const& Assumptions = LTSCtx->GetAllAssumptions();
             for (auto const& AssumptionSet : Assumptions) {
@@ -200,7 +203,7 @@ namespace ESMC {
                 }
             }
 
-            auto Res = Z3_solver_check(*Ctx, Solver);
+            auto Res = Z3_solver_check(*Ctx, FlashSolver);
             if (Res == Z3_L_FALSE) {
                 LastSolveResult = TPResult::UNSATISFIABLE;
             } else if (Res == Z3_L_TRUE) {
@@ -208,6 +211,7 @@ namespace ESMC {
             } else {
                 LastSolveResult = TPResult::UNKNOWN;
             }
+
             LastSolveWasFlash = true;
             TheModel = Z3Model::NullModel;
             return LastSolveResult;

@@ -1621,6 +1621,10 @@ namespace ESMC {
                     Z3_func_decl* ConstFuncs = new Z3_func_decl[NumConsts];
                     Z3_func_decl* ConstTests = new Z3_func_decl[NumConsts];
 
+                    for (u32 i = 0; i < NumConsts; ++i) {
+                        ConstNames[i] = Z3_mk_string_symbol(*Ctx, QualifiedNames[i].c_str());
+                    }
+
                     auto Z3EnumSort = Z3_mk_enumeration_sort(*Ctx, Z3TypeName, NumConsts,
                                                              ConstNames, ConstFuncs, ConstTests);
 
@@ -1641,6 +1645,10 @@ namespace ESMC {
                     Z3_symbol* ConstNames = new Z3_symbol[NumConsts];
                     Z3_func_decl* ConstFuncs = new Z3_func_decl[NumConsts];
                     Z3_func_decl* ConstTests = new Z3_func_decl[NumConsts];
+
+                    for (u32 i = 0; i < NumConsts; ++i) {
+                        ConstNames[i] = Z3_mk_string_symbol(*Ctx, Members[i].c_str());
+                    }
 
                     auto Z3EnumSort = Z3_mk_enumeration_sort(*Ctx, Z3TypeName, NumConsts,
                                                              ConstNames, ConstFuncs, ConstTests);
@@ -1904,7 +1912,32 @@ namespace ESMC {
                     break;
                     
                 case LTSOps::OpIndex: {
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_select(*Ctx, LChildren[0], LChildren[1])));
+                    auto const& ExpType = Exp->GetType();
+                    auto ExpTypeAsRange = ExpType->template As<ExprRangeType>();
+                    Z3Expr LoweredExpr(Ctx, Z3_mk_select(*Ctx, LChildren[0], LChildren[1]));
+
+                    if (ExpTypeAsRange != nullptr) {
+                        auto RangeLow = ExpTypeAsRange->GetLow();
+                        auto RangeHigh = ExpTypeAsRange->GetHigh();
+                        Z3_ast AndArgs[2];
+                        
+                        auto LowString = to_string(RangeLow);
+                        auto HighString = to_string(RangeHigh);
+
+                        auto LowConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, LowString.c_str(),
+                                                                  Z3_mk_int_sort(*Ctx)));
+                        auto HighConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, HighString.c_str(),
+                                                                   Z3_mk_int_sort(*Ctx)));
+
+                        auto LowExp = Z3Expr(Ctx, Z3_mk_ge(*Ctx, LoweredExpr, LowConst));
+                        auto HighExp = Z3Expr(Ctx, Z3_mk_le(*Ctx, LoweredExpr, HighConst));
+                    
+                        AndArgs[0] = LowExp;
+                        AndArgs[1] = HighExp;
+                        
+                        LTSCtx->AddAssumption(Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs)));
+                    }
+                    ExpStack.push_back(LoweredExpr);
                     break;
                 }
 
@@ -1917,13 +1950,38 @@ namespace ESMC {
                     ExpStack.pop_back();
                     
                     auto const& FieldName = 
-                        Children[0]->template As<ESMC::Exprs::VarExpression>()->GetVarName();
+                        Children[1]->template As<ESMC::Exprs::VarExpression>()->GetVarName();
                     
                     auto FieldFunc = LoweredRecSort.GetFuncDecl(FieldName);
                     Z3_ast FuncArgs[1];
                     FuncArgs[0] = RecExp;
                     auto LoweredExpr = Z3Expr(Ctx, Z3_mk_app(*Ctx, FieldFunc, 1, FuncArgs));
                     ExpStack.push_back(LoweredExpr);
+
+                    auto const& ExpType = Exp->GetType();
+                    auto ExpTypeAsRange = ExpType->template As<ExprRangeType>();
+                    if (ExpTypeAsRange != nullptr) {
+                        auto RangeLow = ExpTypeAsRange->GetLow();
+                        auto RangeHigh = ExpTypeAsRange->GetHigh();
+                        Z3_ast AndArgs[2];
+                        
+                        auto LowString = to_string(RangeLow);
+                        auto HighString = to_string(RangeHigh);
+
+                        auto LowConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, LowString.c_str(),
+                                                                  Z3_mk_int_sort(*Ctx)));
+                        auto HighConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, HighString.c_str(),
+                                                                   Z3_mk_int_sort(*Ctx)));
+
+                        auto LowExp = Z3Expr(Ctx, Z3_mk_ge(*Ctx, LoweredExpr, LowConst));
+                        auto HighExp = Z3Expr(Ctx, Z3_mk_le(*Ctx, LoweredExpr, HighConst));
+                    
+                        AndArgs[0] = LowExp;
+                        AndArgs[1] = HighExp;
+                        
+                        LTSCtx->AddAssumption(Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs)));
+                    }
+
                     break;
                 }
                 default: {

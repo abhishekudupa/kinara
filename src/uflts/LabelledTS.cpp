@@ -950,35 +950,25 @@ namespace ESMC {
         EFSMBase* LabelledTS::MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
                                           const ExpT& Constraint, LTSFairnessType Fairness)
         {
-            AssertMsgsFrozen();
-            AssertAutomataNotFrozen();
-
-            if (AllEFSMs.find(Name) != AllEFSMs.end()) {
-                throw ESMCError((string)"A machine named \"" + Name + "\" has already " + 
-                                "been created in the LTS");
-            }
-
-            auto Retval = new GeneralEFSM(this, Name, Params, Constraint, Fairness);
-            AllEFSMs[Name] = Retval;
-            ActualEFSMs[Name] = Retval;
-            return Retval;
+            return MakeEFSM<GeneralEFSM>(Name, Params, Constraint, Fairness);
         }
 
         EFSMBase* LabelledTS::MakeDetEFSM(const string& Name, const vector<ExpT>& Params,
                                           const ExpT& Constraint, LTSFairnessType Fairness)
         {
-            AssertMsgsFrozen();
-            AssertAutomataNotFrozen();
+            return MakeEFSM<DetEFSM>(Name, Params, Constraint, Fairness);
+        }
 
-            if (AllEFSMs.find(Name) != AllEFSMs.end()) {
-                throw ESMCError((string)"A machine named \"" + Name + "\" has already " + 
-                                "been created in the LTS");
+        vector<EFSMBase*> 
+        LabelledTS::GetEFSMs(const function<bool(const EFSMBase*)>& MatchPred) const
+        {
+            vector<EFSMBase*> Retval;
+            for (auto const& NameEFSM : AllEFSMs) {
+                if (MatchPred(NameEFSM.second)) {
+                    Retval.push_back(NameEFSM.second);
+                }
             }
-
-            auto Retval = new DetEFSM(this, Name, Params, Constraint, Fairness);
-            AllEFSMs[Name] = Retval;
-            ActualEFSMs[Name] = Retval;
-            return Retval;            
+            return Retval;
         }
 
         ChannelEFSM* LabelledTS::MakeChannel(const string& Name, const vector<ExpT> &Params, 

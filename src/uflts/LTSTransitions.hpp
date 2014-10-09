@@ -250,7 +250,7 @@ namespace ESMC {
             const ExpT& GetConstraint() const;
             const vector<LTSAssignRef>& GetUpdates() const;
         };
-        
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

@@ -75,10 +75,6 @@ namespace ESMC {
         class DetEFSM;
         class ChannelEFSM;
 
-        class MonitorBase;
-        class SafetyMonitor;
-        class BuchiMonitor;
-
         class LTSState;
 
         class LTSAssignBase;

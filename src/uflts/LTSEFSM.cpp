@@ -97,6 +97,7 @@ namespace ESMC {
         {
             auto Mgr = Exp1->GetMgr();
             auto Conjunction = Mgr->MakeExpr(LTSOps::OpAND, Exp1, Exp2);
+            
             auto Res = TP->CheckSat(Conjunction);
             if (Res == TPResult::UNKNOWN) {
                 throw InternalError((string)"Got unknown result from Z3 while " +
@@ -196,6 +197,31 @@ namespace ESMC {
                     }
                 }
             }
+        }
+
+
+        // IncompleteEFSM implementation
+        IncompleteEFSM::IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
+                                       const vector<ExpT>& Params, 
+                                       const ExpT& Constraint,
+                                       LTSFairnessType Fairness)
+            : DetEFSM(TheLTS, Name, Params, Constraint, Fairness)
+        {
+            // Nothing here
+        }
+
+        IncompleteEFSM::~IncompleteEFSM()
+        {
+            // Nothing here
+        }
+
+        void IncompleteEFSM::Freeze()
+        {
+            // Add all potential transitions guarded by 
+            // uninterpreted functions and with updates
+            // being uninterpreted functions
+            
+            
         }
         
     } /* end namespace LTS */

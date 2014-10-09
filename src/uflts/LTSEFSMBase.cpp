@@ -834,7 +834,6 @@ namespace ESMC {
             CheckParams(TransParams, Constraint, SymTab, Mgr, true);
             CheckParams(MessageParams, SymTab);
             CheckExpr(Guard, SymTab, Mgr);
-
             
             ExprTypeRef ActMsgType = nullptr;
             if (MessageType->Is<ExprParametricType>()) {

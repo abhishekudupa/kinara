@@ -77,6 +77,25 @@ namespace ESMC {
             virtual void Freeze() override;
         };
 
+        
+        class IncompleteEFSM : public DetEFSM
+        {
+        private:
+            vector<LTSTransRef> AddedTransitions;
+            unordered_set<Z3Expr, Z3ExprHasher> ConstraintSet;
+
+        public:
+            IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
+                           const vector<ExpT>& Params, const ExpT& Constraint,
+                           LTSFairnessType Fairness = LTSFairnessType::None);
+
+            virtual ~IncompleteEFSM();
+
+            // override freeze to add additional transitions
+            // and such
+            virtual void Freeze() override;
+        };
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

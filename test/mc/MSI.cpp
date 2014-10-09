@@ -390,7 +390,7 @@ int main()
 
     EnvEFSM->Freeze();
 
-    auto CacheEFSM = TheLTS->MakeGenEFSM("Cache", 
+    auto CacheEFSM = TheLTS->MakeDetEFSM("Cache", 
                                          { CacheParam, DirParam, AddressParam }, 
                                          TrueExp, LTSFairnessType::Strong);
     
@@ -783,13 +783,13 @@ int main()
                                    { CacheParam1, CacheParam, DirParam, AddressParam });
     Updates.clear();
 
-    CacheEFSM->AddOutputTransition("C_IS_UNBLOCK", "C_IS_DONE", TrueExp, 
-                                   Updates, "OutMsg", UnblockSMsgType, CacheParams);
+    // CacheEFSM->AddOutputTransition("C_IS_UNBLOCK", "C_IS_DONE", TrueExp, 
+    //                                Updates, "OutMsg", UnblockSMsgType, CacheParams);
 
-    Updates.push_back(new LTSAssignSimple(LDAckMsgOutDotLoadedValue, CacheDataExp));
-    CacheEFSM->AddOutputTransition("C_IS_DONE", "C_S", TrueExp, Updates, 
-                                   "OutMsg", LDAckMsgType, CacheParams);
-    Updates.clear();
+    // Updates.push_back(new LTSAssignSimple(LDAckMsgOutDotLoadedValue, CacheDataExp));
+    // CacheEFSM->AddOutputTransition("C_IS_DONE", "C_S", TrueExp, Updates, 
+    //                                "OutMsg", LDAckMsgType, CacheParams);
+    // Updates.clear();
 
     // C_II on WBAckMsg'
     CacheEFSM->AddInputTransition("C_II", "C_II_SENDACK", TrueExp, Updates, "InMsg", 
@@ -827,7 +827,7 @@ int main()
 
     // The directory now
     vector<ExpT> DirParams = { DirParam, AddressParam };
-    auto DirEFSM = TheLTS->MakeGenEFSM("Directory", DirParams, TrueExp, 
+    auto DirEFSM = TheLTS->MakeDetEFSM("Directory", DirParams, TrueExp, 
                                        LTSFairnessType::Strong);
     DirEFSM->AddState("D_I");
     DirEFSM->AddState("D_I_GETX");
