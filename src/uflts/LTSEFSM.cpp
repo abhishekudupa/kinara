@@ -79,6 +79,97 @@ namespace ESMC {
             // Nothing here
         }
 
+        static inline vector<LTSTransRef> 
+        FilterTransitions(const vector<LTSTransRef>& Transitions,
+                          const function<bool(const LTSTransRef&)>& Pred)
+        {
+            vector<LTSTransRef> Retval;
+            for (auto const& Transition : Transitions) {
+                if (Pred(Transition)) {
+                    Retval.push_back(Transition);
+                }
+            }
+            return Retval;
+        }
+
+        static inline bool CheckDisjoint(const ExpT& Exp1, const ExpT& Exp2,
+                                         const TPRef& TP)
+        {
+            auto Mgr = Exp1->GetMgr();
+            auto Conjunction = Mgr->MakeExpr(LTSOps::OpAND, Exp1, Exp2);
+            auto Res = TP->CheckSat(Conjunction);
+            if (Res == TPResult::UNKNOWN) {
+                throw InternalError((string)"Got unknown result from Z3 while " +
+                                    "checking determinism of guards.\n" + 
+                                    "Guards being checked:\n" + Exp1->ToString() + 
+                                    "\n\n" + Exp2->ToString() + "\nAt: " + 
+                                    __FILE__ + ":" + to_string(__LINE__));
+            } else if (Res == TPResult::SATISFIABLE) {
+                return false;
+            } else {
+                return true;
+            }
+        }
+
+        // Rules:
+        // 1. An input transition t on a message m
+        //    - Must have disjoint guards from all other input transitions on m
+        //    - Must have disjoint guards from all output transitions
+        //    - Must have disjoint guards from all internal transitions
+        // 2. An output transition t with a message m
+        //    - Must have disjoint guards from all other output transitions
+        //    - Must have disjoint guards from all internal transitions
+        // 3. An internal transition t
+        //    - Must have disjoint guards from all other internal transitions
+        inline void 
+        DetEFSM::CheckTransition(const TPRef& TP, u32 TransIndex,
+                                 const vector<LTSTransRef>& CandTrans) const
+        {
+            auto const& Trans = CandTrans[TransIndex];
+            auto TransAsInput = Trans->As<LTSTransitionInput>();
+
+            if (TransAsInput != nullptr) {
+                auto MType = TransAsInput->GetMessageType();
+                for (u32 j = TransIndex + 1; j < CandTrans.size(); ++j) {
+                    auto const& OtherTrans = CandTrans[j];
+                    auto OtherAsInput = OtherTrans->As<LTSTransitionInput>();
+
+                    if (OtherAsInput != nullptr) {
+                        if (OtherAsInput->GetMessageType() != MType) {
+                            continue;
+                        }
+                        // Check disjointness of guards
+                        auto Disjoint = 
+                            CheckDisjoint(Trans->GetGuard(), OtherAsInput->GetGuard(), TP);
+                        if (!Disjoint) {
+                            throw ESMCError((string)"Determinism check failed on deterministic " + 
+                                            "EFSM named \"" + Name + "\"\nOn transitions:\n" + 
+                                            Trans->ToString() + "\n\n" + OtherTrans->ToString());
+                        }
+                    } else {
+                        auto Disjoint = 
+                            CheckDisjoint(Trans->GetGuard(), OtherTrans->GetGuard(), TP);
+                        if (!Disjoint) {
+                            throw ESMCError((string)"Determinism check failed on deterministic " + 
+                                            "EFSM named \"" + Name + "\"\nOn transitions:\n" + 
+                                            Trans->ToString() + "\n\n" + OtherTrans->ToString());
+                        }
+                    }
+                }
+            } else {
+                for (u32 j = TransIndex + 1; j < CandTrans.size(); ++j) {
+                    auto const& OtherTrans = CandTrans[j];
+                    auto Disjoint = 
+                        CheckDisjoint(Trans->GetGuard(), OtherTrans->GetGuard(), TP);
+                    if (!Disjoint) {
+                        throw ESMCError((string)"Determinism check failed on deterministic " + 
+                                        "EFSM named \"" + Name + "\"\nOn transitions:\n" + 
+                                        Trans->ToString() + "\n\n" + OtherTrans->ToString());
+                    }     
+                }
+            }
+        }
+
         // Overriden to check determinism
         void DetEFSM::Freeze()
         {
@@ -87,8 +178,23 @@ namespace ESMC {
             // Check for determinism now on each of the EFSMs
             auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
             for (auto const& ParamInst : ParamInsts) {
-                auto const& Transitions = Transitions[ParamInst];
-                
+                auto const& InstTransitions = Transitions[ParamInst];
+
+                for (auto const& NameState : States) {
+                    auto const& StateName = NameState.first;
+                    auto&& CandTransitions = 
+                        FilterTransitions(InstTransitions, 
+                                          [&] (const LTSTransRef& Trans) -> bool
+                                          {
+                                              return (Trans->GetInitState().GetName() ==
+                                                      StateName);
+                                          });
+
+                    // These are now the transitions from the same state
+                    for (u32 i = 0; i < CandTransitions.size(); ++i) {
+                        CheckTransition(TP, i, CandTransitions);
+                    }
+                }
             }
         }
         

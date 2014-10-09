@@ -62,8 +62,10 @@ namespace ESMC {
         class DetEFSM : public EFSMBase
         {
         private:
-            
-            
+            inline void 
+            CheckTransition(const TPRef& TP, u32 TransIndex,
+                            const vector<LTSTransRef>& CandTrans) const;
+
         public:
             DetEFSM(LabelledTS* TheLTS, const string& Name,
                     const vector<ExpT>& Params, const ExpT& Constraint,
