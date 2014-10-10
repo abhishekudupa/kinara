@@ -89,12 +89,22 @@ namespace ESMC {
 
         void TheoremProver::Assert(const ExpT& Assertion) const
         {
+            if (!Assertion->GetType()->Is<Exprs::ExprBoolType>()) {
+                throw ESMCError((string)"Attempted to assert a non-Boolean " + 
+                                "expression.\nThe expression is:\n" + 
+                                Assertion->ToString());
+            }
             AssertionStack.top().push_back(Assertion);
         }
 
         void TheoremProver::Assert(const vector<ExpT>& Assertions) const
         {
             for (auto const& Assertion : Assertions) {
+                if (!Assertion->GetType()->Is<Exprs::ExprBoolType>()) {
+                    throw ESMCError((string)"Attempted to assert a non-Boolean " + 
+                                    "expression.\nThe expression is:\n" + 
+                                    Assertion->ToString());
+                }
                 AssertionStack.top().push_back(Assertion);
             }
         }
