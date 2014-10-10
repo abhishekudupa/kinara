@@ -1363,6 +1363,9 @@ int main()
     
     TheLTS->AddInitStates(InitStates);
     TheLTS->Freeze();
+
+    cout << CacheEFSM->ToString() << endl;
+    cout << DirEFSM->ToString() << endl;
     
     auto const& StateVectorVars = TheLTS->GetStateVectorVars();
 

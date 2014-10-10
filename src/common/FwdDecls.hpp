@@ -104,6 +104,10 @@ namespace ESMC {
         class GeneralEFSM;
         class DetEFSM;
 
+        class SymmetricMessageDecl;
+        
+        typedef CSmartPtr<SymmetricMessageDecl> SymmMsgDeclRef;
+
         template <typename E> class LTSTermSemantizer;
         class LTSLoweredContext;
         typedef CSmartPtr<LTSLoweredContext> LTSLCRef;
@@ -123,6 +127,14 @@ namespace ESMC {
 
         typedef CSmartPtr<LTSTransitionBase> LTSTransRef;
         typedef CSmartPtr<LTSInitState> InitStateRef;
+
+        class LTSSymbTransitionBase;
+        class LTSSymbIOTransitionBase;
+        class LTSSymbInputTransition;
+        class LTSSymbOutputTransition;
+        class LTSSymbInternalTransition;
+
+        typedef CSmartPtr<LTSSymbTransitionBase> LTSSymbTransRef;
 
         class LTSGuardedCommand;        
         typedef CSmartPtr<LTSGuardedCommand> GCmdRef;

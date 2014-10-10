@@ -49,6 +49,33 @@
 namespace ESMC {
     namespace LTS {
 
+        // Used to remember what messages were declared
+        // as a set of symmetric message types
+        class SymmetricMessageDecl : public RefCountable
+        {
+        private:
+            ExprTypeRef MessageType;
+            vector<ExpT> NewParams;
+            ExpT Constraint;
+            vector<ExpT> MessageParams;
+            bool Input;
+
+        public:
+            SymmetricMessageDecl(const ExprTypeRef& MessageType,
+                                 const vector<ExpT>& NewParams,
+                                 const ExpT& Constraint,
+                                 const vector<ExpT>& MessageParams,
+                                 bool Input);
+            virtual ~SymmetricMessageDecl();
+
+            const ExprTypeRef& GetMessageType() const;
+            const vector<ExpT>& GetNewParams() const;
+            const ExpT& GetConstraint() const;
+            const vector<ExpT>& GetMessageParams() const;
+            bool IsInput() const;
+            bool IsOutput() const;
+        };
+
         class EFSMBase : public AutomatonBase
         {
             friend class LabelledTS;
@@ -65,6 +92,9 @@ namespace ESMC {
             map<vector<ExpT>, MgrT::SubstMapT> RebaseSubstMaps;
             UIDGenerator FairnessUIDGenerator;
 
+            // Symbolic Transitions
+            vector<LTSSymbTransRef> SymbolicTransitions;
+
             // Transitions per instance
             map<vector<ExpT>, vector<LTSTransRef>> Transitions;
 
@@ -76,6 +106,7 @@ namespace ESMC {
             // Inputs and outputs per instance
             map<vector<ExpT>, set<ExprTypeRef>> Inputs;
             map<vector<ExpT>, set<ExprTypeRef>> Outputs;
+            vector<SymmMsgDeclRef> SymmetricMessages;
 
             ExpT ErrorCondition;
             ExpT FinalCondition;
@@ -264,6 +295,15 @@ namespace ESMC {
 
             virtual string ToString() const override;
 
+            const vector<LTSSymbTransRef>& GetSymbolicTransitions() const;
+
+            vector<LTSSymbTransRef>
+            GetSymbolicTransitions(const function<bool(const LTSSymbTransRef&)>& MatchPred) const;
+
+            const vector<SymmMsgDeclRef>& GetSymmetricMessages() const;
+
+            vector<SymmMsgDeclRef>
+            GetSymmetricMessages(const function<bool(const SymmMsgDeclRef&)>& MatchPred) const;
         };
 
     } /* end namespace LTS */

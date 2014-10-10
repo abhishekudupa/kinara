@@ -47,6 +47,54 @@
 namespace ESMC {
     namespace LTS {
 
+        // Symmetric message decl implementation
+        SymmetricMessageDecl::SymmetricMessageDecl(const ExprTypeRef& MessageType,
+                                                   const vector<ExpT>& NewParams,
+                                                   const ExpT& Constraint,
+                                                   const vector<ExpT>& MessageParams,
+                                                   bool Input)
+            : MessageType(MessageType), NewParams(NewParams),
+              Constraint(Constraint), MessageParams(MessageParams),
+              Input(Input)
+        {
+            // Nothing here
+        }
+
+        SymmetricMessageDecl::~SymmetricMessageDecl()
+        {
+            // Nothing here
+        }
+
+        const ExprTypeRef& SymmetricMessageDecl::GetMessageType() const
+        {
+            return MessageType;
+        }
+
+        const vector<ExpT>& SymmetricMessageDecl::GetNewParams() const
+        {
+            return NewParams;
+        }
+
+        const ExpT& SymmetricMessageDecl::GetConstraint() const
+        {
+            return Constraint;
+        }
+
+        const vector<ExpT>& SymmetricMessageDecl::GetMessageParams() const
+        {
+            return MessageParams;
+        }
+
+        bool SymmetricMessageDecl::IsInput() const
+        {
+            return Input;
+        }
+
+        bool SymmetricMessageDecl::IsOutput() const
+        {
+            return (!Input);
+        }
+
         EFSMBase::EFSMBase(LabelledTS* TheLTS, const string& Name,
                            const vector<ExpT>& Params, const ExpT& Constraint,
                            LTSFairnessType Fairness)
@@ -384,6 +432,11 @@ namespace ESMC {
                             throw ESMCError((string)"Message type "  + ActMsgType->ToString()  + 
                                             " conflicts in input/output definition");
                         }
+                        if (InpSet.find(ActMsgType) != InpSet.end()) {
+                            throw ESMCError((string)"Message type "  + ActMsgType->ToString()  + 
+                                            " already declared as input of machine \"" + 
+                                            Name + "\"");
+                        }
                         
                         Inputs[ParamInsts[i]].insert(ActMsgType);
                     } else {
@@ -391,11 +444,21 @@ namespace ESMC {
                             throw ESMCError((string)"Message type "  + ActMsgType->ToString()  + 
                                             " conflicts in input/output definition");
                         }
+                        if (OutSet.find(ActMsgType) != OutSet.end()) {
+                            throw ESMCError((string)"Message type "  + ActMsgType->ToString()  + 
+                                            " already declared as output of machine \"" + 
+                                            Name + "\"");
+                        }
+
                         
                         Outputs[ParamInsts[i]].insert(ActMsgType);
                     }
                 }
             }
+
+            SymmetricMessages.push_back(new SymmetricMessageDecl(MsgType, NewParams, 
+                                                                 Constraint, Params,
+                                                                 IsInput));
         }
 
         vector<LTSAssignRef> EFSMBase::InstantiateUpdates(const MgrT::SubstMapT& ParamSubst,
@@ -815,6 +878,13 @@ namespace ESMC {
                                          Guard, Updates, MessageName, MessageType,
                                          ActMType);
             }
+
+            auto SymbTrans = new LTSSymbInputTransition(this->Params, this->Constraint,
+                                                        this, States[InitState],
+                                                        States[FinalState], Guard,
+                                                        Updates, MessageName,
+                                                        MessageType, MessageParams);
+            SymbolicTransitions.push_back(SymbTrans);
         }
 
         void EFSMBase::AddInputTransitions(const vector<ExpT>& TransParams, const ExpT& Constraint,
@@ -879,6 +949,20 @@ namespace ESMC {
                                              MessageName, MessageType, ActMType);
                 }
             }
+
+            vector<ExpT> CombinedParams = Params;
+            CombinedParams.insert(CombinedParams.end(), TransParams.begin(),
+                                  TransParams.end());
+            auto CombinedConstraint = Mgr->MakeExpr(LTSOps::OpAND, this->Constraint,
+                                                    Constraint);
+            auto SymbTrans = new LTSSymbInputTransition(CombinedParams,
+                                                        CombinedConstraint,
+                                                        this, States[InitState],
+                                                        States[FinalState],
+                                                        Guard, Updates,
+                                                        MessageName, MessageType,
+                                                        MessageParams);
+            SymbolicTransitions.push_back(SymbTrans);
         }
 
         void EFSMBase::AddOutputTransForInstance(u32 InstanceID, 
@@ -1012,6 +1096,13 @@ namespace ESMC {
                                           Guard, Updates, MessageName, 
                                           MessageType, ActMType, AddToFairnessSets);
             }
+
+            auto SymbTrans = new LTSSymbOutputTransition(this->Params, this->Constraint,
+                                                         this, States[InitState],
+                                                         States[FinalState], Guard,
+                                                         Updates, MessageName,
+                                                         MessageType, MessageParams);
+            SymbolicTransitions.push_back(SymbTrans);
         }
 
         void EFSMBase::AddOutputTransitions(const vector<ExpT>& TransParams, 
@@ -1137,6 +1228,20 @@ namespace ESMC {
 
                 FirstInstance = false;
             }
+
+            vector<ExpT> CombinedParams = Params;
+            CombinedParams.insert(CombinedParams.end(), TransParams.begin(),
+                                  TransParams.end());
+            auto CombinedConstraint = Mgr->MakeExpr(LTSOps::OpAND, this->Constraint,
+                                                    Constraint);
+            auto SymbTrans = new LTSSymbOutputTransition(CombinedParams,
+                                                         CombinedConstraint,
+                                                         this, States[InitState],
+                                                         States[FinalState],
+                                                         Guard, Updates,
+                                                         MessageName, MessageType,
+                                                         MessageParams);
+            SymbolicTransitions.push_back(SymbTrans);
         }
 
         void EFSMBase::AddInternalTransForInstance(u32 InstanceID,
@@ -1214,6 +1319,12 @@ namespace ESMC {
                 AddInternalTransForInstance(i, SubstMap, InitState, FinalState,
                                             Guard, Updates, AddToFairnessSets);
             }
+
+            auto SymbTrans = new LTSSymbInternalTransition(this->Params, this->Constraint,
+                                                           this, States[InitState],
+                                                           States[FinalState], Guard,
+                                                           Updates);
+            SymbolicTransitions.push_back(SymbTrans);
         }
 
         void EFSMBase::AddInternalTransitions(const vector<ExpT>& TransParams, 
@@ -1311,6 +1422,18 @@ namespace ESMC {
 
                 FirstInstance = false;
             }
+
+            vector<ExpT> CombinedParams = Params;
+            CombinedParams.insert(CombinedParams.end(), TransParams.begin(),
+                                  TransParams.end());
+            auto CombinedConstraint = Mgr->MakeExpr(LTSOps::OpAND, this->Constraint,
+                                                    Constraint);
+            auto SymbTrans = new LTSSymbInternalTransition(CombinedParams,
+                                                           CombinedConstraint,
+                                                           this, States[InitState],
+                                                           States[FinalState],
+                                                           Guard, Updates);
+            SymbolicTransitions.push_back(SymbTrans);
         }
 
         string EFSMBase::ToString() const
@@ -1362,11 +1485,56 @@ namespace ESMC {
                 sstr << "}" << endl << endl;
             }
 
+            sstr << "Symbolic Transitions:" << endl;
+            for (auto const& SymbTrans : SymbolicTransitions) {
+                sstr << SymbTrans->ToString() << endl << endl;
+            }
+
             return sstr.str();
         }
+
+        const vector<LTSSymbTransRef>& EFSMBase::GetSymbolicTransitions() const
+        {
+            return SymbolicTransitions;
+        }
+
+        vector<LTSSymbTransRef> 
+        EFSMBase::GetSymbolicTransitions(const function<bool(const LTSSymbTransRef&)>& 
+                                         MatchPred) const
+        {
+            vector<LTSSymbTransRef> Retval;
+            for (auto const& SymbTrans : SymbolicTransitions) {
+                if (MatchPred(SymbTrans)) {
+                    Retval.push_back(SymbTrans);
+                }
+            }
+            return Retval;
+        }
+
+        const vector<SymmMsgDeclRef>& EFSMBase::GetSymmetricMessages() const
+        {
+            return SymmetricMessages;
+        }
+
+        vector<SymmMsgDeclRef> 
+        EFSMBase::GetSymmetricMessages(const function<bool(const SymmMsgDeclRef&)>& 
+                                       MatchPred) const
+        {
+            vector<SymmMsgDeclRef> Retval;
+            for (auto const& SymmMsgDecl : SymmetricMessages) {
+                if (MatchPred(SymmMsgDecl)) {
+                    Retval.push_back(SymmMsgDecl);
+                }
+            }
+            return Retval;
+        }
+            
 
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
 // 
 // LTSEFSMBase.cpp ends here
+
+
+

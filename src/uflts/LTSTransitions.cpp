@@ -374,6 +374,164 @@ namespace ESMC {
             return Updates;
         }
 
+
+        // Symbolic transitions implementation
+        LTSSymbTransitionBase::LTSSymbTransitionBase(const vector<ExpT>& Params,
+                                                     const ExpT& Constraint,
+                                                     AutomatonBase* Automaton,
+                                                     const LTSState& InitState,
+                                                     const LTSState& FinalState,
+                                                     const ExpT& Guard,
+                                                     const vector<LTSAssignRef>& Updates)
+          : Params(Params), Constraint(Constraint), Automaton(Automaton),
+            InitState(InitState), FinalState(FinalState),
+            Guard(Guard), Updates(Updates)
+        {
+            // Nothing here
+        }
+
+        LTSSymbTransitionBase::~LTSSymbTransitionBase()
+        {
+            // Nothing here
+        }
+
+        const vector<ExpT>& LTSSymbTransitionBase::GetParams() const
+        {
+            return Params;
+        }
+
+        const ExpT& LTSSymbTransitionBase::GetConstraint() const
+        {
+            return Constraint;
+        }
+
+        AutomatonBase* LTSSymbTransitionBase::GetAutomaton() const
+        {
+            return Automaton;
+        }
+
+        const LTSState& LTSSymbTransitionBase::GetInitState() const
+        {
+            return InitState;
+        }
+
+        const LTSState& LTSSymbTransitionBase::GetFinalState() const
+        {
+            return FinalState;
+        }
+
+        const ExpT& LTSSymbTransitionBase::GetGuard() const
+        {
+            return Guard;
+        }
+
+        const vector<LTSAssignRef>& LTSSymbTransitionBase::GetUpdates() const
+        {
+            return Updates;
+        }
+
+        LTSSymbIOTransitionBase::LTSSymbIOTransitionBase(const vector<ExpT>& Params,
+                                                         const ExpT& Constraint,
+                                                         AutomatonBase* Automaton,
+                                                         const LTSState& InitState,
+                                                         const LTSState& FinalState,
+                                                         const ExpT& Guard,
+                                                         const vector<LTSAssignRef>& Updates,
+                                                         const string& MessageName,
+                                                         const ExprTypeRef& MessageType,
+                                                         const vector<ExpT>& MessageParams)
+        : LTSSymbTransitionBase(Params, Constraint, Automaton, InitState, FinalState,
+                                Guard, Updates),
+          MessageName(MessageName), MessageType(MessageType), MessageParams(MessageParams)
+        {
+            // Nothing here
+        }
+
+        LTSSymbIOTransitionBase::~LTSSymbIOTransitionBase()
+        {
+            // Nothing here
+        }
+
+        const string& LTSSymbIOTransitionBase::GetMessageName() const
+        {
+            return MessageName;
+        }
+
+        const ExprTypeRef& LTSSymbIOTransitionBase::GetMessageType() const
+        {
+            return MessageType;
+        }
+
+        const vector<ExpT>& LTSSymbIOTransitionBase::GetMessageParams() const
+        {
+            return MessageParams;
+        }
+
+        LTSSymbInputTransition::~LTSSymbInputTransition()
+        {
+            // Nothing here
+        }
+        
+        string LTSSymbInputTransition::ToString() const
+        {
+            ostringstream sstr;
+            sstr << "Symbolic Input Transition {" << endl;
+            sstr << "    on " << MessageName << " of " << MessageType->ToString();
+            for (auto const& MParam : MessageParams) {
+                sstr << "[" << MParam->ToString() << "]";
+            }
+            sstr << endl << "    " << "from " << InitState.GetName() << " to " 
+                 << FinalState.GetName();
+            sstr << endl << "    " << Guard->ToString() << " -> " << endl;
+            for (auto const& Update : Updates) {
+                sstr << "    " << Update->ToString() << endl;
+            }
+            sstr << "}" << endl;
+            return sstr.str();
+        }
+
+        LTSSymbOutputTransition::~LTSSymbOutputTransition()
+        {
+            // Nothing here
+        }
+
+        string LTSSymbOutputTransition::ToString() const
+        {
+            ostringstream sstr;
+            sstr << "Symbolic Output Transition {" << endl;
+            sstr << "    with " << MessageName << " of " << MessageType->ToString();
+            for (auto const& MParam : MessageParams) {
+                sstr << "[" << MParam->ToString() << "]";
+            }
+            sstr << endl << "    " << "from " << InitState.GetName() << " to " 
+                 << FinalState.GetName();
+            sstr << endl << "    " << Guard->ToString() << " -> " << endl;
+            for (auto const& Update : Updates) {
+                sstr << "    " << Update->ToString() << endl;
+            }
+            sstr << "}" << endl;
+            return sstr.str();
+        }
+
+        LTSSymbInternalTransition::~LTSSymbInternalTransition()
+        {
+            // Nothing here
+        }
+
+        string LTSSymbInternalTransition::ToString() const
+        {
+            ostringstream sstr;
+            sstr << "Symbolic Internal Transition {" << endl;
+            sstr << endl << "    " << "from " << InitState.GetName() << " to " 
+                 << FinalState.GetName();
+            sstr << endl << "    " << Guard->ToString() << " -> " << endl;
+            for (auto const& Update : Updates) {
+                sstr << "    " << Update->ToString() << endl;
+            }
+            sstr << "}" << endl;
+            return sstr.str();
+        }
+
     } /* end namespace */
 } /* end namespace */
 

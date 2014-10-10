@@ -251,6 +251,119 @@ namespace ESMC {
             const vector<LTSAssignRef>& GetUpdates() const;
         };
 
+        class LTSSymbTransitionBase : public RefCountable
+        {
+        protected:
+            vector<ExpT> Params;
+            ExpT Constraint;
+            AutomatonBase* Automaton;
+            LTSState InitState;
+            LTSState FinalState;
+            ExpT Guard;
+            vector<LTSAssignRef> Updates;
+            
+        public:
+            LTSSymbTransitionBase(const vector<ExpT>& Params,
+                                  const ExpT& Constraint,
+                                  AutomatonBase* Automaton,
+                                  const LTSState& InitState,
+                                  const LTSState& FinalState,
+                                  const ExpT& Guard,
+                                  const vector<LTSAssignRef>& Updates);
+            virtual ~LTSSymbTransitionBase();
+
+            const vector<ExpT>& GetParams() const;
+            const ExpT& GetConstraint() const;
+            AutomatonBase* GetAutomaton() const;
+            const LTSState& GetInitState() const;
+            const LTSState& GetFinalState() const;
+            const ExpT& GetGuard() const;
+            const vector<LTSAssignRef>& GetUpdates() const;
+
+            virtual string ToString() const = 0;
+
+            template <typename T>
+            inline T* As()
+            {
+                return dynamic_cast<T*>(this);
+            }
+            
+            template <typename T>
+            inline const T* As() const
+            {
+                return dynamic_cast<const T*>(this);
+            }
+
+            template <typename T>
+            inline T* SAs()
+            {
+                return static_cast<T*>(this);
+            }
+            
+            template <typename T>
+            inline const T* SAs() const
+            {
+                return static_cast<const T*>(this);
+            }
+
+            template <typename T>
+            inline bool Is() const
+            {
+                return (dynamic_cast<const T*>(this) != nullptr);
+            }
+        };
+
+        class LTSSymbIOTransitionBase : public LTSSymbTransitionBase
+        {
+        protected:
+            string MessageName;
+            ExprTypeRef MessageType;
+            vector<ExpT> MessageParams;
+
+        public:
+            LTSSymbIOTransitionBase(const vector<ExpT>& Params,
+                                    const ExpT& Constraint,
+                                    AutomatonBase* Automaton,
+                                    const LTSState& InitState,
+                                    const LTSState& FinalState,
+                                    const ExpT& Guard,
+                                    const vector<LTSAssignRef>& Updates,
+                                    const string& MessageName,
+                                    const ExprTypeRef& MessageType,
+                                    const vector<ExpT>& MessageParams);
+            virtual ~LTSSymbIOTransitionBase();
+
+            const string& GetMessageName() const;
+            const ExprTypeRef& GetMessageType() const;
+            const vector<ExpT>& GetMessageParams() const;
+        };
+
+        class LTSSymbInputTransition : public LTSSymbIOTransitionBase
+        {
+        public:
+            using LTSSymbIOTransitionBase::LTSSymbIOTransitionBase;
+            virtual ~LTSSymbInputTransition();
+
+            virtual string ToString() const override;
+        };
+
+        class LTSSymbOutputTransition : public LTSSymbIOTransitionBase
+        {
+        public:
+            using LTSSymbIOTransitionBase::LTSSymbIOTransitionBase;
+            virtual ~LTSSymbOutputTransition();
+
+            virtual string ToString() const override;
+        };
+
+        class LTSSymbInternalTransition : public LTSSymbTransitionBase
+        {
+            using LTSSymbTransitionBase::LTSSymbTransitionBase;
+            virtual ~LTSSymbInternalTransition();
+
+            virtual string ToString() const override;
+        };
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
