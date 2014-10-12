@@ -1018,7 +1018,7 @@ namespace ESMC {
                 First = false;
                 Retval += ("(" + NTPair.first + " : " + NTPair.second->ToString() + ")");
             }
-            Retval += ")";
+            Retval += "))";
             return Retval;
         }
 

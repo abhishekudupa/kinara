@@ -64,8 +64,8 @@ namespace ESMC {
         private:
             inline void 
             CheckTransition(const TPRef& TP, u32 TransIndex,
-                            const vector<LTSTransRef>& CandTrans) const;
-
+                            const vector<LTSSymbTransRef>& CandTrans) const;
+            
         public:
             DetEFSM(LabelledTS* TheLTS, const string& Name,
                     const vector<ExpT>& Params, const ExpT& Constraint,
