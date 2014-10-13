@@ -224,8 +224,7 @@ namespace ESMC {
             }
 
             LTS::CheckExpr(Guard, SymTab, Mgr);
-            auto UnrolledGuard = 
-                Mgr->ApplyTransform<LTS::Detail::QuantifierUnroller>(Guard);
+            auto UnrolledGuard = Mgr->UnrollQuantifiers(Guard);
 
             auto it = StateNameToStateID.find(InitState);
             if (it == StateNameToStateID.end()) {

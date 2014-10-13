@@ -61,6 +61,7 @@
 #include "../expr/Expressions.hpp"
 #include "../expr/ExprTypes.hpp"
 #include "../tpinterface/Z3Objects.hpp"
+#include "../utils/CombUtils.hpp"
 
 
 namespace ESMC {
@@ -346,6 +347,36 @@ namespace ESMC {
                 static inline ExpT 
                 Do(const LExpT& LExp, const unordered_map<string, i64>& UFNameToIDMap,
                    const LTSLCRef& LTSCtx, MgrT* Mgr);
+            };
+
+            // A class that unrolls quantifiers
+            template <typename E, template <typename> class S>
+            class QuantifierUnroller : public ExpressionVisitorBase<E, S>
+            {
+            private:
+                typedef ExprMgr<E, S> MgrT;
+                typedef Expr<E, S> ExpT;
+
+                vector<ExpT> ExpStack;
+                MgrT* Mgr;
+
+                inline vector<ExpT> UnrollQuantifier(const QuantifiedExpressionBase<E, S>* Exp);
+                
+            public:
+                inline QuantifierUnroller(MgrT* Mgr);
+                inline virtual ~QuantifierUnroller();
+
+                inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+                inline virtual void 
+                VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) override;
+                inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+                inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+                inline virtual void 
+                VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) override;
+                inline virtual void 
+                VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override;
+                
+                static ExpT Do(MgrT* Mgr, const ExpT& Exp);
             };
 
             // Implementation of type checker
@@ -2337,6 +2368,129 @@ namespace ESMC {
                 return Retval;
             }
 
+            // implementation of quantifier unroller
+            template <typename E, template <typename> class S>
+            inline QuantifierUnroller<E, S>::QuantifierUnroller(MgrT* Mgr)
+                : ExpressionVisitorBase<E, S>("QuantifierUnroller"), Mgr(Mgr)
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline QuantifierUnroller<E, S>::~QuantifierUnroller()
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline void QuantifierUnroller<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp) 
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            QuantifierUnroller<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            QuantifierUnroller<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp) 
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void QuantifierUnroller<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+            {
+                ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+                auto const& Children = Exp->GetChildren();
+                const u32 NumChildren = Children.size();
+
+                vector<ExpT> NewChildren(NumChildren);
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    NewChildren[NumChildren - i - 1] = ExpStack.back();
+                    ExpStack.pop_back();
+                }
+                
+                ExpStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
+            }
+
+            template <typename E, template <typename> class S>
+            inline vector<typename QuantifierUnroller<E, S>::ExpT>
+            QuantifierUnroller<E, S>::UnrollQuantifier(const QuantifiedExpressionBase<E, S>* Exp)
+            {
+                vector<ExpT> Retval;
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const& QBody = Exp->GetQExpression();
+                const u32 NumQVars = QVarTypes.size();
+
+                vector<vector<string>> QVarElems;
+                for (auto const& QVarType : QVarTypes) {
+                    QVarElems.push_back(QVarType->GetElements());
+                }
+                auto&& CP = CrossProduct<string>(QVarElems.begin(), 
+                                                  QVarElems.end());
+                for (auto const& CPElem : CP) {
+                    typename MgrT::SubstMapT SubstMap;
+                    for (u32 i = 0; i < NumQVars; ++i) {
+                        auto const& BoundVarExp = Mgr->MakeBoundVar(QVarTypes[i], i);
+                        auto const& ValExp = Mgr->MakeVal(CPElem[i], QVarTypes[i]);
+                        SubstMap[BoundVarExp] = ValExp;
+                    }
+
+                    Retval.push_back(Mgr->Substitute(SubstMap, QBody));
+                }
+                return Retval;
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            QuantifierUnroller<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* 
+                                                                 Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto NewExp = ExpStack.back();
+                ExpStack.pop_back();
+                auto NewQExp = Mgr->MakeExists(Exp->GetQVarTypes(), NewExp);
+                auto&& UnrolledExps = 
+                    UnrollQuantifier(NewQExp->template SAs<Exprs::QuantifiedExpressionBase>());
+                if (UnrolledExps.size() == 1) {
+                    ExpStack.push_back(UnrolledExps[0]);
+                } else {
+                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpOR, UnrolledExps));
+                }
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            QuantifierUnroller<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* 
+                                                                 Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto NewExp = ExpStack.back();
+                ExpStack.pop_back();
+                auto NewQExp = Mgr->MakeForAll(Exp->GetQVarTypes(), NewExp);
+                auto&& UnrolledExps = 
+                    UnrollQuantifier(NewQExp->template SAs<Exprs::QuantifiedExpressionBase>());
+                if (UnrolledExps.size() == 1) {
+                    ExpStack.push_back(UnrolledExps[0]);
+                } else {
+                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpAND, UnrolledExps));
+                }
+            }
+
+            template <typename E, template <typename> class S>
+            inline typename QuantifierUnroller<E, S>::ExpT 
+            QuantifierUnroller<E, S>::Do(MgrT* Mgr, const ExpT& Exp)
+            {
+                QuantifierUnroller Unroller(Mgr);
+                Exp->Accept(&Unroller);
+                return Unroller.ExpStack[0];
+            }
+
         } /* end namespace Detail */
  
         template <typename E>
@@ -2376,6 +2530,7 @@ namespace ESMC {
             inline ExpT RaiseExpr(MgrType* Mgr, const LExpT& LExp, const LTSLCRef& LTSCtx);
             inline LExpT LowerExpr(const ExpT& Exp, const LTSLCRef& ExpCtx);
             inline ExpT ElimQuantifiers(MgrType* Mgr, const ExpT& Exp);
+            inline ExpT UnrollQuantifiers(MgrType* Mgr, const ExpT& Exp);
         };
 
         
@@ -2529,6 +2684,13 @@ namespace ESMC {
             } else {
                 return Mgr->MakeExpr(LTSOps::OpAND, RaisedExprs);
             }
+        }
+
+        template <typename E>
+        inline typename LTSTermSemanticizer<E>::ExpT
+        LTSTermSemanticizer<E>::UnrollQuantifiers(MgrType* Mgr, const ExpT& Exp)
+        {
+            return Detail::QuantifierUnroller<E, ESMC::LTS::LTSTermSemanticizer>::Do(Mgr, Exp);
         }
 
         template<typename E>

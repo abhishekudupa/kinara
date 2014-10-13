@@ -825,9 +825,7 @@ namespace ESMC {
                                                             TheLTS->GetUnifiedMType());
 
             // Finally, unroll quantifiers 
-            auto ElimGuard = 
-                Mgr->ApplyTransform<Detail::QuantifierUnroller>(MsgTransformedGuard);
-
+            auto ElimGuard = Mgr->UnrollQuantifiers(MsgTransformedGuard);
             auto SimpGuard = Mgr->Simplify(ElimGuard);
 
             auto CurTransition = new LTSTransitionInput(this, ParamInst, IS, FS, SimpGuard,
@@ -1031,9 +1029,7 @@ namespace ESMC {
                 Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard, MessageName, 
                                                             MessageType, 
                                                             TheLTS->GetUnifiedMType());
-            auto ElimGuard = 
-                Mgr->ApplyTransform<Detail::QuantifierUnroller>(MsgTransformedGuard);
-
+            auto ElimGuard = Mgr->UnrollQuantifiers(MsgTransformedGuard);
             auto SimpGuard = Mgr->Simplify(ElimGuard);
 
             // Add to appropriate fairness set if process fairness is set
@@ -1287,7 +1283,7 @@ namespace ESMC {
 
             auto SubstGuard = Mgr->Substitute(SubstMap, LocalGuard);
             auto RebasedGuard = Mgr->Substitute(RebaseSubstMaps[ParamInst], SubstGuard);
-            auto ElimGuard = Mgr->ApplyTransform<Detail::QuantifierUnroller>(RebasedGuard);
+            auto ElimGuard = Mgr->UnrollQuantifiers(RebasedGuard);
             auto SimpGuard = Mgr->Simplify(ElimGuard);
 
             auto LocalFairnessSets = AddToFairnessSets;
