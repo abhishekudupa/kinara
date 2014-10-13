@@ -19,7 +19,8 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/sparsehash
 
 PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP \
 	ABP_generated MSI MSI_generated Fischer LeaderElection Dijkstra4 MSI_no_busy_data_no_pending_unblock_e \
-	MSIC2D
+	MSIC2D \
+	WeakestPreconditionTest
 
 
 PingPongChan_SYS_LIBS=esmc z3 rt boost_system
@@ -61,6 +62,9 @@ Fischer_EXT_LIBS=boost z3 esmc
 LeaderElection_SYS_LIBS=esmc z3 rt boost_system
 LeaderElection_EXT_LIBS=boost z3 esmc
 
+WeakestPreconditionTest_SYS_LIBS=esmc z3 rt boost_system
+WeakestPreconditionTest_EXT_LIBS=boost z3 esmc
+
 Dijkstra4_SYS_LIBS=esmc z3 rt boost_system
 Dijkstra4_EXT_LIBS=boost z3 esmc
 
@@ -85,6 +89,7 @@ MSI_OBJS=MSI.o
 MSIC2D_OBJS=MSIC2D.o
 MSI_no_busy_data_no_pending_unblock_e_OBJS=MSI_no_busy_data_no_pending_unblock_e.o
 Dijkstra4_OBJS=Dijkstra4.o
+WeakestPreconditionTest_OBSJ=WeakestPreconditionTest.o
 
 PingPongChan_LIB_PATHS= \
     $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \
@@ -145,5 +150,8 @@ Dijkstra4_LIB_PATHS= \
     $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \
     $(PROJECT_ROOT)/../../thirdparty/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
+
+WeakestPreconditionTest_LIB_PATHS==$(Dijkstra4_LIB_PATHS)
+
 
 include $(PROJECT_ROOT)/../../Makefile.util
