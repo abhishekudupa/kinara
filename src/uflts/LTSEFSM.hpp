@@ -84,6 +84,9 @@ namespace ESMC {
             vector<LTSTransRef> AddedTransitions;
             unordered_set<Z3Expr, Z3ExprHasher> ConstraintSet;
 
+            inline ExpT FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
+                                          const TPRef& TP) const;
+
         public:
             IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
                            const vector<ExpT>& Params, const ExpT& Constraint,

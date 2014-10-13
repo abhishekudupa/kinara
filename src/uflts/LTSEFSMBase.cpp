@@ -388,6 +388,10 @@ namespace ESMC {
                     Outputs[ParamInsts[i]].insert(ActMsgType);
                 }
             }
+            
+            SymmetricMessages.push_back(new SymmetricMessageDecl(MsgType, vector<ExpT>(),
+                                                                 this->Constraint,
+                                                                 Params, IsInput));
         }
 
         void EFSMBase::AddMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint, 

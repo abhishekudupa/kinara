@@ -166,7 +166,6 @@ namespace ESMC {
             }
         }
 
-
         // IncompleteEFSM implementation
         IncompleteEFSM::IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
                                        const vector<ExpT>& Params, 
@@ -182,13 +181,56 @@ namespace ESMC {
             // Nothing here
         }
 
+        inline ExpT 
+        IncompleteEFSM::FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
+                                          const TPRef& TP) const
+        {
+            vector<ExpT> SpontGuards = { TheLTS->MakeFalse() };
+            ExpT CoveredGuard = ExpT::NullPtr;
+
+            for (auto const& Trans : Transitions) {
+                if (Trans->Is<LTSSymbInternalTransition>() ||
+                    Trans->Is<LTSSymbOutputTransition>()) {
+                    SpontGuards.push_back(Trans->GetGuard());
+                }
+            }
+
+            if (SpontGuards.size() > 1) {
+                CoveredGuard = TheLTS->MakeOp(LTSOps::OpOR, SpontGuards);
+            } else {
+                CoveredGuard = SpontGuards[0];
+            }
+
+            auto NegCovered = TheLTS->MakeOp(LTSOps::OpNOT, CoveredGuard);
+            auto Res = TP->CheckSat(NegCovered);
+            if (Res == TPResult::SATISFIABLE) {
+                return NegCovered;
+            } else if (Res == TPResult::UNSATISFIABLE) {
+                return TheLTS->MakeFalse();
+            } else {
+                throw ESMCError((string)"Could not ensure sat or unsat of proposition:\n" + 
+                                NegCovered->ToString() + "\n.Theory incomplete perhaps?");
+            }
+        }
+
         void IncompleteEFSM::Freeze()
         {
             // Add all potential transitions guarded by 
             // uninterpreted functions and with updates
             // being uninterpreted functions
+            auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
             
-            
+            // for each state
+            for (auto const& NameState : States) {
+                auto const& StateName = NameState.first;
+                auto&& TransFromState = 
+                    GetSymbolicTransitions([&] (const LTSSymbTransRef& Trans) -> bool
+                                           {
+                                               return (Trans->GetInitState().GetName() ==
+                                                       StateName);
+                                           });
+                auto UncoveredPred = FindUncoveredPred(TransFromState, TP);
+            }
         }
         
     } /* end namespace LTS */
