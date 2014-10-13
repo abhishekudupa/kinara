@@ -88,7 +88,7 @@ namespace ESMC {
         }
 
         // helpers
-        inline void LabelledTS::AssertFrozen() const
+        void LabelledTS::AssertFrozen() const
         {
             if (!Frozen) {
                 throw ESMCError((string)"Operation cannot be performed before freezing " + 
@@ -96,7 +96,7 @@ namespace ESMC {
             }
         }
 
-        inline void LabelledTS::AssertNotFrozen() const
+        void LabelledTS::AssertNotFrozen() const
         {
             if (Frozen) {
                 throw ESMCError((string)"Operation cannot be performed after freezing " + 
@@ -105,7 +105,7 @@ namespace ESMC {
 
         }
 
-        inline void LabelledTS::AssertMsgsFrozen() const
+        void LabelledTS::AssertMsgsFrozen() const
         {
             if (!MsgsFrozen) {
                 throw ESMCError((string)"Operation cannot be performed before freezing " + 
@@ -113,7 +113,7 @@ namespace ESMC {
             }
         }
 
-        inline void LabelledTS::AssertMsgsNotFrozen() const
+        void LabelledTS::AssertMsgsNotFrozen() const
         {
             if (MsgsFrozen) {
                 throw ESMCError((string)"Operation cannot be performed after freezing " + 
@@ -121,7 +121,7 @@ namespace ESMC {
             }
         }
 
-        inline void LabelledTS::AssertAutomataFrozen() const
+        void LabelledTS::AssertAutomataFrozen() const
         {
             if (!AutomataFrozen) {
                 throw ESMCError((string)"Operation cannot be performed before freezing " + 
@@ -129,7 +129,7 @@ namespace ESMC {
             }
         }
 
-        inline void LabelledTS::AssertAutomataNotFrozen() const
+        void LabelledTS::AssertAutomataNotFrozen() const
         {
             if (AutomataFrozen) {
                 throw ESMCError((string)"Operation cannot be performed after freezing " + 
@@ -137,7 +137,7 @@ namespace ESMC {
             }
         }
 
-        inline void LabelledTS::CheckConsistency() const
+        void LabelledTS::CheckConsistency() const
         {
             set<ExprTypeRef> Inputs;
             set<ExprTypeRef> Outputs;
@@ -196,7 +196,7 @@ namespace ESMC {
             return;
         }
 
-        inline GCmdRef 
+        GCmdRef 
         LabelledTS::MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const
         {
             vector<ExpT> GuardComps;
@@ -383,7 +383,7 @@ namespace ESMC {
             return StateVectorSize;
         }
 
-        inline MgrT::SubstMapT LabelledTS::ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
+        MgrT::SubstMapT LabelledTS::ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
                                                      const vector<u08>& Perm)
         {
             MgrT::SubstMapT Retval;
@@ -398,7 +398,7 @@ namespace ESMC {
             return Retval;
         }
 
-        inline void LabelledTS::MakeMsgCanonMap()
+        void LabelledTS::MakeMsgCanonMap()
         {
             auto UMType = UnifiedMsgType->As<ExprUnionType>();
             const u32 NumMsgTypes = UMType->GetMemberTypes().size();
@@ -608,7 +608,7 @@ namespace ESMC {
             return StateVectorVars;
         }
 
-        inline void LabelledTS::CheckTypeName(const string& Name) const
+        void LabelledTS::CheckTypeName(const string& Name) const
         {
             if (boost::algorithm::contains(Name, "]") ||
                 boost::algorithm::contains(Name, "[")) {
@@ -947,14 +947,14 @@ namespace ESMC {
             return Mgr->MakeUninterpretedFunction(Name, Domain, Range);
         }
 
-        EFSMBase* LabelledTS::MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
-                                          const ExpT& Constraint, LTSFairnessType Fairness)
+        GeneralEFSM* LabelledTS::MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
+                                             const ExpT& Constraint, LTSFairnessType Fairness)
         {
             return MakeEFSM<GeneralEFSM>(Name, Params, Constraint, Fairness);
         }
 
-        EFSMBase* LabelledTS::MakeDetEFSM(const string& Name, const vector<ExpT>& Params,
-                                          const ExpT& Constraint, LTSFairnessType Fairness)
+        DetEFSM* LabelledTS::MakeDetEFSM(const string& Name, const vector<ExpT>& Params,
+                                         const ExpT& Constraint, LTSFairnessType Fairness)
         {
             return MakeEFSM<DetEFSM>(Name, Params, Constraint, Fairness);
         }
@@ -991,7 +991,7 @@ namespace ESMC {
             return Retval;
         }
 
-        inline void LabelledTS::InstantiateInitState(const InitStateRef& InitState)
+        void LabelledTS::InstantiateInitState(const InitStateRef& InitState)
         {
             auto const& Params = InitState->GetParams();
             auto const& Constraint = InitState->GetConstraint();

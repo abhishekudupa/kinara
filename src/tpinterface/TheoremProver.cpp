@@ -87,7 +87,9 @@ namespace ESMC {
             }
         }
 
-        void TheoremProver::Assert(const ExpT& Assertion) const
+        // Assumes that quantifiers are unrolled already
+        void TheoremProver::Assert(const ExpT& Assertion,
+                                   bool UnrollQuantifiers) const
         {
             if (!Assertion->GetType()->Is<Exprs::ExprBoolType>()) {
                 throw ESMCError((string)"Attempted to assert a non-Boolean " + 
@@ -96,8 +98,10 @@ namespace ESMC {
             }
             AssertionStack.top().push_back(Assertion);
         }
-
-        void TheoremProver::Assert(const vector<ExpT>& Assertions) const
+        
+        // Again, assumes that quantifiers are unrolled already
+        void TheoremProver::Assert(const vector<ExpT>& Assertions,
+                                   bool UnrollQuantifiers) const
         {
             for (auto const& Assertion : Assertions) {
                 if (!Assertion->GetType()->Is<Exprs::ExprBoolType>()) {
@@ -158,11 +162,20 @@ namespace ESMC {
             TheoremProver::Pop(NumScopes);
         }
 
-        void Z3TheoremProver::Assert(const ExpT& Assertion) const
+        void Z3TheoremProver::Assert(const ExpT& Assertion,
+                                     bool UnrollQuantifiers) const
         {
-            TheoremProver::Assert(Assertion);
             auto Mgr = Assertion->GetMgr();
             LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
+            ExpT UnrolledExp = ExpT::NullPtr;
+            
+            if (UnrollQuantifiers) {
+                UnrolledExp = Mgr->UnrollQuantifiers(Assertion);
+            } else {
+                UnrolledExp = Assertion;
+            }
+            TheoremProver::Assert(Assertion);
+
             Z3_solver_assert(*Ctx, Solver, Mgr->LowerExpr(Assertion, LTSCtx));
             
             // Assert the constraints from the lowered context as well
@@ -174,10 +187,11 @@ namespace ESMC {
             }
         }
 
-        void Z3TheoremProver::Assert(const vector<ExpT>& Assertions) const
+        void Z3TheoremProver::Assert(const vector<ExpT>& Assertions,
+                                     bool UnrollQuantifiers) const
         {
             for (auto const& Assertion : Assertions) {
-                Assert(Assertion);
+                Assert(Assertion, UnrollQuantifiers);
             }
         }
 
@@ -196,12 +210,20 @@ namespace ESMC {
             return LastSolveResult;
         }
 
-        TPResult Z3TheoremProver::CheckSat(const ExpT& Assertion) const
+        TPResult Z3TheoremProver::CheckSat(const ExpT& Assertion,
+                                           bool UnrollQuantifiers) const
         {
             Z3_solver_reset(*Ctx, FlashSolver);
 
             auto Mgr = Assertion->GetMgr();
             LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
+
+            ExpT UnrolledAssertion = ExpT::NullPtr;
+            if (UnrollQuantifiers) {
+                UnrolledAssertion = Mgr->UnrollQuantifiers(Assertion);
+            } else {
+                UnrolledAssertion = Assertion;
+            }
             auto LoweredAssertion = Mgr->LowerExpr(Assertion, LTSCtx);
 
             Z3_solver_assert(*Ctx, FlashSolver, LoweredAssertion);

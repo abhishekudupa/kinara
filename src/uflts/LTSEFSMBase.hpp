@@ -128,15 +128,15 @@ namespace ESMC {
                                                const MgrT::SubstMapT& SubstMap,
                                                const ExprTypeRef& MsgType);
 
-            void AddMsg(const ExprTypeRef& MsgType,
-                        const vector<ExpT>& Params,
-                        bool IsInput);
+            SymmMsgDeclRef AddMsg(const ExprTypeRef& MsgType,
+                                  const vector<ExpT>& Params,
+                                  bool IsInput);
 
-            void AddMsgs(const vector<ExpT>& NewParams,
-                         const ExpT& Constraint,
-                         const ExprTypeRef& MsgType,
-                         const vector<ExpT>& Params,
-                         bool IsInput);
+            SymmMsgDeclRef AddMsgs(const vector<ExpT>& NewParams,
+                                   const ExpT& Constraint,
+                                   const ExprTypeRef& MsgType,
+                                   const vector<ExpT>& Params,
+                                   bool IsInput);
             
             vector<LTSAssignRef> InstantiateUpdates(const MgrT::SubstMapT& ParamSubst,
                                                     const vector<LTSAssignRef>& Updates,
@@ -217,19 +217,21 @@ namespace ESMC {
             virtual void FreezeVars();
             virtual void Freeze();
 
-            virtual void AddInputMsg(const ExprTypeRef& MessageType,
-                                     const vector<ExpT>& Params = vector<ExpT>());
+            virtual SymmMsgDeclRef AddInputMsg(const ExprTypeRef& MessageType,
+                                               const vector<ExpT>& Params = vector<ExpT>());
 
-            virtual void AddInputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
-                                      const ExprTypeRef& MessageType, 
-                                      const vector<ExpT>& MessageParams);
+            virtual SymmMsgDeclRef AddInputMsgs(const vector<ExpT>& NewParams, 
+                                                const ExpT& Constraint,
+                                                const ExprTypeRef& MessageType, 
+                                                const vector<ExpT>& MessageParams);
 
-            virtual void AddOutputMsg(const ExprTypeRef& MessageType,
-                                      const vector<ExpT>& Params = vector<ExpT>());
+            virtual SymmMsgDeclRef AddOutputMsg(const ExprTypeRef& MessageType,
+                                                const vector<ExpT>& Params = vector<ExpT>());
 
-            virtual void AddOutputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
-                                       const ExprTypeRef& MessageType,
-                                       const vector<ExpT>& MEssageParams);
+            virtual SymmMsgDeclRef AddOutputMsgs(const vector<ExpT>& NewParams, 
+                                                 const ExpT& Constraint,
+                                                 const ExprTypeRef& MessageType,
+                                                 const vector<ExpT>& MEssageParams);
 
             virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType);
 

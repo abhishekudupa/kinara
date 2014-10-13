@@ -354,7 +354,9 @@ namespace ESMC {
             }
         }
 
-        void EFSMBase::AddMsg(const ExprTypeRef& MsgType, const vector<ExpT>& Params, bool IsInput)
+        SymmMsgDeclRef EFSMBase::AddMsg(const ExprTypeRef& MsgType, 
+                                        const vector<ExpT>& Params, 
+                                        bool IsInput)
         {
             AssertStatesFrozen();
             AssertEFSMNotFrozen();
@@ -392,11 +394,14 @@ namespace ESMC {
             SymmetricMessages.push_back(new SymmetricMessageDecl(MsgType, vector<ExpT>(),
                                                                  this->Constraint,
                                                                  Params, IsInput));
+            return SymmetricMessages.back();
         }
 
-        void EFSMBase::AddMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint, 
-                               const ExprTypeRef& MsgType, const vector<ExpT>& Params, 
-                               bool IsInput)
+        SymmMsgDeclRef EFSMBase::AddMsgs(const vector<ExpT>& NewParams, 
+                                         const ExpT& Constraint, 
+                                         const ExprTypeRef& MsgType, 
+                                         const vector<ExpT>& Params, 
+                                         bool IsInput)
         {
             AssertStatesFrozen();
             AssertEFSMNotFrozen();
@@ -463,6 +468,7 @@ namespace ESMC {
             SymmetricMessages.push_back(new SymmetricMessageDecl(MsgType, NewParams, 
                                                                  Constraint, Params,
                                                                  IsInput));
+            return SymmetricMessages.back();
         }
 
         vector<LTSAssignRef> EFSMBase::InstantiateUpdates(const MgrT::SubstMapT& ParamSubst,
@@ -735,30 +741,32 @@ namespace ESMC {
             return;
         }
 
-        void EFSMBase::AddInputMsg(const ExprTypeRef& MsgType,
-                                   const vector<ExpT>& Params)
+        SymmMsgDeclRef EFSMBase::AddInputMsg(const ExprTypeRef& MsgType,
+                                             const vector<ExpT>& Params)
         {
-            AddMsg(MsgType, Params, true);
+            return AddMsg(MsgType, Params, true);
         }
 
-        void EFSMBase::AddInputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint, 
-                                    const ExprTypeRef& MessageType,
-                                    const vector<ExpT>& MessageParams)
+        SymmMsgDeclRef EFSMBase::AddInputMsgs(const vector<ExpT>& NewParams, 
+                                              const ExpT& Constraint, 
+                                              const ExprTypeRef& MessageType,
+                                              const vector<ExpT>& MessageParams)
         {
-            AddMsgs(NewParams, Constraint, MessageType, MessageParams, true);
+            return AddMsgs(NewParams, Constraint, MessageType, MessageParams, true);
         }
 
-        void EFSMBase::AddOutputMsg(const ExprTypeRef& MsgType,
-                                    const vector<ExpT>& Params)
+        SymmMsgDeclRef EFSMBase::AddOutputMsg(const ExprTypeRef& MsgType,
+                                              const vector<ExpT>& Params)
         {
-            AddMsg(MsgType, Params, false);
+            return AddMsg(MsgType, Params, false);
         }
 
-        void EFSMBase::AddOutputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint, 
-                                     const ExprTypeRef& MessageType,
-                                     const vector<ExpT>& MessageParams)
+        SymmMsgDeclRef EFSMBase::AddOutputMsgs(const vector<ExpT>& NewParams, 
+                                               const ExpT& Constraint, 
+                                               const ExprTypeRef& MessageType,
+                                               const vector<ExpT>& MessageParams)
         {
-            AddMsgs(NewParams, Constraint, MessageType, MessageParams, false);
+            return AddMsgs(NewParams, Constraint, MessageType, MessageParams, false);
         }
 
         void EFSMBase::AddVariable(const string& VarName, const ExprTypeRef& VarType)

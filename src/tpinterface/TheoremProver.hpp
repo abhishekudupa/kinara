@@ -86,12 +86,15 @@ namespace ESMC {
             virtual vector<ExpT> Pop() const;
             virtual void Pop(u32 NumScopes) const;
 
-            virtual void Assert(const ExpT& Assertion) const;
-            virtual void Assert(const vector<ExpT>& Assertions) const;
+            virtual void Assert(const ExpT& Assertion, 
+                                bool UnrollQuantifiers = false) const;
+            virtual void Assert(const vector<ExpT>& Assertions, 
+                                bool UnrollQuantifiers = false) const;
             
             virtual TPResult CheckSat() const = 0;
             // Ignores all the assertions on the stack
-            virtual TPResult CheckSat(const ExpT& Assertion) const = 0;
+            virtual TPResult CheckSat(const ExpT& Assertion,
+                                      bool UnrollQuantifiers = false) const = 0;
 
             // Evaluates only scalar typed expressions
             virtual ExpT Evaluate(const ExpT& Exp) const = 0;
@@ -153,11 +156,14 @@ namespace ESMC {
             virtual vector<ExpT> Pop() const override;
             virtual void Pop(u32 NumScopes) const override;
             
-            virtual void Assert(const ExpT& Assertion) const override;
-            virtual void Assert(const vector<ExpT>& Assertions) const override;
+            virtual void Assert(const ExpT& Assertion, 
+                                bool UnrollQuantifiers = false) const override;
+            virtual void Assert(const vector<ExpT>& Assertions,
+                                bool UnrollQuantifiers = false) const override;
 
             virtual TPResult CheckSat() const override;
-            virtual TPResult CheckSat(const ExpT& Assertion) const override;
+            virtual TPResult CheckSat(const ExpT& Assertion,
+                                      bool UnrollQuantifiers = false) const override;
 
             virtual ExpT Evaluate(const ExpT& Exp) const override;
 

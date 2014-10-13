@@ -81,11 +81,30 @@ namespace ESMC {
         class IncompleteEFSM : public DetEFSM
         {
         private:
-            vector<LTSTransRef> AddedTransitions;
-            unordered_set<Z3Expr, Z3ExprHasher> ConstraintSet;
+            map<string, set<SymmMsgDeclRef>> BlockedCompletions;
+            set<string> CompleteStates;
+            set<string> ReadOnlyVars;
+            map<string, ExprTypeRef> UpdateableVariables;
+            map<string, ExprTypeRef> AllVariables;
+
+            inline ExpT FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
+                                          const TPRef& TP, const ExprTypeRef& MsgType) const;
 
             inline ExpT FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
                                           const TPRef& TP) const;
+
+            inline void CompleteInputTransitions(const string& StateName,
+                                                 const vector<LTSSymbTransRef>& Transitions,
+                                                 const ExpT& UncoveredPredicate,
+                                                 const TPRef& TP);
+            
+            inline void MakeGuard(const set<string>& DomainVars);
+
+            inline void CompleteOneInputTransition(const string& InitStateName,
+                                                   const string& FinalStateName,
+                                                   const map<string, ExprTypeRef>& DomainVars,
+                                                   vector<ExpT>& GuardExps,
+                                                   const ExpT& UncoveredPred);
 
         public:
             IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
@@ -93,6 +112,21 @@ namespace ESMC {
                            LTSFairnessType Fairness = LTSFairnessType::None);
 
             virtual ~IncompleteEFSM();
+            // overrides to remember variables
+            virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType) override;
+
+            // Do not add completions particular set of messages on a 
+            // particular state
+            void IgnoreMsgOnState(const SymmMsgDeclRef& MsgDecl,
+                                  const string& StateName);
+            
+            // Do not add any more completions on any message 
+            // type on a particular state
+            void MarkStateComplete(const string& StateName);
+
+            // Do not include updates to variables
+            // in completion
+            void MarkVariableReadOnly(const string& VarName);
 
             // override freeze to add additional transitions
             // and such

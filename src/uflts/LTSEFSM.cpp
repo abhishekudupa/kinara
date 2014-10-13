@@ -38,6 +38,7 @@
 // Code:
 
 #include "../tpinterface/TheoremProver.hpp"
+#include "../utils/CombUtils.hpp"
 
 #include "LTSEFSM.hpp"
 #include "LTSUtils.hpp"
@@ -181,6 +182,94 @@ namespace ESMC {
             // Nothing here
         }
 
+        void IncompleteEFSM::AddVariable(const string& VarName, const ExprTypeRef& VarType)
+        {
+            DetEFSM::AddVariable(VarName, VarType);
+            UpdateableVariables[VarName] = VarType;
+            AllVariables[VarName] = VarType;
+        }
+
+        void IncompleteEFSM::IgnoreMsgOnState(const SymmMsgDeclRef& MsgDecl,
+                                              const string &StateName)
+        {
+            if (States.find(StateName) == States.end()) {
+                throw ESMCError((string)"State named \"" + StateName + "\" is " + 
+                                "not a valid state for EFSM \"" + Name + "\"" + 
+                                " in call to IncompleteEFSM::IgnoreMsgOnState()");
+            }
+            if (find(SymmetricMessages.begin(), SymmetricMessages.end(), MsgDecl) ==
+                SymmetricMessages.end()) {
+                throw ESMCError((string)"Symmetric message undeclared as input " + 
+                                "or output to EFSM in call to " + 
+                                "IncompleteEFSM::IgnoreMsgOnState()");
+            }
+            BlockedCompletions[StateName].insert(MsgDecl);
+        }
+
+        void IncompleteEFSM::MarkStateComplete(const string& StateName)
+        {
+            if (States.find(StateName) == States.end()) {
+                throw ESMCError((string)"State named \"" + StateName + "\" is " + 
+                                "not a valid state for EFSM \"" + Name + "\"" + 
+                                " in call to IncompleteEFSM::IgnoreMsgOnState()");
+            }
+            CompleteStates.insert(StateName);
+        }
+
+        void IncompleteEFSM::MarkVariableReadOnly(const string& VarName)
+        {
+            auto const& STEntry = SymTab.Lookup(VarName);
+            if (STEntry == DeclRef::NullPtr || !STEntry->Is<VarDecl>()) {
+                throw ESMCError((string)"Object named \"" + VarName + "\" is not " +
+                                "a variable of the EFSM named \"" + Name + "\"" + 
+                                " in call to IncompleteEFSM::MarkVariableReadOnly()");
+            }
+            ReadOnlyVars.insert(VarName);
+            UpdateableVariables.erase(VarName);
+        }
+
+        // Find the predicate left uncovered by 
+        // input transition on MsgType
+        inline ExpT
+        IncompleteEFSM::FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
+                                          const TPRef& TP, const ExprTypeRef& MsgType) const
+        {
+            vector<ExpT> Guards = { TheLTS->MakeFalse() };
+            ExpT CoveredGuard = ExpT::NullPtr;
+
+            auto&& RelTransitions = 
+                Filter<LTSSymbTransRef>(Transitions.begin(), 
+                                        Transitions.end(),
+                                        [&] (const LTSSymbTransRef& Trans) -> bool 
+                                        {
+                                            auto TransAsInput = 
+                                                Trans->As<LTSSymbInputTransition>();
+                                            return (TransAsInput != nullptr &&
+                                                    TransAsInput->GetMessageType() == MsgType);
+                                        });
+
+            for (auto const& Trans : RelTransitions) {
+                Guards.push_back(Trans->GetGuard());
+            }
+
+            if (Guards.size() > 1) {
+                CoveredGuard = TheLTS->MakeOp(LTSOps::OpAND, Guards);
+            } else {
+                CoveredGuard = Guards[0];
+            }
+
+            auto NegCovered = TheLTS->MakeOp(LTSOps::OpNOT, CoveredGuard);
+            auto Res = TP->CheckSat(NegCovered);
+            if (Res == TPResult::SATISFIABLE) {
+                return NegCovered;
+            } else if (Res == TPResult::UNSATISFIABLE) {
+                return TheLTS->MakeFalse();
+            } else {
+                throw ESMCError((string)"Could not ensure sat or unsat of proposition:\n" + 
+                                NegCovered->ToString() + "\n.Theory incomplete perhaps?");
+            }
+        }
+
         inline ExpT 
         IncompleteEFSM::FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
                                           const TPRef& TP) const
@@ -213,12 +302,120 @@ namespace ESMC {
             }
         }
 
+        inline void IncompleteEFSM::MakeGuard(const map<string, ExprTypeRef>& DomainVars)
+        {
+            map<ExprTypeRef, set<ExpT>> SymmetricVarsByType;
+            map<string, ExpT> ActualDomainVars;
+            vector<ExpT> SymmDomainVars;
+            // gather up the symmetric vars in the domain
+            for (auto const& NameType : DomainVars) {
+                auto VarExp = TheLTS->MakeVar(NameType.first, NameType.second);
+                if (NameType.second->Is<Exprs::ExprSymmetricType>()) {
+                    SymmetricVarsByType[NameType.second].insert(VarExp);
+                } else {
+                    ActualDomainVars[NameType.first] = VarExp;
+                }
+            }
+            
+            // for each symmetric type, which has more than one variable
+            // of the type, (say n) we create choose(n, 2) booleans
+            for (auto const& TypeSymmVars : SymmetricVarsByType) {
+                if (TypeSymmVars.second.size() >= 2) {
+                    auto const& SymmVars = TypeSymmVars.second;
+
+                    for (auto it1 = SymmVars.begin(); it1 != SymmVars.end(); ++it1) {
+                        for (auto it2 = it1 + 1; it2 != SymmVars.end(); ++it2) {
+                            SymmDomainVars.push_back(TheLTS->MakeOp(LTSOps::OpEQ, *it1, *it2));
+                        }
+                    }
+                }
+            }
+
+            // We're now ready to create the guard op
+        }
+
+        inline void 
+        IncompleteEFSM::CompleteOneInputTransition(const string& InitStateName, 
+                                                   const string& FinalStateName, 
+                                                   const map<string, ExprTypeRef>& DomainVars, 
+                                                   vector<ExpT>& GuardExps, 
+                                                   const ExpT &UncoveredPred)
+        {
+            auto GuardExp = MakeGuard(DomainVars);
+        }
+
+        inline void 
+        IncompleteEFSM::CompleteInputTransitions(const string& StateName,
+                                                 const vector<LTSSymbTransRef>& TransFromState,
+                                                 const ExpT& UncoveredPredicate, const TPRef& TP)
+        {
+            for (auto const& MsgDecl : SymmetricMessages) {
+                if (!MsgDecl->IsInput()) {
+                    continue;
+                }
+                if (CompleteStates.find(StateName) != CompleteStates.end()) {
+                    continue;
+                }
+                auto it = BlockedCompletions.find(StateName);
+                if (it != BlockedCompletions.end() &&
+                    it->second.find(MsgDecl) != it->second.end()) {
+                    continue;
+                }
+
+                // We need to add transitions
+                // find the predicate already covered
+                // for this state on this input message
+                auto UncoveredMsgPred = FindUncoveredPred(TransFromState, TP, 
+                                                          MsgDecl->GetMessageType());
+                if (UncoveredMsgPred == TheLTS->MakeFalse()) {
+                    continue;
+                }
+
+                auto ActualUncoveredPred = TheLTS->MakeOp(LTSOps::OpAND, UncoveredPredicate,
+                                                          UncoveredMsgPred);
+                
+                auto SatRes = TP->CheckSat(ActualUncoveredPred);
+                if (SatRes == TPResult::UNSATISFIABLE) {
+                    continue;
+                } else if (SatRes == TPResult::UNKNOWN) {
+                    throw ESMCError((string)"Could not ensure sat or unsat of proposition:\n" + 
+                                    ActualUncoveredPred->ToString() + "\n." + 
+                                    "Perhaps the theory is incomplete?");
+                }
+
+                // We're okay to add one or more transitions
+                // Gather the list of variables that can be read from
+                map<string, ExprTypeRef> DomainVariables;
+
+                for (auto const& Var : AllVariables) {
+                    DomainVariables.insert(Var);
+                }
+                // add in the message params to the domain vars
+                auto const& NewMsgParams = MsgDecl->GetNewParams();
+                for (auto const& NewMsgParam : NewMsgParams) {
+                    auto ParamAsVar = NewMsgParam->As<Exprs::VarExpression>();
+                    assert(ParamAsVar != nullptr);
+                    DomainVariables[ParamAsVar->GetVarName()] = ParamAsVar->GetVarType();
+                }
+
+                vector<ExpT> GuardExps;
+
+                // The target can be any state
+                for (auto const& NameState : States) {
+                    CompleteOneInputTransition(StateName, NameState.first,
+                                               DomainVariables, GuardExps,
+                                               ActualUncoveredPred);
+                }
+            }
+        }
+
         void IncompleteEFSM::Freeze()
         {
-            // Add all potential transitions guarded by 
-            // uninterpreted functions and with updates
-            // being uninterpreted functions
+            // Check for determinism first
+            DetEFSM::Freeze();
+
             auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
+            vector<ExpT> AddedGuards;
             
             // for each state
             for (auto const& NameState : States) {
@@ -230,6 +427,12 @@ namespace ESMC {
                                                        StateName);
                                            });
                 auto UncoveredPred = FindUncoveredPred(TransFromState, TP);
+                if (UncoveredPred == TheLTS->MakeFalse()) {
+                    continue;
+                }
+                
+                // Add transitions
+                CompleteInputTransitions(StateName, TransFromState, UncoveredPred, TP);
             }
         }
         

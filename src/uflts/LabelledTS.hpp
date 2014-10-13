@@ -52,6 +52,8 @@ namespace ESMC {
             friend class ChannelEFSM;
             friend class AutomatonBase;
             friend class EFSMBase;
+            friend class DetEFSM;
+            friend class IncompleteEFSM;
             friend class MC::LTSChecker;
             friend class MC::LTSCompiler;
             friend class MC::StateVecPrinter;
@@ -99,21 +101,21 @@ namespace ESMC {
 
             SymbolTable SymTab;
 
-            inline void AssertFrozen() const;
-            inline void AssertNotFrozen() const;
-            inline void AssertMsgsFrozen() const;
-            inline void AssertMsgsNotFrozen() const;
-            inline void AssertAutomataFrozen() const;
-            inline void AssertAutomataNotFrozen() const;
+            void AssertFrozen() const;
+            void AssertNotFrozen() const;
+            void AssertMsgsFrozen() const;
+            void AssertMsgsNotFrozen() const;
+            void AssertAutomataFrozen() const;
+            void AssertAutomataNotFrozen() const;
 
-            inline void CheckTypeName(const string& Name) const;
+            void CheckTypeName(const string& Name) const;
 
-            inline void CheckConsistency() const;
-            inline GCmdRef MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const;
-            inline MgrT::SubstMapT ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
+            void CheckConsistency() const;
+            GCmdRef MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const;
+            MgrT::SubstMapT ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
                                              const vector<u08>& Perm);
-            inline void MakeMsgCanonMap();
-            inline void InstantiateInitState(const InitStateRef& InitState);
+            void MakeMsgCanonMap();
+            void InstantiateInitState(const InitStateRef& InitState);
 
             ExpT InvariantExp;
             ExpT FinalCondExp;
@@ -197,7 +199,7 @@ namespace ESMC {
             const ExprTypeRef& GetPrimedType(const ExprTypeRef& Type) const;
 
             template <typename T, typename... ArgTypes>
-            inline EFSMBase* 
+            inline T* 
             MakeEFSM(const string& Name, const vector<ExpT>& Params,
                      const ExpT& Constraint, LTSFairnessType Fairness,
                      ArgTypes&&... Args)
@@ -215,9 +217,9 @@ namespace ESMC {
                 return Retval;
             }
 
-            EFSMBase* MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
-                                  const ExpT& Constraint, LTSFairnessType Fairness);
-            EFSMBase* MakeDetEFSM(const string& Name, const vector<ExpT>& Params,
+            GeneralEFSM* MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
+                                     const ExpT& Constraint, LTSFairnessType Fairness);
+            DetEFSM* MakeDetEFSM(const string& Name, const vector<ExpT>& Params,
                                   const ExpT& Constraint, LTSFairnessType Fairness);
             vector<EFSMBase*> GetEFSMs(const function<bool(const EFSMBase*)>& MatchPred) const;
 

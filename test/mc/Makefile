@@ -19,11 +19,14 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/sparsehash
 
 PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP \
 	ABP_generated MSI MSI_generated Fischer LeaderElection Dijkstra4 MSI_no_busy_data_no_pending_unblock_e \
-	MSIC2D
+	MSIC2D PingPongChanSynth
 
 
 PingPongChan_SYS_LIBS=esmc z3 rt boost_system
 PingPongChan_EXT_LIBS=boost z3 esmc
+PingPongChanSynth_SYS_LIBS=$(PingPongChan_SYS_LIBS)
+PingPongChanSynth_EXT_LIBS=$(PingPongChan_EXT_LIBS)
+
 
 PingPongChanBug_SYS_LIBS=$(PingPongChan_SYS_LIBS)
 PingPongChanBug_EXT_LIBS=$(PingPongChan_EXT_LIBS)
@@ -73,6 +76,7 @@ libesmc_MAKE_DIR=$(PROJECT_ROOT)/../../
 
 PingPongChan_OBJS=PingPongChan.o
 PingPongChanBug_OBJS=PingPongChanBug.o
+PingPongChanSynth_OBJS=PingPongChanSynth.o
 Flip_OBJS=Flip.o
 FlipSimple_OBJS=FlipSimple.o
 Elevator_OBJS=Elevator.o
@@ -92,6 +96,7 @@ PingPongChan_LIB_PATHS= \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
 
 PingPongChanBug_LIB_PATHS=$(PingPongChan_LIB_PATHS)
+PingPongChanSynth_LIB_PATHS=$(PingPongChan_LIB_PATHS)
 
 Elevator_LIB_PATHS= \
     $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \

@@ -117,20 +117,26 @@ namespace ESMC {
                          LossDupFairnessType LossDupFairness = LossDupFairnessType::None);
 
 
-            virtual void AddInputMsg(const ExprTypeRef& MessageType,
-                                     const vector<ExpT>& Params = vector<ExpT>()) override;
+            virtual SymmMsgDeclRef 
+            AddInputMsg(const ExprTypeRef& MessageType,
+                        const vector<ExpT>& Params = vector<ExpT>()) override;
 
-            virtual void AddInputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
-                                      const ExprTypeRef& MessageType,
-                                      const vector<ExpT>& MessageParams) override;
+            virtual SymmMsgDeclRef 
+            AddInputMsgs(const vector<ExpT>& NewParams, 
+                         const ExpT& Constraint,
+                         const ExprTypeRef& MessageType,
+                         const vector<ExpT>& MessageParams) override;
 
-            virtual void AddOutputMsg(const ExprTypeRef& MessageType,
-                                      const vector<ExpT>& Params = vector<ExpT>()) override;
+            virtual SymmMsgDeclRef 
+            AddOutputMsg(const ExprTypeRef& MessageType,
+                         const vector<ExpT>& Params = vector<ExpT>()) override;
 
-            virtual void AddOutputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
-                                       const ExprTypeRef& MessageType,
-                                       const vector<ExpT>& MessageParams) override;
-
+            virtual SymmMsgDeclRef
+            AddOutputMsgs(const vector<ExpT>& NewParams, 
+                          const ExpT& Constraint,
+                          const ExprTypeRef& MessageType,
+                          const vector<ExpT>& MessageParams) override;
+            
             virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType) override;
 
             virtual void AddInputTransition(const string& InitState,
