@@ -1,0 +1,78 @@
+PROJECT_NAME=esmc
+PROJECT_ROOT=$(realpath .)
+BASE_OBJ_DIR=$(PROJECT_ROOT)/obj
+BASE_LIB_DIR=$(PROJECT_ROOT)/lib
+BASE_BIN_DIR=$(PROJECT_ROOT)/bin
+BASE_GEN_DIR=$(PROJECT_ROOT)/gen
+BASE_SRC_DIR=$(PROJECT_ROOT)/src
+
+CXX?=g++
+
+CXXFLAGS=-std=c++11 -Wall -pedantic -pipe
+CXXFLAGS+=-I/usr/local/Cellar/google-sparsehash/2.0.2/include/sparsehash/
+
+PROJECT_MODULES= \
+	common \
+	containers \
+	expr \
+	hash \
+	main \
+	mc \
+	symmetry \
+	tpinterface \
+	uflts \
+	utils \
+
+
+PROJECT_EXECUTABLES=esmc
+esmc_SYS_LIBS=z3 boost_system
+esmc_DEP_LIBS=esmc
+esmc_EXT_LIBS=boost z3
+esmc_OBJS=main.o
+esmc_LIB_PATHS= \
+	$(PROJECT_ROOT)/lib/$(BUILD_SUFFIX)
+
+
+
+PROJECT_LIBS=esmc
+
+libesmc_OBJS= \
+	AQStructure.o \
+	Compiler.o \
+	ExprTypes.o \
+	IndexSet.o \
+	LabelledTS.o \
+	LTSAssign.o \
+	LTSAutomaton.o \
+	LTSChannelEFSM.o \
+	LTSChecker.o \
+	LTSEFSM.o \
+	LTSEFSMBase.o \
+	LTSExtensions.o \
+	LTSFairnessSet.o \
+	LTSState.o \
+	LTSTermSemanticizer.o \
+	LTSTransitions.o \
+	LTSUtils.o \
+	OmegaAutomaton.o \
+	Permutations.o \
+	SpookyHash.o \
+	StateVec.o \
+	StateVecPrinter.o \
+	SymbolTable.o \
+	SymmCanonicalizer.o \
+	TheoremProver.o \
+	Trace.o \
+	UIDGenerator.o \
+	Z3Objects.o \
+	ZeroPage.o \
+
+
+PROJECT_EXT_LIBS=boost z3
+
+libesmc_EXT_LIBS= boost z3
+libesmc_SYS_LIBS= boost z3
+
+
+include $(PROJECT_ROOT)/Makefile.mac.util
+
