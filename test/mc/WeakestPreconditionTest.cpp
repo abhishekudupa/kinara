@@ -5,10 +5,7 @@
 #include "../../src/mc/LTSChecker.hpp"
 #include "../../src/mc/StateVecPrinter.hpp"
 #include "../../src/mc/Trace.hpp"
-<<<<<<< HEAD
 #include "../../src/symexec/LTSAnalyses.hpp"
-=======
->>>>>>> 6b20eee4104abfec37398ea174a457db6a18b245
 
 using namespace std;
 

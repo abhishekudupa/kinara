@@ -24,6 +24,7 @@ PROJECT_MODULES= \
 	hash \
 	main \
 	mc \
+	symexec \
 	symmetry \
 	tpinterface \
 	uflts \
@@ -52,6 +53,7 @@ libesmc_OBJS= \
 	ExprTypes.o \
 	IndexSet.o \
 	LabelledTS.o \
+    LTSAnalyses.o \
 	LTSAssign.o \
 	LTSAutomaton.o \
 	LTSChannelEFSM.o \

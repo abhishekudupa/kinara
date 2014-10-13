@@ -635,7 +635,6 @@ namespace ESMC {
             inline ExpT UnrollQuantifiers(const ExpT& Exp);
             inline ExpT Simplify(const ExpT& Exp);
             inline ExpT Substitute(const SubstMapT& Subst, const ExpT& Exp);
-            inline ExpT SubstituteForWP(const SubstMapT& Subst, const ExpT& Exp);
             inline ExpSetT
             Gather(const ExpT& Exp, 
                    const function<bool(const ExpressionBase<E, S>*)>& Pred) const;
@@ -683,37 +682,6 @@ namespace ESMC {
         public:
             inline Substitutor(MgrType* Mgr, const SubstMapT& Subst);
             inline virtual ~Substitutor();
-
-            inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
-            inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
-            inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
-                override;
-            inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
-            inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
-                override;
-            inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
-                override;
-
-            inline static ExpT Do(MgrType* Mgr, 
-                                  const ExpT& Exp, 
-                                  const SubstMapT& SubstMap);
-        };
-
-        template <typename E, template <typename> class S>
-        class SubstitutorForWP : ExpressionVisitorBase<E, S>
-        {
-        private:
-            typedef ExprMgr<E, S> MgrType;
-            typedef typename MgrType::ExpT ExpT;
-            typedef typename MgrType::SubstMapT SubstMapT;
-
-            MgrType* Mgr;
-            SubstMapT Subst;
-            vector<typename ExprMgr<E, S>::ExpT> SubstStack;
-
-        public:
-            inline SubstitutorForWP(MgrType* Mgr, const SubstMapT& Subst);
-            inline virtual ~SubstitutorForWP();
 
             inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
             inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
@@ -924,103 +892,6 @@ namespace ESMC {
             Substitutor TheSubstitutor(Mgr, Subst);
             Exp->Accept(&TheSubstitutor);
             return TheSubstitutor.SubstStack[0];
-        }
-
-        // SubstitutorForWP implementation
-        template <typename E, template <typename> class S>
-        inline SubstitutorForWP<E, S>::SubstitutorForWP(MgrType* Mgr, const SubstMapT& Subst)
-            : ExpressionVisitorBase<E, S>("SubstitutorForWP"), Mgr(Mgr), Subst(Subst)
-        {
-            // Nothing here
-        }
-        
-        template <typename E, template <typename> class S>
-        inline SubstitutorForWP<E,S>::~SubstitutorForWP()
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline void 
-        SubstitutorForWP<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
-        {
-            auto it = Subst.find(Exp);
-            if (it != Subst.end()) {
-                SubstStack.push_back(it->second);
-            } else {
-                SubstStack.push_back(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        SubstitutorForWP<E, S>::VisitConstExpression(const ConstExpression<E,S>* Exp)
-        {
-            SubstStack.push_back(Exp);
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        SubstitutorForWP<E, S>::VisitBoundVarExpression(const BoundVarExpression<E,S>* Exp)
-        {
-            auto it = Subst.find(Exp);
-            if (it != Subst.end()) {
-                SubstStack.push_back(it->second);
-            } else {
-                SubstStack.push_back(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void 
-        SubstitutorForWP<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
-        {
-            auto it = Subst.find(Exp);
-            if (it != Subst.end()) {
-                SubstStack.push_back(it->second);
-            } else {
-                ExpressionVisitorBase<E,S>::VisitOpExpression(Exp);
-                const u32 NumChildren = Exp->GetChildren().size();
-                vector<ExpT> SubstChildren(NumChildren);
-                for (u32 i = 0; i < NumChildren; ++i) {
-                    SubstChildren[NumChildren - i - 1] = SubstStack.back();
-                    SubstStack.pop_back();
-                }
-                SubstStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(),
-                                                   SubstChildren));
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void 
-        SubstitutorForWP<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E,S>* Exp)
-        {
-            Exp->GetQExpression()->Accept(this);
-            auto SubstQExpr = SubstStack.back();
-            SubstStack.pop_back();
-            SubstStack.push_back(Mgr->MakeExists(Exp->GetQVarTypes(),
-                                                 SubstQExpr));
-        }
-
-        template <typename E, template <typename> class S>
-        inline void 
-        SubstitutorForWP<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E,S>* Exp)
-        {
-            Exp->GetQExpression()->Accept(this);
-            auto SubstQExpr = SubstStack.back();
-            SubstStack.pop_back();
-            SubstStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(),
-                                                 SubstQExpr));
-        }
-
-        template <typename E, template <typename> class S>
-        inline typename SubstitutorForWP<E, S>::ExpT
-        SubstitutorForWP<E, S>::Do(MgrType* Mgr,
-                              const ExpT& Exp, const SubstMapT& Subst)
-        {
-            SubstitutorForWP TheSubstitutorForWP(Mgr, Subst);
-            Exp->Accept(&TheSubstitutorForWP);
-            return TheSubstitutorForWP.SubstStack[0];
         }
 
         // Gatherer implementation
@@ -2273,6 +2144,7 @@ namespace ESMC {
         {
             return ApplyTransform<Substitutor<E, S>>(Exp, Subst);
         }
+        
 
         template <typename E, template <typename> class S>
         inline void ExprMgr<E, S>::GC()
