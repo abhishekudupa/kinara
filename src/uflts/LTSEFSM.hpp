@@ -40,10 +40,11 @@
 #if !defined ESMC_LTS_EFSM_HPP_
 #define ESMC_LTS_EFSM_HPP_
 
+#include "../utils/UIDGenerator.hpp"
+
 #include "LTSTypes.hpp"
 #include "LTSState.hpp"
 #include "SymbolTable.hpp"
-
 #include "LTSEFSMBase.hpp"
 
 namespace ESMC {
@@ -86,6 +87,7 @@ namespace ESMC {
             set<string> ReadOnlyVars;
             map<string, ExprTypeRef> UpdateableVariables;
             map<string, ExprTypeRef> AllVariables;
+            UIDGenerator UFUIDGen;
 
             inline ExpT FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
                                           const TPRef& TP, const ExprTypeRef& MsgType) const;
@@ -98,10 +100,12 @@ namespace ESMC {
                                                  const ExpT& UncoveredPredicate,
                                                  const TPRef& TP);
             
-            inline void MakeGuard(const set<string>& DomainVars);
+            inline ExpT MakeGuard(const map<string, ExprTypeRef>& DomainVars);
+            inline vector<LTSAssignRef> MakeUpdates(const map<string, ExprTypeRef>& DomainVars);
 
             inline void CompleteOneInputTransition(const string& InitStateName,
                                                    const string& FinalStateName,
+                                                   const SymmMsgDeclRef& MsgDecl,
                                                    const map<string, ExprTypeRef>& DomainVars,
                                                    vector<ExpT>& GuardExps,
                                                    const ExpT& UncoveredPred);

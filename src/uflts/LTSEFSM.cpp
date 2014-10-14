@@ -302,7 +302,7 @@ namespace ESMC {
             }
         }
 
-        inline void IncompleteEFSM::MakeGuard(const map<string, ExprTypeRef>& DomainVars)
+        inline ExpT IncompleteEFSM::MakeGuard(const map<string, ExprTypeRef>& DomainVars)
         {
             map<ExprTypeRef, set<ExpT>> SymmetricVarsByType;
             map<string, ExpT> ActualDomainVars;
@@ -324,7 +324,7 @@ namespace ESMC {
                     auto const& SymmVars = TypeSymmVars.second;
 
                     for (auto it1 = SymmVars.begin(); it1 != SymmVars.end(); ++it1) {
-                        for (auto it2 = it1 + 1; it2 != SymmVars.end(); ++it2) {
+                        for (auto it2 = next(it1); it2 != SymmVars.end(); ++it2) {
                             SymmDomainVars.push_back(TheLTS->MakeOp(LTSOps::OpEQ, *it1, *it2));
                         }
                     }
@@ -332,16 +332,41 @@ namespace ESMC {
             }
 
             // We're now ready to create the guard op
+            auto GuardUID = UFUIDGen.GetUID();
+            auto GuardFuncName = (string)"SynthGuard_" + to_string(GuardUID);
+            vector<ExprTypeRef> DomTypes;
+            vector<ExpT> AppArgs;
+
+            for (auto const& DomVar : ActualDomainVars) {
+                DomTypes.push_back(DomVar.second->GetType());
+                AppArgs.push_back(DomVar.second);
+            }
+            for (auto const& SymmVar : SymmDomainVars) {
+                DomTypes.push_back(TheLTS->MakeBoolType());
+                AppArgs.push_back(SymmVar);
+            }
+
+            auto GuardOp = TheLTS->MakeUF(GuardFuncName, DomTypes, TheLTS->MakeBoolType());
+            auto GuardExp = TheLTS->MakeOp(GuardOp, AppArgs);
+            return GuardExp;
         }
 
         inline void 
         IncompleteEFSM::CompleteOneInputTransition(const string& InitStateName, 
-                                                   const string& FinalStateName, 
+                                                   const string& FinalStateName,
+                                                   const SymmMsgDeclRef& MsgDecl,
                                                    const map<string, ExprTypeRef>& DomainVars, 
                                                    vector<ExpT>& GuardExps, 
-                                                   const ExpT &UncoveredPred)
+                                                   const ExpT& UncoveredPred)
         {
             auto GuardExp = MakeGuard(DomainVars);
+            auto&& Updates = MakeUpdates(Domainvars);
+
+            if (MsgDecl->GetNewParams().size() == 0) {
+                AddInputTransition(InitStateName, FinalStateName, GuardExp, 
+                                   Updates, "InMsg", MsgDecl->GetMessageType(),
+                                   MsgDecl->GetMessageParams());
+            }
         }
 
         inline void 
@@ -402,9 +427,8 @@ namespace ESMC {
 
                 // The target can be any state
                 for (auto const& NameState : States) {
-                    CompleteOneInputTransition(StateName, NameState.first,
-                                               DomainVariables, GuardExps,
-                                               ActualUncoveredPred);
+                    CompleteOneInputTransition(StateName, NameState.first, MsgDecl,
+                                               DomainVariables, GuardExps, ActualUncoveredPred);
                 }
             }
         }
