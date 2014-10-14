@@ -77,8 +77,9 @@ namespace ESMC {
                            const MgrT::SubstMapT& SubstMap);
         };
 
-
         LTS::ExpT WeakestPrecondition(LTS::ExpT InitialPhi, MC::TraceBase* Trace);
+
+        LTS::ExpT SymbolicExecution(LTS::ExpT Phi, MC::TraceBase* Trace, vector<MgrT::SubstMapT>& symbolic_states);
     } /* end namespace Analyses */
 } /* end namespace ESMC */
 

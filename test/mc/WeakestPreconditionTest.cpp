@@ -26,4 +26,18 @@ int main() {
     }
     ExpT phi = the_lts->MakeTrue();
     cout << WeakestPrecondition(phi, safety_trace)->ToString() << endl;
+
+    vector<MgrT::SubstMapT> symbolic_states;
+    auto path_condition = SymbolicExecution(phi, safety_trace, symbolic_states);
+    path_condition = path_condition->GetMgr()->Simplify(path_condition);
+    cout << path_condition->ToString() << endl;
+
+    for (auto memory: symbolic_states) {
+        for (auto update: memory) {
+            auto lhs = update.first;
+            auto rhs = update.second;
+            cout << lhs->ToString() << " = " << rhs->ToString() << endl;
+        }
+        cout << "------------------------" << endl;
+    }
 }

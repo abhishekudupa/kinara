@@ -173,6 +173,72 @@ namespace ESMC {
             }
             return Phi;
         }
+
+        // Returns path condition and adds intermediate states in symbolic_states
+        ExpT SymbolicExecution(ExpT InitialPredicate, TraceBase* Trace, vector<MgrT::SubstMapT>& symbolic_states) {
+            MgrT::SubstMapT memory;
+            const vector<TraceElemT>& TraceElements = Trace->As<SafetyViolation>()->GetTraceElems();
+            ExpT path_condition = InitialPredicate;
+            for (auto it = TraceElements.begin(); it != TraceElements.end(); ++it) {
+                GCmdRef guarded_command = it->first;
+                const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
+                const ExpT& guard = guarded_command->GetGuard();
+                ExpT new_guard = guard->GetMgr()->ApplyTransform<SubstitutorForWP>(guard, memory);
+                MgrT::SubstMapT SubstMapForTransMsg;
+                for (LTSAssignRef update: updates) {
+                    const ExpT& lhs = update->GetLHS();
+                    if (lhs->Is<OpExpression>()) {
+                        auto lhs_as_op = lhs->As<OpExpression>();
+                        auto children = lhs_as_op->GetChildren();
+                        auto lhs_base = children[0];
+                        if (lhs_base->Is<VarExpression>()) {
+                            auto lhs_base_var = lhs_base->As<VarExpression>();
+                            if (lhs_base_var->GetVarName() == "__trans_msg__") {
+                                SubstMapForTransMsg[lhs] = update->GetRHS();
+                            }
+                        }
+                    }
+                }
+                MgrT::SubstMapT SubstMapForTransition;
+                for (LTSAssignRef update: updates) {
+                    auto lhs = update->GetLHS();
+                    auto rhs = update->GetRHS();
+                    if (lhs->Is<OpExpression>()) {
+                        auto lhs_as_op = lhs->As<OpExpression>();
+                        auto children = lhs_as_op->GetChildren();
+                        auto lhs_base = children[0];
+                        if (lhs_base->Is<VarExpression>()) {
+                            auto lhs_base_var = lhs_base->As<VarExpression>();
+                            if (lhs_base_var->GetVarName() == "__trans_msg__") {
+                                continue;
+                            }
+                        }
+                    }
+                    SubstMapForTransition[lhs] = rhs->GetMgr()->ApplyTransform<SubstitutorForWP>(rhs, SubstMapForTransMsg);
+                }
+                MgrT::SubstMapT new_memory;
+                for (auto update: SubstMapForTransition) {
+                    auto lhs = update.first;
+                    auto rhs = update.second;
+                    auto new_rhs = rhs->GetMgr()->ApplyTransform<SubstitutorForWP>(rhs, memory);
+                    new_memory[lhs] = new_rhs;
+                }
+                for (auto update: memory) {
+                    auto lhs = update.first;
+                    auto rhs = update.second;
+                    if (new_memory.find(lhs) == new_memory.end()) {
+                        new_memory[lhs] = memory[lhs];
+                    }
+                }
+                memory = new_memory;
+                symbolic_states.push_back(memory);
+
+                path_condition = path_condition->GetMgr()->MakeExpr(LTSOps::OpAND, new_guard, path_condition);
+            }
+            return path_condition;
+        }
+
+
     }
 }
 
