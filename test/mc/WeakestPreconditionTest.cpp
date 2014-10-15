@@ -40,4 +40,22 @@ int main() {
         }
         cout << "------------------------" << endl;
     }
+
+    vector<vector<MgrT::SubstMapT>> symbolic_states_per_input;
+    vector<ExpT> path_conditions;
+    path_conditions = SymbolicExecution(the_lts, safety_trace, symbolic_states_per_input);
+
+    for (int i = 0; i < path_conditions.size(); ++i) {
+        path_condition = path_conditions[i];
+        cout << path_condition->ToString() << endl;
+        symbolic_states = symbolic_states_per_input[i];
+        for (auto memory: symbolic_states) {
+            for (auto update: memory) {
+                auto lhs = update.first;
+                auto rhs = update.second;
+                cout << lhs->ToString() << " = " << rhs->ToString() << endl;
+            }
+            cout << "------------------------" << endl;
+        }
+    }
 }

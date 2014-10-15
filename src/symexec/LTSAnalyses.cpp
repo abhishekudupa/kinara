@@ -38,6 +38,7 @@
 // Code:
 
 #include "LTSAnalyses.hpp"
+#include "../uflts/LabelledTS.hpp"
 #include "../uflts/LTSAssign.hpp"
 #include "../uflts/LTSTypes.hpp"
 #include "../uflts/LTSTransitions.hpp"
@@ -136,7 +137,6 @@ namespace ESMC {
             Exp->Accept(&TheSubstitutorForWP);
             return TheSubstitutorForWP.SubstStack[0];
         }
-
 
         ExpT WeakestPrecondition(ExpT InitialPhi, TraceBase* Trace) {
             ExpT Phi = InitialPhi;
@@ -238,7 +238,79 @@ namespace ESMC {
             return path_condition;
         }
 
-
+        vector<ExpT> SymbolicExecution(LabelledTS* TheLTS, TraceBase* Trace, vector<vector<MgrT::SubstMapT>>& symbolic_states_per_initial) {
+            vector<ExpT> PathConditions;
+            MgrT::SubstMapT Memory;
+            auto TraceAsSafetyViolation = Trace->As<SafetyViolation>();
+            const vector<TraceElemT>& TraceElements = TraceAsSafetyViolation->GetTraceElems();
+            auto InitStateGenerators = TheLTS->GetInitStateGenerators();
+            for (auto InitState: InitStateGenerators) {
+                vector<MgrT::SubstMapT> symbolic_states;
+                Memory.clear();
+                for (auto update: InitState) {
+                    Memory[update->GetLHS()] = update->GetRHS();
+                }
+                ExpT path_condition = TheLTS->MakeTrue();
+                for (auto it = TraceElements.begin(); it != TraceElements.end(); ++it) {
+                    GCmdRef guarded_command = it->first;
+                    const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
+                    const ExpT& guard = guarded_command->GetGuard();
+                    ExpT new_guard = guard->GetMgr()->ApplyTransform<SubstitutorForWP>(guard, Memory);
+                    MgrT::SubstMapT SubstMapForTransMsg;
+                    for (LTSAssignRef update: updates) {
+                        const ExpT& lhs = update->GetLHS();
+                        if (lhs->Is<OpExpression>()) {
+                            auto lhs_as_op = lhs->As<OpExpression>();
+                            auto children = lhs_as_op->GetChildren();
+                            auto lhs_base = children[0];
+                            if (lhs_base->Is<VarExpression>()) {
+                                auto lhs_base_var = lhs_base->As<VarExpression>();
+                                if (lhs_base_var->GetVarName() == "__trans_msg__") {
+                                    SubstMapForTransMsg[lhs] = update->GetRHS();
+                                }
+                            }
+                        }
+                    }
+                    MgrT::SubstMapT SubstMapForTransition;
+                    for (LTSAssignRef update: updates) {
+                        auto lhs = update->GetLHS();
+                        auto rhs = update->GetRHS();
+                        if (lhs->Is<OpExpression>()) {
+                            auto lhs_as_op = lhs->As<OpExpression>();
+                            auto children = lhs_as_op->GetChildren();
+                            auto lhs_base = children[0];
+                            if (lhs_base->Is<VarExpression>()) {
+                                auto lhs_base_var = lhs_base->As<VarExpression>();
+                                if (lhs_base_var->GetVarName() == "__trans_msg__") {
+                                    continue;
+                                }
+                            }
+                        }
+                        SubstMapForTransition[lhs] = rhs->GetMgr()->ApplyTransform<SubstitutorForWP>(rhs, SubstMapForTransMsg);
+                    }
+                    MgrT::SubstMapT new_Memory;
+                    for (auto update: SubstMapForTransition) {
+                        auto lhs = update.first;
+                        auto rhs = update.second;
+                        auto new_rhs = rhs->GetMgr()->ApplyTransform<SubstitutorForWP>(rhs, Memory);
+                        new_Memory[lhs] = new_rhs;
+                    }
+                    for (auto update: Memory) {
+                        auto lhs = update.first;
+                        auto rhs = update.second;
+                        if (new_Memory.find(lhs) == new_Memory.end()) {
+                            new_Memory[lhs] = Memory[lhs];
+                        }
+                    }
+                    Memory = new_Memory;
+                    symbolic_states.push_back(Memory);
+                    path_condition = path_condition->GetMgr()->MakeExpr(LTSOps::OpAND, new_guard, path_condition);
+                }
+                symbolic_states_per_initial.push_back(symbolic_states);
+                PathConditions.push_back(path_condition);
+            }
+            return PathConditions;
+        }
     }
 }
 

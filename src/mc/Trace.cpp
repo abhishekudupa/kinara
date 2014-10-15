@@ -668,6 +668,11 @@ namespace ESMC {
             return sstr.str();
         }
 
+        const StateVec* SafetyViolation::GetInitialState() const
+        {
+            return InitialState;
+        }
+
         const vector<TraceElemT>& SafetyViolation::GetTraceElems() const
         {
             return TraceElems;
