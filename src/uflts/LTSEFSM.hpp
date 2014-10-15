@@ -77,7 +77,6 @@ namespace ESMC {
             // Override freeze to check for determinism
             virtual void Freeze() override;
         };
-
         
         class IncompleteEFSM : public DetEFSM
         {
@@ -90,7 +89,15 @@ namespace ESMC {
             map<string, ExprTypeRef> UpdateableVariables;
             map<string, ExprTypeRef> AllVariables;
             UIDGenerator UFUIDGen;
+            
+            // Gets all the terms possible 
+            // aborts if the number of terms capable of 
+            // being generated is unbounded
+            void GetDomainTerms(const map<string, ExprTypeRef>& DomainVars,
+                                map<ExprTypeRef, set<ExpT>>& DomainTerms);
 
+            void ExtendDomainTerms(map<ExprTypeRef, set<ExpT>>& DomainTerms);
+            
             inline ExpT FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
                                           const TPRef& TP, const ExprTypeRef& MsgType) const;
 
@@ -102,16 +109,12 @@ namespace ESMC {
                                                  const ExpT& UncoveredPredicate,
                                                  const TPRef& TP);
             
-            inline ExpT MakeGuard(const set<ExpT>& DomainArgs,
+            inline ExpT MakeGuard(const map<string, ExprTypeRef>& DomainArgs,
                                   const ExpT& UncoveredPred,
                                   const vector<ExpT>& GuardExps);
+            
 
-            inline vector<LTSAssignRef> MakeUpdates(const set<ExpT>& DomainArgs);
-
-            set<ExpT> GetArrayArgs(const ExpT& ArrayExp);
-            set<ExpT> GetRecordArgs(const ExpT& RecordExp);
-            set<ExpT> FlattenVariable(const ExpT& VarExp);
-            set<ExpT> GetDomainArgs();
+            inline vector<LTSAssignRef> MakeUpdates(const map<string, ExprTypeRef>& DomainArgs);
 
             inline void CompleteOneInputTransition(const string& InitStateName,
                                                    const string& FinalStateName,
@@ -127,7 +130,8 @@ namespace ESMC {
 
             virtual ~IncompleteEFSM();
             // overrides to remember variables
-            virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType) override;
+            virtual void AddVariable(const string& VarName, 
+                                     const ExprTypeRef& VarType) override;
 
             // Do not add completions particular set of messages on a 
             // particular state

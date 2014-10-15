@@ -95,6 +95,30 @@ namespace ESMC {
             return (!Input);
         }
 
+        string SymmetricMessageDecl::ToString() const
+        {
+            ostringstream sstr;
+            if (Input) {
+                sstr << "Input Message: ";
+            } else {
+                sstr << "Output Message: ";
+            }
+            if (NewParams.size() > 0) {
+                sstr << "New Params: " << endl;
+                for (auto const& NewParam : NewParams) {
+                    sstr << "    " << NewParam->ToString() << endl;
+                }
+                sstr << "Constraint: " << Constraint->ToString() << endl;
+            }
+            sstr << "Message Type: " << MessageType->ToString() << endl;
+            sstr << "Message Params: " << endl;
+            for (auto const& MessageParam : MessageParams) {
+                sstr << "    " << MessageParam->ToString() << endl;
+            }
+            sstr << endl;
+            return sstr.str();
+        }
+
         EFSMBase::EFSMBase(LabelledTS* TheLTS, const string& Name,
                            const vector<ExpT>& Params, const ExpT& Constraint,
                            LTSFairnessType Fairness)

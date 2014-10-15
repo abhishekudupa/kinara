@@ -228,6 +228,142 @@ namespace ESMC {
             UpdateableVariables.erase(VarName);
         }
 
+        void IncompleteEFSM::ExtendDomainTerms(map<ExprTypeRef, set<ExpT>>& DomainTerms)
+        {
+            // first attempt to extend record types
+            auto Mgr = TheLTS->GetMgr();
+            bool Modified = false;
+            for (auto const& DomTerm : DomainTerms) {
+                auto const& TermType = DomTerm.first;
+                if (!TermType->Is<Exprs::ExprRecordType>()) {
+                    continue;
+                }
+                
+                Modified = true;
+                auto TypeAsRec = TermType->SAs<Exprs::ExprRecordType>();
+                auto const& Fields = TypeAsRec->GetMemberVec();
+
+                for (auto const& Field : Fields) {
+                    auto FAType = TheLTS->MakeFieldAccessType();
+                    auto FAVar = TheLTS->MakeVar(Field.first, FAType);
+                    for (auto const& Exp : DomTerm.second) {
+                        auto NewExp = TheLTS->MakeOp(LTSOps::OpField, Exp, FAVar);
+                        DomainTerms[Field.second].insert(NewExp);
+                    }
+                }
+
+                DomainTerms.erase(DomTerm.first);
+                break;
+            }
+
+            if (Modified) {
+                return;
+            }
+
+            // Now attempt to extend array types 
+            // which are indexed by non-symmetric values
+            for (auto const& DomTerm : DomainTerms) {
+                auto const& TermType = DomTerm.first;
+                if (!TermType->Is<Exprs::ExprArrayType>()) {
+                    continue;
+                }
+
+                auto TypeAsArr = TermType->SAs<ExprArrayType>();
+                auto IndexType = TypeAsArr->GetIndexType();
+                auto ValueType = TypeAsArr->GetValueType();
+                if (IndexType->Is<Exprs::ExprSymmetricType>()) {
+                    continue;
+                }
+
+                Modified = true;
+                auto const& IndexElems = IndexType->GetElements();
+                for (auto const& IndexElem : IndexElems) {
+                    auto IndexExp = TheLTS->MakeVal(IndexElem, IndexType);
+                    for (auto const& Exp : DomTerm.second) {
+                        auto NewExp = TheLTS->MakeOp(LTSOps::OpIndex, Exp, IndexExp);
+                        DomainTerms[ValueType].insert(NewExp);
+                    }
+                }
+                
+                DomainTerms.erase(DomTerm.first);
+                break;
+            }
+
+            if (Modified) {
+                return;
+            }
+
+            // Finally, we extend array types which are 
+            // indexed by symmetric values
+            for (auto const& DomTerm : DomainTerms) {
+                auto const& TermType = DomTerm.first;
+                if (!TermType->Is<Exprs::ExprArrayType>()) {
+                    continue;
+                }
+
+                auto TypeAsArr = TermType->SAs<ExprArrayType>();
+                auto IndexType = TypeAsArr->GetIndexType();
+                auto ValueType = TypeAsArr->GetValueType();
+                if (!IndexType->Is<Exprs::ExprSymmetricType>()) {
+                    continue;
+                }
+                
+                // We now try to find terms of the index type
+                auto it = DomainTerms.find(IndexType);
+                if (it == DomainTerms.end()) {
+                    continue;
+                }
+
+                auto const& IndexExps = it->second;
+                for (auto const& IndexExp : IndexExps) {
+                    for (auto const& Exp : DomTerm.second) {
+                        // Check if the IndexExp includes Exp
+                        auto&& SearchRes = 
+                            Mgr->Gather(IndexExp, 
+                                        [&] (const ExpBaseT* ExpPtr) -> bool
+                                        {
+                                            return (Exp == ExpPtr);
+                                        });
+
+                        if (SearchRes.size() > 0) {
+                            throw ESMCError((string)"Unbounded expansion encountered!");
+                        }
+
+                        auto NewExp = TheLTS->MakeOp(LTSOps::OpIndex, Exp, IndexExp);
+                        DomainTerms[ValueType].insert(NewExp);
+                    }
+                }
+            }
+        }
+        
+        void IncompleteEFSM::GetDomainTerms(const map<string, ExprTypeRef>& DomainVars, 
+                                            map<ExprTypeRef, set<ExpT>>& DomainTerms)
+        {
+            DomainTerms.clear();
+            
+            for (auto const& Var : DomainVars) {
+                auto VarExp = TheLTS->MakeVar(Var.first, Var.second);
+                DomainTerms[Var.second].insert(VarExp);
+            }
+
+            // extend the domain terms until fixpoint or until
+            // we realize that the number of terms is unbounded
+            map<ExprTypeRef, set<ExpT>> OldDomainTerms;
+            do {
+                OldDomainTerms = DomainTerms;
+                ExtendDomainTerms(DomainTerms);
+            } while (OldDomainTerms != DomainTerms);
+
+            // Finally, filter out all non-scalar types from the domain terms
+            DomainTerms.clear();
+            for (auto const& DomTerm : OldDomainTerms) {
+                if (DomTerm.first->Is<Exprs::ExprScalarType>()) {
+                    DomainTerms.insert(DomTerm);
+                }
+            }
+            return;
+        }
+
         // Find the predicate left uncovered by 
         // input transition on MsgType
         inline ExpT
@@ -253,7 +389,7 @@ namespace ESMC {
             }
 
             if (Guards.size() > 1) {
-                CoveredGuard = TheLTS->MakeOp(LTSOps::OpAND, Guards);
+                CoveredGuard = TheLTS->MakeOp(LTSOps::OpOR, Guards);
             } else {
                 CoveredGuard = Guards[0];
             }
@@ -302,78 +438,40 @@ namespace ESMC {
             }
         }
 
-        set<ExpT> IncompleteEFSM::GetArrayArgs(const ExpT& ArrayExp)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            set<ExpT> Retval;
-            auto ArrayType = ArrayExp->GetType()->As<Exprs::ExprArrayType>();
-            auto ValueType = ArrayType->GetValueType();
-            auto IndexType = ArrayType->GetIndexType();
-
-            auto&& IndexElems = IndexType->GetElements();
-            for (auto const& IndexElem : IndexElems) {
-                auto IndexExp = 
-            }
-        }
-
-        set<ExpT> IncompleteEFSM::GetRecordArgs(const ExpT& RecordExp)
-        {
-            
-        }
-
-        set<ExpT> IncompleteEFSM::FlattenVariable(const ExpT& VarExp)
-        {
-            set<ExpT> Retval;
-            auto VarType = VarExp->GetType();
-            if (VarType->Is<Exprs::ExprScalarType>()) {
-                Retval.insert(VarExp);
-            } else if (VarType->Is<Exprs::ExprArrayType>()) {
-                Retval = GetArrayArgs(VarExp);
-            } else if (VarType->Is<Exprs::ExprRecordType>()) {
-                Retval = GetRecordArgs(VarExp);
-            }
-            return Retval;
-        }
-
-        // Gets the set of expressions 
-        // that could be args to uninterpreted 
-        // functions
-        set<ExpT> IncompleteEFSM::GetDomainArgs()
-        {
-            for (auto const& Var : AllVariables) {
-                
-            }
-        }
-
         inline ExpT IncompleteEFSM::MakeGuard(const map<string, ExprTypeRef>& DomainVars,
                                               const ExpT& UncoveredPred, 
                                               const vector<ExpT>& GuardExps)
         {
-            auto Mgr = TheLTS->GetMgr();
+            // Get the relevant domain terms first
+            map<ExprTypeRef, set<ExpT>> DomainTerms;
+            GetDomainTerms(DomainVars, DomainTerms);
 
-            map<ExprTypeRef, set<ExpT>> SymmetricVarsByType;
-            map<string, ExpT> ActualDomainVars;
-            vector<ExpT> SymmDomainVars;
-            // gather up the symmetric vars in the domain
-            for (auto const& NameType : DomainVars) {
-                auto VarExp = TheLTS->MakeVar(NameType.first, NameType.second);
-                if (NameType.second->Is<Exprs::ExprSymmetricType>()) {
-                    SymmetricVarsByType[NameType.second].insert(VarExp);
-                } else {
-                    ActualDomainVars[NameType.first] = VarExp;
+            // Filter out any symmetric types from the domain terms
+            map<ExprTypeRef, set<ExpT>> SymmetricTerms;
+            for (auto const& DomTerm : DomainTerms) {
+                if (DomTerm.first->Is<Exprs::ExprSymmetricType>()) {
+                    SymmetricTerms.insert(DomTerm);
                 }
             }
-            
-            // for each symmetric type, which has more than one variable
-            // of the type, (say n) we create choose(n, 2) booleans
-            for (auto const& TypeSymmVars : SymmetricVarsByType) {
-                if (TypeSymmVars.second.size() >= 2) {
-                    auto const& SymmVars = TypeSymmVars.second;
-
-                    for (auto it1 = SymmVars.begin(); it1 != SymmVars.end(); ++it1) {
-                        for (auto it2 = next(it1); it2 != SymmVars.end(); ++it2) {
-                            SymmDomainVars.push_back(TheLTS->MakeOp(LTSOps::OpEQ, *it1, *it2));
-                        }
+            for (auto const& SymmTerm : SymmetricTerms) {
+                DomainTerms.erase(SymmTerm.first);
+            }
+            vector<ExpT> AppArgs;
+            for (auto const& DomTerm : DomainTerms) {
+                AppArgs.insert(AppArgs.end(), DomTerm.second.begin(),
+                               DomTerm.second.end());
+            }
+            for (auto const& SymmTerm : SymmetricTerms) {
+                auto const& TermSet = SymmTerm.second;
+                if (TermSet.size() == 1) {
+                    continue;
+                }
+                for (auto it1 = TermSet.begin(); it1 != TermSet.end(); ++it1) {
+                    auto it2 = it1;
+                    ++it2;
+                    for (; it2 != TermSet.end(); ++it2) {
+                        auto Exp = TheLTS->MakeOp(LTSOps::OpEQ, *it1, *it2);
+                        AppArgs.push_back(Exp);
                     }
                 }
             }
@@ -382,15 +480,9 @@ namespace ESMC {
             auto GuardUID = UFUIDGen.GetUID();
             auto GuardFuncName = (string)"SynthGuard_" + to_string(GuardUID);
             vector<ExprTypeRef> DomTypes;
-            vector<ExpT> AppArgs;
-
-            for (auto const& DomVar : ActualDomainVars) {
-                DomTypes.push_back(DomVar.second->GetType());
-                AppArgs.push_back(DomVar.second);
-            }
-            for (auto const& SymmVar : SymmDomainVars) {
-                DomTypes.push_back(TheLTS->MakeBoolType());
-                AppArgs.push_back(SymmVar);
+            
+            for (auto const& AppArg : AppArgs) {
+                DomTypes.push_back(AppArg->GetType());
             }
 
             auto GuardOp = TheLTS->MakeUF(GuardFuncName, DomTypes, TheLTS->MakeBoolType());
@@ -404,7 +496,7 @@ namespace ESMC {
             // Ensure that the guard and the rest of the guards are disjoint
             vector<ExpT> DisjointConstraints;
             for (auto const& OtherGuard : GuardExps) {
-                auto Conjunction = TheLTS->MakeOp(LTSOps::OpAND, Guard, OtherGuard);
+                auto Conjunction = TheLTS->MakeOp(LTSOps::OpAND, GuardExp, OtherGuard);
                 DisjointConstraints.push_back(TheLTS->MakeOp(LTSOps::OpNOT, Conjunction));
             }
             ExpT GuardDisjoint = ExpT::NullPtr;
@@ -419,14 +511,12 @@ namespace ESMC {
             auto FinalConstraint = TheLTS->MakeOp(LTSOps::OpAND, 
                                                   GuardInUncovered, 
                                                   GuardDisjoint);
-            // Quantify all the domain variables
-            vector<ExprTypeRef> QSorts;
-            MgrT::SubstMapT SubstMap;
-            for (auto const& Var : DomainVars) {
-                auto VarExp = TheLTS->MakeVar(Var.first, Var.second);
-                SubstMap[VarExp] = TheLTS->MakeBoundVar(i, Var.second);
-            }
-            
+            auto Mgr = TheLTS->GetMgr();
+            FinalConstraint = Mgr->Simplify(FinalConstraint);
+
+            cout << "Final Constraint:" << endl << FinalConstraint->ToString() << endl;
+
+            // TODO: Finish up constraint
             return GuardExp;
         }
 
@@ -596,6 +686,12 @@ namespace ESMC {
 
                 // The target can be any state
                 for (auto const& NameState : States) {
+                    cout << "Completing input transition on state \"" 
+                         << StateName << "\" on message type:" << endl
+                         << MsgDecl->ToString() << endl
+                         << "to state \"" << NameState.first << "\" on EFSM "
+                         << this->Name << endl;
+                        
                     CompleteOneInputTransition(StateName, NameState.first, MsgDecl,
                                                DomainVariables, GuardExps, ActualUncoveredPred);
                 }
@@ -606,6 +702,8 @@ namespace ESMC {
         {
             // Check for determinism first
             DetEFSM::Freeze();
+            // Thaw it
+            EFSMFrozen = false;
 
             auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
             vector<ExpT> AddedGuards;
@@ -627,6 +725,8 @@ namespace ESMC {
                 // Add transitions
                 CompleteInputTransitions(StateName, TransFromState, UncoveredPred, TP);
             }
+            
+            EFSMFrozen = true;
         }
         
     } /* end namespace LTS */

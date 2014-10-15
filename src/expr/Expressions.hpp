@@ -745,10 +745,7 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        void ExpressionVisitorBase<E, S>::VisitConstExpression
-        (
-         const ConstExpression<E, S>* Exp
-         )
+        void ExpressionVisitorBase<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
         {
             return;
         }

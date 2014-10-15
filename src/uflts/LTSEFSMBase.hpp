@@ -74,6 +74,7 @@ namespace ESMC {
             const vector<ExpT>& GetMessageParams() const;
             bool IsInput() const;
             bool IsOutput() const;
+            string ToString() const;
         };
 
         class EFSMBase : public AutomatonBase
