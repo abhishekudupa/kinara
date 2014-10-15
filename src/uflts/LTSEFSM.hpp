@@ -82,6 +82,8 @@ namespace ESMC {
         class IncompleteEFSM : public DetEFSM
         {
         private:
+            // Constraints over uninterpreted functions
+            set<ExpT> Constraints;
             map<string, set<SymmMsgDeclRef>> BlockedCompletions;
             set<string> CompleteStates;
             set<string> ReadOnlyVars;
@@ -100,8 +102,16 @@ namespace ESMC {
                                                  const ExpT& UncoveredPredicate,
                                                  const TPRef& TP);
             
-            inline ExpT MakeGuard(const map<string, ExprTypeRef>& DomainVars);
-            inline vector<LTSAssignRef> MakeUpdates(const map<string, ExprTypeRef>& DomainVars);
+            inline ExpT MakeGuard(const set<ExpT>& DomainArgs,
+                                  const ExpT& UncoveredPred,
+                                  const vector<ExpT>& GuardExps);
+
+            inline vector<LTSAssignRef> MakeUpdates(const set<ExpT>& DomainArgs);
+
+            set<ExpT> GetArrayArgs(const ExpT& ArrayExp);
+            set<ExpT> GetRecordArgs(const ExpT& RecordExp);
+            set<ExpT> FlattenVariable(const ExpT& VarExp);
+            set<ExpT> GetDomainArgs();
 
             inline void CompleteOneInputTransition(const string& InitStateName,
                                                    const string& FinalStateName,

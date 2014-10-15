@@ -302,8 +302,55 @@ namespace ESMC {
             }
         }
 
-        inline ExpT IncompleteEFSM::MakeGuard(const map<string, ExprTypeRef>& DomainVars)
+        set<ExpT> IncompleteEFSM::GetArrayArgs(const ExpT& ArrayExp)
         {
+            auto Mgr = TheLTS->GetMgr();
+            set<ExpT> Retval;
+            auto ArrayType = ArrayExp->GetType()->As<Exprs::ExprArrayType>();
+            auto ValueType = ArrayType->GetValueType();
+            auto IndexType = ArrayType->GetIndexType();
+
+            auto&& IndexElems = IndexType->GetElements();
+            for (auto const& IndexElem : IndexElems) {
+                auto IndexExp = 
+            }
+        }
+
+        set<ExpT> IncompleteEFSM::GetRecordArgs(const ExpT& RecordExp)
+        {
+            
+        }
+
+        set<ExpT> IncompleteEFSM::FlattenVariable(const ExpT& VarExp)
+        {
+            set<ExpT> Retval;
+            auto VarType = VarExp->GetType();
+            if (VarType->Is<Exprs::ExprScalarType>()) {
+                Retval.insert(VarExp);
+            } else if (VarType->Is<Exprs::ExprArrayType>()) {
+                Retval = GetArrayArgs(VarExp);
+            } else if (VarType->Is<Exprs::ExprRecordType>()) {
+                Retval = GetRecordArgs(VarExp);
+            }
+            return Retval;
+        }
+
+        // Gets the set of expressions 
+        // that could be args to uninterpreted 
+        // functions
+        set<ExpT> IncompleteEFSM::GetDomainArgs()
+        {
+            for (auto const& Var : AllVariables) {
+                
+            }
+        }
+
+        inline ExpT IncompleteEFSM::MakeGuard(const map<string, ExprTypeRef>& DomainVars,
+                                              const ExpT& UncoveredPred, 
+                                              const vector<ExpT>& GuardExps)
+        {
+            auto Mgr = TheLTS->GetMgr();
+
             map<ExprTypeRef, set<ExpT>> SymmetricVarsByType;
             map<string, ExpT> ActualDomainVars;
             vector<ExpT> SymmDomainVars;
@@ -348,7 +395,127 @@ namespace ESMC {
 
             auto GuardOp = TheLTS->MakeUF(GuardFuncName, DomTypes, TheLTS->MakeBoolType());
             auto GuardExp = TheLTS->MakeOp(GuardOp, AppArgs);
+
+            // We're done constructing the expression for the guard
+            // but we need to constrain it to ensure determinism, etc.
+
+            // Ensure that the guard is always in the uncovered region
+            auto GuardInUncovered = TheLTS->MakeOp(LTSOps::OpIMPLIES, GuardExp, UncoveredPred);
+            // Ensure that the guard and the rest of the guards are disjoint
+            vector<ExpT> DisjointConstraints;
+            for (auto const& OtherGuard : GuardExps) {
+                auto Conjunction = TheLTS->MakeOp(LTSOps::OpAND, Guard, OtherGuard);
+                DisjointConstraints.push_back(TheLTS->MakeOp(LTSOps::OpNOT, Conjunction));
+            }
+            ExpT GuardDisjoint = ExpT::NullPtr;
+            if (DisjointConstraints.size() == 0) {
+                GuardDisjoint = TheLTS->MakeTrue();
+            } else if (DisjointConstraints.size() == 1) {
+                GuardDisjoint = DisjointConstraints[0];
+            } else {
+                GuardDisjoint = TheLTS->MakeOp(LTSOps::OpAND, DisjointConstraints);
+            }
+            
+            auto FinalConstraint = TheLTS->MakeOp(LTSOps::OpAND, 
+                                                  GuardInUncovered, 
+                                                  GuardDisjoint);
+            // Quantify all the domain variables
+            vector<ExprTypeRef> QSorts;
+            MgrT::SubstMapT SubstMap;
+            for (auto const& Var : DomainVars) {
+                auto VarExp = TheLTS->MakeVar(Var.first, Var.second);
+                SubstMap[VarExp] = TheLTS->MakeBoundVar(i, Var.second);
+            }
+            
             return GuardExp;
+        }
+
+        inline vector<LTSAssignRef> 
+        IncompleteEFSM::MakeUpdates(const map<string, ExprTypeRef>& DomainVars)
+        {
+            vector<LTSAssignRef> Retval;
+            auto Mgr = TheLTS->GetMgr();
+
+            map<ExprTypeRef, set<ExpT>> SymmetricVarsByType;
+            map<string, ExpT> ActualDomainVars;
+            vector<ExpT> SymmDomainVars;
+            // gather up the symmetric vars in the domain
+            for (auto const& NameType : DomainVars) {
+                auto VarExp = TheLTS->MakeVar(NameType.first, NameType.second);
+                if (NameType.second->Is<Exprs::ExprSymmetricType>()) {
+                    SymmetricVarsByType[NameType.second].insert(VarExp);
+                } else {
+                    ActualDomainVars[NameType.first] = VarExp;
+                }
+            }
+            
+            // for each symmetric type, which has more than one variable
+            // of the type, (say n) we create choose(n, 2) booleans
+            for (auto const& TypeSymmVars : SymmetricVarsByType) {
+                if (TypeSymmVars.second.size() >= 2) {
+                    auto const& SymmVars = TypeSymmVars.second;
+                    
+                    for (auto it1 = SymmVars.begin(); it1 != SymmVars.end(); ++it1) {
+                        for (auto it2 = next(it1); it2 != SymmVars.end(); ++it2) {
+                            SymmDomainVars.push_back(TheLTS->MakeOp(LTSOps::OpEQ, *it1, *it2));
+                        }
+                    }
+                }
+            }
+            
+            for (auto const& Var : UpdateableVariables) {
+                vector<ExprTypeRef> DomTypes;
+                vector<ExpT> AppArgs;
+
+                for (auto const& DomVar : ActualDomainVars) {
+                    DomTypes.push_back(DomVar.second->GetType());
+                    AppArgs.push_back(DomVar.second);
+                }
+                for (auto const& SymmVar : SymmDomainVars) {
+                    DomTypes.push_back(TheLTS->MakeBoolType());
+                    AppArgs.push_back(SymmVar);
+                }
+
+                auto LHSExp = TheLTS->MakeVar(Var.first, Var.second);
+                auto LHSType = LHSExp->GetType();
+
+                if (LHSType->Is<Exprs::ExprSymmetricType>()) {
+                    auto const& SymmVarsOfType = SymmetricVarsByType[LHSType];
+
+                    if (SymmVarsOfType.size() == 0) {
+                        continue;
+                    }
+
+                    // introduce additional boolean flags for 
+                    // the values of the arguments
+                    auto TypeElems = LHSType->GetElements();
+                    const u32 NumTypeElems = TypeElems.size();
+
+                    for (u32 i = 0; i < NumTypeElems; ++i) {
+                        DomTypes.push_back(TheLTS->MakeBoolType());
+                        vector<ExpT> Disjuncts;
+                        for (auto it = SymmVarsOfType.begin(); 
+                             it != SymmVarsOfType.end(); ++it) {
+                            Disjuncts.push_back(Mgr->MakeExpr(LTSOps::OpEQ,
+                                                              Mgr->MakeVal(TypeElems[i], 
+                                                                           LHSType),
+                                                              *it));
+                        }
+                        if (Disjuncts.size() == 1) {
+                            AppArgs.push_back(Disjuncts[0]);
+                        } else {
+                            AppArgs.push_back(Mgr->MakeExpr(LTSOps::OpOR, Disjuncts));
+                        }
+                    }
+                }
+                // Make a new uninterpreted function
+                string UpdateOpName = (string)"Update_" + Var.first + "_" + 
+                    to_string(UFUIDGen.GetUID());
+                auto UpdateOp = TheLTS->MakeUF(UpdateOpName, DomTypes, LHSType);
+                auto RHSExp = TheLTS->MakeOp(UpdateOp, AppArgs);
+                Retval.push_back(new LTSAssignSimple(LHSExp, RHSExp));
+            }
+            return Retval;
         }
 
         inline void 
@@ -359,8 +526,9 @@ namespace ESMC {
                                                    vector<ExpT>& GuardExps, 
                                                    const ExpT& UncoveredPred)
         {
-            auto GuardExp = MakeGuard(DomainVars);
-            auto&& Updates = MakeUpdates(Domainvars);
+            auto GuardExp = MakeGuard(DomainVars, UncoveredPred, GuardExps);
+            GuardExps.push_back(GuardExp);
+            auto&& Updates = MakeUpdates(DomainVars);
 
             if (MsgDecl->GetNewParams().size() == 0) {
                 AddInputTransition(InitStateName, FinalStateName, GuardExp, 
@@ -409,7 +577,8 @@ namespace ESMC {
                 }
 
                 // We're okay to add one or more transitions
-                // Gather the list of variables that can be read from
+                // Gather the list of expresions that could be 
+                // arguments to the uninterpreted functions
                 map<string, ExprTypeRef> DomainVariables;
 
                 for (auto const& Var : AllVariables) {
