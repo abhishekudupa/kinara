@@ -523,49 +523,42 @@ namespace ESMC {
         inline vector<LTSAssignRef> 
         IncompleteEFSM::MakeUpdates(const map<string, ExprTypeRef>& DomainVars)
         {
-            vector<LTSAssignRef> Retval;
-            auto Mgr = TheLTS->GetMgr();
+            map<ExprTypeRef, set<ExpT>> DomainTerms;
+            GetDomainTerms(DomainVars, DomainTerms);
 
-            map<ExprTypeRef, set<ExpT>> SymmetricVarsByType;
-            map<string, ExpT> ActualDomainVars;
-            vector<ExpT> SymmDomainVars;
-            // gather up the symmetric vars in the domain
-            for (auto const& NameType : DomainVars) {
-                auto VarExp = TheLTS->MakeVar(NameType.first, NameType.second);
-                if (NameType.second->Is<Exprs::ExprSymmetricType>()) {
-                    SymmetricVarsByType[NameType.second].insert(VarExp);
-                } else {
-                    ActualDomainVars[NameType.first] = VarExp;
+            // Filter out any symmetric types from the domain terms
+            map<ExprTypeRef, set<ExpT>> SymmetricTerms;
+            for (auto const& DomTerm : DomainTerms) {
+                if (DomTerm.first->Is<Exprs::ExprSymmetricType>()) {
+                    SymmetricTerms.insert(DomTerm);
                 }
             }
-            
-            // for each symmetric type, which has more than one variable
-            // of the type, (say n) we create choose(n, 2) booleans
-            for (auto const& TypeSymmVars : SymmetricVarsByType) {
-                if (TypeSymmVars.second.size() >= 2) {
-                    auto const& SymmVars = TypeSymmVars.second;
-                    
-                    for (auto it1 = SymmVars.begin(); it1 != SymmVars.end(); ++it1) {
-                        for (auto it2 = next(it1); it2 != SymmVars.end(); ++it2) {
-                            SymmDomainVars.push_back(TheLTS->MakeOp(LTSOps::OpEQ, *it1, *it2));
-                        }
+            for (auto const& SymmTerm : SymmetricTerms) {
+                DomainTerms.erase(SymmTerm.first);
+            }
+            vector<ExpT> AppArgs;
+            for (auto const& DomTerm : DomainTerms) {
+                AppArgs.insert(AppArgs.end(), DomTerm.second.begin(),
+                               DomTerm.second.end());
+            }
+            for (auto const& SymmTerm : SymmetricTerms) {
+                auto const& TermSet = SymmTerm.second;
+                if (TermSet.size() == 1) {
+                    continue;
+                }
+                for (auto it1 = TermSet.begin(); it1 != TermSet.end(); ++it1) {
+                    auto it2 = it1;
+                    ++it2;
+                    for (; it2 != TermSet.end(); ++it2) {
+                        auto Exp = TheLTS->MakeOp(LTSOps::OpEQ, *it1, *it2);
+                        AppArgs.push_back(Exp);
                     }
                 }
             }
             
             for (auto const& Var : UpdateableVariables) {
+
                 vector<ExprTypeRef> DomTypes;
-                vector<ExpT> AppArgs;
-
-                for (auto const& DomVar : ActualDomainVars) {
-                    DomTypes.push_back(DomVar.second->GetType());
-                    AppArgs.push_back(DomVar.second);
-                }
-                for (auto const& SymmVar : SymmDomainVars) {
-                    DomTypes.push_back(TheLTS->MakeBoolType());
-                    AppArgs.push_back(SymmVar);
-                }
-
                 auto LHSExp = TheLTS->MakeVar(Var.first, Var.second);
                 auto LHSType = LHSExp->GetType();
 
@@ -700,6 +693,9 @@ namespace ESMC {
 
         void IncompleteEFSM::Freeze()
         {
+            if (EFSMFrozen) {
+                return;
+            }
             // Check for determinism first
             DetEFSM::Freeze();
             // Thaw it
