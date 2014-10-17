@@ -93,28 +93,33 @@ namespace ESMC {
             // Gets all the terms possible 
             // aborts if the number of terms capable of 
             // being generated is unbounded
-            void GetDomainTerms(const map<string, ExprTypeRef>& DomainVars,
-                                map<ExprTypeRef, set<ExpT>>& DomainTerms);
+            void ExpandExpression(const ExpT& VarExp, set<ExpT>& Expansions);
+            set<ExpT> GetDomainTerms(const map<string, ExprTypeRef>& DomainVars);
 
-            void ExtendDomainTerms(map<ExprTypeRef, set<ExpT>>& DomainTerms);
-            
-            inline ExpT FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
-                                          const TPRef& TP, const ExprTypeRef& MsgType) const;
+            inline vector<ExpT> GetSymmetryConstraints(const ExpT& Exp);
 
-            inline ExpT FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
-                                          const TPRef& TP) const;
+            inline ExpT FindNegDisjunction(const vector<LTSSymbTransRef>& Transitions,
+                                           const TPRef& TP,
+                                           const ExpT& RegionConstraint);
+
+            inline ExpT FindInputUncoveredRegion(const vector<LTSSymbTransRef>& Transitions,
+                                                 const TPRef& TP, 
+                                                 const ExprTypeRef& MsgType,
+                                                 const ExpT& RegionConstraint);
+
+            inline ExpT FindGlobalUncoveredRegion(const vector<LTSSymbTransRef>& Transitions,
+                                                  const TPRef& TP);
 
             inline void CompleteInputTransitions(const string& StateName,
                                                  const vector<LTSSymbTransRef>& Transitions,
                                                  const ExpT& UncoveredPredicate,
                                                  const TPRef& TP);
             
-            inline ExpT MakeGuard(const map<string, ExprTypeRef>& DomainArgs,
+            inline ExpT MakeGuard(const set<ExpT>& DomainTerms,
                                   const ExpT& UncoveredPred,
                                   const vector<ExpT>& GuardExps);
             
-
-            inline vector<LTSAssignRef> MakeUpdates(const map<string, ExprTypeRef>& DomainArgs);
+            inline vector<LTSAssignRef> MakeUpdates(const set<ExpT>& DomainTerms);
 
             inline void CompleteOneInputTransition(const string& InitStateName,
                                                    const string& FinalStateName,

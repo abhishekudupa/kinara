@@ -56,7 +56,7 @@ using namespace LTS;
 using namespace Exprs;
 using namespace MC;
 
-const u32 NumCaches = 3;
+const u32 NumCaches = 2;
 const u32 NumAddresses = 1;
 const u32 NumValues = 2;
 const u32 NumDirs = 1;

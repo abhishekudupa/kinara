@@ -379,6 +379,7 @@ namespace ESMC {
             u32 GetIndexID() const;
             u64 Hash() const;
             bool operator == (const ProductState& Other) const;
+            bool Equals(const ProductState* Other) const;
 
             void ClearMarkings() const;
 

@@ -977,7 +977,19 @@ namespace ESMC {
                         } while (SCCState != CurState);
 
                         if (NumStatesInSCC == 1) {
-                            SCCState->MarkNotInSCC();
+                            auto const& Edges = ThePS->GetEdges(SCCState);
+                            bool SelfLoop = false;
+                            for (auto const& Edge : Edges) {
+                                if (Edge->GetTarget() == SCCState) {
+                                    SelfLoop = true;
+                                }
+                            }
+                            if (!SelfLoop) {
+                                SCCState->MarkNotInSCC();                                
+                            } else {
+                                Retval.push_back(CurState);
+                                ++CurSCCID;
+                            }
                         } else if (!FoundAccepting) {
                             // Unmark all the SCCs
                             for (auto SCCState : SCCStateVec) {

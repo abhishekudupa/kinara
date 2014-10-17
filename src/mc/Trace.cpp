@@ -566,18 +566,18 @@ namespace ESMC {
 
             // audupa: DEBUG END
 
-            vector<PSTraceElemT> LoopBack;
+            // Self loop??
+            if (CurEndOfPath->Equals(StartOfLoop)) {
+                return (new LivenessViolation(InitState, StemPath, PathSoFar,
+                                              Checker->Printer, ThePS));
+            }
+
             // Now connect this path back to the original state
+            vector<PSTraceElemT> LoopBack;
             auto FinalPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
                                           [&] (u32 CmdID, const ProductState* State) -> bool
                                           {
-                                              auto SVPtr1 = State->GetSVPtr();
-                                              auto SVPtr2 = StartOfLoop->GetSVPtr();
-                                              return (SVPtr1->Equals(*SVPtr2) &&
-                                                      State->GetMonitorState() ==
-                                                      StartOfLoop->GetMonitorState() &&
-                                                      State->GetIndexID() == 
-                                                      StartOfLoop->GetIndexID());
+                                              return (State->Equals(StartOfLoop));
                                           },
                                           LoopBack, SCCNodes);
 
@@ -589,7 +589,6 @@ namespace ESMC {
             return (new LivenessViolation(InitState, StemPath, PathSoFar,
                                           Checker->Printer, ThePS));
         }
-
 
         // Takes ownership of trace elems
         // and initial state

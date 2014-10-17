@@ -42,6 +42,7 @@
 #define ESMC_LTS_TERM_SEMANTICIZER_HPP_
 
 #include <unordered_map>
+#include <unordered_set>
 #include <set>
 #include <vector>
 #include <z3.h>
@@ -118,6 +119,7 @@ namespace ESMC {
 
             using namespace ESMC::Exprs;
             extern const unordered_map<i64, string> OpCodeToNameMap;
+            extern const unordered_set<i64> LTSReservedOps;
             extern const string BoundVarPrefix;
             extern const ExprTypeRef InvalidType;
 
@@ -128,6 +130,11 @@ namespace ESMC {
         using namespace Detail;
         using namespace TP;
         using namespace Exprs;
+
+        static inline bool IsLTSReserved(i64 OpCode)
+        {
+            return (Detail::LTSReservedOps.find(OpCode) != Detail::LTSReservedOps.end());
+        }
 
         // A context class for remembering type info
         // etc about lowered expressions, so that if and when

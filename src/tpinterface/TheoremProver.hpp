@@ -63,6 +63,18 @@ namespace ESMC {
             SATISFIABLE, UNSATISFIABLE, UNKNOWN
         };
 
+        class IncompleteTheoryException : public exception
+        {
+        private:
+            ExpT Expression;
+            string ExceptionInfo;
+            
+        public:
+            IncompleteTheoryException(const ExpT& Expression) throw ();
+            virtual ~IncompleteTheoryException() throw ();
+            virtual const char* what() const throw () override;
+            const ExpT& GetExpression() const;
+        };
 
         class TheoremProver : public RefCountable
         {
