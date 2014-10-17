@@ -420,29 +420,30 @@ namespace ESMC {
             }
         }
 
-        void ChannelEFSM::AddInputMsg(const ExprTypeRef& MessageType,
-                                      const vector<ExpT>& Params)
+        SymmMsgDeclRef ChannelEFSM::AddInputMsg(const ExprTypeRef& MessageType,
+                                                const vector<ExpT>& Params)
         {
             throw ESMCError((string)"ChannelEFSM::AddInputMsg() should not be called");
         }
 
-        void ChannelEFSM::AddInputMsgs(const vector<ExpT>& NewParams, 
-                                       const ExpT& Constraint,
-                                       const ExprTypeRef& MessageType,
-                                       const vector<ExpT>& MessageParams)
+        SymmMsgDeclRef ChannelEFSM::AddInputMsgs(const vector<ExpT>& NewParams, 
+                                                 const ExpT& Constraint,
+                                                 const ExprTypeRef& MessageType,
+                                                 const vector<ExpT>& MessageParams)
         {
             throw ESMCError((string)"ChannelEFSM::AddInputMsgs() should not be called");
         }
 
-        void ChannelEFSM::AddOutputMsg(const ExprTypeRef& MessageType,
-                                       const vector<ExpT>& Params)
+        SymmMsgDeclRef ChannelEFSM::AddOutputMsg(const ExprTypeRef& MessageType,
+                                                 const vector<ExpT>& Params)
         {
             throw ESMCError((string)"ChannelEFSM::AddOutputMsg() should not be called");
         }
 
-        void ChannelEFSM::AddOutputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
-                                        const ExprTypeRef& MessageType,
-                                        const vector<ExpT>& MessageParams)
+        SymmMsgDeclRef ChannelEFSM::AddOutputMsgs(const vector<ExpT>& NewParams, 
+                                                  const ExpT& Constraint,
+                                                  const ExprTypeRef& MessageType,
+                                                  const vector<ExpT>& MessageParams)
         {
             throw ESMCError((string)"ChannelEFSM::AddOutputMsgs() should not be called");
         }

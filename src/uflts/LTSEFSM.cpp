@@ -38,6 +38,7 @@
 // Code:
 
 #include "../tpinterface/TheoremProver.hpp"
+#include "../utils/CombUtils.hpp"
 
 #include "LTSEFSM.hpp"
 #include "LTSUtils.hpp"
@@ -181,6 +182,230 @@ namespace ESMC {
             // Nothing here
         }
 
+        void IncompleteEFSM::AddVariable(const string& VarName, const ExprTypeRef& VarType)
+        {
+            DetEFSM::AddVariable(VarName, VarType);
+            UpdateableVariables[VarName] = VarType;
+            AllVariables[VarName] = VarType;
+        }
+
+        void IncompleteEFSM::IgnoreMsgOnState(const SymmMsgDeclRef& MsgDecl,
+                                              const string &StateName)
+        {
+            if (States.find(StateName) == States.end()) {
+                throw ESMCError((string)"State named \"" + StateName + "\" is " + 
+                                "not a valid state for EFSM \"" + Name + "\"" + 
+                                " in call to IncompleteEFSM::IgnoreMsgOnState()");
+            }
+            if (find(SymmetricMessages.begin(), SymmetricMessages.end(), MsgDecl) ==
+                SymmetricMessages.end()) {
+                throw ESMCError((string)"Symmetric message undeclared as input " + 
+                                "or output to EFSM in call to " + 
+                                "IncompleteEFSM::IgnoreMsgOnState()");
+            }
+            BlockedCompletions[StateName].insert(MsgDecl);
+        }
+
+        void IncompleteEFSM::MarkStateComplete(const string& StateName)
+        {
+            if (States.find(StateName) == States.end()) {
+                throw ESMCError((string)"State named \"" + StateName + "\" is " + 
+                                "not a valid state for EFSM \"" + Name + "\"" + 
+                                " in call to IncompleteEFSM::IgnoreMsgOnState()");
+            }
+            CompleteStates.insert(StateName);
+        }
+
+        void IncompleteEFSM::MarkVariableReadOnly(const string& VarName)
+        {
+            auto const& STEntry = SymTab.Lookup(VarName);
+            if (STEntry == DeclRef::NullPtr || !STEntry->Is<VarDecl>()) {
+                throw ESMCError((string)"Object named \"" + VarName + "\" is not " +
+                                "a variable of the EFSM named \"" + Name + "\"" + 
+                                " in call to IncompleteEFSM::MarkVariableReadOnly()");
+            }
+            ReadOnlyVars.insert(VarName);
+            UpdateableVariables.erase(VarName);
+        }
+
+        void IncompleteEFSM::ExtendDomainTerms(map<ExprTypeRef, set<ExpT>>& DomainTerms)
+        {
+            // first attempt to extend record types
+            auto Mgr = TheLTS->GetMgr();
+            bool Modified = false;
+            for (auto const& DomTerm : DomainTerms) {
+                auto const& TermType = DomTerm.first;
+                if (!TermType->Is<Exprs::ExprRecordType>()) {
+                    continue;
+                }
+                
+                Modified = true;
+                auto TypeAsRec = TermType->SAs<Exprs::ExprRecordType>();
+                auto const& Fields = TypeAsRec->GetMemberVec();
+
+                for (auto const& Field : Fields) {
+                    auto FAType = TheLTS->MakeFieldAccessType();
+                    auto FAVar = TheLTS->MakeVar(Field.first, FAType);
+                    for (auto const& Exp : DomTerm.second) {
+                        auto NewExp = TheLTS->MakeOp(LTSOps::OpField, Exp, FAVar);
+                        DomainTerms[Field.second].insert(NewExp);
+                    }
+                }
+
+                DomainTerms.erase(DomTerm.first);
+                break;
+            }
+
+            if (Modified) {
+                return;
+            }
+
+            // Now attempt to extend array types 
+            // which are indexed by non-symmetric values
+            for (auto const& DomTerm : DomainTerms) {
+                auto const& TermType = DomTerm.first;
+                if (!TermType->Is<Exprs::ExprArrayType>()) {
+                    continue;
+                }
+
+                auto TypeAsArr = TermType->SAs<ExprArrayType>();
+                auto IndexType = TypeAsArr->GetIndexType();
+                auto ValueType = TypeAsArr->GetValueType();
+                if (IndexType->Is<Exprs::ExprSymmetricType>()) {
+                    continue;
+                }
+
+                Modified = true;
+                auto const& IndexElems = IndexType->GetElements();
+                for (auto const& IndexElem : IndexElems) {
+                    auto IndexExp = TheLTS->MakeVal(IndexElem, IndexType);
+                    for (auto const& Exp : DomTerm.second) {
+                        auto NewExp = TheLTS->MakeOp(LTSOps::OpIndex, Exp, IndexExp);
+                        DomainTerms[ValueType].insert(NewExp);
+                    }
+                }
+                
+                DomainTerms.erase(DomTerm.first);
+                break;
+            }
+
+            if (Modified) {
+                return;
+            }
+
+            // Finally, we extend array types which are 
+            // indexed by symmetric values
+            for (auto const& DomTerm : DomainTerms) {
+                auto const& TermType = DomTerm.first;
+                if (!TermType->Is<Exprs::ExprArrayType>()) {
+                    continue;
+                }
+
+                auto TypeAsArr = TermType->SAs<ExprArrayType>();
+                auto IndexType = TypeAsArr->GetIndexType();
+                auto ValueType = TypeAsArr->GetValueType();
+                if (!IndexType->Is<Exprs::ExprSymmetricType>()) {
+                    continue;
+                }
+                
+                // We now try to find terms of the index type
+                auto it = DomainTerms.find(IndexType);
+                if (it == DomainTerms.end()) {
+                    continue;
+                }
+
+                auto const& IndexExps = it->second;
+                for (auto const& IndexExp : IndexExps) {
+                    for (auto const& Exp : DomTerm.second) {
+                        // Check if the IndexExp includes Exp
+                        auto&& SearchRes = 
+                            Mgr->Gather(IndexExp, 
+                                        [&] (const ExpBaseT* ExpPtr) -> bool
+                                        {
+                                            return (Exp == ExpPtr);
+                                        });
+
+                        if (SearchRes.size() > 0) {
+                            throw ESMCError((string)"Unbounded expansion encountered!");
+                        }
+
+                        auto NewExp = TheLTS->MakeOp(LTSOps::OpIndex, Exp, IndexExp);
+                        DomainTerms[ValueType].insert(NewExp);
+                    }
+                }
+            }
+        }
+        
+        void IncompleteEFSM::GetDomainTerms(const map<string, ExprTypeRef>& DomainVars, 
+                                            map<ExprTypeRef, set<ExpT>>& DomainTerms)
+        {
+            DomainTerms.clear();
+            
+            for (auto const& Var : DomainVars) {
+                auto VarExp = TheLTS->MakeVar(Var.first, Var.second);
+                DomainTerms[Var.second].insert(VarExp);
+            }
+
+            // extend the domain terms until fixpoint or until
+            // we realize that the number of terms is unbounded
+            map<ExprTypeRef, set<ExpT>> OldDomainTerms;
+            do {
+                OldDomainTerms = DomainTerms;
+                ExtendDomainTerms(DomainTerms);
+            } while (OldDomainTerms != DomainTerms);
+
+            // Finally, filter out all non-scalar types from the domain terms
+            DomainTerms.clear();
+            for (auto const& DomTerm : OldDomainTerms) {
+                if (DomTerm.first->Is<Exprs::ExprScalarType>()) {
+                    DomainTerms.insert(DomTerm);
+                }
+            }
+            return;
+        }
+
+        // Find the predicate left uncovered by 
+        // input transition on MsgType
+        inline ExpT
+        IncompleteEFSM::FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
+                                          const TPRef& TP, const ExprTypeRef& MsgType) const
+        {
+            vector<ExpT> Guards = { TheLTS->MakeFalse() };
+            ExpT CoveredGuard = ExpT::NullPtr;
+
+            auto&& RelTransitions = 
+                Filter<LTSSymbTransRef>(Transitions.begin(), 
+                                        Transitions.end(),
+                                        [&] (const LTSSymbTransRef& Trans) -> bool 
+                                        {
+                                            auto TransAsInput = 
+                                                Trans->As<LTSSymbInputTransition>();
+                                            return (TransAsInput != nullptr &&
+                                                    TransAsInput->GetMessageType() == MsgType);
+                                        });
+
+            for (auto const& Trans : RelTransitions) {
+                Guards.push_back(Trans->GetGuard());
+            }
+
+            if (Guards.size() > 1) {
+                CoveredGuard = TheLTS->MakeOp(LTSOps::OpOR, Guards);
+            } else {
+                CoveredGuard = Guards[0];
+            }
+
+            auto NegCovered = TheLTS->MakeOp(LTSOps::OpNOT, CoveredGuard);
+            auto Res = TP->CheckSat(NegCovered);
+            if (Res == TPResult::SATISFIABLE) {
+                return NegCovered;
+            } else if (Res == TPResult::UNSATISFIABLE) {
+                return TheLTS->MakeFalse();
+            } else {
+                throw ESMCError((string)"Could not ensure sat or unsat of proposition:\n" + 
+                                NegCovered->ToString() + "\n.Theory incomplete perhaps?");
+            }
+        }
+
         inline ExpT 
         IncompleteEFSM::FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
                                           const TPRef& TP) const
@@ -213,12 +438,272 @@ namespace ESMC {
             }
         }
 
+        inline ExpT IncompleteEFSM::MakeGuard(const map<string, ExprTypeRef>& DomainVars,
+                                              const ExpT& UncoveredPred, 
+                                              const vector<ExpT>& GuardExps)
+        {
+            // Get the relevant domain terms first
+            map<ExprTypeRef, set<ExpT>> DomainTerms;
+            GetDomainTerms(DomainVars, DomainTerms);
+
+            // Filter out any symmetric types from the domain terms
+            map<ExprTypeRef, set<ExpT>> SymmetricTerms;
+            for (auto const& DomTerm : DomainTerms) {
+                if (DomTerm.first->Is<Exprs::ExprSymmetricType>()) {
+                    SymmetricTerms.insert(DomTerm);
+                }
+            }
+            for (auto const& SymmTerm : SymmetricTerms) {
+                DomainTerms.erase(SymmTerm.first);
+            }
+            vector<ExpT> AppArgs;
+            for (auto const& DomTerm : DomainTerms) {
+                AppArgs.insert(AppArgs.end(), DomTerm.second.begin(),
+                               DomTerm.second.end());
+            }
+            for (auto const& SymmTerm : SymmetricTerms) {
+                auto const& TermSet = SymmTerm.second;
+                if (TermSet.size() == 1) {
+                    continue;
+                }
+                for (auto it1 = TermSet.begin(); it1 != TermSet.end(); ++it1) {
+                    auto it2 = it1;
+                    ++it2;
+                    for (; it2 != TermSet.end(); ++it2) {
+                        auto Exp = TheLTS->MakeOp(LTSOps::OpEQ, *it1, *it2);
+                        AppArgs.push_back(Exp);
+                    }
+                }
+            }
+
+            // We're now ready to create the guard op
+            auto GuardUID = UFUIDGen.GetUID();
+            auto GuardFuncName = (string)"SynthGuard_" + to_string(GuardUID);
+            vector<ExprTypeRef> DomTypes;
+            
+            for (auto const& AppArg : AppArgs) {
+                DomTypes.push_back(AppArg->GetType());
+            }
+
+            auto GuardOp = TheLTS->MakeUF(GuardFuncName, DomTypes, TheLTS->MakeBoolType());
+            auto GuardExp = TheLTS->MakeOp(GuardOp, AppArgs);
+
+            // We're done constructing the expression for the guard
+            // but we need to constrain it to ensure determinism, etc.
+
+            // Ensure that the guard is always in the uncovered region
+            auto GuardInUncovered = TheLTS->MakeOp(LTSOps::OpIMPLIES, GuardExp, UncoveredPred);
+            // Ensure that the guard and the rest of the guards are disjoint
+            vector<ExpT> DisjointConstraints;
+            for (auto const& OtherGuard : GuardExps) {
+                auto Conjunction = TheLTS->MakeOp(LTSOps::OpAND, GuardExp, OtherGuard);
+                DisjointConstraints.push_back(TheLTS->MakeOp(LTSOps::OpNOT, Conjunction));
+            }
+            ExpT GuardDisjoint = ExpT::NullPtr;
+            if (DisjointConstraints.size() == 0) {
+                GuardDisjoint = TheLTS->MakeTrue();
+            } else if (DisjointConstraints.size() == 1) {
+                GuardDisjoint = DisjointConstraints[0];
+            } else {
+                GuardDisjoint = TheLTS->MakeOp(LTSOps::OpAND, DisjointConstraints);
+            }
+            
+            auto FinalConstraint = TheLTS->MakeOp(LTSOps::OpAND, 
+                                                  GuardInUncovered, 
+                                                  GuardDisjoint);
+            auto Mgr = TheLTS->GetMgr();
+            FinalConstraint = Mgr->Simplify(FinalConstraint);
+
+            cout << "Final Constraint:" << endl << FinalConstraint->ToString() << endl;
+
+            // TODO: Finish up constraint
+            return GuardExp;
+        }
+
+        inline vector<LTSAssignRef> 
+        IncompleteEFSM::MakeUpdates(const map<string, ExprTypeRef>& DomainVars)
+        {
+            map<ExprTypeRef, set<ExpT>> DomainTerms;
+            GetDomainTerms(DomainVars, DomainTerms);
+
+            // Filter out any symmetric types from the domain terms
+            map<ExprTypeRef, set<ExpT>> SymmetricTerms;
+            for (auto const& DomTerm : DomainTerms) {
+                if (DomTerm.first->Is<Exprs::ExprSymmetricType>()) {
+                    SymmetricTerms.insert(DomTerm);
+                }
+            }
+            for (auto const& SymmTerm : SymmetricTerms) {
+                DomainTerms.erase(SymmTerm.first);
+            }
+            vector<ExpT> AppArgs;
+            for (auto const& DomTerm : DomainTerms) {
+                AppArgs.insert(AppArgs.end(), DomTerm.second.begin(),
+                               DomTerm.second.end());
+            }
+            for (auto const& SymmTerm : SymmetricTerms) {
+                auto const& TermSet = SymmTerm.second;
+                if (TermSet.size() == 1) {
+                    continue;
+                }
+                for (auto it1 = TermSet.begin(); it1 != TermSet.end(); ++it1) {
+                    auto it2 = it1;
+                    ++it2;
+                    for (; it2 != TermSet.end(); ++it2) {
+                        auto Exp = TheLTS->MakeOp(LTSOps::OpEQ, *it1, *it2);
+                        AppArgs.push_back(Exp);
+                    }
+                }
+            }
+            
+            vector<LTSAssignRef> Retval;
+            // for (auto const& Var : UpdateableVariables) {
+
+            //     vector<ExprTypeRef> DomTypes;
+            //     auto LHSExp = TheLTS->MakeVar(Var.first, Var.second);
+            //     auto LHSType = LHSExp->GetType();
+
+            //     if (LHSType->Is<Exprs::ExprSymmetricType>()) {
+            //         auto const& SymmVarsOfType = SymmetricVarsByType[LHSType];
+
+            //         if (SymmVarsOfType.size() == 0) {
+            //             continue;
+            //         }
+
+            //         // introduce additional boolean flags for 
+            //         // the values of the arguments
+            //         auto TypeElems = LHSType->GetElements();
+            //         const u32 NumTypeElems = TypeElems.size();
+
+            //         for (u32 i = 0; i < NumTypeElems; ++i) {
+            //             DomTypes.push_back(TheLTS->MakeBoolType());
+            //             vector<ExpT> Disjuncts;
+            //             for (auto it = SymmVarsOfType.begin(); 
+            //                  it != SymmVarsOfType.end(); ++it) {
+            //                 Disjuncts.push_back(Mgr->MakeExpr(LTSOps::OpEQ,
+            //                                                   Mgr->MakeVal(TypeElems[i], 
+            //                                                                LHSType),
+            //                                                   *it));
+            //             }
+            //             if (Disjuncts.size() == 1) {
+            //                 AppArgs.push_back(Disjuncts[0]);
+            //             } else {
+            //                 AppArgs.push_back(Mgr->MakeExpr(LTSOps::OpOR, Disjuncts));
+            //             }
+            //         }
+            //     }
+            //     // Make a new uninterpreted function
+            //     string UpdateOpName = (string)"Update_" + Var.first + "_" + 
+            //         to_string(UFUIDGen.GetUID());
+            //     auto UpdateOp = TheLTS->MakeUF(UpdateOpName, DomTypes, LHSType);
+            //     auto RHSExp = TheLTS->MakeOp(UpdateOp, AppArgs);
+            //     Retval.push_back(new LTSAssignSimple(LHSExp, RHSExp));
+            // }
+            return Retval;
+        }
+
+        inline void 
+        IncompleteEFSM::CompleteOneInputTransition(const string& InitStateName, 
+                                                   const string& FinalStateName,
+                                                   const SymmMsgDeclRef& MsgDecl,
+                                                   const map<string, ExprTypeRef>& DomainVars, 
+                                                   vector<ExpT>& GuardExps, 
+                                                   const ExpT& UncoveredPred)
+        {
+            auto GuardExp = MakeGuard(DomainVars, UncoveredPred, GuardExps);
+            GuardExps.push_back(GuardExp);
+            auto&& Updates = MakeUpdates(DomainVars);
+
+            if (MsgDecl->GetNewParams().size() == 0) {
+                AddInputTransition(InitStateName, FinalStateName, GuardExp, 
+                                   Updates, "InMsg", MsgDecl->GetMessageType(),
+                                   MsgDecl->GetMessageParams());
+            }
+        }
+
+        inline void 
+        IncompleteEFSM::CompleteInputTransitions(const string& StateName,
+                                                 const vector<LTSSymbTransRef>& TransFromState,
+                                                 const ExpT& UncoveredPredicate, const TPRef& TP)
+        {
+            for (auto const& MsgDecl : SymmetricMessages) {
+                if (!MsgDecl->IsInput()) {
+                    continue;
+                }
+                if (CompleteStates.find(StateName) != CompleteStates.end()) {
+                    continue;
+                }
+                auto it = BlockedCompletions.find(StateName);
+                if (it != BlockedCompletions.end() &&
+                    it->second.find(MsgDecl) != it->second.end()) {
+                    continue;
+                }
+
+                // We need to add transitions
+                // find the predicate already covered
+                // for this state on this input message
+                auto UncoveredMsgPred = FindUncoveredPred(TransFromState, TP, 
+                                                          MsgDecl->GetMessageType());
+                if (UncoveredMsgPred == TheLTS->MakeFalse()) {
+                    continue;
+                }
+
+                auto ActualUncoveredPred = TheLTS->MakeOp(LTSOps::OpAND, UncoveredPredicate,
+                                                          UncoveredMsgPred);
+                
+                auto SatRes = TP->CheckSat(ActualUncoveredPred);
+                if (SatRes == TPResult::UNSATISFIABLE) {
+                    continue;
+                } else if (SatRes == TPResult::UNKNOWN) {
+                    throw ESMCError((string)"Could not ensure sat or unsat of proposition:\n" + 
+                                    ActualUncoveredPred->ToString() + "\n." + 
+                                    "Perhaps the theory is incomplete?");
+                }
+
+                // We're okay to add one or more transitions
+                // Gather the list of expresions that could be 
+                // arguments to the uninterpreted functions
+                map<string, ExprTypeRef> DomainVariables;
+
+                for (auto const& Var : AllVariables) {
+                    DomainVariables.insert(Var);
+                }
+                // add in the message params to the domain vars
+                auto const& NewMsgParams = MsgDecl->GetNewParams();
+                for (auto const& NewMsgParam : NewMsgParams) {
+                    auto ParamAsVar = NewMsgParam->As<Exprs::VarExpression>();
+                    assert(ParamAsVar != nullptr);
+                    DomainVariables[ParamAsVar->GetVarName()] = ParamAsVar->GetVarType();
+                }
+
+                vector<ExpT> GuardExps;
+
+                // The target can be any state
+                for (auto const& NameState : States) {
+                    cout << "Completing input transition on state \"" 
+                         << StateName << "\" on message type:" << endl
+                         << MsgDecl->ToString() << endl
+                         << "to state \"" << NameState.first << "\" on EFSM "
+                         << this->Name << endl;
+                        
+                    CompleteOneInputTransition(StateName, NameState.first, MsgDecl,
+                                               DomainVariables, GuardExps, ActualUncoveredPred);
+                }
+            }
+        }
+
         void IncompleteEFSM::Freeze()
         {
-            // Add all potential transitions guarded by 
-            // uninterpreted functions and with updates
-            // being uninterpreted functions
+            if (EFSMFrozen) {
+                return;
+            }
+            // Check for determinism first
+            DetEFSM::Freeze();
+            // Thaw it
+            EFSMFrozen = false;
+
             auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
+            vector<ExpT> AddedGuards;
             
             // for each state
             for (auto const& NameState : States) {
@@ -230,7 +715,15 @@ namespace ESMC {
                                                        StateName);
                                            });
                 auto UncoveredPred = FindUncoveredPred(TransFromState, TP);
+                if (UncoveredPred == TheLTS->MakeFalse()) {
+                    continue;
+                }
+                
+                // Add transitions
+                CompleteInputTransitions(StateName, TransFromState, UncoveredPred, TP);
             }
+            
+            EFSMFrozen = true;
         }
         
     } /* end namespace LTS */

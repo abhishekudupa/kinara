@@ -147,9 +147,120 @@ namespace ESMC {
                 return TheTransformer.ExpStack[0];
             }
 
-        } /* end namespace Detail */
+            ArrayRValueTransformer::ArrayRValueTransformer(MgrT* Mgr)
+                : VisitorBaseT("ArrayRValueTransformer"), Mgr(Mgr)
+            {
+                // Nothing here
+            }
+
+            ArrayRValueTransformer::~ArrayRValueTransformer()
+            {
+                // Nothing here
+            }
+
+            void ArrayRValueTransformer::VisitVarExpression(const VarExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void ArrayRValueTransformer::VisitBoundVarExpression(const BoundVarExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void ArrayRValueTransformer::VisitConstExpression(const ConstExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void ArrayRValueTransformer::VisitOpExpression(const OpExpT* Exp)
+            {
+                VisitorBaseT::VisitOpExpression(Exp);
+
+                auto OpCode = Exp->GetOpCode();
+                auto const& Children = Exp->GetChildren();
+                
+                const u32 NumChildren = Exp->GetChildren().size();
+                vector<ExpT> NewChildren(NumChildren);
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    NewChildren[NumChildren - i - 1] = ExpStack.back();
+                    ExpStack.pop_back();
+                }
+
+                if (OpCode != LTSOps::OpIndex) {
+                    ExpStack.push_back(Mgr->MakeExpr(OpCode, NewChildren));
+                    return;
+                }
+
+                // An index op
+                auto ArrayType = Children[0]->GetType()->SAs<ExprArrayType>();
+                auto IndexType = ArrayType->GetIndexType();
+                auto ValueType = ArrayType->GetValueType();
+                auto const& IndexElems = IndexType->GetElements();
+                const u32 IndexCardinality = IndexElems.size();
+
+                if (IndexCardinality == 1) {
+                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpIndex, NewChildren[0],
+                                                     Mgr->MakeVal(IndexElems[0], IndexType)));
+                } else {
+                    auto AccExp = Mgr->MakeExpr(LTSOps::OpIndex, NewChildren[0],
+                                                Mgr->MakeVal(IndexElems.back(), IndexType));
+                    for (u32 i = 0; i < IndexCardinality - 1; ++i) {
+
+                        auto CurVal = Mgr->MakeVal(IndexElems[IndexCardinality - i - 2],
+                                                   IndexType);
+
+                        AccExp = Mgr->MakeExpr(LTSOps::OpITE,
+                                               Mgr->MakeExpr(LTSOps::OpEQ,
+                                                             NewChildren[1], CurVal),
+                                               Mgr->MakeExpr(LTSOps::OpIndex,
+                                                             NewChildren[0], CurVal),
+                                               AccExp);
+                    }
+                    ExpStack.push_back(AccExp);
+                }
+            }
+
+            void ArrayRValueTransformer::VisitEQuantifiedExpression(const EQExpT* Exp)
+            {
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const& QExpr = Exp->GetQExpression();
+                QExpr->Accept(this);
+                auto NewExp = ExpStack.back();
+                ExpStack.pop_back();
+                ExpStack.push_back(Mgr->MakeExists(QVarTypes, NewExp));
+            }
+
+            void ArrayRValueTransformer::VisitAQuantifiedExpression(const AQExpT* Exp)
+            {
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const& QExpr = Exp->GetQExpression();
+                QExpr->Accept(this);
+                auto NewExp = ExpStack.back();
+                ExpStack.pop_back();
+                ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewExp));
+            }
+
+            ExpT ArrayRValueTransformer::Do(MgrT* Mgr, const ExpT& Exp)
+            {
+                ArrayRValueTransformer TheTransformer(Mgr);
+                Exp->Accept(&TheTransformer);
+                return TheTransformer.ExpStack[0];
+            }
+
+        } /* End namespace Detail */
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
 // 
 // LTSUtils.cpp ends here
+
+
+
+
+
+
+
+
+
+

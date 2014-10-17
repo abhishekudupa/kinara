@@ -110,6 +110,7 @@ namespace ESMC {
         typedef typename LTSTermSemanticizer<LTSExtensionT>::LExpT LExpT;
         typedef Exprs::ExpressionVisitorBase<LTSExtensionT, LTSTermSemanticizer> VisitorBaseT;
 
+        typedef Exprs::ExpressionBase<LTSExtensionT, LTSTermSemanticizer> ExpBaseT;
         typedef Exprs::VarExpression<LTSExtensionT, LTSTermSemanticizer> VarExpT;
         typedef Exprs::ConstExpression<LTSExtensionT, LTSTermSemanticizer> ConstExpT;
         typedef Exprs::BoundVarExpression<LTSExtensionT, LTSTermSemanticizer> BoundVarExpT;

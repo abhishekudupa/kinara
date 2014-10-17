@@ -40,10 +40,11 @@
 #if !defined ESMC_LTS_EFSM_HPP_
 #define ESMC_LTS_EFSM_HPP_
 
+#include "../utils/UIDGenerator.hpp"
+
 #include "LTSTypes.hpp"
 #include "LTSState.hpp"
 #include "SymbolTable.hpp"
-
 #include "LTSEFSMBase.hpp"
 
 namespace ESMC {
@@ -76,16 +77,51 @@ namespace ESMC {
             // Override freeze to check for determinism
             virtual void Freeze() override;
         };
-
         
         class IncompleteEFSM : public DetEFSM
         {
         private:
-            vector<LTSTransRef> AddedTransitions;
-            unordered_set<Z3Expr, Z3ExprHasher> ConstraintSet;
+            // Constraints over uninterpreted functions
+            set<ExpT> Constraints;
+            map<string, set<SymmMsgDeclRef>> BlockedCompletions;
+            set<string> CompleteStates;
+            set<string> ReadOnlyVars;
+            map<string, ExprTypeRef> UpdateableVariables;
+            map<string, ExprTypeRef> AllVariables;
+            UIDGenerator UFUIDGen;
+            
+            // Gets all the terms possible 
+            // aborts if the number of terms capable of 
+            // being generated is unbounded
+            void GetDomainTerms(const map<string, ExprTypeRef>& DomainVars,
+                                map<ExprTypeRef, set<ExpT>>& DomainTerms);
+
+            void ExtendDomainTerms(map<ExprTypeRef, set<ExpT>>& DomainTerms);
+            
+            inline ExpT FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
+                                          const TPRef& TP, const ExprTypeRef& MsgType) const;
 
             inline ExpT FindUncoveredPred(const vector<LTSSymbTransRef>& Transitions,
                                           const TPRef& TP) const;
+
+            inline void CompleteInputTransitions(const string& StateName,
+                                                 const vector<LTSSymbTransRef>& Transitions,
+                                                 const ExpT& UncoveredPredicate,
+                                                 const TPRef& TP);
+            
+            inline ExpT MakeGuard(const map<string, ExprTypeRef>& DomainArgs,
+                                  const ExpT& UncoveredPred,
+                                  const vector<ExpT>& GuardExps);
+            
+
+            inline vector<LTSAssignRef> MakeUpdates(const map<string, ExprTypeRef>& DomainArgs);
+
+            inline void CompleteOneInputTransition(const string& InitStateName,
+                                                   const string& FinalStateName,
+                                                   const SymmMsgDeclRef& MsgDecl,
+                                                   const map<string, ExprTypeRef>& DomainVars,
+                                                   vector<ExpT>& GuardExps,
+                                                   const ExpT& UncoveredPred);
 
         public:
             IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
@@ -93,6 +129,22 @@ namespace ESMC {
                            LTSFairnessType Fairness = LTSFairnessType::None);
 
             virtual ~IncompleteEFSM();
+            // overrides to remember variables
+            virtual void AddVariable(const string& VarName, 
+                                     const ExprTypeRef& VarType) override;
+
+            // Do not add completions particular set of messages on a 
+            // particular state
+            void IgnoreMsgOnState(const SymmMsgDeclRef& MsgDecl,
+                                  const string& StateName);
+            
+            // Do not add any more completions on any message 
+            // type on a particular state
+            void MarkStateComplete(const string& StateName);
+
+            // Do not include updates to variables
+            // in completion
+            void MarkVariableReadOnly(const string& VarName);
 
             // override freeze to add additional transitions
             // and such

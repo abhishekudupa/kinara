@@ -56,7 +56,7 @@ using namespace LTS;
 using namespace Exprs;
 using namespace MC;
 
-const u32 NumCaches = 2;
+const u32 NumCaches = 3;
 const u32 NumAddresses = 1;
 const u32 NumValues = 2;
 const u32 NumDirs = 1;
@@ -390,7 +390,8 @@ int main()
 
     EnvEFSM->Freeze();
 
-    auto CacheEFSM = TheLTS->MakeDetEFSM("Cache", 
+    auto CacheEFSM = 
+        TheLTS->MakeEFSM<IncompleteEFSM>("Cache", 
                                          { CacheParam, DirParam, AddressParam }, 
                                          TrueExp, LTSFairnessType::Strong);
     
@@ -827,8 +828,8 @@ int main()
 
     // The directory now
     vector<ExpT> DirParams = { DirParam, AddressParam };
-    auto DirEFSM = TheLTS->MakeDetEFSM("Directory", DirParams, TrueExp, 
-                                       LTSFairnessType::Strong);
+    auto DirEFSM = TheLTS->MakeEFSM<IncompleteEFSM>("Directory", DirParams, TrueExp, 
+                                                    LTSFairnessType::Strong);
     DirEFSM->AddState("D_I");
     DirEFSM->AddState("D_I_GETX");
     DirEFSM->AddState("D_I_GETS");

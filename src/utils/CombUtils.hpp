@@ -43,14 +43,16 @@
 #include "../common/FwdDecls.hpp"
 
 #include <vector>
+#include <iterator>
 
 namespace ESMC {
 
     template <typename E>
-    static void CrossProdInt(vector<vector<E>>& Result,
-                             vector<E>& Scratch,
-                             typename vector<vector<E>>::const_iterator Me,
-                             typename vector<vector<E>>::const_iterator End)
+    static inline void 
+    CrossProdInt(vector<vector<E>>& Result,
+                 vector<E>& Scratch,
+                 typename vector<vector<E>>::const_iterator Me,
+                 typename vector<vector<E>>::const_iterator End)
     {
         if (Me == End) {
             Result.push_back(Scratch);
@@ -66,13 +68,28 @@ namespace ESMC {
     }
 
     template <typename E>
-    static vector<vector<E>> CrossProduct(typename vector<vector<E>>::const_iterator Begin,
-                                          typename vector<vector<E>>::const_iterator End)
+    static inline vector<vector<E>> 
+    CrossProduct(typename vector<vector<E>>::const_iterator Begin,
+                 typename vector<vector<E>>::const_iterator End)
     {
         vector<vector<E>> Result;
         vector<E> Scratch;
         CrossProdInt(Result, Scratch, Begin, End);
         return Result;
+    }
+
+    template <typename T, class ForwardIterator>
+    static inline vector<T> Filter(const ForwardIterator& First,
+                                   const ForwardIterator& Last,
+                                   const function<bool(const T&)>& Pred)
+    {
+        vector<T> Retval;
+        for (auto it = First; it != Last; ++it) {
+            if (Pred(*it)) {
+                Retval.push_back(*it);
+            }
+        }
+        return Retval;
     }
 
     static inline u64 Factorial(u32 Num)

@@ -122,6 +122,26 @@ namespace ESMC {
                                const ExprTypeRef& UnifiedMType);
             };
 
+            class ArrayRValueTransformer : public VisitorBaseT
+            {
+            private:
+                vector<ExpT> ExpStack;
+                MgrT* Mgr;
+                
+            public:
+                ArrayRValueTransformer(MgrT* Mgr);
+                virtual ~ArrayRValueTransformer();
+
+                virtual void VisitVarExpression(const VarExpT* Exp) override;
+                virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
+                virtual void VisitConstExpression(const ConstExpT* Exp) override;
+                virtual void VisitOpExpression(const OpExpT* Exp) override;
+                virtual inline void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+                virtual inline void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+                
+                static ExpT Do(MgrT* Mgr, const ExpT& Exp);
+            };
+
         } /* end namespace Detail */
 
 
@@ -285,18 +305,20 @@ namespace ESMC {
 
                 // Check that no constants of symmetric types 
                 // appear in the assignment
-                auto SymmConstsLHS = Mgr->Gather(Asgn->GetLHS(), Detail::SymmConstGatherer());
-                auto SymmConstsRHS = Mgr->Gather(Asgn->GetRHS(), Detail::SymmConstGatherer());
-                if (SymmConstsLHS.size() != 0 || SymmConstsRHS.size() != 0) {
-                    if (!(SymmConstsLHS.size() == 0 && 
-                          Asgn->GetRHS()->Is<Exprs::ConstExpression>() &&
-                          (Asgn->GetRHS()->SAs<Exprs::ConstExpression>()->GetConstValue() == 
-                           "clear") &&
-                          SymmConstsRHS.size() == 1)) {
-                        throw ESMCError((string)"Assignments cannot contain symmetric constant " + 
-                                        "literal values. This breaks symmetry!");
-                    }
-                }
+                // audupa: This is now taken care of in the LabelledTS
+                //         commented out on 10/16/2014
+                // auto SymmConstsLHS = Mgr->Gather(Asgn->GetLHS(), Detail::SymmConstGatherer());
+                // auto SymmConstsRHS = Mgr->Gather(Asgn->GetRHS(), Detail::SymmConstGatherer());
+                // if (SymmConstsLHS.size() != 0 || SymmConstsRHS.size() != 0) {
+                //     if (!(SymmConstsLHS.size() == 0 && 
+                //           Asgn->GetRHS()->Is<Exprs::ConstExpression>() &&
+                //           (Asgn->GetRHS()->SAs<Exprs::ConstExpression>()->GetConstValue() == 
+                //            "clear") &&
+                //           SymmConstsRHS.size() == 1)) {
+                //         throw ESMCError((string)"Assignments cannot contain symmetric constant " + 
+                //                         "literal values. This breaks symmetry!");
+                //     }
+                // }
                 
                 // Finally check type compat
                 if (!CheckAsgnCompat(Asgn->GetLHS()->GetType(),
