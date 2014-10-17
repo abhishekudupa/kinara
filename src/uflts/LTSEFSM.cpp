@@ -364,6 +364,12 @@ namespace ESMC {
                                     "At: " + __FILE__ + ":" + to_string(__LINE__));
             }
             auto const& AppArgs = ExpAsOp->GetChildren();
+            vector<ExprTypeRef> ArgTypes;
+            for_each(AppArgs.begin(), AppArgs.end()
+                     [&] (const ExpT& Arg) -> void
+                     {
+                         ArgTypes.push_back(AppArgs->GetType());
+                     });
 
             vector<ExpT> Retval;
             auto const IsRangeSymmetric = Exp->GetType()->Is<ExprSymmetricType>();
