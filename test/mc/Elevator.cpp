@@ -50,6 +50,9 @@
 #include "../../src/uflts/LTSAssign.hpp"
 #include "../../src/uflts/LTSTransitions.hpp"
 #include "../../src/mc/LTSChecker.hpp"
+#include "../../src/mc/OmegaAutomaton.hpp"
+#include "../../src/mc/Trace.hpp"
+
 
 using namespace ESMC;
 using namespace LTS;
@@ -60,13 +63,15 @@ using namespace MC;
 
 int main()
 {
-    int top_floor = 20;
+    int top_floor = 3;
     auto TheLTS = new LabelledTS();
     set<string> EmptyFairnessSets;
     auto FloorType = TheLTS->MakeRangeType(1, top_floor + 1);
     auto TrueExp = TheLTS->MakeTrue();
     auto TopFloorExp = TheLTS->MakeVal(to_string(top_floor), FloorType);
     auto FloorOneExp = TheLTS->MakeVal(to_string(1), FloorType);
+    auto FloorTwoExp = TheLTS->MakeVal(to_string(2), FloorType);
+
 
     vector<LTSAssignRef> EmptyUpdates;
     vector<ExpT> EmptyParams;
@@ -120,9 +125,10 @@ int main()
     // Controller
     auto Controller = TheLTS->MakeGenEFSM("Controller", vector<ExpT>(), TrueExp, LTSFairnessType::None);
     Controller->AddState("Initial");
-    Controller->AddState("CheckRequest");
+    Controller->AddState("CheckRequest"); //, false, false, false, true);
     Controller->AddState("SentUp");
     Controller->AddState("SentDown");
+    Controller->AddState("Dummy");
     Controller->FreezeStates();
     Controller->AddVariable("CurrentFloor", FloorType);
     Controller->AddVariable("TargetFloor", FloorType);
@@ -140,10 +146,13 @@ int main()
     auto ControllerGuardCurrentFloorLTTargetFloor = TheLTS->MakeOp(LTSOps::OpLT, CurrentFloorExp, TargetFloorExp);
     auto ControllerGuardCurrentFloorEQTargetFloor = TheLTS->MakeOp(LTSOps::OpEQ, CurrentFloorExp, TargetFloorExp);
     auto CurrentFloorPlusOneExp = TheLTS->MakeOp(LTSOps::OpADD, CurrentFloorExp, FloorOneExp);
+    auto CurrentFloorPlusTwoExp = TheLTS->MakeOp(LTSOps::OpADD, CurrentFloorExp, FloorTwoExp);
     auto CurrentFloorMinusOneExp = TheLTS->MakeOp(LTSOps::OpSUB, CurrentFloorExp, FloorOneExp);
     vector<LTSAssignRef> CurrentFloorPlusUpdates;
+    vector<LTSAssignRef> CurrentFloorPlusTwoUpdates;
     vector<LTSAssignRef> CurrentFloorMinusUpdates;
     CurrentFloorPlusUpdates.push_back(new LTSAssignSimple(CurrentFloorExp, CurrentFloorPlusOneExp));
+    CurrentFloorPlusTwoUpdates.push_back(new LTSAssignSimple(CurrentFloorExp, CurrentFloorPlusTwoExp));
     CurrentFloorMinusUpdates.push_back(new LTSAssignSimple(CurrentFloorExp, CurrentFloorMinusOneExp));
 
     vector<LTSAssignRef> ReadTargetUpdates;
@@ -154,10 +163,12 @@ int main()
     Controller->AddInputTransition("Initial", "CheckRequest", TrueExp, ReadTargetUpdates, "Request", RequestMsgType, EmptyParams);
 
     auto ArriveGuard = TheLTS->MakeOp(LTSOps::OpEQ, TargetFloorExp, CurrentFloorExp);
-    auto GoUpGuard = TheLTS->MakeOp(LTSOps::OpLT, TargetFloorExp, CurrentFloorExp);
-    auto GoDownGuard = TheLTS->MakeOp(LTSOps::OpGT, TargetFloorExp, CurrentFloorExp);
+    auto GoUpGuard = TheLTS->MakeOp(LTSOps::OpGT, TargetFloorExp, CurrentFloorExp);
+    auto GoDownGuard = TheLTS->MakeOp(LTSOps::OpLT, TargetFloorExp, CurrentFloorExp);
 
-    Controller->AddOutputTransition("CheckRequest", "Initial", ArriveGuard, EmptyUpdates, "Arrive", ArriveMsgType, EmptyParams, EmptyFairnessSets);
+    // Controller->AddOutputTransition("CheckRequest", "Initial", ArriveGuard, EmptyUpdates, "Arrive", ArriveMsgType, EmptyParams, EmptyFairnessSets);
+    Controller->AddOutputTransition("Dummy", "Dummy", TrueExp, EmptyUpdates, "Arrive", ArriveMsgType, EmptyParams, EmptyFairnessSets);
+    Controller->AddInternalTransition("CheckRequest", "CheckRequest", TrueExp, EmptyUpdates);
     Controller->AddOutputTransition("CheckRequest", "SentUp", GoUpGuard, EmptyUpdates, "Up", UpMsgType, EmptyParams, EmptyFairnessSets);
     Controller->AddOutputTransition("CheckRequest", "SentDown", GoDownGuard, EmptyUpdates, "Down", DownMsgType, EmptyParams, EmptyFairnessSets);
     Controller->AddInputTransition("SentUp", "CheckRequest", TrueExp, CurrentFloorPlusUpdates, "UpAck", UpAckMsgType, EmptyParams);
@@ -203,6 +214,24 @@ int main()
     Elevator->AddOutputTransition("ReceiveUpState", "InitialState", TrueExp, EmptyUpdates, "UpAck", UpAckMsgType, EmptyParams);
     Elevator->AddOutputTransition("ReceiveDownState", "InitialState", TrueExp, EmptyUpdates, "DownAck", DownAckMsgType, EmptyParams);
 
+
+    // Liveness monitor
+    // auto LivenessMonitor = TheLTS->MakeGenEFSM("LivenessMonitor", vector<ExpT>(), TrueExp, LTSFairnessType::None);
+    // LivenessMonitor->AddState("InitialState");
+    // LivenessMonitor->AddState("AcceptingState");
+    // LivenessMonitor->AddState("OtherState");
+    // LivenessMonitor->FreezeStates();
+    // LivenessMonitor->AddInputMsg(RequestMsgType, EmptyParams);
+    // LivenessMonitor->AddInputMsg(ArriveMsgType, EmptyParams);
+    // LivenessMonitor->FreezeVars();
+    // LivenessMonitor->AddInputTransition("InitialState", "InitialState", TrueExp, EmptyUpdates, "Request", RequestMsgType, EmptyParams);
+    // LivenessMonitor->AddInputTransition("InitialState", "InitialState", TrueExp, EmptyUpdates, "Arrive", ArriveMsgType, EmptyParams);
+    // LivenessMonitor->AddInputTransition("InitialState", "AcceptingState", TrueExp, EmptyUpdates, "Request", RequestMsgType, EmptyParams);
+    // LivenessMonitor->AddInputTransition("AcceptingState", "AcceptingState", TrueExp, EmptyUpdates, "Request", RequestMsgType, EmptyParams);
+    // LivenessMonitor->AddInputTransition("AcceptingState", "OtherState", TrueExp, EmptyUpdates, "Arrive", ArriveMsgType, EmptyParams);
+    // LivenessMonitor->AddInputTransition("OtherState", "OtherState", TrueExp, EmptyUpdates, "Request", RequestMsgType, EmptyParams);
+    // LivenessMonitor->AddInputTransition("OtherState", "OtherState", TrueExp, EmptyUpdates, "Arrive", ArriveMsgType, EmptyParams);
+
     TheLTS->FreezeAutomata();
 
     vector<InitStateRef> InitStates;
@@ -211,10 +240,12 @@ int main()
     auto ElevatorType = TheLTS->GetEFSMType("Elevator");
     auto ControllerType = TheLTS->GetEFSMType("Controller");
     auto UserType = TheLTS->GetEFSMType("User");
+    // auto LivenessMonitorType = TheLTS->GetEFSMType("LivenessMonitor");
 
     auto ElevatorStateVar = TheLTS->MakeVar("Elevator", ElevatorType);
     auto ControllerStateVar = TheLTS->MakeVar("Controller", ControllerType);
     auto UserStateVar = TheLTS->MakeVar("User", UserType);
+    // auto LivenessMonitorStateVar = TheLTS->MakeVar("LivenessMonitor", LivenessMonitorType);
 
     auto ElevatorDotState = TheLTS->MakeOp(LTSOps::OpField, ElevatorStateVar, TheLTS->MakeVar("state", FAType));
     auto ElevatorDotFloor = TheLTS->MakeOp(LTSOps::OpField, ElevatorStateVar, TheLTS->MakeVar("Floor", FAType));
@@ -234,6 +265,13 @@ int main()
 
     InitUpdates.push_back(new LTSAssignSimple(UserDotState, TheLTS->MakeVal("InitialState", UserDotState->GetType())));
 
+    // auto LivenessMonitorDotState = TheLTS->MakeOp(LTSOps::OpField, LivenessMonitorStateVar, TheLTS->MakeVar("state", FAType));
+
+    // auto LivenessMonitorInitialStateValue = TheLTS->MakeVal("InitialState", LivenessMonitorDotState->GetType());
+
+    // auto LivenessMonitorAcceptingStateValue = TheLTS->MakeVal("AcceptingState", LivenessMonitorDotState->GetType());
+
+    // InitUpdates.push_back(new LTSAssignSimple(LivenessMonitorDotState, LivenessMonitorInitialStateValue));
 
     InitStates.push_back(new LTSInitState(EmptyParams, TrueExp, InitUpdates));
     TheLTS->AddInitStates(InitStates);
@@ -276,7 +314,48 @@ int main()
     }
 
     auto Checker = new LTSChecker(TheLTS);
-    Checker->BuildAQS();
+
+    auto Monitor = Checker->MakeStateBuchiMonitor("RequestToAccept", EmptyParams, TrueExp);
+    Monitor->AddState("InitialState", true, false);
+    Monitor->AddState("AcceptingState", false, true);
+    Monitor->AddState("OtherState", false, false);
+    Monitor->FreezeStates();
+
+    auto ControllerCheckRequestStateValue = TheLTS->MakeVal("CheckRequest", ControllerDotState->GetType());
+
+    auto ControllerStateEQCheckRequest = TheLTS->MakeOp(LTSOps::OpEQ, ControllerDotState, ControllerCheckRequestStateValue);
+
+    cout << ControllerStateEQCheckRequest->ToString() << endl;
+
+    auto ControllerStateNEQCheckRequest = TheLTS->MakeOp(LTSOps::OpNOT, ControllerStateEQCheckRequest);
+
+    Monitor->AddTransition("InitialState", "InitialState", TrueExp);
+    Monitor->AddTransition("InitialState", "AcceptingState", ControllerStateEQCheckRequest);
+    Monitor->AddTransition("AcceptingState", "AcceptingState", ControllerStateEQCheckRequest);
+    Monitor->AddTransition("AcceptingState", "OtherState", ControllerStateNEQCheckRequest);
+    Monitor->AddTransition("OtherState", "OtherState", TrueExp);
+    Monitor->Freeze();
+
+    auto Traces = Checker->BuildAQS();
+
+    cout << "Number of traces: " << Traces.size() << endl;
+
+    for (auto Trace: Traces) {
+        cout << Trace->ToString() << endl;
+        delete Trace;
+    }
+
+    Traces = Checker->CheckLiveness("RequestToAccept");
+    
+    for (auto const& Trace : Traces) {
+        cout << Trace->ToString() << endl;
+        // auto result = WeakestPrecondition(TheLTS->MakeTrue(), Trace);
+        // cout << result << endl;
+
+        delete Trace;
+    }
+
+
     delete Checker;
 }
 

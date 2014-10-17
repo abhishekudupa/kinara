@@ -103,6 +103,15 @@ namespace ESMC {
                   { LTSOps::OpLT, "<" },
                   { LTSOps::OpLE, "<=" } };
 
+            const unordered_set<i64> LTSReservedOps = 
+                { { LTSOps::OpEQ, LTSOps::OpNOT, LTSOps::OpITE, LTSOps::OpOR,
+                    LTSOps::OpAND, LTSOps::OpIMPLIES, LTSOps::OpIFF, LTSOps::OpXOR,
+                    LTSOps::OpADD, LTSOps::OpSUB, LTSOps::OpMINUS, LTSOps::OpMUL,
+                    LTSOps::OpDIV, LTSOps::OpMOD, LTSOps::OpGT, LTSOps::OpGE,
+                    LTSOps::OpLE, LTSOps::OpLT, LTSOps::OpIndex, LTSOps::OpField,
+                    LTSOps::OpTemporalX, LTSOps::OpTemporalG, LTSOps::OpTemporalU,
+                    LTSOps::OpTemporalF } };
+
         } /* end namespace Detail */
 
         // The LTSLoweredContext implementation

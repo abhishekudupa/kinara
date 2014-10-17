@@ -142,6 +142,32 @@ namespace ESMC {
                 static ExpT Do(MgrT* Mgr, const ExpT& Exp);
             };
 
+            class ExpressionPermuter : public VisitorBaseT
+            {
+            private:
+                MgrT* Mgr;
+                vector<u08> PermVec;
+                map<ExprTypeRef, u32> TypeOffsets;
+                vector<ExpT> ExpStack;
+                
+            public:
+                ExpressionPermuter(MgrT* Mgr, const vector<u08>& PermVec,
+                                   const map<ExprTypeRef, u32>& TypeOffsets);
+                virtual ~ExpressionPermuter();
+
+                virtual void VisitVarExpression(const VarExpT* Exp) override;
+                virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
+                virtual void VisitConstExpression(const ConstExpT* Exp) override;
+                virtual void VisitOpExpression(const OpExpT* Exp) override;
+                virtual inline void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+                virtual inline void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+                
+                static ExpT Do(MgrT* Mgr, const vector<u08>& PermVec,
+                               const map<ExprTypeRef, u32>& TypeOffsets,
+                               const ExpT& Exp);
+                
+            };
+
         } /* end namespace Detail */
 
 

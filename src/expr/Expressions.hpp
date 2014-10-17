@@ -698,6 +698,38 @@ namespace ESMC {
                                   const SubstMapT& SubstMap);
         };
 
+        // A term substitutor
+        template <typename E, template <typename> class S>
+        class TermSubstitutor : ExpressionVisitorBase<E, S>
+        {
+        private:
+            typedef ExprMgr<E, S> MgrType;
+            typedef typename MgrType::ExpT ExpT;
+            typedef typename MgrType::SubstMapT SubstMapT;
+
+            MgrType* Mgr;
+            SubstMapT SubstMap;
+            vector<typename ExprMgr<E, S>::ExpT> SubstStack;
+
+        public:
+            inline TermSubstitutor(MgrType* Mgr, const SubstMapT& Subst);
+            inline virtual ~TermSubstitutor();
+
+            inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+            inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+            inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
+                override;
+            inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+            inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+                override;
+            inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+                override;
+
+            inline static ExpT Do(MgrType* Mgr, 
+                                  const ExpT& Exp, 
+                                  const SubstMapT& SubstMap);
+        };
+
         template <typename E, template <typename> class S>
         class Gatherer : ExpressionVisitorBase<E, S>
         {
@@ -889,6 +921,54 @@ namespace ESMC {
             Substitutor TheSubstitutor(Mgr, Subst);
             Exp->Accept(&TheSubstitutor);
             return TheSubstitutor.SubstStack[0];
+        }
+
+        // Term substitutor implementation
+
+        // Assumptions on the substmap:
+        // for all substitution pairs of the form
+        // from1 |--> to1 and from2 |--> to2:
+        // 1. from1 is not a subterm of from2
+        // 2. from2 is not a subterm of from1
+        // 3. from1 is not a subterm of to1
+        // 4. from2 is not a subterm of to1
+
+        template <typename E, template <typename> class S>
+        inline TermSubstitutor<E, S>::TermSubstitutor(MgrType* Mgr, 
+                                                      const SubstMapT& SubstMap)
+            : ExpressionVisitorBase<E, S>("TermSubstitutor"),
+              Mgr(Mgr), SubstMap(SubstMap)
+        {
+            for (auto it1 = SubstMap.begin(); it1 != SubstMap.end(); ++it1) {
+                for (auto it2 = next(it1); it2 != SubstMap.end(); ++it2) {
+                    auto const& From1 = it1->first;
+                    auto const& From2 = it2->first;
+                    auto&& Terms1 = 
+                        Mgr->Gather(From2, 
+                                    [&] (const ExpressionBase<E, S>* Exp) -> bool
+                                    {
+                                        return (Exp == From1);
+                                    });
+                    if (Terms1.size() != 0) {
+                        throw ExprTypeError((string)"The term:\n" + From1->ToString() + 
+                                            "\nis a subterm of term\n:" + From2->ToString() + 
+                                            "\nin substitution. And both occur as " + 
+                                            "terms to be substituted for");
+                    }
+                    auto&& Terms2 = 
+                        Mgr->Gather(From1, 
+                                    [&] (const ExpressionBase<E, S>* Exp) -> bool
+                                    {
+                                        return (Exp == From2);
+                                    });
+                    if (Terms2.size() != 0) {
+                        throw ExprTypeError((string)"The term:\n" + From2->ToString() + 
+                                            "\nis a subterm of term\n:" + From1->ToString() + 
+                                            "\nin substitution. And both occur as " + 
+                                            "terms to be substituted for");
+                    }
+                }
+            }
         }
 
         // Gatherer implementation

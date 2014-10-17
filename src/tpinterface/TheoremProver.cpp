@@ -42,6 +42,31 @@
 namespace ESMC {
     namespace TP {
 
+        IncompleteTheoryException::IncompleteTheoryException(const ExpT& Expression) throw ()
+            : Expression(Expression)
+        {
+            ExceptionInfo = 
+                (string)"Could not determine satisfiability of expression:\n" + 
+                Expression->ToString() + "\nThis could be due to incompleteness " + 
+                "in the theorem prover";
+        }
+
+        IncompleteTheoryException::~IncompleteTheoryException() throw ()
+        {
+            // Nothing here
+        }
+
+        const char* IncompleteTheoryException::what() const throw ()
+        {
+            return ExceptionInfo.c_str();
+        }
+
+        const ExpT& IncompleteTheoryException::GetExpression() const
+        {
+            return Expression;
+        }
+
+
         TheoremProver::TheoremProver(const string& Name)
             : Name(Name)
         {

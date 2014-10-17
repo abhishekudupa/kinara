@@ -248,19 +248,98 @@ namespace ESMC {
                 return TheTransformer.ExpStack[0];
             }
 
+            ExpressionPermuter::ExpressionPermuter(MgrT* Mgr, const vector<u08>& PermVec,
+                                                   const map<ExprTypeRef, u32>& TypeOffsets)
+                : VisitorBaseT("ExpressionPermuter"),
+                  Mgr(Mgr), PermVec(PermVec), TypeOffsets(TypeOffsets)
+            {
+                // Nothing here
+            }
+
+            ExpressionPermuter::~ExpressionPermuter()
+            {
+                // Nothing here
+            }
+
+            void ExpressionPermuter::VisitVarExpression(const VarExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void ExpressionPermuter::VisitConstExpression(const ConstExpT* Exp)
+            {
+                auto const& Type = Exp->GetType();
+                if (!Type->Is<ExprSymmetricType>()) {
+                    ExpStack.push_back(Exp);
+                }
+
+                auto TypeAsSym = Type->SAs<ExprSymmetricType>();
+                // Symmetric type. Permute
+                auto const& ConstVal = Exp->GetConstValue();
+                auto ConstIdx = TypeAsSym->GetMemberIdx(ConstVal);
+                auto it = TypeOffsets.find(Type);
+                
+                if (it == TypeOffsets.end()) {
+                    throw ESMCError((string)"Could not find offset for type: " + 
+                                    Type->ToString() + "\nIn Expression Permuter, on " + 
+                                    "expression:\n" + Exp->ToString());
+                }
+                auto Offset = it->second;
+                auto PermutedIdx = PermVec[Offset + ConstIdx];
+                auto const& PermutedVal = TypeAsSym->GetMember(PermutedIdx);
+                ExpStack.push_back(Mgr->MakeVal(PermutedVal, Type));
+            }
+
+            void ExpressionPermuter::VisitBoundVarExpression(const BoundVarExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void ExpressionPermuter::VisitOpExpression(const OpExpT* Exp)
+            {
+                VisitorBaseT::VisitOpExpression(Exp);
+
+                auto OpCode = Exp->GetOpCode();
+                auto const& Children = Exp->GetChildren();
+                const u32 NumChildren = Children.size();
+
+                vector<ExpT> NewChildren(NumChildren);
+
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    NewChildren[NumChildren - i - 1] = ExpStack.back();
+                    ExpStack.pop_back();
+                }
+
+                ExpStack.push_back(Mgr->MakeExpr(OpCode, NewChildren));
+            }
+
+            void ExpressionPermuter::VisitEQuantifiedExpression(const EQExpT* Exp)
+            {
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const& QExpr = Exp->GetQExpression();
+
+                QExpr->Accept(this);
+                
+                auto NewExp = ExpStack.back();
+                ExpStack.pop_back();
+                ExpStack.push_back(Mgr->MakeExists(QVarTypes, NewExp));
+            }
+
+            void ExpressionPermuter::VisitAQuantifiedExpression(const AQExpT* Exp)
+            {
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const& QExpr = Exp->GetQExpression();
+
+                QExpr->Accept(this);
+                
+                auto NewExp = ExpStack.back();
+                ExpStack.pop_back();
+                ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewExp));
+            }
+
         } /* End namespace Detail */
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
 // 
 // LTSUtils.cpp ends here
-
-
-
-
-
-
-
-
-
-

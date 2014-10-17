@@ -518,6 +518,13 @@ namespace ESMC {
                     IndexID == Other.IndexID);
         }
 
+        bool ProductState::Equals(const ProductState* Other) const
+        {
+            return (SVPtr->Equals(*(Other->SVPtr)) && 
+                    MonitorState == Other->MonitorState &&
+                    IndexID == Other->IndexID);
+        }
+
         void ProductState::ClearMarkings() const
         {
             Status.InSCC = -1;
