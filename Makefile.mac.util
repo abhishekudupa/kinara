@@ -139,13 +139,15 @@ ifeq "x$(VERBOSE_BUILD)" "x"
         $(foreach path, $($(1)_LIB_PATHS), -Wl,-rpath $(path)) \
 		$(foreach path, $($(1)_LIB_PATHS), -L $(path)) \
 		$(foreach lib, $($(1)_DEP_LIBS), -l$(lib)) \
-		$(foreach lib, $($(1)_SYS_LIBS), -l$(lib))
+		$(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) \
+        -L/usr/local/lib/
 else 
 	$(LD) $(CXXFLAGS) $(OPTFLAGS) $(addprefix $(OBJ_DIR)/, $($(1)_OBJS)) -o $(BIN_DIR)/$(1) \
         $(foreach path, $($(1)_LIB_PATHS), -Wl,-rpath $(path)) \
 		$(foreach path, $($(1)_LIB_PATHS), -L $(path)) \
 		$(foreach lib, $($(1)_DEP_LIBS), -l$(lib)) \
-		$(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) 
+		$(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) \
+        -L/usr/local/lib/
 endif
 endef
 
@@ -166,11 +168,14 @@ ifeq "x$(VERBOSE_BUILD)" "x"
 	@echo "$(LDPRINTNAME) `basename $(LIB_DIR)/lib$(1).so`"; \
 	$(LD) -shared $(OPTFLAGS) $(LDFLAGS) $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS)) \
     $(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) \
-	-o $(LIB_DIR)/lib$(1).so
+	-o $(LIB_DIR)/lib$(1).so \
+    -L/usr/local/lib/
+
 else 
 	$(LD) -shared $(OPTFLAGS) $(LDFLAGS) $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS)) \
 	$(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) \
-	-o $(LIB_DIR)/lib$(1).so
+	-o $(LIB_DIR)/lib$(1).so \
+    -L/usr/local/lib/
 endif
 
 $(LIB_DIR)/lib$(1).a:	$(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS))

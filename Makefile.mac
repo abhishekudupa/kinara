@@ -8,8 +8,8 @@ BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
 CXX?=g++
 
-CXXFLAGS=-std=c++11 -Wall -pedantic -pipe
-CXXFLAGS+=-I/usr/local/Cellar/google-sparsehash/2.0.2/include/sparsehash/
+CXXFLAGS=-std=c++11 -Wall -pipe
+CXXFLAGS+=-I/usr/local/Cellar/google-sparsehash/2.0.2/include/sparsehash/ -I/usr/local/include/
 
 PROJECT_MODULES= \
 	common \
@@ -31,7 +31,8 @@ esmc_DEP_LIBS=esmc
 esmc_EXT_LIBS=boost z3
 esmc_OBJS=main.o
 esmc_LIB_PATHS= \
-	$(PROJECT_ROOT)/lib/$(BUILD_SUFFIX)
+	$(PROJECT_ROOT)/lib/$(BUILD_SUFFIX) \
+    /usr/local/lib/
 
 
 
