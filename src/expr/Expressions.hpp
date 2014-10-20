@@ -942,7 +942,6 @@ namespace ESMC {
         {
             for (auto it1 = SubstMap.begin(); it1 != SubstMap.end(); ++it1) {
                 auto const& From1 = it1->first;
-                auto const& To1 = it1->second;
 
                 for (auto it2 = next(it1); it2 != SubstMap.end(); ++it2) {
                     auto const& From2 = it2->first;
@@ -1051,7 +1050,7 @@ namespace ESMC {
                     ExpStack.pop_back();
                 }
 
-                ExpStack.push_back(Mgr->MakeOp(Exp->GetOpCode(), NewChildren));
+                ExpStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
             }                                   
         }
 
@@ -1062,7 +1061,7 @@ namespace ESMC {
             auto const& QVarTypes = Exp->GetQVarTypes();
             auto const& QExpr = Exp->GetQExpression();
 
-            QExpr->Accept(&this);
+            QExpr->Accept(this);
             auto NewQExpr = ExpStack.back();
             ExpStack.pop_back();
             ExpStack.push_back(Mgr->MakeExists(QVarTypes, NewQExpr));
@@ -1075,7 +1074,7 @@ namespace ESMC {
             auto const& QVarTypes = Exp->GetQVarTypes();
             auto const& QExpr = Exp->GetQExpression();
 
-            QExpr->Accept(&this);
+            QExpr->Accept(this);
             auto NewQExpr = ExpStack.back();
             ExpStack.pop_back();
             ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewQExpr));

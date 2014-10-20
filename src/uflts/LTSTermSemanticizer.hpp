@@ -1579,6 +1579,13 @@ namespace ESMC {
                 Exp->GetQExpression()->Accept(this);
                 auto NewQExpr = ExpStack.back();
                 ExpStack.pop_back();
+
+                if (NewQExpr->template Is<ConstExpression>()) {
+                    ExpStack.push_back(NewQExpr);
+                    return;
+                }
+
+                // Not a constant
                 if (Exp->IsForAll()) {
                     ExpStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(),
                                                        NewQExpr, Exp->ExtensionData));

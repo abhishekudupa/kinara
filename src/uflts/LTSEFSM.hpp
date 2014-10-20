@@ -88,13 +88,31 @@ namespace ESMC {
             set<string> ReadOnlyVars;
             map<string, ExprTypeRef> UpdateableVariables;
             map<string, ExprTypeRef> AllVariables;
-            UIDGenerator UFUIDGen;
+            UIDGenerator GuardUFUIDGen;
+            UIDGenerator UpdateUFUIDGen;
+
+            // Constraint addition methods. mainly for logging
+            inline void AddConstraint(const ExpT& Constraint);
+            inline void AddConstraint(const vector<ExpT>& Constraints);
             
             // Gets all the terms possible 
             // aborts if the number of terms capable of 
             // being generated is unbounded
             void ExpandExpression(const ExpT& VarExp, set<ExpT>& Expansions);
             set<ExpT> GetDomainTerms(const map<string, ExprTypeRef>& DomainVars);
+
+            inline vector<ExprTypeRef> GetSymmTypesInExpr(const ExpT& Exp);
+            inline void PartitionDomain(const vector<ExpT>& Args,
+                                        vector<ExpT>& SymmArgs,
+                                        vector<ExpT>& NonSymmArgs);
+
+            inline void MergeEquivalences(const set<ExpT>& NewEquivalences,
+                                          set<set<ExpT>>& EquivalenceSets);
+
+            inline set<set<ExpT>> FindEquivalences(const ExpT& Exp,
+                                                   const vector<ExprTypeRef>& SymmTypes,
+                                                   const vector<ExpT>& SymmArgs,
+                                                   const vector<ExpT>& NonSymmArgs);
 
             inline vector<ExpT> GetSymmetryConstraints(const ExpT& Exp);
 
