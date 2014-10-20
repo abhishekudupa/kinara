@@ -364,11 +364,20 @@ namespace ESMC {
                                     "At: " + __FILE__ + ":" + to_string(__LINE__));
             }
             auto const& AppArgs = ExpAsOp->GetChildren();
+            vector<ExpT> SymmArgs;
+            vector<ExpT> NonSymmArgs;
+
             vector<ExprTypeRef> ArgTypes;
-            for_each(AppArgs.begin(), AppArgs.end()
+            for_each(AppArgs.begin(), AppArgs.end(),
                      [&] (const ExpT& Arg) -> void
                      {
-                         ArgTypes.push_back(AppArgs->GetType());
+                         auto const& ArgType = Arg->GetType();
+                         ArgTypes.push_back(Arg->GetType());
+                         if (ArgType->Is<ExprSymmetricType>()) {
+                             SymmArgs.push_back(Arg);
+                         } else {
+                             NonSymmArgs.push_back(Arg);
+                         }
                      });
 
             vector<ExpT> Retval;
@@ -409,9 +418,9 @@ namespace ESMC {
             }
 
             PermutationSet PermSet(DomainSizes, false);
-
             
-
+            
+            
             return Retval;
         }
 

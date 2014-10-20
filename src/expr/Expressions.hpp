@@ -635,6 +635,7 @@ namespace ESMC {
             inline ExpT UnrollQuantifiers(const ExpT& Exp);
             inline ExpT Simplify(const ExpT& Exp);
             inline ExpT Substitute(const SubstMapT& Subst, const ExpT& Exp);
+            inline ExpT TermSubstitute(const SubstMapT& Subst, const ExpT& Exp);
             inline ExpSetT
             Gather(const ExpT& Exp, 
                    const function<bool(const ExpressionBase<E, S>*)>& Pred) const;
@@ -709,7 +710,7 @@ namespace ESMC {
 
             MgrType* Mgr;
             SubstMapT SubstMap;
-            vector<typename ExprMgr<E, S>::ExpT> SubstStack;
+            vector<typename ExprMgr<E, S>::ExpT> ExpStack;
 
         public:
             inline TermSubstitutor(MgrType* Mgr, const SubstMapT& Subst);
@@ -940,8 +941,10 @@ namespace ESMC {
               Mgr(Mgr), SubstMap(SubstMap)
         {
             for (auto it1 = SubstMap.begin(); it1 != SubstMap.end(); ++it1) {
+                auto const& From1 = it1->first;
+                auto const& To1 = it1->second;
+
                 for (auto it2 = next(it1); it2 != SubstMap.end(); ++it2) {
-                    auto const& From1 = it1->first;
                     auto const& From2 = it2->first;
                     auto&& Terms1 = 
                         Mgr->Gather(From2, 
@@ -968,7 +971,124 @@ namespace ESMC {
                                             "terms to be substituted for");
                     }
                 }
+
+                for (auto it2 = SubstMap.begin(); it2 != SubstMap.end(); ++it2) {
+                    auto const& To2 = it2->second;
+                    auto&& Terms1 =
+                        Mgr->Gather(To2, 
+                                    [&] (const ExpressionBase<E, S>* Exp) -> bool
+                                    {
+                                        return (Exp == From1);
+                                    });
+
+                    if (Terms1.size() != 0) {
+                        throw ExprTypeError((string)"The term:\n" + From1->ToString() + 
+                                            "\nis a subterm of term\n:" + To2->ToString() + 
+                                            "\nin substitution. The first is an LHS term " + 
+                                            "and the second is an RHS term!");
+                    }
+                }
             }
+        }
+
+        template <typename E, template <typename> class S>
+        inline TermSubstitutor<E, S>::~TermSubstitutor()
+        {
+            // Nothing here
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        TermSubstitutor<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+        {
+            auto it = SubstMap.find(Exp);
+            if (it != SubstMap.end()) {
+                ExpStack.push_back(it->second);
+            } else {
+                ExpStack.push_back(Exp);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        TermSubstitutor<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+        {
+            auto it = SubstMap.find(Exp);
+            if (it != SubstMap.end()) {
+                ExpStack.push_back(it->second);
+            } else {
+                ExpStack.push_back(Exp);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        TermSubstitutor<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+        {
+            auto it = SubstMap.find(Exp);
+            if (it != SubstMap.end()) {
+                ExpStack.push_back(it->second);
+            } else {
+                ExpStack.push_back(Exp);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        TermSubstitutor<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+        {
+            auto it = SubstMap.find(Exp);
+            if (it != SubstMap.end()) {
+                ExpStack.push_back(it->second);
+            } else {
+                ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+                auto const& OldChildren = Exp->GetChildren();
+                const u32 NumChildren = OldChildren.size();
+                vector<ExpT> NewChildren(NumChildren);
+                
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    NewChildren[NumChildren - i - 1] = ExpStack.back();
+                    ExpStack.pop_back();
+                }
+
+                ExpStack.push_back(Mgr->MakeOp(Exp->GetOpCode(), NewChildren));
+            }                                   
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        TermSubstitutor<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+        {
+            auto const& QVarTypes = Exp->GetQVarTypes();
+            auto const& QExpr = Exp->GetQExpression();
+
+            QExpr->Accept(&this);
+            auto NewQExpr = ExpStack.back();
+            ExpStack.pop_back();
+            ExpStack.push_back(Mgr->MakeExists(QVarTypes, NewQExpr));
+        }
+        
+        template <typename E, template <typename> class S>
+        inline void 
+        TermSubstitutor<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+        {
+            auto const& QVarTypes = Exp->GetQVarTypes();
+            auto const& QExpr = Exp->GetQExpression();
+
+            QExpr->Accept(&this);
+            auto NewQExpr = ExpStack.back();
+            ExpStack.pop_back();
+            ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewQExpr));
+        }
+        
+        template <typename E, template <typename> class S>
+        inline typename TermSubstitutor<E, S>::ExpT
+        TermSubstitutor<E, S>::Do(MgrType* Mgr, const ExpT& Exp, 
+                                  const SubstMapT& SubstMap)
+        {
+            TermSubstitutor TheSubstitutor(Mgr, SubstMap);
+            Exp->Accept(&TheSubstitutor);
+            return TheSubstitutor.ExpStack[0];
         }
 
         // Gatherer implementation
@@ -978,6 +1098,7 @@ namespace ESMC {
         {
             // Nothing here
         }
+
 
         template <typename E, template <typename> class S>
         inline Gatherer<E, S>::~Gatherer()
@@ -2220,6 +2341,13 @@ namespace ESMC {
         ExprMgr<E, S>::Substitute(const SubstMapT& Subst, const ExpT& Exp)
         {
             return ApplyTransform<Substitutor<E, S>>(Exp, Subst);
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::TermSubstitute(const SubstMapT& Subst, const ExpT& Exp)
+        {
+            return ApplyTransform<TermSubstitutor<E, S>>(Exp, Subst);
         }
         
 
