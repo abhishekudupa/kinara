@@ -316,7 +316,7 @@ namespace ESMC {
 
         const ExpT& StateBuchiAutomaton::GetGuardForTransition(u32 FromState, 
                                                                u32 ToState, 
-                                                               u32 IndexID)
+                                                               u32 IndexID) const
         {
             if (FromState >= NumStates || ToState >= NumStates) {
                 throw ESMCError((string)"State IDs out of bounds for Buchi monitor");
@@ -328,9 +328,10 @@ namespace ESMC {
                 }
             }
 
+            auto it1 = StateIDToStateName.find(FromState);
+            auto it2 = StateIDToStateName.find(ToState);
             throw ESMCError((string)"No transition between states: " + 
-                            StateIDToStateName[FromState] + 
-                            " to " + StateIDToStateName[ToState]);
+                            it1->second + " to " + it2->second);
         }
 
         void StateBuchiAutomaton::Freeze()
