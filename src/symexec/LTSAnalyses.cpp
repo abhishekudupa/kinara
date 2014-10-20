@@ -37,6 +37,8 @@
 
 // Code:
 
+#include <algorithm>
+
 #include "LTSAnalyses.hpp"
 #include "../uflts/LabelledTS.hpp"
 #include "../uflts/LTSAssign.hpp"
@@ -104,8 +106,41 @@ namespace ESMC {
                     SubstChildren[NumChildren - i - 1] = SubstStack.back();
                     SubstStack.pop_back();
                 }
-                SubstStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(),
-                                                   SubstChildren));
+                auto OpCode = Exp->GetOpCode();
+                if (OpCode != LTSOps::OpIndex) {
+                    SubstStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(),
+                                                       SubstChildren));
+                } else {
+                    // Look if an index expression of the same array
+                    // is in the substitution map
+                    bool index_on_array_in_map = false;
+                    ExpT LhsArrayAssignmentInMap;
+                    ExpT RhsArrayAssignmentInMap;
+                    auto NewExp = Mgr->MakeExpr(Exp->GetOpCode(),
+                                                SubstChildren);
+                    auto ITEExp = NewExp;
+                    for (auto Pair: Subst) {
+                        auto Lhs = Pair.first;
+                        if (Lhs->Is<OpExpression>()) {
+                            auto LhsOpExp = Lhs->As<OpExpression>();
+                            if (LhsOpExp->GetOpCode() == LTSOps::OpIndex) {
+                                auto Base = LhsOpExp->GetChildren()[0];
+                                if (Base == Exp->GetChildren()[0]) {
+                                    index_on_array_in_map = true;
+                                    auto NewExpIndex = NewExp->As<OpExpression>()->GetChildren()[1];
+                                    auto LhsIndex = LhsOpExp->GetChildren()[1];
+                                    auto IndicesEqual = Mgr->MakeExpr(LTSOps::OpEQ,
+                                                                      NewExpIndex, LhsIndex);
+                                    ITEExp = Mgr->MakeExpr(LTSOps::OpITE,
+                                                           IndicesEqual,
+                                                           Pair.second,
+                                                           ITEExp);
+                                }
+                            }
+                        }
+                    }
+                    SubstStack.push_back(ITEExp);
+                }
             }
         }
 
@@ -140,6 +175,13 @@ namespace ESMC {
 
         ExpT WeakestPrecondition(ExpT InitialPhi, TraceBase* Trace) {
             ExpT Phi = InitialPhi;
+            if (!Trace->Is<SafetyViolation>()) {
+                throw InternalError((string)"WeakestPrecondition called" +
+                                     "with a non safety violation. Call" +
+                                    "SymbolicExecution instead.");
+
+            }
+
             const vector<TraceElemT>& TraceElements = Trace->As<SafetyViolation>()->GetTraceElems();
             for (auto it = TraceElements.rbegin(); it != TraceElements.rend(); ++it) {
                 GCmdRef guarded_command = it->first;
@@ -241,8 +283,21 @@ namespace ESMC {
         vector<ExpT> SymbolicExecution(LabelledTS* TheLTS, TraceBase* Trace, vector<vector<MgrT::SubstMapT>>& symbolic_states_per_initial) {
             vector<ExpT> PathConditions;
             MgrT::SubstMapT Memory;
-            auto TraceAsSafetyViolation = Trace->As<SafetyViolation>();
-            const vector<TraceElemT>& TraceElements = TraceAsSafetyViolation->GetTraceElems();
+            vector<LTS::GCmdRef> GuardedCommands;
+            if (Trace->Is<SafetyViolation>()) {
+                auto TraceAsSafetyViolation = Trace->As<SafetyViolation>();
+                auto TraceElements = TraceAsSafetyViolation->GetTraceElems();
+                transform(TraceElements.begin(), TraceElements.end(), GuardedCommands.begin(),
+                          [&](TraceElemT& Element){return Element.first;});
+            } else if (Trace->Is<LivenessViolation>()) {
+                auto TraceAsLivenessViolation = Trace->As<LivenessViolation>();
+                auto TraceStemElements = TraceAsLivenessViolation->GetStem();
+                auto TraceLoopElements = TraceAsLivenessViolation->GetLoop();
+                transform(TraceStemElements.begin(), TraceStemElements.end(), back_inserter(GuardedCommands),
+                          [&](PSTraceElemT& Element){return Element.first;});
+                transform(TraceLoopElements.begin(), TraceLoopElements.end(), back_inserter(GuardedCommands),
+                          [&](PSTraceElemT& Element){return Element.first;});
+            }
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
             for (auto InitState: InitStateGenerators) {
                 vector<MgrT::SubstMapT> symbolic_states;
@@ -251,8 +306,8 @@ namespace ESMC {
                     Memory[update->GetLHS()] = update->GetRHS();
                 }
                 ExpT path_condition = TheLTS->MakeTrue();
-                for (auto it = TraceElements.begin(); it != TraceElements.end(); ++it) {
-                    GCmdRef guarded_command = it->first;
+                for (auto it = GuardedCommands.begin(); it != GuardedCommands.end(); ++it) {
+                    GCmdRef guarded_command = *it;
                     const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
                     const ExpT& guard = guarded_command->GetGuard();
                     ExpT new_guard = guard->GetMgr()->ApplyTransform<SubstitutorForWP>(guard, Memory);

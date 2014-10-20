@@ -761,6 +761,21 @@ namespace ESMC {
             }
         }
 
+        const ProductState* LivenessViolation::GetInitialState() const
+        {
+            return InitialState;
+        }
+
+        const vector<PSTraceElemT>& LivenessViolation::GetStem() const
+        {
+            return StemPath;
+        }
+
+        const vector<PSTraceElemT>& LivenessViolation::GetLoop() const
+        {
+            return LoopPath;
+        }
+
         string LivenessViolation::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
