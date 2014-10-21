@@ -366,6 +366,8 @@ namespace ESMC {
 
                 vector<ExpT> ExpStack;
                 MgrT* Mgr;
+                vector<vector<ExpT>> BoundVars;
+                u32 QuantifierDepth;
 
                 inline vector<ExpT> UnrollQuantifier(const QuantifiedExpressionBase<E, S>* Exp);
                 
@@ -2385,7 +2387,8 @@ namespace ESMC {
             // implementation of quantifier unroller
             template <typename E, template <typename> class S>
             inline QuantifierUnroller<E, S>::QuantifierUnroller(MgrT* Mgr)
-                : ExpressionVisitorBase<E, S>("QuantifierUnroller"), Mgr(Mgr)
+                : ExpressionVisitorBase<E, S>("QuantifierUnroller"), Mgr(Mgr),
+                  QuantifierDepth(0)
             {
                 // Nothing here
             }
@@ -2454,8 +2457,23 @@ namespace ESMC {
                         auto const& ValExp = Mgr->MakeVal(CPElem[i], QVarTypes[i]);
                         SubstMap[BoundVarExp] = ValExp;
                     }
-
-                    Retval.push_back(Mgr->Substitute(SubstMap, QBody));
+                    auto SubstExp = Mgr->Substitute(SubstMap, QBody);
+                    // We also need to replace higher number debruijn indices
+                    // by lower numbered ones
+                    SubstMap.clear();
+                    for (u32 i = 0; i < BoundVars.size() - 1; ++i) {
+                        const u32 NumBoundVars = BoundVars[i].size();
+                        for (u32 j = 0; j < NumBoundVars; ++j) {
+                            auto const& CurBoundVar = BoundVars[i][NumBoundVars - j - 1];
+                            auto const& VarType = CurBoundVar->GetType();
+                            auto const VarIndex = 
+                                CurBoundVar->template As<BoundVarExpression>()->GetVarIdx();
+                            SubstMap[CurBoundVar] = 
+                                Mgr->MakeBoundVar(VarType, VarIndex - NumQVars);
+                        }
+                    }
+                    
+                    Retval.push_back(Mgr->Substitute(SubstMap, SubstExp));
                 }
                 return Retval;
             }
@@ -2465,10 +2483,24 @@ namespace ESMC {
             QuantifierUnroller<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* 
                                                                  Exp)
             {
+                // Add new bound vars
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const NumQVars = QVarTypes.size();
+                vector<ExpT> NewBoundVars(NumQVars);
+                
+                for (u32 i = 0; i < NumQVars; ++i) {
+                    auto CurType = QVarTypes[NumQVars - i - 1];
+                    auto CurIndex = QuantifierDepth + i;
+                    NewBoundVars[NumQVars - i - 1] = Mgr->MakeBoundVar(CurType, CurIndex);
+                }
+
+                QuantifierDepth += NumQVars;
+                BoundVars.push_back(NewBoundVars);
+
                 Exp->GetQExpression()->Accept(this);
                 auto NewExp = ExpStack.back();
                 ExpStack.pop_back();
-                auto NewQExp = Mgr->MakeExists(Exp->GetQVarTypes(), NewExp);
+                auto NewQExp = Mgr->MakeExists(QVarTypes, NewExp);
                 auto&& UnrolledExps = 
                     UnrollQuantifier(NewQExp->template SAs<Exprs::QuantifiedExpressionBase>());
                 if (UnrolledExps.size() == 1) {
@@ -2476,6 +2508,9 @@ namespace ESMC {
                 } else {
                     ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpOR, UnrolledExps));
                 }
+
+                BoundVars.pop_back();
+                QuantifierDepth -= NumQVars;
             }
 
             template <typename E, template <typename> class S>
@@ -2483,6 +2518,17 @@ namespace ESMC {
             QuantifierUnroller<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* 
                                                                  Exp)
             {
+                // Add new bound vars
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const NumQVars = QVarTypes.size();
+                vector<ExpT> NewBoundVars(NumQVars);
+                
+                for (u32 i = 0; i < NumQVars; ++i) {
+                    auto CurType = QVarTypes[NumQVars - i - 1];
+                    auto CurIndex = QuantifierDepth + i;
+                    NewBoundVars[NumQVars - i - 1] = Mgr->MakeBoundVar(CurType, CurIndex);
+                }
+
                 Exp->GetQExpression()->Accept(this);
                 auto NewExp = ExpStack.back();
                 ExpStack.pop_back();
@@ -2494,6 +2540,9 @@ namespace ESMC {
                 } else {
                     ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpAND, UnrolledExps));
                 }
+
+                BoundVars.pop_back();
+                QuantifierDepth -= NumQVars;
             }
 
             template <typename E, template <typename> class S>

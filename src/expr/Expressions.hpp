@@ -711,7 +711,7 @@ namespace ESMC {
 
             MgrType* Mgr;
             SubstMapT SubstMap;
-            vector<typename ExprMgr<E, S>::ExpT> ExpStack;
+            vector<ExpT> ExpStack;
 
         public:
             inline TermSubstitutor(MgrType* Mgr, const SubstMapT& Subst);
@@ -734,13 +734,16 @@ namespace ESMC {
 
         // A term substitutor for substituting a term with bound de-bruijn vars
         template <typename E, template <typename> class S>
-        class BoundSubstitutor : public TermSubstitutor<E, S>
+        class BoundSubstitutor : public ExpressionVisitorBase<E, S>
         {
         private:
             typedef ExprMgr<E, S> MgrType;
             typedef typename MgrType::ExpT ExpT;
             typedef typename MgrType::SubstMapT SubstMapT;
 
+            MgrType* Mgr;
+            SubstMapT SubstMap;
+            vector<ExpT> ExpStack;
             u32 OffsetToAdd;
 
             inline bool TrySubstitute(const ExpressionBase<E, S>* Exp);
@@ -869,12 +872,7 @@ namespace ESMC {
         inline Substitutor<E, S>::Substitutor(MgrType* Mgr, const SubstMapT& Subst)
             : ExpressionVisitorBase<E, S>("Substitutor"), Mgr(Mgr), Subst(Subst)
         {
-            for (auto const& SubstEntry : Subst) {
-                if (SubstEntry.second->template Is<BoundVarExpression>()) {
-                    throw ESMCError((string)"Cannot substitute for bound vars. " + 
-                                    "Use BoundSubstitutor instead.");
-                }
-            }
+            // Nothing here
         }
         
         template <typename E, template <typename> class S>
@@ -1024,11 +1022,6 @@ namespace ESMC {
                                             "and the second is an RHS term!");
                     }
                 }
-
-                if (it1->second->template Is<BoundVarExpression>()) {
-                    throw ESMCError((string)"Cannot substitute for bound vars. " + 
-                                    "Use BoundSubstitutor instead.");
-                }
             }
         }
 
@@ -1136,8 +1129,60 @@ namespace ESMC {
         template <typename E, template <typename> class S>
         inline BoundSubstitutor<E, S>::BoundSubstitutor(MgrType* Mgr, 
                                                         const SubstMapT& SubstMap)
-            : TermSubstitutor<E, S>(Mgr, SubstMap), OffsetToAdd(0)
+            : ExpressionVisitorBase<E, S>("BoundSubstitutor"), 
+              Mgr(Mgr), SubstMap(SubstMap), OffsetToAdd(0)
         {
+            // Copy paste from above :-(
+            for (auto it1 = SubstMap.begin(); it1 != SubstMap.end(); ++it1) {
+                auto const& From1 = it1->first;
+
+                for (auto it2 = next(it1); it2 != SubstMap.end(); ++it2) {
+                    auto const& From2 = it2->first;
+                    auto&& Terms1 = 
+                        Mgr->Gather(From2, 
+                                    [&] (const ExpressionBase<E, S>* Exp) -> bool
+                                    {
+                                        return (Exp == From1);
+                                    });
+                    if (Terms1.size() != 0) {
+                        throw ExprTypeError((string)"The term:\n" + From1->ToString() + 
+                                            "\nis a subterm of term\n:" + From2->ToString() + 
+                                            "\nin substitution. And both occur as " + 
+                                            "terms to be substituted for");
+                    }
+                    auto&& Terms2 = 
+                        Mgr->Gather(From1, 
+                                    [&] (const ExpressionBase<E, S>* Exp) -> bool
+                                    {
+                                        return (Exp == From2);
+                                    });
+                    if (Terms2.size() != 0) {
+                        throw ExprTypeError((string)"The term:\n" + From2->ToString() + 
+                                            "\nis a subterm of term\n:" + From1->ToString() + 
+                                            "\nin substitution. And both occur as " + 
+                                            "terms to be substituted for");
+                    }
+                }
+
+                for (auto it2 = SubstMap.begin(); it2 != SubstMap.end(); ++it2) {
+                    auto const& To2 = it2->second;
+                    auto&& Terms1 =
+                        Mgr->Gather(To2, 
+                                    [&] (const ExpressionBase<E, S>* Exp) -> bool
+                                    {
+                                        return (Exp == From1);
+                                    });
+
+                    if (Terms1.size() != 0) {
+                        throw ExprTypeError((string)"The term:\n" + From1->ToString() + 
+                                            "\nis a subterm of term\n:" + To2->ToString() + 
+                                            "\nin substitution. The first is an LHS term " + 
+                                            "and the second is an RHS term!");
+                    }
+                }
+            }
+
+
             for (auto const& SubstEntry : SubstMap) {
                 if (!(SubstEntry.second->template Is<BoundVarExpression>())) {
                     throw ESMCError((string)"Substitute terms must be bound variables " + 
