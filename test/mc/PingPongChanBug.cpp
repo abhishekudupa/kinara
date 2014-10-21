@@ -52,11 +52,13 @@
 #include "../../src/mc/LTSChecker.hpp"
 #include "../../src/mc/OmegaAutomaton.hpp"
 #include "../../src/mc/Trace.hpp"
+#include "../../src/symexec/LTSAnalyses.hpp"
 
 using namespace ESMC;
 using namespace LTS;
 using namespace Exprs;
 using namespace MC;
+using namespace Analyses;
 
 int main()
 {
@@ -348,6 +350,7 @@ int main()
     
     for (auto const& Trace : Traces) {
         cout << Trace->ToString() << endl;
+        cout << WeakestPreconditionForLiveness(TheLTS, Monitor, Trace->As<LivenessViolation>()) << endl;
         delete Trace;
     }
 

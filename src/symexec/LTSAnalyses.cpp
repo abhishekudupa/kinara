@@ -306,18 +306,9 @@ namespace ESMC {
         ExpT WeakestPreconditionForLiveness(LabelledTS* TheLTS, StateBuchiAutomaton* Monitor, LivenessViolation* Trace) {
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
             MgrT::SubstMapT LoopValues;
-            auto SomeInitState = InitStateGenerators[0];
-            for (auto update: SomeInitState) {
-                auto Lhs = update->GetLHS();
-                auto LhsType = Lhs->GetType();
-                if (LhsType->Is<ExprArrayType>()) {
-                    for (ExpT ScalarSubExp: GetAllScalarLeaves(Lhs)) {
-                        LoopValues[ScalarSubExp] = TheLTS->MakeVar(ScalarSubExp->ToString() + "_0", ScalarSubExp->GetType());
-                    }
-                } else if (LhsType->Is<ExprRecordType>()) {
-                    throw InternalError((string)"Cannot handle record initializations in wp for liveness.");
-                } else {
-                    LoopValues[Lhs] = TheLTS->MakeVar(Lhs->ToString() + "_0", Lhs->GetType());
+            for (auto StateVariable: TheLTS->GetStateVectorVars()) {
+                for (auto Exp: GetAllScalarLeaves(StateVariable)) {
+                    LoopValues[Exp] = TheLTS->MakeVar(Exp->ToString() + "_0", Exp->GetType());
                 }
             }
             MgrT::SubstMapT InvertLoopValues;
