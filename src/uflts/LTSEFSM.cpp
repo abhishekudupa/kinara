@@ -229,6 +229,26 @@ namespace ESMC {
             UpdateableVariables.erase(VarName);
         }
 
+        inline void IncompleteEFSM::AddConstraint(const ExpT& Constraint)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto SimpConstraint = Mgr->Simplify(Constraint);
+            cout << "Adding Constraint:" << endl << SimpConstraint->ToString() << endl;
+            Constraints.insert(SimpConstraint);
+        }
+
+        inline void IncompleteEFSM::AddConstraint(const vector<ExpT>& Constraints)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            cout << "Adding Constraints:" << endl;
+            for (auto const& Constraint : Constraints) {
+                auto SimpConstraint = Mgr->Simplify(Constraint);
+                cout << SimpConstraint->ToString() << endl << endl;
+                this->Constraints.insert(SimpConstraint);
+            }
+            cout << "End of constraint set." << endl;
+        }
+
         void IncompleteEFSM::ExpandExpression(const ExpT& Exp, set<ExpT>& Expansions)
         {
             auto VarType = Exp->GetType();
@@ -352,31 +372,11 @@ namespace ESMC {
             return FindNegDisjunction(RelTransitions, TP, TheLTS->MakeTrue());
         }
 
-        inline vector<ExpT> IncompleteEFSM::GetSymmetryConstraints(const ExpT& Exp)
+        inline vector<ExprTypeRef>
+        IncompleteEFSM::GetSymmTypesInExpr(const ExpT& Exp)
         {
-            using namespace Symm;
-
-            auto ExpAsOp = Exp->As<OpExpression>();
-            if (ExpAsOp == nullptr) {
-                throw InternalError((string)"Expected an uninterpreted function " + 
-                                    "application as expression argument in " + 
-                                    "IncompleteEFSM::GetSymmetryConstraints()\n" + 
-                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
-            }
-            auto const& AppArgs = ExpAsOp->GetChildren();
-            vector<ExprTypeRef> ArgTypes;
-            for_each(AppArgs.begin(), AppArgs.end(),
-                     [&] (const ExpT& Arg) -> void
-                     {
-                         ArgTypes.push_back(Arg->GetType());
-                     });
-
-            vector<ExpT> Retval;
-            auto const IsRangeSymmetric = Exp->GetType()->Is<ExprSymmetricType>();
-
             auto Mgr = TheLTS->GetMgr();
 
-            // Get all the terms which are of symmetric type
             auto&& SymmTerms = 
                 Mgr->Gather(Exp,
                             [&] (const ExpT& Exp) -> bool
@@ -391,17 +391,80 @@ namespace ESMC {
                      {
                          SymmTypeSet.insert(Term->GetType());
                      });
-
-            if (IsRangeSymmetric) {
+            if (Exp->GetType()->Is<ExprSymmetricType>()) {
                 SymmTypeSet.insert(Exp->GetType());
             }
 
+            return vector<ExprTypeRef>(SymmTypeSet.begin(), SymmTypeSet.end());
+        }
+
+        inline void IncompleteEFSM::PartitionDomain(const vector<ExpT>& Args, 
+                                                    vector<ExpT>& SymmArgs, 
+                                                    vector<ExpT>& NonSymmArgs)
+        {
+            SymmArgs.clear();
+            NonSymmArgs.clear();
+
+            for_each(Args.begin(), Args.end(),
+                     [&] (const ExpT& Arg) -> void
+                     {
+                         auto const& ArgType = Arg->GetType();
+                         if (ArgType->Is<ExprSymmetricType>()) {
+                             SymmArgs.push_back(Arg);
+                         } else {
+                             NonSymmArgs.push_back(Arg);
+                         }
+                     });
+        }
+
+        inline void
+        IncompleteEFSM::MergeEquivalences(const set<ExpT>& NewEquivalences, 
+                                          set<set<ExpT>>& EquivalenceSets)
+        {
+            vector<set<set<ExpT>>::const_iterator> ToMerge;
+            set<ExpT> MergedSet(NewEquivalences.begin(), NewEquivalences.end());
+
+            for (auto const& Exp : NewEquivalences) {
+                for (auto it = EquivalenceSets.begin(); 
+                     it != EquivalenceSets.end(); ++it) {
+                    auto const& CurSet = *it;
+                    if (CurSet.find(Exp) != CurSet.end()) {
+                        if (find(ToMerge.begin(), ToMerge.end(), it) == ToMerge.end()) {
+                            ToMerge.push_back(it);
+                        }
+                    }
+                }
+            }
+
+            for (auto const& IteratorToMerge : ToMerge) {
+                auto const& SetToMerge = *IteratorToMerge;
+                MergedSet.insert(SetToMerge.begin(), SetToMerge.end());
+            }
+            
+            for (auto const& IteratorToMerge : ToMerge) {
+                EquivalenceSets.erase(IteratorToMerge);
+            }
+            EquivalenceSets.insert(MergedSet);
+        }
+
+        inline set<set<ExpT>> 
+        IncompleteEFSM::FindEquivalences(const ExpT& Exp,
+                                         const vector<ExprTypeRef>& SymmTypes,
+                                         const vector<ExpT>& SymmArgs,
+                                         const vector<ExpT>& NonSymmArgs)
+        {
+            using namespace Symm;
+
             map<ExprTypeRef, u32> TypeOffsets;
             vector<u32> DomainSizes;
+            auto const IsRangeSymmetric = Exp->GetType()->Is<ExprSymmetricType>();
+            set<set<ExpT>> Retval;
+            const u32 NumSymmArgs = SymmArgs.size();
+            auto Mgr = TheLTS->GetMgr();
             
             // Run offset, run!!
             u32 RunningOffset = 0;
-            for (auto const& SymmType : SymmTypeSet) {
+            for (auto const& SymmType : SymmTypes) {
                 auto const CurSize = SymmType->GetCardinality();
                 DomainSizes.push_back(CurSize);
                 TypeOffsets[SymmType] = RunningOffset;
@@ -409,8 +472,122 @@ namespace ESMC {
             }
 
             PermutationSet PermSet(DomainSizes, false);
-
+            const u32 NumPerms = PermSet.GetSize();
             
+            // Get the cross product of values for symmetric arguments
+            vector<vector<string>> SymmArgValues;
+            for (auto const& SymmArg : SymmArgs) {
+                SymmArgValues.push_back(SymmArg->GetType()->GetElements());
+            }
+            auto&& ValueTuples = CrossProduct<string>(SymmArgValues.begin(), 
+                                                      SymmArgValues.end());
+            
+            // for each value tuple, we substitute args with
+            // the values, and then compute the equivalences
+            // based on the permutations
+            for (auto const& ValueTuple : ValueTuples) {
+                MgrT::SubstMapT SubstMap;
+
+                for (u32 i = 0; i < NumSymmArgs; ++i) {
+                    SubstMap[SymmArgs[i]] = Mgr->MakeVal(ValueTuple[i], 
+                                                         SymmArgs[i]->GetType());
+                }
+
+                set<ExpT> CurEquivalences;
+
+                if (!IsRangeSymmetric) {
+                    auto SubstExp = Mgr->TermSubstitute(SubstMap, Exp);
+                    for (u32 i = 0; i < NumPerms; ++i) {
+                        auto const& CurPerm = PermSet.GetIterator(i).GetPerm();
+                        
+                        auto PermExp = Mgr->ApplyTransform<ExpressionPermuter>(SubstExp, 
+                                                                               CurPerm,
+                                                                               TypeOffsets);
+                        CurEquivalences.insert(PermExp);
+                    }
+                } else {
+                    // The range itself is symmetric
+                    auto const& RangeType = Exp->GetType();
+                    auto const& RangeElems = RangeType->GetElements();
+                    
+                    for (auto const& RangeElem : RangeElems) {
+                        auto CurVal = Mgr->MakeVal(RangeElem, RangeType);
+                        auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, Exp, CurVal);
+                        auto SubstExp = Mgr->TermSubstitute(SubstMap, EQExp);
+                        for (u32 i = 0; i < NumPerms; ++i) {
+                            auto const& CurPerm = PermSet.GetIterator(i).GetPerm();
+                            auto PermExp = Mgr->ApplyTransform<ExpressionPermuter>(SubstExp,
+                                                                                   CurPerm,
+                                                                                   TypeOffsets);
+                            CurEquivalences.insert(PermExp);
+                        }
+                    }
+                }
+
+                MergeEquivalences(CurEquivalences, Retval);
+            }
+            return Retval;
+        }
+
+        static inline ExpT MakeEquivalence(const ExpT& Exp1, const ExpT& Exp2,
+                                           MgrT* Mgr)
+        {
+            if (Exp1->GetType() != Exp2->GetType()) {
+                throw InternalError((string)"Types do not match when attempting to " +
+                                    "assert equivalence of expressions:\n" + 
+                                    Exp1->ToString() + "\nand:\n" + Exp2->ToString() + 
+                                    "\nAt: " + __FILE__ + ":" + to_string(__LINE__));
+            }
+            
+            if (Exp1->GetType()->Is<ExprBoolType>()) {
+                return Mgr->MakeExpr(LTSOps::OpIFF, Exp1, Exp2);
+            } else {
+                return Mgr->MakeExpr(LTSOps::OpEQ, Exp1, Exp2);
+            }
+        }
+
+        inline vector<ExpT> IncompleteEFSM::GetSymmetryConstraints(const ExpT& Exp)
+        {
+            vector<ExpT> Retval;
+            auto Mgr = TheLTS->GetMgr();
+
+            auto ExpAsOp = Exp->As<OpExpression>();
+            if (ExpAsOp == nullptr) {
+                throw InternalError((string)"Expected an uninterpreted function " + 
+                                    "application as expression argument in " + 
+                                    "IncompleteEFSM::GetSymmetryConstraints()\n" + 
+                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
+            }
+            auto const& AppArgs = ExpAsOp->GetChildren();
+            vector<ExpT> SymmArgs;
+            vector<ExpT> NonSymmArgs;
+            PartitionDomain(AppArgs, SymmArgs, NonSymmArgs);
+
+            const u32 NumNonSymmArgs = NonSymmArgs.size();
+            auto&& RelevantSymmTypes = GetSymmTypesInExpr(Exp);
+            auto&& Equivalences = FindEquivalences(Exp, RelevantSymmTypes, 
+                                                   SymmArgs, NonSymmArgs);
+            
+            for (auto const& EqClass : Equivalences) {
+                auto const& Representative = *(EqClass.begin());
+                for (auto it = next(EqClass.begin()); it != EqClass.end(); ++it) {
+                    auto CurConstraint = MakeEquivalence(Representative, *it, Mgr);
+                        
+                    // Quantify the non symmetric args
+                    MgrT::SubstMapT SubstMap;
+                    vector<ExprTypeRef> QVarTypes(NumNonSymmArgs);
+                        
+                    for (u32 i = 0; i < NumNonSymmArgs; ++i) {
+                        auto const& ArgType = NonSymmArgs[i]->GetType();
+                        SubstMap[NonSymmArgs[i]] = 
+                            Mgr->MakeBoundVar(ArgType, i);
+                        QVarTypes[NumNonSymmArgs - i - 1] = ArgType;
+                    }
+
+                    auto QBody = Mgr->TermSubstitute(SubstMap, CurConstraint);
+                    Retval.push_back(Mgr->MakeForAll(QVarTypes, QBody));
+                }
+            }
 
             return Retval;
         }
@@ -419,8 +596,6 @@ namespace ESMC {
                                               const ExpT& UncoveredPred, 
                                               const vector<ExpT>& GuardExps)
         {
-            using namespace ESMC::Symm;
-
             auto Mgr = TheLTS->GetMgr();
             vector<ExpT> DomainTermVec(DomainTerms.begin(), DomainTerms.end());
             vector<ExprTypeRef> DomainTypes;
@@ -433,20 +608,90 @@ namespace ESMC {
 
             // Register a new uninterpreted function
             string GuardUFName = 
-                (string)"SynGuard_" + this->Name + "_" + to_string(UFUIDGen.GetUID());
+                (string)"SynGuard_" + this->Name + "_" + to_string(GuardUFUIDGen.GetUID());
             auto GuardOp = Mgr->MakeUninterpretedFunction(GuardUFName, 
                                                           DomainTypes,
                                                           Mgr->MakeType<ExprBoolType>());
             auto GuardExp = Mgr->MakeExpr(GuardOp, DomainTermVec);
             // Make the constraints for symmetry on the guard expression
             auto&& SymmConstraints = GetSymmetryConstraints(GuardExp);
+            cout << "Symmetry constraints:" << endl;
+            AddConstraint(SymmConstraints);
             
+            // Make the determinism constraints
+            vector<ExpT> DetConstraints;
+            // This guard must lie in the uncovered region
+            DetConstraints.push_back(Mgr->MakeExpr(LTSOps::OpIMPLIES, GuardExp,
+                                                   UncoveredPred));
+
+            for (auto const& OtherGuard : GuardExps) {
+                auto Conjunction = Mgr->MakeExpr(LTSOps::OpAND, GuardExp,
+                                                 OtherGuard);
+                DetConstraints.push_back(Mgr->MakeExpr(LTSOps::OpNOT, Conjunction));
+            }
+
+            ExpT FinalDetConstraint = ExpT::NullPtr;
+            if (DetConstraints.size() == 0) {
+                FinalDetConstraint = Mgr->MakeTrue();
+            } else if (DetConstraints.size() == 1) {
+                FinalDetConstraint = DetConstraints[0];
+            } else {
+                FinalDetConstraint = Mgr->MakeExpr(LTSOps::OpAND, DetConstraints);
+            }
+
+            // Quantify on all the domain terms
+            MgrT::SubstMapT SubstMap;
+            const u32 NumDomainTerms = DomainTermVec.size();
+            vector<ExprTypeRef> QVarTypes(DomainTypes.rbegin(), DomainTypes.rend());
+            for (u32 i = 0; i < NumDomainTerms; ++i) {
+                auto const& DomTerm = DomainTermVec[i];
+                auto const& DomTermType = DomainTypes[i];
+                SubstMap[DomTerm] = Mgr->MakeBoundVar(DomTermType, i);
+            }
+
+            auto BodyExp = Mgr->TermSubstitute(SubstMap, FinalDetConstraint);
+            auto QExp = Mgr->MakeForAll(QVarTypes, BodyExp);
+            cout << "Determinism Constraint:" << endl;
+            AddConstraint(QExp);
+            return GuardExp;
         }
 
         inline vector<LTSAssignRef> 
         IncompleteEFSM::MakeUpdates(const set<ExpT>& DomainTerms)
         {
+            auto Mgr = TheLTS->GetMgr();
             vector<LTSAssignRef> Retval;
+            vector<ExprTypeRef> DomainTypes;
+            vector<ExpT> DomainTermVec(DomainTerms.begin(), DomainTerms.end());
+            for_each(DomainTerms.begin(), DomainTerms.end(),
+                     [&] (const ExpT& DomainTerm) -> void
+                     {
+                         DomainTypes.push_back(DomainTerm->GetType());
+                     });
+
+            map<string, ExprTypeRef> LValues;
+            for (auto const& Var : UpdateableVariables) {
+                LValues.insert(Var);
+            }
+
+            auto&& LValueTerms = GetDomainTerms(LValues);
+
+            for (auto const& LValue : LValueTerms) {
+                // Register a new uninterpreted function
+                // for the update of each domain term
+                string UpdateUFName = 
+                    (string)"Update_" + this->Name + "_" + to_string(UpdateUFUIDGen.GetUID());
+                auto UpdateOp = Mgr->MakeUninterpretedFunction(UpdateUFName,
+                                                               DomainTypes,
+                                                               LValue->GetType());
+                auto UpdateExp = Mgr->MakeExpr(UpdateOp, DomainTermVec);
+                auto&& SymmConstraints = GetSymmetryConstraints(UpdateExp);
+                cout << "Symmetry constraints for update of term " << LValue->ToString() 
+                     << ":" << endl;
+                AddConstraint(SymmConstraints);
+
+                Retval.push_back(new LTSAssignSimple(LValue, UpdateExp));
+            }
             return Retval;
         }
 
@@ -480,6 +725,8 @@ namespace ESMC {
             auto&& DomainTerms = GetDomainTerms(LocalDomVars);
 
             auto GuardExp = MakeGuard(DomainTerms, UncoveredPred, GuardExps);
+            GuardExps.push_back(GuardExp);
+
             auto&& Updates = MakeUpdates(DomainTerms);
 
             if (NewParams.size() == 0) {

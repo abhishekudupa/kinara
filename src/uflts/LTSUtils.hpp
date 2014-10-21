@@ -146,7 +146,7 @@ namespace ESMC {
             {
             private:
                 MgrT* Mgr;
-                vector<u08> PermVec;
+                const vector<u08>& PermVec;
                 map<ExprTypeRef, u32> TypeOffsets;
                 vector<ExpT> ExpStack;
                 
@@ -162,9 +162,9 @@ namespace ESMC {
                 virtual inline void VisitEQuantifiedExpression(const EQExpT* Exp) override;
                 virtual inline void VisitAQuantifiedExpression(const AQExpT* Exp) override;
                 
-                static ExpT Do(MgrT* Mgr, const vector<u08>& PermVec,
-                               const map<ExprTypeRef, u32>& TypeOffsets,
-                               const ExpT& Exp);
+                static ExpT Do(MgrT* Mgr, const ExpT& Exp,
+                               const vector<u08>& PermVec,
+                               const map<ExprTypeRef, u32>& TypeOffsets);
                 
             };
 

@@ -337,6 +337,15 @@ namespace ESMC {
                 ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewExp));
             }
 
+            ExpT ExpressionPermuter::Do(MgrT* Mgr, const ExpT& Exp,
+                                        const vector<u08>& PermVec,
+                                        const map<ExprTypeRef, u32>& TypeOffsets)
+            {
+                ExpressionPermuter ThePermuter(Mgr, PermVec, TypeOffsets);
+                Exp->Accept(&ThePermuter);
+                return ThePermuter.ExpStack[0];
+            }
+
         } /* End namespace Detail */
     } /* end namespace LTS */
 } /* end namespace ESMC */
