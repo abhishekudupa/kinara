@@ -165,6 +165,8 @@ namespace ESMC {
             // Methods for model checking
             vector<u32> GetNextStates(u32 CurState, u32 IndexID, 
                                       const StateVec* StateVector) const;
+            const ExpT& GetGuardForTransition(u32 FromState, u32 ToState,
+                                              u32 IndexID) const;
 
             void Freeze();
         };

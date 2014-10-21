@@ -238,6 +238,16 @@ namespace ESMC {
                                 " for Buchi Automaton transition undefined");
             }
             auto FinalStateID = it->second;
+
+            auto const& ExistingTransitions = Transitions[0][InitStateID];
+            for (auto const& Transition : ExistingTransitions) {
+                if (Transition.second == FinalStateID) {
+                    throw ESMCError((string)"Parallel edges in Buchi monitor between " + 
+                                    "states " + InitState + " and " + FinalState + 
+                                    ".\nMake a disjunctive guard instead");
+                }
+            }
+
             u32 InstIdx = 0;
             for (auto const& SymmInst : SymmInsts) {
                 // Create a substitution map for this instance
@@ -302,6 +312,26 @@ namespace ESMC {
             }
             
             return Retval;
+        }
+
+        const ExpT& StateBuchiAutomaton::GetGuardForTransition(u32 FromState, 
+                                                               u32 ToState, 
+                                                               u32 IndexID) const
+        {
+            if (FromState >= NumStates || ToState >= NumStates) {
+                throw ESMCError((string)"State IDs out of bounds for Buchi monitor");
+            }
+            auto const& TransVec = Transitions[IndexID][FromState];
+            for (auto const& Transition : TransVec) {
+                if (ToState == Transition.second) {
+                    return Transition.first;
+                }
+            }
+
+            auto it1 = StateIDToStateName.find(FromState);
+            auto it2 = StateIDToStateName.find(ToState);
+            throw ESMCError((string)"No transition between states: " + 
+                            it1->second + " to " + it2->second);
         }
 
         void StateBuchiAutomaton::Freeze()

@@ -11,7 +11,7 @@ CXX?=g++
 CXXFLAGS+=-std=c++11 -Wall -pipe
 CXXFLAGS+=-I/usr/local/Cellar/google-sparsehash/2.0.2/include/sparsehash/ -I/usr/local/include/
 
-PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP ABP_generated MSI_generated Fischer LeaderElection MSI MSIC2D WeakestPreconditionTest WeakestPreconditionArrayTest
+PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP ABP_generated MSI_generated Fischer LeaderElection MSI MSIC2D WeakestPreconditionTest WeakestPreconditionArrayTest ElevatorBug
 
 PingPongChan_SYS_LIBS=esmc z3 boost_system
 PingPongChan_EXT_LIBS=boost z3 esmc
@@ -21,6 +21,9 @@ PingPongChanBug_EXT_LIBS=$(PingPongChan_EXT_LIBS)
 
 Elevator_SYS_LIBS=esmc z3 boost_system
 Elevator_EXT_LIBS=boost z3 esmc
+
+ElevatorBug_SYS_LIBS=esmc z3 boost_system
+ElevatorBug_EXT_LIBS=boost z3 esmc
 
 ElevatorMissingEdges_SYS_LIBS=esmc z3 boost_system
 ElevatorMissingEdges_EXT_LIBS=boost z3 esmc
@@ -70,6 +73,7 @@ PingPongChanBug_OBJS=PingPongChanBug.o
 Flip_OBJS=Flip.o
 FlipSimple_OBJS=FlipSimple.o
 Elevator_OBJS=Elevator.o
+ElevatorBug_OBJS=ElevatorBug.o
 ABP_OBJS=ABP.o
 WeakestPreconditionArrayTest_OBJS=WeakestPreconditionArrayTest.o
 ABP_generated_OBJS=ABP_generated.o
@@ -89,6 +93,8 @@ PingPongChanBug_LIB_PATHS=$(PingPongChan_LIB_PATHS)
 
 Elevator_LIB_PATHS= \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
+
+ElevatorBug_LIB_PATHS=$(Elevator_LIB_PATHS)
 
 ABP_LIB_PATHS= \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)

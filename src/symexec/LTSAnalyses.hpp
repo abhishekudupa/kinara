@@ -79,6 +79,8 @@ namespace ESMC {
 
         LTS::ExpT WeakestPrecondition(LTS::ExpT InitialPhi, MC::TraceBase* Trace);
 
+        LTS::ExpT WeakestPreconditionForLiveness(LTS::LabelledTS* TheLTS, MC:: StateBuchiAutomaton* Monitor, MC::LivenessViolation* LivenessViolation);
+
         LTS::ExpT SymbolicExecution(LTS::ExpT Phi, MC::TraceBase* Trace, vector<MgrT::SubstMapT>& symbolic_states);
 
         vector<LTS::ExpT> SymbolicExecution(LTS::LabelledTS* TheLTS, MC::TraceBase* Trace, vector<vector<MgrT::SubstMapT>>& symbolic_states);

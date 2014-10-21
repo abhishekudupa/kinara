@@ -67,9 +67,10 @@ int main()
     vector<ExpT> Params = { ParamExp };
     auto TrueExp = TheLTS->MakeTrue();
 
+    int MaxValue = 1;
     // Add the message types
     vector<pair<string, ExprTypeRef>> MsgFields;
-    auto RangeType = TheLTS->MakeRangeType(0, 9);
+    auto RangeType = TheLTS->MakeRangeType(0, MaxValue);
     MsgFields.push_back(make_pair("Data", RangeType));
 
     auto DataMsgType = TheLTS->MakeMsgTypes(Params, TrueExp, "DataMsg", MsgFields, true);
@@ -154,7 +155,7 @@ int main()
     auto CountExp = TheLTS->MakeVar("Count", RangeType);
     auto ZeroExp = TheLTS->MakeVal("0", RangeType);
     auto OneExp = TheLTS->MakeVal("1", RangeType);
-    auto MaxExp = TheLTS->MakeVal("9", RangeType);
+    auto MaxExp = TheLTS->MakeVal(to_string(MaxValue), RangeType);
     auto CountIncExp = TheLTS->MakeOp(LTSOps::OpITE, 
                                       TheLTS->MakeOp(LTSOps::OpEQ, CountExp, MaxExp),
                                       ZeroExp,
