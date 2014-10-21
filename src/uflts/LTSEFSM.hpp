@@ -116,35 +116,34 @@ namespace ESMC {
 
             inline vector<ExpT> GetSymmetryConstraints(const ExpT& Exp);
 
-            inline ExpT FindNegDisjunction(const vector<LTSSymbTransRef>& Transitions,
-                                           const TPRef& TP,
-                                           const ExpT& RegionConstraint);
+            inline ExpT FindDisjunction(const vector<LTSSymbTransRef>& Transitions,
+                                        const TPRef& TP,
+                                        const ExpT& CoveredRegion);
 
-            inline ExpT FindInputUncoveredRegion(const vector<LTSSymbTransRef>& Transitions,
-                                                 const TPRef& TP, 
-                                                 const ExprTypeRef& MsgType,
-                                                 const ExpT& RegionConstraint);
+            inline ExpT FindInputCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
+                                               const TPRef& TP, 
+                                               const ExprTypeRef& MsgType,
+                                               const ExpT& CoveredRegion);
 
-            inline ExpT FindGlobalUncoveredRegion(const vector<LTSSymbTransRef>& Transitions,
-                                                  const TPRef& TP);
-
+            inline ExpT FindGlobalCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
+                                                const TPRef& TP);
+            
             inline void CompleteInputTransitions(const string& StateName,
                                                  const vector<LTSSymbTransRef>& Transitions,
-                                                 const ExpT& UncoveredPredicate,
+                                                 const ExpT& CoveredPredicate,
                                                  const TPRef& TP);
             
             inline ExpT MakeGuard(const set<ExpT>& DomainTerms,
-                                  const ExpT& UncoveredPred,
+                                  const ExpT& CoveredPredicate,
                                   const vector<ExpT>& GuardExps);
             
             inline vector<LTSAssignRef> MakeUpdates(const set<ExpT>& DomainTerms);
 
             inline void CompleteOneInputTransition(const string& InitStateName,
-                                                   const string& FinalStateName,
                                                    const SymmMsgDeclRef& MsgDecl,
                                                    const map<string, ExprTypeRef>& DomainVars,
                                                    vector<ExpT>& GuardExps,
-                                                   const ExpT& UncoveredPred);
+                                                   const ExpT& CoveredPred);
 
         public:
             IncompleteEFSM(LabelledTS* TheLTS, const string& Name,

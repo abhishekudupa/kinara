@@ -636,6 +636,7 @@ namespace ESMC {
             inline ExpT Simplify(const ExpT& Exp);
             inline ExpT Substitute(const SubstMapT& Subst, const ExpT& Exp);
             inline ExpT TermSubstitute(const SubstMapT& Subst, const ExpT& Exp);
+            inline ExpT BoundSubstitute(const SubstMapT& Subst, const ExpT& Exp);
             inline ExpSetT
             Gather(const ExpT& Exp, 
                    const function<bool(const ExpressionBase<E, S>*)>& Pred) const;
@@ -701,9 +702,9 @@ namespace ESMC {
 
         // A term substitutor
         template <typename E, template <typename> class S>
-        class TermSubstitutor : ExpressionVisitorBase<E, S>
+        class TermSubstitutor : public ExpressionVisitorBase<E, S>
         {
-        private:
+        protected:
             typedef ExprMgr<E, S> MgrType;
             typedef typename MgrType::ExpT ExpT;
             typedef typename MgrType::SubstMapT SubstMapT;
@@ -729,6 +730,37 @@ namespace ESMC {
             inline static ExpT Do(MgrType* Mgr, 
                                   const ExpT& Exp, 
                                   const SubstMapT& SubstMap);
+        };
+
+        // A term substitutor for substituting a term with bound de-bruijn vars
+        template <typename E, template <typename> class S>
+        class BoundSubstitutor : public TermSubstitutor<E, S>
+        {
+        private:
+            typedef ExprMgr<E, S> MgrType;
+            typedef typename MgrType::ExpT ExpT;
+            typedef typename MgrType::SubstMapT SubstMapT;
+
+            u32 OffsetToAdd;
+
+            inline bool TrySubstitute(const ExpressionBase<E, S>* Exp);
+
+        public:
+            inline BoundSubstitutor(MgrType* Mgr, const SubstMapT& Subst);
+            inline virtual ~BoundSubstitutor();
+
+            inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+            inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+            inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
+                override;
+            inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+            inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+                override;
+            inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+                override;
+
+            inline static ExpT Do(MgrType* Mgr, const ExpT& Exp, 
+                                  const SubstMapT& SubstMap);            
         };
 
         template <typename E, template <typename> class S>
@@ -837,7 +869,12 @@ namespace ESMC {
         inline Substitutor<E, S>::Substitutor(MgrType* Mgr, const SubstMapT& Subst)
             : ExpressionVisitorBase<E, S>("Substitutor"), Mgr(Mgr), Subst(Subst)
         {
-            // Nothing here
+            for (auto const& SubstEntry : Subst) {
+                if (SubstEntry.second->template Is<BoundVarExpression>()) {
+                    throw ESMCError((string)"Cannot substitute for bound vars. " + 
+                                    "Use BoundSubstitutor instead.");
+                }
+            }
         }
         
         template <typename E, template <typename> class S>
@@ -987,6 +1024,11 @@ namespace ESMC {
                                             "and the second is an RHS term!");
                     }
                 }
+
+                if (it1->second->template Is<BoundVarExpression>()) {
+                    throw ESMCError((string)"Cannot substitute for bound vars. " + 
+                                    "Use BoundSubstitutor instead.");
+                }
             }
         }
 
@@ -1079,13 +1121,142 @@ namespace ESMC {
             ExpStack.pop_back();
             ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewQExpr));
         }
-        
+
         template <typename E, template <typename> class S>
         inline typename TermSubstitutor<E, S>::ExpT
         TermSubstitutor<E, S>::Do(MgrType* Mgr, const ExpT& Exp, 
                                   const SubstMapT& SubstMap)
         {
             TermSubstitutor TheSubstitutor(Mgr, SubstMap);
+            Exp->Accept(&TheSubstitutor);
+            return TheSubstitutor.ExpStack[0];
+        }
+
+        // BoundSubstitutor implementation
+        template <typename E, template <typename> class S>
+        inline BoundSubstitutor<E, S>::BoundSubstitutor(MgrType* Mgr, 
+                                                        const SubstMapT& SubstMap)
+            : TermSubstitutor<E, S>(Mgr, SubstMap), OffsetToAdd(0)
+        {
+            for (auto const& SubstEntry : SubstMap) {
+                if (!(SubstEntry.second->template Is<BoundVarExpression>())) {
+                    throw ESMCError((string)"Substitute terms must be bound variables " + 
+                                    "in BoundSubstitutor");
+                }
+                if (SubstEntry.first->template Is<BoundVarExpression>()) {
+                    throw ESMCError((string)"Bound variables cannot be substituted for " + 
+                                    "in BoundSubstitutor");
+                }
+            }
+        }
+        
+        template <typename E, template <typename> class S>
+        inline BoundSubstitutor<E, S>::~BoundSubstitutor()
+        {
+            // Nothing here
+        }
+
+        template <typename E, template <typename> class S>
+        inline bool 
+        BoundSubstitutor<E, S>::TrySubstitute(const ExpressionBase<E, S>* Exp)
+        {
+            auto const& SubstMap = this->SubstMap;
+            auto it = SubstMap.find(Exp);
+            if (it == SubstMap.end()) {
+                return false;
+            } else if (OffsetToAdd == 0) {
+                this->ExpStack.push_back(it->second);
+                return true;
+            } else {
+                auto OrigBoundVar = it->second->template SAs<BoundVarExpression>();
+                auto Type = OrigBoundVar->GetVarType();
+                auto OrigIndex = OrigBoundVar->GetVarIdx();
+                auto NewIndex = OrigIndex + OffsetToAdd;
+                auto NewExp = this->Mgr->MakeBoundVar(Type, NewIndex);
+                this->ExpStack.push_back(NewExp);
+                return true;
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        BoundSubstitutor<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+        {
+            if (TrySubstitute(Exp)) {
+                return;
+            } else {
+                this->ExpStack.push_back(Exp);
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        BoundSubstitutor<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+        {
+            if (TrySubstitute(Exp)) {
+                return;
+            } else {
+                this->ExpStack.push_back(Exp);
+            }
+        }
+        
+        template <typename E, template <typename> class S>
+        inline void 
+        BoundSubstitutor<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+        {
+            this->ExpStack.push_back(Exp);
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        BoundSubstitutor<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+        {
+            if (TrySubstitute(Exp)) {
+                return;
+            } else {
+                ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+                auto const& OldChildren = Exp->GetChildren();
+                auto const NumChildren = OldChildren.size();
+                vector<ExpT> NewChildren(NumChildren);
+                
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    NewChildren[NumChildren - i - 1] = this->ExpStack.back();
+                    this->ExpStack.pop_back();
+                }
+                
+                this->ExpStack.push_back(this->Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
+            }
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        BoundSubstitutor<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+        {
+            OffsetToAdd += Exp->GetQVarTypes().size();
+            Exp->GetQExpression()->Accept(this);
+            auto NewQExpr = this->ExpStack.back();
+            this->ExpStack.pop_back();
+            this->ExpStack.push_back(this->Mgr->MakeExists(Exp->GetQVarTypes(), NewQExpr));
+            OffsetToAdd -= Exp->GetQVarTypes().size();
+        }
+
+        template <typename E, template <typename> class S>
+        inline void 
+        BoundSubstitutor<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+        {
+            OffsetToAdd += Exp->GetQVarTypes().size();
+            Exp->GetQExpression()->Accept(this);
+            auto NewQExpr = this->ExpStack.back();
+            this->ExpStack.pop_back();
+            this->ExpStack.push_back(this->Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
+            OffsetToAdd -= Exp->GetQVarTypes().size();
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename BoundSubstitutor<E, S>::ExpT
+        BoundSubstitutor<E, S>::Do(MgrType* Mgr, const ExpT& Exp, const SubstMapT& SubstMap)
+        {
+            BoundSubstitutor TheSubstitutor(Mgr, SubstMap);
             Exp->Accept(&TheSubstitutor);
             return TheSubstitutor.ExpStack[0];
         }
@@ -2348,8 +2519,14 @@ namespace ESMC {
         {
             return ApplyTransform<TermSubstitutor<E, S>>(Exp, Subst);
         }
-        
 
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::BoundSubstitute(const SubstMapT& Subst, const ExpT& Exp)
+        {
+            return ApplyTransform<BoundSubstitutor<E, S>>(Exp, Subst);
+        }
+        
         template <typename E, template <typename> class S>
         inline void ExprMgr<E, S>::GC()
         {

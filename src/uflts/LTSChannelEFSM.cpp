@@ -158,10 +158,18 @@ namespace ESMC {
             Updates = NoCountUpdates;
             Updates.push_back(new LTSAssignSimple(CountExp, Mgr->MakeExpr(LTSOps::OpADD,
                                                                           CountExp, OneExp)));
+            Updates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                  Mgr->MakeVal("ChanInitState", StateType)));
+
+            if (Lossy) {
+                NoCountUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                             Mgr->MakeVal("LossDecideState", 
+                                                                          StateType)));
+            }
+
             if (!Lossy) {
                 EFSMBase::AddInputTransForInstance(InstanceID,
                                                    SubstMap,
-                                                   "ChanInitState", 
                                                    "ChanInitState", 
                                                    Guard, 
                                                    Updates, 
@@ -176,16 +184,21 @@ namespace ESMC {
                                                                          CountExp, OneExp)));
                 Step2Updates.push_back(new LTSAssignSimple(LastMsgExp, 
                                                            Mgr->MakeVal("clear", UMType)));
+                Step2Updates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                           Mgr->MakeVal("ChanInitState",
+                                                                        StateType)));
                 vector<LTSAssignRef> LossUpdates;
                 LossUpdates.push_back(new LTSAssignSimple(LastMsgExp, 
                                                           Mgr->MakeVal("clear", UMType)));
+                LossUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                          Mgr->MakeVal("ChanInitState",
+                                                                       StateType)));
 
                 ExpT Guard2 = nullptr;
                 if (Blocking) {
                     EFSMBase::AddInputTransForInstance(InstanceID,
                                                        SubstMap,
                                                        "ChanInitState", 
-                                                       "LossDecideState",
                                                        Guard, 
                                                        NoCountUpdates, 
                                                        InMsgName, 
@@ -196,7 +209,6 @@ namespace ESMC {
                     EFSMBase::AddInputTransForInstance(InstanceID,
                                                        SubstMap,
                                                        "ChanInitState", 
-                                                       "LossDecideState",
                                                        TrueExp, 
                                                        NoCountUpdates,
                                                        InMsgName, 
@@ -218,7 +230,6 @@ namespace ESMC {
                 EFSMBase::AddInternalTransForInstance(InstanceID,
                                                       SubstMap,
                                                       "LossDecideState", 
-                                                      "ChanInitState", 
                                                       TrueExp, 
                                                       LossUpdates, 
                                                       set<string>());
@@ -226,7 +237,6 @@ namespace ESMC {
                 EFSMBase::AddInternalTransForInstance(InstanceID,
                                                       SubstMap,
                                                       "LossDecideState", 
-                                                      "ChanInitState",
                                                       Guard2, 
                                                       Step2Updates, 
                                                       AddToFairnessSets);
@@ -304,6 +314,9 @@ namespace ESMC {
                 
                 vector<LTSAssignRef> Updates;
                 Updates.push_back(new LTSAssignSimple(OutMsgExp, ChooseIndexExp));
+                Updates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                      Mgr->MakeVal("ChanInitState", 
+                                                                   StateType)));
                 vector<LTSAssignRef> MsgUpdates = Updates;
 
                 // Clear the last message
@@ -332,7 +345,6 @@ namespace ESMC {
                 EFSMBase::AddOutputTransForInstance(InstanceID,
                                                     SubstMap,
                                                     "ChanInitState", 
-                                                    "ChanInitState", 
                                                     Guard, 
                                                     Updates, 
                                                     OutMsgName, 
@@ -343,7 +355,6 @@ namespace ESMC {
                     EFSMBase::AddOutputTransForInstance(InstanceID,
                                                         SubstMap,
                                                         "ChanInitState", 
-                                                        "ChanInitState",
                                                         Guard,
                                                         MsgUpdates, 
                                                         OutMsgName,
@@ -455,7 +466,6 @@ namespace ESMC {
         }
 
         void ChannelEFSM::AddInputTransition(const string& InitState,
-                                             const string& FinalState,
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
@@ -468,7 +478,6 @@ namespace ESMC {
         void ChannelEFSM::AddInputTransitions(const vector<ExpT>& TransParams,
                                               const ExpT& Constraint,
                                               const string& InitState,
-                                              const string& FinalState,
                                               const ExpT& Guard,
                                               const vector<LTSAssignRef>& Updates,
                                               const string& MessageName,
@@ -479,7 +488,6 @@ namespace ESMC {
         }
             
         void ChannelEFSM::AddOutputTransition(const string& InitState,
-                                              const string& FinalState,
                                               const ExpT& Guard,
                                               const vector<LTSAssignRef>& Updates,
                                               const string& MessageName,
@@ -493,7 +501,6 @@ namespace ESMC {
         void ChannelEFSM::AddOutputTransitions(const vector<ExpT>& TransParams,
                                                const ExpT& Constraint,
                                                const string& InitState,
-                                               const string& FinalState,
                                                const ExpT& Guard,
                                                const vector<LTSAssignRef>& Updates,
                                                const string& MessageName,
@@ -508,7 +515,6 @@ namespace ESMC {
 
         
         void ChannelEFSM::AddInternalTransition(const string& InitState,
-                                                const string& FinalState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
                                                 const set<string>& AddToFairnessSets)
@@ -519,7 +525,6 @@ namespace ESMC {
         void ChannelEFSM::AddInternalTransitions(const vector<ExpT>& TransParams,
                                                  const ExpT& Constraint,
                                                  const string& InitState,
-                                                 const string& FinalState,
                                                  const ExpT& Guard,
                                                  const vector<LTSAssignRef>& Updates,
                                                  LTSFairnessType MessageFairness,

@@ -54,7 +54,6 @@ namespace ESMC {
         protected:
             AutomatonBase* Automaton;
             LTSState InitState;
-            LTSState FinalState;
             ExpT Guard;
             // The parameters with which I was 
             // instantiated
@@ -64,13 +63,11 @@ namespace ESMC {
             AutomatonTransitionBase(AutomatonBase* Automaton,
                                     const vector<ExpT>& ParamInst,
                                     const LTSState& InitState,
-                                    const LTSState& FinalState,
                                     const ExpT& Guard);
             virtual ~AutomatonTransitionBase();
 
             AutomatonBase* GetAutomaton() const;
             const LTSState& GetInitState() const;
-            const LTSState& GetFinalState() const;
             const ExpT& GetGuard() const;
             const vector<ExpT>& GetParamInst() const;
 
@@ -117,7 +114,6 @@ namespace ESMC {
             LTSTransitionBase(EFSMBase* TheEFSM,
                               const vector<ExpT>& ParamInst,
                               const LTSState& InitState,
-                              const LTSState& FinalState,
                               const ExpT& Guard,
                               const vector<LTSAssignRef>& Updates);
             virtual ~LTSTransitionBase();
@@ -136,7 +132,6 @@ namespace ESMC {
             LTSTransitionIOBase(EFSMBase* TheEFSM,
                                 const vector<ExpT>& ParamInst,
                                 const LTSState& InitState,
-                                const LTSState& FinalState,
                                 const ExpT& Guard,
                                 const vector<LTSAssignRef>& Updates,
                                 const string& MessageName,
@@ -153,7 +148,6 @@ namespace ESMC {
             LTSTransitionInput(EFSMBase* TheEFSM,
                                const vector<ExpT>& ParamInst,
                                const LTSState& InitState,
-                               const LTSState& FinalState,
                                const ExpT& Guard,
                                const vector<LTSAssignRef>& Updates,
                                const string& MessageName,
@@ -172,7 +166,6 @@ namespace ESMC {
             LTSTransitionOutput(EFSMBase* TheEFSM,
                                 const vector<ExpT>& ParamInst,
                                 const LTSState& InitState,
-                                const LTSState& FinalState,
                                 const ExpT& Guard,
                                 const vector<LTSAssignRef>& Updates,
                                 const string& MessageName,
@@ -194,7 +187,6 @@ namespace ESMC {
             LTSTransitionInternal(EFSMBase* TheEFSM,
                                   const vector<ExpT>& ParamInst,
                                   const LTSState& InitState,
-                                  const LTSState& FinalState,
                                   const ExpT& Guard,
                                   const vector<LTSAssignRef>& Updates,
                                   const set<string>& CompOfFairnessSets);
@@ -254,29 +246,29 @@ namespace ESMC {
         class LTSSymbTransitionBase : public RefCountable
         {
         protected:
+            vector<ExpT> TransParams;
             vector<ExpT> Params;
             ExpT Constraint;
             AutomatonBase* Automaton;
             LTSState InitState;
-            LTSState FinalState;
             ExpT Guard;
             vector<LTSAssignRef> Updates;
             
         public:
-            LTSSymbTransitionBase(const vector<ExpT>& Params,
+            LTSSymbTransitionBase(const vector<ExpT>& TransParams,
+                                  const vector<ExpT>& Params,
                                   const ExpT& Constraint,
                                   AutomatonBase* Automaton,
                                   const LTSState& InitState,
-                                  const LTSState& FinalState,
                                   const ExpT& Guard,
                                   const vector<LTSAssignRef>& Updates);
             virtual ~LTSSymbTransitionBase();
 
+            const vector<ExpT>& GetTransParams() const;
             const vector<ExpT>& GetParams() const;
             const ExpT& GetConstraint() const;
             AutomatonBase* GetAutomaton() const;
             const LTSState& GetInitState() const;
-            const LTSState& GetFinalState() const;
             const ExpT& GetGuard() const;
             const vector<LTSAssignRef>& GetUpdates() const;
 
@@ -321,11 +313,11 @@ namespace ESMC {
             vector<ExpT> MessageParams;
 
         public:
-            LTSSymbIOTransitionBase(const vector<ExpT>& Params,
+            LTSSymbIOTransitionBase(const vector<ExpT>& TransParams,
+                                    const vector<ExpT>& Params,
                                     const ExpT& Constraint,
                                     AutomatonBase* Automaton,
                                     const LTSState& InitState,
-                                    const LTSState& FinalState,
                                     const ExpT& Guard,
                                     const vector<LTSAssignRef>& Updates,
                                     const string& MessageName,
