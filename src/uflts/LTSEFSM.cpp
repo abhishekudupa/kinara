@@ -729,7 +729,14 @@ namespace ESMC {
                 auto const& ParamName = ParamAsVar->GetVarName();
                 LocalDomVars[ParamName] = ParamAsVar->GetVarType();
             }
-            // Add the input message
+
+            // Get the domain terms
+            auto&& DomainTerms = GetDomainTerms(LocalDomVars);
+
+            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, GuardExps);
+            GuardExps.push_back(GuardExp);
+
+            // Add the input message for the updates
             auto const& MsgType = MsgDecl->GetMessageType();
             ExprTypeRef ActMsgType = ExprTypeRef::NullPtr;
             if (MsgType->Is<ExprParametricType>()) {
@@ -740,12 +747,9 @@ namespace ESMC {
 
             LocalDomVars["InMsg"] = MsgDecl->GetMessageType();
 
-            // Get the domain terms
-            auto&& DomainTerms = GetDomainTerms(LocalDomVars);
+            DomainTerms = GetDomainTerms(LocalDomVars);
 
-            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, GuardExps);
-            GuardExps.push_back(GuardExp);
-
+            // Make the updates
             auto&& Updates = MakeUpdates(DomainTerms);
 
             if (NewParams.size() == 0) {
@@ -812,6 +816,13 @@ namespace ESMC {
                 for (auto const& Var : AllVariables) {
                     DomainVariables.insert(Var);
                 }
+
+                // Add any parameters as well
+                for (auto const& Param : Params) {
+                    auto const& ParamName = Param->As<VarExpression>()->GetVarName();
+                    DomainVariables[ParamName] = Param->GetType();
+                }
+                
                 // add in the message params to the domain vars
                 auto const& NewMsgParams = MsgDecl->GetNewParams();
                 for (auto const& NewMsgParam : NewMsgParams) {
