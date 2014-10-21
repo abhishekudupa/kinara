@@ -140,7 +140,6 @@ namespace ESMC {
             virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType) override;
 
             virtual void AddInputTransition(const string& InitState,
-                                            const string& FinalState,
                                             const ExpT& Guard,
                                             const vector<LTSAssignRef>& Updates,
                                             const string& MessageName,
@@ -150,7 +149,6 @@ namespace ESMC {
             virtual void AddInputTransitions(const vector<ExpT>& TransParams,
                                              const ExpT& Constraint,
                                              const string& InitState,
-                                             const string& FinalState,
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
@@ -158,7 +156,6 @@ namespace ESMC {
                                              const vector<ExpT>& MessageParams) override;
 
             virtual void AddOutputTransition(const string& InitState,
-                                             const string& FinalState,
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
@@ -170,7 +167,6 @@ namespace ESMC {
             virtual void AddOutputTransitions(const vector<ExpT>& TransParams,
                                               const ExpT& Constraint,
                                               const string& InitState,
-                                              const string& FinalState,
                                               const ExpT& Guard,
                                               const vector<LTSAssignRef>& Updates,
                                               const string& MessageName,
@@ -181,7 +177,6 @@ namespace ESMC {
                                               const string& SplatFairnessName) override;
 
             virtual void AddInternalTransition(const string& InitState,
-                                               const string& FinalState,
                                                const ExpT& Guard,
                                                const vector<LTSAssignRef>& Updates,
                                                const set<string>& AddToFairnessSets = 
@@ -190,7 +185,6 @@ namespace ESMC {
             virtual void AddInternalTransitions(const vector<ExpT>& TransParams,
                                                 const ExpT& Constraint,
                                                 const string& InitState,
-                                                const string& FinalState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
                                                 LTSFairnessType MessageFairness,

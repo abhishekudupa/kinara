@@ -809,7 +809,6 @@ namespace ESMC {
         void EFSMBase::AddInputTransForInstance(u32 InstanceID, 
                                                 const MgrT::SubstMapT& SubstMap,
                                                 const string& InitState, 
-                                                const string& FinalState, 
                                                 const ExpT& Guard, 
                                                 const vector<LTSAssignRef>& Updates, 
                                                 const string& MessageName, 
@@ -822,17 +821,12 @@ namespace ESMC {
 
             auto Mgr = TheLTS->GetMgr();
             CheckState(InitState);
-            CheckState(FinalState);
 
             auto const& IS = States[InitState];
-            auto const& FS = States[FinalState];
 
             auto const& ParamInst = ParamInsts[InstanceID];
             
             auto LocalUpdates = Updates;
-            // Update state var
-            LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
-                                                       Mgr->MakeVal(FinalState, StateType)));
             auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates, MessageName,
                                                     MessageType, ActMType);
             auto&& RebasedUpdates = RebaseUpdates(ParamInst, InstUpdates);
@@ -860,7 +854,7 @@ namespace ESMC {
             auto ElimGuard = Mgr->UnrollQuantifiers(MsgTransformedGuard);
             auto SimpGuard = Mgr->Simplify(ElimGuard);
 
-            auto CurTransition = new LTSTransitionInput(this, ParamInst, IS, FS, SimpGuard,
+            auto CurTransition = new LTSTransitionInput(this, ParamInst, IS, SimpGuard,
                                                         SimpUpdates, MessageName, 
                                                         ActMType);
             Transitions[ParamInst].push_back(CurTransition);
@@ -869,6 +863,37 @@ namespace ESMC {
         void EFSMBase::AddInputTransition(const string& InitState, const string& FinalState, 
                                           const ExpT& Guard, const vector<LTSAssignRef>& Updates, 
                                           const string& MessageName, const ExprTypeRef& MessageType, 
+                                          const vector<ExpT>& MessageParams)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            CheckState(FinalState);
+            auto LocalUpdates = Updates;
+            LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                       Mgr->MakeVal(FinalState, StateType)));
+            AddInputTransition(InitState, Guard, LocalUpdates, MessageName, 
+                               MessageType, MessageParams);
+        }
+
+        void EFSMBase::AddInputTransitions(const vector<ExpT>& TransParams, const ExpT& Constraint,
+                                           const string& InitState, const string& FinalState,
+                                           const ExpT& Guard, const vector<LTSAssignRef>& Updates,
+                                           const string& MessageName, const ExprTypeRef& MessageType,
+                                           const vector<ExpT>& MessageParams)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            CheckState(FinalState);
+            auto LocalUpdates = Updates;
+            LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                       Mgr->MakeVal(FinalState, StateType)));
+            AddInputTransitions(TransParams, Constraint, InitState, Guard, 
+                                LocalUpdates, MessageName, MessageType, MessageParams);
+        }
+
+        void EFSMBase::AddInputTransition(const string& InitState, 
+                                          const ExpT& Guard, 
+                                          const vector<LTSAssignRef>& Updates, 
+                                          const string& MessageName, 
+                                          const ExprTypeRef& MessageType, 
                                           const vector<ExpT>& MessageParams)
         {
             AssertStatesFrozen();
@@ -908,24 +933,26 @@ namespace ESMC {
                 CheckMsgType(ActMType);
                 AssertInput(ParamInsts[i], ActMType);
 
-                AddInputTransForInstance(i, SubstMap, InitState, FinalState,
+                AddInputTransForInstance(i, SubstMap, InitState,
                                          Guard, Updates, MessageName, MessageType,
                                          ActMType);
             }
 
-            auto SymbTrans = new LTSSymbInputTransition(this->Params, this->Constraint,
+            auto SymbTrans = new LTSSymbInputTransition({}, this->Params, this->Constraint,
                                                         this, States[InitState],
-                                                        States[FinalState], Guard,
-                                                        Updates, MessageName,
+                                                        Guard, Updates, MessageName,
                                                         MessageType, MessageParams);
             SymbolicTransitions.push_back(SymbTrans);
         }
 
-        void EFSMBase::AddInputTransitions(const vector<ExpT>& TransParams, const ExpT& Constraint,
-                                           const string& InitState, const string& FinalState,
-                                           const ExpT& Guard, const vector<LTSAssignRef>& Updates,
-                                           const string& MessageName, const ExprTypeRef& MessageType,
-                                           const vector<ExpT>& MessageParams)
+        void EFSMBase::AddInputTransitions(const vector<ExpT>& TransParams, 
+                                           const ExpT& Constraint, 
+                                           const string& InitState, 
+                                           const ExpT& Guard, 
+                                           const vector<LTSAssignRef>& Updates, 
+                                           const string& MessageName, 
+                                           const ExprTypeRef& MessageType, 
+                                           const vector<ExpT> &MessageParams)
         {
             AssertStatesFrozen();
             AssertVarsFrozen();
@@ -978,8 +1005,8 @@ namespace ESMC {
                     CheckMsgType(ActMType);
                     AssertInput(ParamInsts[i], ActMType);
 
-                    AddInputTransForInstance(i, LocalSubstMap, InitState,
-                                             FinalState, Guard, Updates,
+                    AddInputTransForInstance(i, LocalSubstMap,
+                                             InitState, Guard, Updates,
                                              MessageName, MessageType, ActMType);
                 }
             }
@@ -989,10 +1016,10 @@ namespace ESMC {
                                   TransParams.end());
             auto CombinedConstraint = Mgr->MakeExpr(LTSOps::OpAND, this->Constraint,
                                                     Constraint);
-            auto SymbTrans = new LTSSymbInputTransition(CombinedParams,
+            auto SymbTrans = new LTSSymbInputTransition(TransParams,
+                                                        CombinedParams,
                                                         CombinedConstraint,
                                                         this, States[InitState],
-                                                        States[FinalState],
                                                         Guard, Updates,
                                                         MessageName, MessageType,
                                                         MessageParams);
@@ -1002,7 +1029,6 @@ namespace ESMC {
         void EFSMBase::AddOutputTransForInstance(u32 InstanceID, 
                                                  const MgrT::SubstMapT& SubstMap,
                                                  const string& InitState,
-                                                 const string& FinalState,
                                                  const ExpT& Guard,
                                                  const vector<LTSAssignRef>& Updates,
                                                  const string& MessageName,
@@ -1016,11 +1042,9 @@ namespace ESMC {
 
             auto Mgr = TheLTS->GetMgr();
             CheckState(InitState);
-            CheckState(FinalState);
             CheckFairnessSets(AddToFairnessSets);
 
             auto const& IS = States[InitState];
-            auto const& FS = States[FinalState];
             auto const& ParamInst = ParamInsts[InstanceID];
 
             auto UMType = TheLTS->GetUnifiedMType();
@@ -1037,9 +1061,6 @@ namespace ESMC {
             
             auto LocalUpdates = Updates;
             LocalUpdates.push_back(new LTSAssignSimple(FieldExp, TypeIDExp));
-            // Add the next state update
-            LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
-                                                       Mgr->MakeVal(FinalState, StateType)));
                                                            
             auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates,
                                                     MessageName, MessageType, ActMType);
@@ -1070,7 +1091,7 @@ namespace ESMC {
                 LocalFairnessSets.insert("ProcessFairness");
             }
 
-            auto CurTransition = new LTSTransitionOutput(this, ParamInst, IS, FS, SimpGuard,
+            auto CurTransition = new LTSTransitionOutput(this, ParamInst, IS, SimpGuard,
                                                          SimpUpdates, MessageName,
                                                          ActMType, LocalFairnessSets);
 
@@ -1078,11 +1099,30 @@ namespace ESMC {
             Transitions[ParamInst].push_back(CurTransition);
         }
 
-        void EFSMBase::AddOutputTransition(const string& InitState, const string& FinalState, 
-                                           const ExpT& Guard, const vector<LTSAssignRef> &Updates, 
-                                           const string &MessageName, 
-                                           const ExprTypeRef &MessageType, 
-                                           const vector<ExpT> &MessageParams,
+        void EFSMBase::AddOutputTransition(const string& InitState, 
+                                           const string& FinalState, 
+                                           const ExpT& Guard, 
+                                           const vector<LTSAssignRef>& Updates, 
+                                           const string& MessageName, 
+                                           const ExprTypeRef& MessageType, 
+                                           const vector<ExpT>& MessageParams, 
+                                           const set<string> &AddToFairnessSets)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            CheckState(FinalState);
+            auto LocalUpdates = Updates;
+            LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                       Mgr->MakeVal(FinalState, StateType)));
+            AddOutputTransition(InitState, Guard, Updates, MessageName,
+                                MessageType, MessageParams, AddToFairnessSets);
+        }
+
+        void EFSMBase::AddOutputTransition(const string& InitState, 
+                                           const ExpT& Guard, 
+                                           const vector<LTSAssignRef>& Updates, 
+                                           const string& MessageName, 
+                                           const ExprTypeRef& MessageType, 
+                                           const vector<ExpT>& MessageParams,
                                            const set<string>& AddToFairnessSets)
         {
             AssertStatesFrozen();
@@ -1124,23 +1164,46 @@ namespace ESMC {
                 CheckMsgType(ActMType);
                 AssertOutput(ParamInsts[i], ActMType);
 
-                AddOutputTransForInstance(i, SubstMap, InitState, FinalState,
+                AddOutputTransForInstance(i, SubstMap, InitState,
                                           Guard, Updates, MessageName, 
                                           MessageType, ActMType, AddToFairnessSets);
             }
 
-            auto SymbTrans = new LTSSymbOutputTransition(this->Params, this->Constraint,
+            auto SymbTrans = new LTSSymbOutputTransition({}, this->Params, this->Constraint,
                                                          this, States[InitState],
-                                                         States[FinalState], Guard,
-                                                         Updates, MessageName,
+                                                         Guard, Updates, MessageName,
                                                          MessageType, MessageParams);
             SymbolicTransitions.push_back(SymbTrans);
         }
+
 
         void EFSMBase::AddOutputTransitions(const vector<ExpT>& TransParams, 
                                             const ExpT& Constraint, 
                                             const string& InitState, 
                                             const string& FinalState, 
+                                            const ExpT& Guard, 
+                                            const vector<LTSAssignRef>& Updates, 
+                                            const string& MessageName, 
+                                            const ExprTypeRef& MessageType, 
+                                            const vector<ExpT>& MessageParams,
+                                            LTSFairnessType FairnessKind,
+                                            SplatFairnessType SplatFairness,
+                                            const string& SplatFairnessName)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            CheckState(FinalState);
+            auto LocalUpdates = Updates;
+            LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                       Mgr->MakeVal(FinalState, StateType)));
+            AddOutputTransitions(TransParams, Constraint, InitState,
+                                 Guard, Updates, MessageName, MessageType, 
+                                 MessageParams, FairnessKind, SplatFairness, 
+                                 SplatFairnessName);
+        }
+
+        void EFSMBase::AddOutputTransitions(const vector<ExpT>& TransParams, 
+                                            const ExpT& Constraint, 
+                                            const string& InitState, 
                                             const ExpT& Guard, 
                                             const vector<LTSAssignRef>& Updates, 
                                             const string& MessageName, 
@@ -1253,8 +1316,8 @@ namespace ESMC {
                     }
                     
                     AddOutputTransForInstance(i, LocalSubstMap, InitState,
-                                              FinalState, Guard, Updates, 
-                                              MessageName, MessageType, ActMType,
+                                              Guard, Updates, MessageName, 
+                                              MessageType, ActMType, 
                                               LocalFairnessSets);
                 }
 
@@ -1266,10 +1329,10 @@ namespace ESMC {
                                   TransParams.end());
             auto CombinedConstraint = Mgr->MakeExpr(LTSOps::OpAND, this->Constraint,
                                                     Constraint);
-            auto SymbTrans = new LTSSymbOutputTransition(CombinedParams,
+            auto SymbTrans = new LTSSymbOutputTransition(TransParams,
+                                                         CombinedParams,
                                                          CombinedConstraint,
                                                          this, States[InitState],
-                                                         States[FinalState],
                                                          Guard, Updates,
                                                          MessageName, MessageType,
                                                          MessageParams);
@@ -1279,7 +1342,6 @@ namespace ESMC {
         void EFSMBase::AddInternalTransForInstance(u32 InstanceID,
                                                    const MgrT::SubstMapT& SubstMap,
                                                    const string& InitState,
-                                                   const string& FinalState,
                                                    const ExpT& Guard,
                                                    const vector<LTSAssignRef>& Updates,
                                                    const set<string>& AddToFairnessSets)
@@ -1291,16 +1353,12 @@ namespace ESMC {
             auto Mgr = TheLTS->GetMgr();
 
             CheckState(InitState);
-            CheckState(FinalState);
             CheckFairnessSets(AddToFairnessSets);
 
             auto const& IS = States[InitState];
-            auto const& FS = States[FinalState];
             auto const& ParamInst = ParamInsts[InstanceID];
             
             auto LocalUpdates = Updates;
-            LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
-                                                       Mgr->MakeVal(FinalState, StateType)));
             auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates,
                                                     "", ExprTypeRef::NullPtr, ExprTypeRef::NullPtr);
             auto&& RebasedUpdates = RebaseUpdates(ParamInst, InstUpdates);
@@ -1323,14 +1381,29 @@ namespace ESMC {
                 LocalFairnessSets.insert("ProcessFairness");
             }
 
-            auto CurTransition = new LTSTransitionInternal(this, ParamInst, IS, FS, SimpGuard,
+            auto CurTransition = new LTSTransitionInternal(this, ParamInst, IS, SimpGuard,
                                                            SimpUpdates, LocalFairnessSets);
 
             Transitions[ParamInst].push_back(CurTransition);
         }
 
-        void EFSMBase::AddInternalTransition(const string& InitState, const string& FinalState, 
-                                             const ExpT& Guard, const vector<LTSAssignRef> &Updates,
+        void EFSMBase::AddInternalTransition(const string& InitState, 
+                                             const string& FinalState, 
+                                             const ExpT& Guard, 
+                                             const vector<LTSAssignRef>& Updates,
+                                             const set<string>& AddToFairnessSets)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            CheckState(FinalState);
+            auto LocalUpdates = Updates;
+            LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                       Mgr->MakeVal(FinalState, StateType)));
+            AddInternalTransition(InitState, Guard, Updates, AddToFairnessSets);
+        }
+
+        void EFSMBase::AddInternalTransition(const string& InitState, 
+                                             const ExpT& Guard, 
+                                             const vector<LTSAssignRef> &Updates,
                                              const set<string>& AddToFairnessSets)
         {
             AssertStatesFrozen();
@@ -1348,14 +1421,13 @@ namespace ESMC {
 
             for (u32 i = 0; i < NumInsts; ++i) {
                 auto const& SubstMap = ParamSubsts[i];
-                AddInternalTransForInstance(i, SubstMap, InitState, FinalState,
-                                            Guard, Updates, AddToFairnessSets);
+                AddInternalTransForInstance(i, SubstMap, InitState, Guard, 
+                                            Updates, AddToFairnessSets);
             }
 
-            auto SymbTrans = new LTSSymbInternalTransition(this->Params, this->Constraint,
+            auto SymbTrans = new LTSSymbInternalTransition({}, this->Params, this->Constraint,
                                                            this, States[InitState],
-                                                           States[FinalState], Guard,
-                                                           Updates);
+                                                           Guard, Updates);
             SymbolicTransitions.push_back(SymbTrans);
         }
 
@@ -1363,6 +1435,25 @@ namespace ESMC {
                                               const ExpT& Constraint, 
                                               const string& InitState, 
                                               const string& FinalState, 
+                                              const ExpT& Guard, 
+                                              const vector<LTSAssignRef>& Updates, 
+                                              LTSFairnessType FairnessKind, 
+                                              SplatFairnessType SplatFairness,
+                                              const string& SplatFairnessName)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            CheckState(FinalState);
+            auto LocalUpdates = Updates;
+            LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                       Mgr->MakeVal(FinalState, StateType)));
+            AddInternalTransitions(TransParams, Constraint, InitState, 
+                                   Guard, Updates, FairnessKind, SplatFairness, 
+                                   SplatFairnessName);
+        }
+
+        void EFSMBase::AddInternalTransitions(const vector<ExpT>& TransParams, 
+                                              const ExpT& Constraint, 
+                                              const string& InitState, 
                                               const ExpT& Guard, 
                                               const vector<LTSAssignRef>& Updates, 
                                               LTSFairnessType FairnessKind, 
@@ -1448,8 +1539,7 @@ namespace ESMC {
                     }
                     
                     AddInternalTransForInstance(i, LocalSubstMap, InitState,
-                                                FinalState, Guard, Updates,
-                                                LocalFairnessSets);
+                                                Guard, Updates, LocalFairnessSets);
                 }
 
                 FirstInstance = false;
@@ -1460,10 +1550,10 @@ namespace ESMC {
                                   TransParams.end());
             auto CombinedConstraint = Mgr->MakeExpr(LTSOps::OpAND, this->Constraint,
                                                     Constraint);
-            auto SymbTrans = new LTSSymbInternalTransition(CombinedParams,
+            auto SymbTrans = new LTSSymbInternalTransition(TransParams,
+                                                           CombinedParams,
                                                            CombinedConstraint,
                                                            this, States[InitState],
-                                                           States[FinalState],
                                                            Guard, Updates);
             SymbolicTransitions.push_back(SymbTrans);
         }

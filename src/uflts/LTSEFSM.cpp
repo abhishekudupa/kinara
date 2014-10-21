@@ -91,11 +91,7 @@ namespace ESMC {
                  << endl << endl;
             auto Res = TP->CheckSat(Conjunction);
             if (Res == TPResult::UNKNOWN) {
-                throw InternalError((string)"Got unknown result from Z3 while " +
-                                    "checking determinism of guards.\n" + 
-                                    "Guards being checked:\n" + Exp1->ToString() + 
-                                    "\n\n" + Exp2->ToString() + "\nAt: " + 
-                                    __FILE__ + ":" + to_string(__LINE__));
+                throw IncompleteTheoryException(Conjunction);
             } else if (Res == TPResult::SATISFIABLE) {
                 return false;
             } else {
@@ -125,219 +121,240 @@ namespace ESMC {
                 MType = TransAsInput->GetMessageType();
             }
 
-            for (u32 j = TransIndex + 1; j < CandTrans.size(); ++j) {
-                auto const& OtherTrans = CandTrans[j];
-                auto OtherAsInput = OtherTrans->As<LTSSymbInputTransition>();
-                
-                if (MType != ExprTypeRef::NullPtr && OtherAsInput != nullptr) {
-                    if (OtherAsInput->GetMessageType() != MType) {
-                        continue;
-                    }
-                }
-                
-                auto Disjoint = 
-                    CheckDisjoint(Trans->GetGuard(), OtherTrans->GetGuard(), TP);
-                if (!Disjoint) {
-                    throw ESMCError((string)"Determinism Check failed on EFSM \"" + 
-                                    Name + "\"\nOn Transitions:\n" + Trans->ToString() + 
-                                    "\n\nand:\n\n" + OtherTrans->ToString());
-                }
-            }
-        }
+             for (u32 j = TransIndex + 1; j < CandTrans.size(); ++j) {
+                 auto const& OtherTrans = CandTrans[j];
+                 auto OtherAsInput = OtherTrans->As<LTSSymbInputTransition>();
+
+                 if (MType != ExprTypeRef::NullPtr && OtherAsInput != nullptr) {
+                     if (OtherAsInput->GetMessageType() != MType) {
+                         continue;
+                     }
+                 }
+
+                 auto Disjoint = 
+                     CheckDisjoint(Trans->GetGuard(), OtherTrans->GetGuard(), TP);
+                 if (!Disjoint) {
+                     throw ESMCError((string)"Determinism Check failed on EFSM \"" + 
+                                     Name + "\"\nOn Transitions:\n" + Trans->ToString() + 
+                                     "\n\nand:\n\n" + OtherTrans->ToString());
+                 }
+             }
+         }
 
 
-        // Overriden to check determinism
-        void DetEFSM::Freeze()
-        {
-            EFSMBase::Freeze();
+         // Overriden to check determinism
+         void DetEFSM::Freeze()
+         {
+             EFSMBase::Freeze();
 
-            // Check for determinism
-            auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
+             // Check for determinism
+             auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
 
-            for (auto const& NameState : States) {
-                auto const& StateName = NameState.first;
-                auto&& CandTransitions = 
-                    GetSymbolicTransitions([&] (const LTSSymbTransRef& Trans) -> bool
-                                           {
-                                               return (Trans->GetInitState().GetName() ==
-                                                       StateName);
-                                           });
-                for (u32 i = 0; i < CandTransitions.size(); ++i) {
-                    CheckTransition(TP, i, CandTransitions);
-                }
-            }
-        }
+             for (auto const& NameState : States) {
+                 auto const& StateName = NameState.first;
+                 auto&& CandTransitions = 
+                     GetSymbolicTransitions([&] (const LTSSymbTransRef& Trans) -> bool
+                                            {
+                                                return (Trans->GetInitState().GetName() ==
+                                                        StateName);
+                                            });
+                 for (u32 i = 0; i < CandTransitions.size(); ++i) {
+                     CheckTransition(TP, i, CandTransitions);
+                 }
+             }
+         }
 
-        // IncompleteEFSM implementation
-        IncompleteEFSM::IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
-                                       const vector<ExpT>& Params, 
-                                       const ExpT& Constraint,
-                                       LTSFairnessType Fairness)
-            : DetEFSM(TheLTS, Name, Params, Constraint, Fairness)
-        {
-            // Nothing here
-        }
+         // IncompleteEFSM implementation
+         IncompleteEFSM::IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
+                                        const vector<ExpT>& Params, 
+                                        const ExpT& Constraint,
+                                        LTSFairnessType Fairness)
+             : DetEFSM(TheLTS, Name, Params, Constraint, Fairness)
+         {
+             // Nothing here
+         }
 
-        IncompleteEFSM::~IncompleteEFSM()
-        {
-            // Nothing here
-        }
+         IncompleteEFSM::~IncompleteEFSM()
+         {
+             // Nothing here
+         }
 
-        void IncompleteEFSM::AddVariable(const string& VarName, const ExprTypeRef& VarType)
-        {
-            DetEFSM::AddVariable(VarName, VarType);
-            UpdateableVariables[VarName] = VarType;
-            AllVariables[VarName] = VarType;
-        }
+         void IncompleteEFSM::AddVariable(const string& VarName, const ExprTypeRef& VarType)
+         {
+             DetEFSM::AddVariable(VarName, VarType);
+             UpdateableVariables[VarName] = VarType;
+             AllVariables[VarName] = VarType;
+         }
 
-        void IncompleteEFSM::IgnoreMsgOnState(const SymmMsgDeclRef& MsgDecl,
-                                              const string& StateName)
-        {
-            if (States.find(StateName) == States.end()) {
-                throw ESMCError((string)"State named \"" + StateName + "\" is " + 
-                                "not a valid state for EFSM \"" + Name + "\"" + 
-                                " in call to IncompleteEFSM::IgnoreMsgOnState()");
-            }
-            if (find(SymmetricMessages.begin(), SymmetricMessages.end(), MsgDecl) ==
-                SymmetricMessages.end()) {
-                throw ESMCError((string)"Symmetric message undeclared as input " + 
-                                "or output to EFSM in call to " + 
-                                "IncompleteEFSM::IgnoreMsgOnState()");
-            }
-            BlockedCompletions[StateName].insert(MsgDecl);
-        }
+         void IncompleteEFSM::IgnoreMsgOnState(const SymmMsgDeclRef& MsgDecl,
+                                               const string& StateName)
+         {
+             if (States.find(StateName) == States.end()) {
+                 throw ESMCError((string)"State named \"" + StateName + "\" is " + 
+                                 "not a valid state for EFSM \"" + Name + "\"" + 
+                                 " in call to IncompleteEFSM::IgnoreMsgOnState()");
+             }
+             if (find(SymmetricMessages.begin(), SymmetricMessages.end(), MsgDecl) ==
+                 SymmetricMessages.end()) {
+                 throw ESMCError((string)"Symmetric message undeclared as input " + 
+                                 "or output to EFSM in call to " + 
+                                 "IncompleteEFSM::IgnoreMsgOnState()");
+             }
+             BlockedCompletions[StateName].insert(MsgDecl);
+         }
 
-        void IncompleteEFSM::MarkStateComplete(const string& StateName)
-        {
-            if (States.find(StateName) == States.end()) {
-                throw ESMCError((string)"State named \"" + StateName + "\" is " + 
-                                "not a valid state for EFSM \"" + Name + "\"" + 
-                                " in call to IncompleteEFSM::IgnoreMsgOnState()");
-            }
-            CompleteStates.insert(StateName);
-        }
+         void IncompleteEFSM::MarkStateComplete(const string& StateName)
+         {
+             if (States.find(StateName) == States.end()) {
+                 throw ESMCError((string)"State named \"" + StateName + "\" is " + 
+                                 "not a valid state for EFSM \"" + Name + "\"" + 
+                                 " in call to IncompleteEFSM::IgnoreMsgOnState()");
+             }
+             CompleteStates.insert(StateName);
+         }
 
-        void IncompleteEFSM::MarkVariableReadOnly(const string& VarName)
-        {
-            auto const& STEntry = SymTab.Lookup(VarName);
-            if (STEntry == DeclRef::NullPtr || !STEntry->Is<VarDecl>()) {
-                throw ESMCError((string)"Object named \"" + VarName + "\" is not " +
-                                "a variable of the EFSM named \"" + Name + "\"" + 
-                                " in call to IncompleteEFSM::MarkVariableReadOnly()");
-            }
-            ReadOnlyVars.insert(VarName);
-            UpdateableVariables.erase(VarName);
-        }
+         void IncompleteEFSM::MarkVariableReadOnly(const string& VarName)
+         {
+             auto const& STEntry = SymTab.Lookup(VarName);
+             if (STEntry == DeclRef::NullPtr || !STEntry->Is<VarDecl>()) {
+                 throw ESMCError((string)"Object named \"" + VarName + "\" is not " +
+                                 "a variable of the EFSM named \"" + Name + "\"" + 
+                                 " in call to IncompleteEFSM::MarkVariableReadOnly()");
+             }
+             ReadOnlyVars.insert(VarName);
+             UpdateableVariables.erase(VarName);
+         }
 
-        inline void IncompleteEFSM::AddConstraint(const ExpT& Constraint)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            auto SimpConstraint = Mgr->Simplify(Constraint);
-            cout << "Adding Constraint:" << endl << SimpConstraint->ToString() << endl;
-            Constraints.insert(SimpConstraint);
-        }
+         inline void IncompleteEFSM::AddConstraint(const ExpT& Constraint)
+         {
+             auto Mgr = TheLTS->GetMgr();
+             auto SimpConstraint = Mgr->Simplify(Constraint);
+             cout << "Adding Constraint:" << endl << SimpConstraint->ToString() << endl;
+             Constraints.insert(SimpConstraint);
+         }
 
-        inline void IncompleteEFSM::AddConstraint(const vector<ExpT>& Constraints)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            cout << "Adding Constraints:" << endl;
-            for (auto const& Constraint : Constraints) {
-                auto SimpConstraint = Mgr->Simplify(Constraint);
-                cout << SimpConstraint->ToString() << endl << endl;
-                this->Constraints.insert(SimpConstraint);
-            }
-            cout << "End of constraint set." << endl;
-        }
+         inline void IncompleteEFSM::AddConstraint(const vector<ExpT>& Constraints)
+         {
+             auto Mgr = TheLTS->GetMgr();
+             cout << "Adding Constraints:" << endl;
+             for (auto const& Constraint : Constraints) {
+                 auto SimpConstraint = Mgr->Simplify(Constraint);
+                 cout << SimpConstraint->ToString() << endl << endl;
+                 this->Constraints.insert(SimpConstraint);
+             }
+             cout << "End of constraint set." << endl;
+         }
 
-        void IncompleteEFSM::ExpandExpression(const ExpT& Exp, set<ExpT>& Expansions)
-        {
-            auto VarType = Exp->GetType();
-            auto Mgr = TheLTS->GetMgr();
-            if (VarType->Is<Exprs::ExprScalarType>()) {
-                Expansions.insert(Exp);
-                return;
-            }
+         void IncompleteEFSM::ExpandExpression(const ExpT& Exp, set<ExpT>& Expansions)
+         {
+             auto VarType = Exp->GetType();
+             auto Mgr = TheLTS->GetMgr();
+             if (VarType->Is<Exprs::ExprScalarType>()) {
+                 Expansions.insert(Exp);
+                 return;
+             }
 
-            if (VarType->Is<Exprs::ExprRecordType>()) {
-                auto TypeAsRec = VarType->SAs<Exprs::ExprRecordType>();
-                auto const& Fields = TypeAsRec->GetMemberVec();
-                auto FAType = TheLTS->MakeFieldAccessType();
+             if (VarType->Is<Exprs::ExprRecordType>()) {
+                 auto TypeAsRec = VarType->SAs<Exprs::ExprRecordType>();
+                 auto const& Fields = TypeAsRec->GetMemberVec();
+                 auto FAType = TheLTS->MakeFieldAccessType();
 
-                for (auto const& Field : Fields) {
-                    auto FAVar = TheLTS->MakeVar(Field.first, FAType);
-                    auto CurExpansion = TheLTS->MakeOp(LTSOps::OpField,
-                                                       Exp, FAVar);
-                    ExpandExpression(CurExpansion, Expansions);
-                }
-                return;
-            }
-            
-            if (VarType->Is<Exprs::ExprArrayType>()) {
-                auto TypeAsArray = VarType->SAs<Exprs::ExprArrayType>();
-                auto const& IndexType = TypeAsArray->GetIndexType();
-                auto const& IndexElems = IndexType->GetElements();
-                
-                for (auto const& IndexElem : IndexElems) {
-                    auto IndexExp = Mgr->MakeVal(IndexElem, IndexType);
-                    auto CurExpansion = TheLTS->MakeOp(LTSOps::OpIndex,
-                                                       Exp, IndexExp);
-                    ExpandExpression(CurExpansion, Expansions);
-                }
-                return;
-            }
+                 for (auto const& Field : Fields) {
+                     auto FAVar = TheLTS->MakeVar(Field.first, FAType);
+                     auto CurExpansion = TheLTS->MakeOp(LTSOps::OpField,
+                                                        Exp, FAVar);
+                     ExpandExpression(CurExpansion, Expansions);
+                 }
+                 return;
+             }
 
-            // Eh?
-            return;
-        }
+             if (VarType->Is<Exprs::ExprArrayType>()) {
+                 auto TypeAsArray = VarType->SAs<Exprs::ExprArrayType>();
+                 auto const& IndexType = TypeAsArray->GetIndexType();
+                 auto const& IndexElems = IndexType->GetElements();
 
-        set<ExpT> IncompleteEFSM::GetDomainTerms(const map<string, ExprTypeRef>& DomainVars)
-        {
-            set<ExpT> Retval;
-            for (auto const& Var : DomainVars) {
-                auto VarExp = TheLTS->MakeVar(Var.first, Var.second);
-                ExpandExpression(VarExp, Retval);
-            }
-            return Retval;
-        }
+                 for (auto const& IndexElem : IndexElems) {
+                     auto IndexExp = Mgr->MakeVal(IndexElem, IndexType);
+                     auto CurExpansion = TheLTS->MakeOp(LTSOps::OpIndex,
+                                                        Exp, IndexExp);
+                     ExpandExpression(CurExpansion, Expansions);
+                 }
+                 return;
+             }
 
-        // Find the negation of the disjunction of the guards
-        // which is also in the region defined by RegionConstraint
-        inline ExpT 
-        IncompleteEFSM::FindNegDisjunction(const vector<LTSSymbTransRef>& Transitions, 
-                                           const TPRef& TP, 
-                                           const ExpT& RegionConstraint)
-        {
-            vector<ExpT> Guards = { TheLTS->MakeFalse() };
-            ExpT CoveredGuard = ExpT::NullPtr;
+             // Eh?
+             return;
+         }
 
-            for (auto const& Trans : Transitions) {
-                Guards.push_back(Trans->GetGuard());
-            }
+         set<ExpT> IncompleteEFSM::GetDomainTerms(const map<string, ExprTypeRef>& DomainVars)
+         {
+             set<ExpT> Retval;
+             for (auto const& Var : DomainVars) {
+                 auto VarExp = TheLTS->MakeVar(Var.first, Var.second);
+                 ExpandExpression(VarExp, Retval);
+             }
+             return Retval;
+         }
 
-            if (Guards.size() > 1) {
-                CoveredGuard = TheLTS->MakeOp(LTSOps::OpOR, Guards);
-            } else {
-                CoveredGuard = Guards[0];
-            }
-            auto NegCovered = TheLTS->MakeOp(LTSOps::OpNOT, CoveredGuard);
-            NegCovered = TheLTS->MakeOp(LTSOps::OpAND, NegCovered, RegionConstraint);
-            auto Res = TP->CheckSat(NegCovered);
-            if (Res == TPResult::SATISFIABLE) {
-                return NegCovered;
-            } else if (Res == TPResult::UNSATISFIABLE) {
-                return TheLTS->MakeFalse();
-            } else {
-                throw IncompleteTheoryException(NegCovered);
-            }
-        }
+         // Find the negation of the disjunction of the guards
+         // which is also in the region defined by RegionConstraint
+         inline ExpT 
+         IncompleteEFSM::FindDisjunction(const vector<LTSSymbTransRef>& Transitions, 
+                                         const TPRef& TP, 
+                                         const ExpT& CoveredRegion)
+         {
+             vector<ExpT> Guards = { CoveredRegion };
+             ExpT CoveredGuard = ExpT::NullPtr;
+             auto Mgr = TheLTS->GetMgr();
 
-        // Find the predicate left uncovered by 
-        // input transition on MsgType
-        inline ExpT
-        IncompleteEFSM::FindInputUncoveredRegion(const vector<LTSSymbTransRef>& Transitions,
-                                                 const TPRef& TP, 
-                                                 const ExprTypeRef& MsgType,
-                                                 const ExpT& RegionConstraint)
+             for (auto const& Trans : Transitions) {
+                 auto const& NewParams = Trans->GetTransParams();
+                 const u32 NumNewParams = NewParams.size();
+                 if (NumNewParams == 0) {
+                     Guards.push_back(Trans->GetGuard());
+                 } else {
+                     vector<ExprTypeRef> NewParamTypes(NumNewParams);
+                     MgrT::SubstMapT SubstMap;
+                     for (u32 i = 0; i < NumNewParams; ++i) {
+                         auto const& CurParam = NewParams[i];
+                         auto const& CurType = CurParam->GetType();
+                         NewParamTypes[NumNewParams - i - 1] = CurType;
+                         SubstMap[NewParams[i]] = Mgr->MakeBoundVar(CurType, i);
+                     }
+                     auto ConstrainedGuard = Mgr->MakeExpr(LTSOps::OpAND, 
+                                                           Trans->GetGuard(),
+                                                           Trans->GetConstraint());
+
+                     auto SubstGuard = Mgr->BoundSubstitute(SubstMap, ConstrainedGuard);
+                     Guards.push_back(Mgr->MakeExists(NewParamTypes, SubstGuard));
+                 }
+             }
+
+             if (Guards.size() > 1) {
+                 CoveredGuard = TheLTS->MakeOp(LTSOps::OpOR, Guards);
+             } else {
+                 CoveredGuard = Guards[0];
+             }
+
+             auto NegCovered = TheLTS->MakeOp(LTSOps::OpNOT, CoveredGuard);
+
+             auto Res = TP->CheckSat(NegCovered);
+             if (Res == TPResult::SATISFIABLE) {
+                 return CoveredGuard;
+             } else if (Res == TPResult::UNSATISFIABLE) {
+                 return TheLTS->MakeTrue();
+             } else {
+                 throw IncompleteTheoryException(NegCovered);
+             }
+         }
+
+         // Find the predicate left uncovered by 
+         // input transition on MsgType
+         inline ExpT
+         IncompleteEFSM::FindInputCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
+                                                const TPRef& TP, 
+                                                const ExprTypeRef& MsgType,
+                                                const ExpT& CoveredRegion)
         {
             auto&& RelTransitions = 
                 Filter<LTSSymbTransRef>(Transitions.begin(), 
@@ -350,15 +367,15 @@ namespace ESMC {
                                                     TransAsInput->GetMessageType() == MsgType);
                                         });
 
-            return FindNegDisjunction(RelTransitions, TP, RegionConstraint);
+            return FindDisjunction(RelTransitions, TP, CoveredRegion);
         }
 
         // Find the predicate left uncovered
         // globally, i.e., by the output and internal
         // transitions
         inline ExpT 
-        IncompleteEFSM::FindGlobalUncoveredRegion(const vector<LTSSymbTransRef>& Transitions,
-                                                  const TPRef& TP)
+        IncompleteEFSM::FindGlobalCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
+                                                const TPRef& TP)
         {
             auto&& RelTransitions = 
                 Filter<LTSSymbTransRef>(Transitions.begin(),
@@ -369,7 +386,7 @@ namespace ESMC {
                                                     Trans->Is<LTSSymbOutputTransition>());
                                         });
 
-            return FindNegDisjunction(RelTransitions, TP, TheLTS->MakeTrue());
+            return FindDisjunction(RelTransitions, TP, TheLTS->MakeFalse());
         }
 
         inline vector<ExprTypeRef>
@@ -584,7 +601,7 @@ namespace ESMC {
                         QVarTypes[NumNonSymmArgs - i - 1] = ArgType;
                     }
 
-                    auto QBody = Mgr->TermSubstitute(SubstMap, CurConstraint);
+                    auto QBody = Mgr->BoundSubstitute(SubstMap, CurConstraint);
                     Retval.push_back(Mgr->MakeForAll(QVarTypes, QBody));
                 }
             }
@@ -593,7 +610,7 @@ namespace ESMC {
         }
 
         inline ExpT IncompleteEFSM::MakeGuard(const set<ExpT>& DomainTerms,
-                                              const ExpT& UncoveredPred, 
+                                              const ExpT& CoveredPred, 
                                               const vector<ExpT>& GuardExps)
         {
             auto Mgr = TheLTS->GetMgr();
@@ -620,9 +637,10 @@ namespace ESMC {
             
             // Make the determinism constraints
             vector<ExpT> DetConstraints;
-            // This guard must lie in the uncovered region
-            DetConstraints.push_back(Mgr->MakeExpr(LTSOps::OpIMPLIES, GuardExp,
-                                                   UncoveredPred));
+            // The intersection of the guard with the covered region
+            // must be empty
+            auto GuardAndCovered = Mgr->MakeExpr(LTSOps::OpAND, GuardExp, CoveredPred);
+            DetConstraints.push_back(Mgr->MakeExpr(LTSOps::OpNOT, GuardAndCovered));
 
             for (auto const& OtherGuard : GuardExps) {
                 auto Conjunction = Mgr->MakeExpr(LTSOps::OpAND, GuardExp,
@@ -649,7 +667,7 @@ namespace ESMC {
                 SubstMap[DomTerm] = Mgr->MakeBoundVar(DomTermType, i);
             }
 
-            auto BodyExp = Mgr->TermSubstitute(SubstMap, FinalDetConstraint);
+            auto BodyExp = Mgr->BoundSubstitute(SubstMap, FinalDetConstraint);
             auto QExp = Mgr->MakeForAll(QVarTypes, BodyExp);
             cout << "Determinism Constraint:" << endl;
             AddConstraint(QExp);
@@ -675,6 +693,8 @@ namespace ESMC {
             }
 
             auto&& LValueTerms = GetDomainTerms(LValues);
+            // Add the state lvalue
+            LValueTerms.insert(TheLTS->MakeVar("state", StateType));
 
             for (auto const& LValue : LValueTerms) {
                 // Register a new uninterpreted function
@@ -697,11 +717,10 @@ namespace ESMC {
 
         inline void 
         IncompleteEFSM::CompleteOneInputTransition(const string& InitStateName, 
-                                                   const string& FinalStateName,
                                                    const SymmMsgDeclRef& MsgDecl,
                                                    const map<string, ExprTypeRef>& DomainVars, 
                                                    vector<ExpT>& GuardExps, 
-                                                   const ExpT& UncoveredPred)
+                                                   const ExpT& CoveredPred)
         {
             auto LocalDomVars = DomainVars;
             auto const& NewParams = MsgDecl->GetNewParams();
@@ -724,18 +743,18 @@ namespace ESMC {
             // Get the domain terms
             auto&& DomainTerms = GetDomainTerms(LocalDomVars);
 
-            auto GuardExp = MakeGuard(DomainTerms, UncoveredPred, GuardExps);
+            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, GuardExps);
             GuardExps.push_back(GuardExp);
 
             auto&& Updates = MakeUpdates(DomainTerms);
 
             if (NewParams.size() == 0) {
-                AddInputTransition(InitStateName, FinalStateName, GuardExp, 
+                AddInputTransition(InitStateName, GuardExp, 
                                    Updates, "InMsg", MsgDecl->GetMessageType(),
                                    MsgDecl->GetMessageParams());
             } else {
                 AddInputTransitions(NewParams, MsgDecl->GetConstraint(), 
-                                    InitStateName, FinalStateName, 
+                                    InitStateName,
                                     GuardExp, Updates, "InMsg", 
                                     MsgDecl->GetMessageType(), 
                                     MsgDecl->GetMessageParams());
@@ -745,7 +764,7 @@ namespace ESMC {
         inline void 
         IncompleteEFSM::CompleteInputTransitions(const string& StateName,
                                                  const vector<LTSSymbTransRef>& TransFromState,
-                                                 const ExpT& RegionConstraint, const TPRef& TP)
+                                                 const ExpT& CoveredRegion, const TPRef& TP)
         {
             for (auto const& MsgDecl : SymmetricMessages) {
                 if (!MsgDecl->IsInput()) {
@@ -760,15 +779,30 @@ namespace ESMC {
                     continue;
                 }
 
+                auto const& MType = MsgDecl->GetMessageType();
+                ExprTypeRef ActMType = ExprTypeRef::NullPtr;
+                if (MType->Is<ExprParametricType>()) {
+                    ActMType = MType->SAs<ExprParametricType>()->GetBaseType();
+                } else {
+                    ActMType = MType->SAs<ExprRecordType>();
+                }
+
                 // We need to add transitions
                 // find the predicate already covered
                 // for this state on this input message
-                auto UncoveredMsgPred = FindInputUncoveredRegion(TransFromState, TP, 
-                                                                 MsgDecl->GetMessageType(),
-                                                                 RegionConstraint);
-                if (UncoveredMsgPred == TheLTS->MakeFalse()) {
+                auto CoveredMsgPred = FindInputCoveredRegion(TransFromState, TP, 
+                                                             MsgDecl->GetMessageType(),
+                                                             CoveredRegion);
+                if (CoveredMsgPred == TheLTS->MakeTrue()) {
+                    cout << "Nothing to complete on state " << StateName
+                         << " and message " << MsgDecl->ToString() << endl;
                     continue;
                 }
+
+                cout << "Completing transition on MessageType "
+                     << ActMType->SAs<ExprRecordType>()->GetName() 
+                     << " on state " << StateName << endl;
+                    
 
                 // We're okay to add one or more transitions
                 // Gather the list of expresions that could be 
@@ -788,18 +822,9 @@ namespace ESMC {
 
                 vector<ExpT> GuardExps;
 
-                // The target can be any state
-                for (auto const& NameState : States) {
-                    cout << "Completing input transition on state \"" 
-                         << StateName << "\" on message type:" << endl
-                         << MsgDecl->ToString() << endl
-                         << "to state \"" << NameState.first << "\" on EFSM "
-                         << this->Name << endl;
-                        
-                    CompleteOneInputTransition(StateName, NameState.first, 
-                                               MsgDecl, DomainVariables, 
-                                               GuardExps, UncoveredMsgPred);
-                }
+                CompleteOneInputTransition(StateName, 
+                                           MsgDecl, DomainVariables, 
+                                           GuardExps, CoveredMsgPred);
             }
         }
 
@@ -825,13 +850,14 @@ namespace ESMC {
                                                return (Trans->GetInitState().GetName() ==
                                                        StateName);
                                            });
-                auto UncoveredPred = FindGlobalUncoveredRegion(TransFromState, TP);
-                if (UncoveredPred == TheLTS->MakeFalse()) {
+                auto CoveredPred = FindGlobalCoveredRegion(TransFromState, TP);
+                if (CoveredPred == TheLTS->MakeTrue()) {
+                    cout << "Nothing to complete on state " << StateName << endl;
                     continue;
                 }
                 
                 // Add transitions
-                CompleteInputTransitions(StateName, TransFromState, UncoveredPred, TP);
+                CompleteInputTransitions(StateName, TransFromState, CoveredPred, TP);
             }
             
             EFSMFrozen = true;
