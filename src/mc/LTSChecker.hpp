@@ -207,7 +207,8 @@ namespace ESMC {
             LTSChecker(LabelledTS* TheLTS);
             virtual ~LTSChecker();
 
-            vector<TraceBase*> BuildAQS(AQSConstructionMethod Method = 
+            vector<TraceBase*> BuildAQS(const Z3Model& Model = Z3Model::NullModel,
+                                        AQSConstructionMethod Method = 
                                         AQSConstructionMethod::BreadthFirst);
             void ClearAQS();
 

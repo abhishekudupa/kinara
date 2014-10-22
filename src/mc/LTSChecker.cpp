@@ -637,7 +637,8 @@ namespace ESMC {
             }
         }
 
-        vector<TraceBase*> LTSChecker::BuildAQS(AQSConstructionMethod Method)
+        vector<TraceBase*> LTSChecker::BuildAQS(const Z3Model& Model,
+                                                AQSConstructionMethod Method)
         {
             vector<TraceBase*> Retval;
 

@@ -1739,6 +1739,11 @@ namespace ESMC {
             }
         }
 
+        void LTSCompiler::UpdateModel(const Z3Model& Model)
+        {
+            
+        }
+
     } /* end namespace */
 } /* end namespace */
 

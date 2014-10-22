@@ -2061,6 +2061,9 @@ namespace ESMC {
                     auto AppExp = Z3Expr(Ctx, Z3_mk_app(*Ctx, FuncDecl, 
                                                         NumChildren, 
                                                         LoweredChildren));
+
+                    Z3_dec_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl));
+
                     // Make the constraints on the application
                     // if necessary
                     auto RangeTypeAsRange = RangeType->template As<ESMC::Exprs::ExprRangeType>();

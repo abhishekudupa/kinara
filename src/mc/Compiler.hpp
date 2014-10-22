@@ -40,6 +40,7 @@
 #if !defined ESMC_COMPILER_HPP_
 #define ESMC_COMPILER_HPP_
 
+#include "../tpinterface/TheoremProver.hpp"
 #include "../common/FwdDecls.hpp"
 #include "../uflts/LTSTypes.hpp"
 
@@ -186,6 +187,37 @@ namespace ESMC {
 
             virtual void WriteScalar(i64 Value, StateVec* StateVector) const override;
             virtual void Write(const u08* Ptr, StateVec* StateVector) const override;
+        };
+
+        namespace Detail {
+            
+            class ValueVecHasher
+            {
+            public:
+                inline u64 operator () (const vector<i64>& Vec) const
+                {
+                    u64 Retval = 0;
+                    boost::hash_combine(Retval, Vec.size());
+                    for (auto const& Elem : Vec) {
+                        boost::hash_combine(Retval, Elem);
+                    }
+                    return Retval;
+                }
+            };
+            
+        } /* end namespace Detail */
+
+        class UFInterpreter : public RValueInterpreter
+        {
+        private:
+            vector<RValueInterpreter*> ArgInterps;
+            mutable vector<i64> SubEvals;
+            const u32 NumSubInterps;
+            unordered_map<vector<i64>, i64> EvalMap;
+            
+        public:
+            UFInterpreter(const vector<RValueInterpreter*>& ArgInterps,
+                          const unordered_map<vector<i64>, i64>);
         };
 
         class OpInterpreter : public RValueInterpreter
@@ -499,6 +531,7 @@ namespace ESMC {
             void RegisterInterp(RValueInterpreter* Interp);
             void CompileExp(const ExpT& Exp, LabelledTS* TheLTS);
             void CompileLTS(LabelledTS* TheLTS);
+            void UpdateModel(const Z3Model& Model);
         };
         
     } /* end namespace MC */
