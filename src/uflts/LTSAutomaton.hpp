@@ -51,9 +51,6 @@ namespace ESMC {
 
         class AutomatonBase
         {
-        private:
-            static UIDGenerator AutomatonClassIDGen;
-
         protected:
             LabelledTS* TheLTS;
             string Name;

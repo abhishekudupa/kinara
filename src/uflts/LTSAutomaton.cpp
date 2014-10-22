@@ -45,12 +45,10 @@
 namespace ESMC {
     namespace LTS {
 
-        UIDGenerator AutomatonBase::AutomatonClassIDGen;
-
         AutomatonBase::AutomatonBase(LabelledTS* TheLTS, const string& Name,
                                      const vector<ExpT>& Params, const ExpT& Constraint)
             : TheLTS(TheLTS), Name(Name), Params(Params), Constraint(Constraint),
-              ClassID(AutomatonClassIDGen.GetUID()), StatesFrozen(false)
+              ClassID(TheLTS->GetAutomataClassUID()), StatesFrozen(false)
         {
             auto Mgr = TheLTS->GetMgr();
             CheckParams(Params, Constraint, SymTab, Mgr, true);

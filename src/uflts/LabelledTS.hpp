@@ -100,6 +100,7 @@ namespace ESMC {
             vector<GCmdRef> GuardedCommands;
 
             SymbolTable SymTab;
+            UIDGenerator AutomatonClassIDGen;
 
             void AssertFrozen() const;
             void AssertNotFrozen() const;
@@ -116,6 +117,7 @@ namespace ESMC {
                                              const vector<u08>& Perm);
             void MakeMsgCanonMap();
             void InstantiateInitState(const InitStateRef& InitState);
+            u32 GetAutomataClassUID();
 
             ExpT InvariantExp;
             ExpT FinalCondExp;

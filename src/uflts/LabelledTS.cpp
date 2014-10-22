@@ -54,6 +54,7 @@ namespace ESMC {
     namespace LTS {
 
         const string LabelledTS::ProductMsgName = "__trans_msg__";
+
         using ESMC::Symm::PermutationSet;
         
         LabelledTS::LabelledTS()
@@ -70,6 +71,12 @@ namespace ESMC {
             for (auto const& NameEFSM : AllEFSMs) {
                 delete NameEFSM.second;
             }
+        }
+
+        u32 LabelledTS::GetAutomataClassUID()
+        {
+            auto Retval = AutomatonClassIDGen.GetUID();
+            return Retval;
         }
 
         const string& LabelledTS::GetProductMsgName() const
