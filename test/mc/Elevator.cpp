@@ -61,7 +61,7 @@ using namespace MC;
 
 
 
-int main()
+LabelledTS* Elevator()
 {
     int top_floor = 3;
     auto TheLTS = new LabelledTS();
@@ -278,85 +278,94 @@ int main()
 
     TheLTS->Freeze();
 
-    auto const& StateVectorVars = TheLTS->GetStateVectorVars();
+    return TheLTS;
 
-    cout << "LTS Vars:" << endl;
-    for (auto const& Var : StateVectorVars) {
-        cout << Var->ToString() << " : " << endl;
-        cout << Var->GetType()->ToString() << endl;
-    }
+}
+
+// auto const& StateVectorVars = TheLTS->GetStateVectorVars();
+
+//     cout << "LTS Vars:" << endl;
+//     for (auto const& Var : StateVectorVars) {
+//         cout << Var->ToString() << " : " << endl;
+//         cout << Var->GetType()->ToString() << endl;
+//     }
     
-    cout << "State vector size is " << TheLTS->GetStateVectorSize() << " bytes." << endl;
+//     cout << "State vector size is " << TheLTS->GetStateVectorSize() << " bytes." << endl;
 
-    cout << "Guarded Commands:" << endl;
-    auto const& GCmds = TheLTS->GetGuardedCmds();
-    for (auto const& GCmd : GCmds) {
-        cout << GCmd->ToString() << endl;
-    }
+//     cout << "Guarded Commands:" << endl;
+//     auto const& GCmds = TheLTS->GetGuardedCmds();
+//     for (auto const& GCmd : GCmds) {
+//         cout << GCmd->ToString() << endl;
+//     }
 
-    cout << "Initial State Generators:" << endl;
-    auto const& InitStateGens = TheLTS->GetInitStateGenerators();
-    for (auto const& InitStateGen : InitStateGens) {
-        cout << "InitState {" << endl;
-        for (auto const& Update : InitStateGen) {
-            cout << "    " << Update->ToString() << endl;
-        }
-        cout << "}" << endl;
-    }
+//     cout << "Initial State Generators:" << endl;
+//     auto const& InitStateGens = TheLTS->GetInitStateGenerators();
+//     for (auto const& InitStateGen : InitStateGens) {
+//         cout << "InitState {" << endl;
+//         for (auto const& Update : InitStateGen) {
+//             cout << "    " << Update->ToString() << endl;
+//         }
+//         cout << "}" << endl;
+//     }
 
-    cout << "Invariant:" << endl;
-    cout << TheLTS->GetInvariant() << endl;
+//     cout << "Invariant:" << endl;
+//     cout << TheLTS->GetInvariant() << endl;
 
-    cout << "Channel Buffer variables to sort:" << endl;
-    for (auto const& BufferExp : TheLTS->GetChanBuffersToSort()) {
-        cout << BufferExp.first->ToString() << endl;
-        cout << BufferExp.second->ToString() << endl;
-    }
+    // cout << "Channel Buffer variables to sort:" << endl;
+    // for (auto const& BufferExp : TheLTS->GetChanBuffersToSort()) {
+    //     cout << BufferExp.first->ToString() << endl;
+    //     cout << BufferExp.second->ToString() << endl;
+    // }
 
-    auto Checker = new LTSChecker(TheLTS);
+int main()
+{
+    // Comment this line and on my machine the seg fault goes away
+    auto TheLTS = Elevator();
+    auto TheLTS2 = Elevator();
+    auto Checker = new LTSChecker(TheLTS2);
 
-    auto Monitor = Checker->MakeStateBuchiMonitor("RequestToAccept", EmptyParams, TrueExp);
-    Monitor->AddState("InitialState", true, false);
-    Monitor->AddState("AcceptingState", false, true);
-    Monitor->AddState("OtherState", false, false);
-    Monitor->FreezeStates();
+    // auto Monitor = Checker->MakeStateBuchiMonitor("RequestToAccept", EmptyParams, TrueExp);
+    // Monitor->AddState("InitialState", true, false);
+    // Monitor->AddState("AcceptingState", false, true);
+    // Monitor->AddState("OtherState", false, false);
+    // Monitor->FreezeStates();
 
-    auto ControllerCheckRequestStateValue = TheLTS->MakeVal("CheckRequest", ControllerDotState->GetType());
+    // auto ControllerCheckRequestStateValue = TheLTS->MakeVal("CheckRequest", ControllerDotState->GetType());
 
-    auto ControllerStateEQCheckRequest = TheLTS->MakeOp(LTSOps::OpEQ, ControllerDotState, ControllerCheckRequestStateValue);
+    // auto ControllerStateEQCheckRequest = TheLTS->MakeOp(LTSOps::OpEQ, ControllerDotState, ControllerCheckRequestStateValue);
 
-    cout << ControllerStateEQCheckRequest->ToString() << endl;
+    // cout << ControllerStateEQCheckRequest->ToString() << endl;
 
-    auto ControllerStateNEQCheckRequest = TheLTS->MakeOp(LTSOps::OpNOT, ControllerStateEQCheckRequest);
+    // auto ControllerStateNEQCheckRequest = TheLTS->MakeOp(LTSOps::OpNOT, ControllerStateEQCheckRequest);
 
-    Monitor->AddTransition("InitialState", "InitialState", TrueExp);
-    Monitor->AddTransition("InitialState", "AcceptingState", ControllerStateEQCheckRequest);
-    Monitor->AddTransition("AcceptingState", "AcceptingState", ControllerStateEQCheckRequest);
-    Monitor->AddTransition("AcceptingState", "OtherState", ControllerStateNEQCheckRequest);
-    Monitor->AddTransition("OtherState", "OtherState", TrueExp);
-    Monitor->Freeze();
+    // Monitor->AddTransition("InitialState", "InitialState", TrueExp);
+    // Monitor->AddTransition("InitialState", "AcceptingState", ControllerStateEQCheckRequest);
+    // Monitor->AddTransition("AcceptingState", "AcceptingState", ControllerStateEQCheckRequest);
+    // Monitor->AddTransition("AcceptingState", "OtherState", ControllerStateNEQCheckRequest);
+    // Monitor->AddTransition("OtherState", "OtherState", TrueExp);
+    // Monitor->Freeze();
 
-    auto Traces = Checker->BuildAQS();
+    // auto Traces = Checker->BuildAQS();
 
-    cout << "Number of traces: " << Traces.size() << endl;
+    // cout << "Number of traces: " << Traces.size() << endl;
 
-    for (auto Trace: Traces) {
-        cout << Trace->ToString() << endl;
-        delete Trace;
-    }
+    // for (auto Trace: Traces) {
+    //     cout << Trace->ToString() << endl;
+    //     delete Trace;
+    // }
 
-    Traces = Checker->CheckLiveness("RequestToAccept");
+    // Traces = Checker->CheckLiveness("RequestToAccept");
     
-    for (auto const& Trace : Traces) {
-        cout << Trace->ToString() << endl;
-        // auto result = WeakestPrecondition(TheLTS->MakeTrue(), Trace);
-        // cout << result << endl;
+    // for (auto const& Trace : Traces) {
+    //     cout << Trace->ToString() << endl;
+    //     // auto result = WeakestPrecondition(TheLTS->MakeTrue(), Trace);
+    //     // cout << result << endl;
 
-        delete Trace;
-    }
+    //     delete Trace;
+    // }
 
 
-    delete Checker;
+    // delete Checker;
 }
 
 // 
