@@ -49,6 +49,7 @@
 namespace ESMC {
     namespace MC {
 
+        using LTS::GCmdRef;
         using LTS::LabelledTS;
         using Symm::Canonicalizer;
 

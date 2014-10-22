@@ -19,7 +19,10 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/sparsehash
 
 PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP \
 	ABP_generated MSI Fischer LeaderElection Dijkstra4 MSI_no_busy_data_no_pending_unblock_e \
-	MSIC2D PingPongChanSynth
+	MSIC2D PingPongChanSynth \
+	WeakestPreconditionTest \
+	WeakestPreconditionArrayTest \
+	ElevatorBug
 
 
 PingPongChan_SYS_LIBS=esmc z3 rt boost_system
@@ -33,6 +36,9 @@ PingPongChanBug_EXT_LIBS=$(PingPongChan_EXT_LIBS)
 
 Elevator_SYS_LIBS=esmc z3 rt boost_system
 Elevator_EXT_LIBS=boost z3 esmc
+
+ElevatorBug_SYS_LIBS=esmc z3 rt boost_system
+ElevatorBug_EXT_LIBS=boost z3 esmc
 
 Flip_SYS_LIBS=esmc z3 rt boost_system
 Flip_EXT_LIBS=boost z3 esmc
@@ -64,6 +70,12 @@ Fischer_EXT_LIBS=boost z3 esmc
 LeaderElection_SYS_LIBS=esmc z3 rt boost_system
 LeaderElection_EXT_LIBS=boost z3 esmc
 
+WeakestPreconditionTest_SYS_LIBS=esmc z3 rt boost_system
+WeakestPreconditionTest_EXT_LIBS=boost z3 esmc
+
+WeakestPreconditionArrayTest_SYS_LIBS=esmc z3 rt boost_system
+WeakestPreconditionArrayTest_EXT_LIBS=boost z3 esmc
+
 Dijkstra4_SYS_LIBS=esmc z3 rt boost_system
 Dijkstra4_EXT_LIBS=boost z3 esmc
 
@@ -80,6 +92,7 @@ PingPongChanSynth_OBJS=PingPongChanSynth.o
 Flip_OBJS=Flip.o
 FlipSimple_OBJS=FlipSimple.o
 Elevator_OBJS=Elevator.o
+ElevatorBug_OBJS=ElevatorBug.o
 ABP_OBJS=ABP.o
 ABP_generated_OBJS=ABP_generated.o
 MSI_generated_OBJS=MSI_generated.o
@@ -89,6 +102,9 @@ MSI_OBJS=MSI.o
 MSIC2D_OBJS=MSIC2D.o
 MSI_no_busy_data_no_pending_unblock_e_OBJS=MSI_no_busy_data_no_pending_unblock_e.o
 Dijkstra4_OBJS=Dijkstra4.o
+WeakestPreconditionTest_OBJS=WeakestPreconditionTest.o
+WeakestPreconditionArrayTest_OBJS=WeakestPreconditionArrayTest.o
+
 
 PingPongChan_LIB_PATHS= \
     $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \
@@ -102,6 +118,8 @@ Elevator_LIB_PATHS= \
     $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \
     $(PROJECT_ROOT)/../../thirdparty/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
+
+ElevatorBug_LIB_PATHS=$(Elevator_LIB_PATHS)
 
 ABP_LIB_PATHS= \
     $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \
@@ -150,5 +168,10 @@ Dijkstra4_LIB_PATHS= \
     $(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/install \
     $(PROJECT_ROOT)/../../thirdparty/boost-local/boost_install/lib \
     $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
+
+WeakestPreconditionTest_LIB_PATHS=$(Dijkstra4_LIB_PATHS)
+
+WeakestPreconditionArrayTest_LIB_PATHS=$(WeakestPreconditionTest_LIB_PATHS)
+
 
 include $(PROJECT_ROOT)/../../Makefile.util

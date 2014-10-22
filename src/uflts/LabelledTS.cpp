@@ -267,7 +267,8 @@ namespace ESMC {
             auto UMTypeAsUnion = UnifiedMsgType->As<ExprUnionType>();
             auto MsgTypeID = UMTypeAsUnion->GetTypeIDForMemberType(MsgType);
             return (new LTSGuardedCommand(Guard, UpdateComps, MsgType, 
-                                          MsgTypeID, ActualFairnesses));
+                                          MsgTypeID, ActualFairnesses,
+                                          ProductTrans));
         }
 
         void LabelledTS::Freeze()
@@ -350,7 +351,8 @@ namespace ESMC {
                     auto CurGCmd = new LTSGuardedCommand(Trans->GetGuard(),
                                                          Trans->GetUpdates(),
                                                          ExprTypeRef::NullPtr,
-                                                         -1, ActualFairSet);
+                                                         -1, ActualFairSet,
+                                                         {CurTrans});
                     GuardedCommands.push_back(CurGCmd);
                     GuardedCommands.back()->SetCmdID(GCmdCounter++);
                 }

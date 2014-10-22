@@ -8,14 +8,8 @@ BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
 CXX?=g++
 
-CXXFLAGS=-std=c++11 -Wall -pedantic -fopenmp -pipe
-CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/z3-4.3.1/src/api
-CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/boost-local/boost_install/include
-CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/sparsehash
-
-ifeq "x$(CXX)" "xg++"
-CXXFLAGS+=-Wno-unused-local-typedefs
-endif
+CXXFLAGS=-std=c++11 -Wall -pipe
+CXXFLAGS+=-I/usr/local/Cellar/google-sparsehash/2.0.2/include/sparsehash/ -I/usr/local/include/
 
 PROJECT_MODULES= \
 	common \
@@ -24,26 +18,23 @@ PROJECT_MODULES= \
 	hash \
 	main \
 	mc \
-	symexec \
 	symmetry \
+    symexec \
 	tpinterface \
 	uflts \
 	utils \
 
 
 PROJECT_EXECUTABLES=esmc
-esmc_SYS_LIBS=z3 rt boost_system
+esmc_SYS_LIBS=z3 boost_system
 esmc_DEP_LIBS=esmc
 esmc_EXT_LIBS=boost z3
-libboost_FULL_PATH=$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/install.ph
-libboost_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/boost-local/
-libz3_FULL_PATH=$(PROJECT_ROOT)/thirdparty/z3-4.3.1/install/libz3.so
-libz3_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/z3-4.3.1/
 esmc_OBJS=main.o
 esmc_LIB_PATHS= \
-	$(PROJECT_ROOT)/thirdparty/z3-4.3.1/install \
-	$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/lib \
-	$(PROJECT_ROOT)/lib/$(BUILD_SUFFIX)
+	$(PROJECT_ROOT)/lib/$(BUILD_SUFFIX) \
+    /usr/local/lib/
+
+
 
 PROJECT_LIBS=esmc
 
@@ -53,7 +44,7 @@ libesmc_OBJS= \
 	ExprTypes.o \
 	IndexSet.o \
 	LabelledTS.o \
-	LTSAnalyses.o \
+    LTSAnalyses.o \
 	LTSAssign.o \
 	LTSAutomaton.o \
 	LTSChannelEFSM.o \
@@ -82,10 +73,9 @@ libesmc_OBJS= \
 
 PROJECT_EXT_LIBS=boost z3
 
-libesmc_EXT_LIBS= \
-	boost \
-	z3 \
+libesmc_EXT_LIBS= boost z3
+libesmc_SYS_LIBS= boost z3
 
 
-include $(PROJECT_ROOT)/Makefile.util
+include $(PROJECT_ROOT)/Makefile.mac.util
 

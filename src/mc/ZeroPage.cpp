@@ -66,6 +66,9 @@ namespace ESMC {
             if (ThePage != nullptr) {
                 return ThePage;
             }
+#ifdef __APPLE__
+            return (u08*) calloc(100000, sizeof(u08));
+#endif
             int fd = open("/dev/zero", O_RDONLY);
             ThePage = (u08*)mmap(nullptr, PageSize, PROT_READ, MAP_PRIVATE, fd, 0);
             close(fd);

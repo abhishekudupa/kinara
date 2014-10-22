@@ -1,0 +1,246 @@
+# The file including this file must define the following variables:
+# PROJECT_NAME
+# PROJECT_ROOT
+# BASE_OBJ_DIR
+# BASE_LIB_DIR
+# BASE_BIN_DIR
+# BASE_SRC_DIR
+# PROJECT_MODULES
+# PROJECT_EXECUTABLES
+#   for each exec in PROJECT_EXECUTABLES, a variable called exec_DEP_LIBS containing libs that it depends on
+#   for each exec in PROJECT_EXECUTABLES, a variable called exec_LIB_PATHS which indicate the path
+#   for each exec in PROJECT_EXECUTABLES, a variable called exec_SYS_LIBS which indicate system libs
+#   for each exec in PROJECT_EXECUTABLES, a variable called exec_EXT_LIBS which indicate external libs to be built.
+#   for each exec in PROJECT_EXECUTABLES, a variable called exec_OBJS
+# PROJECT_LIBS
+#   foreach lib in PROJECT_LIBS, a variable called lib_OBJS containing objs required to build it
+#   foreach lib in PROJECT_LIBS, a variable called lib_EXT_LIBS containing ext libs required to build it
+# PROJECT_EXT_LIBS:
+#   for each lib in PROJECT_EXT_LIBS, a variable called lib_FULL_PATH containing the full path of target to be built
+#   for each lib in PROJECT_EXT_LIBS, a variable called lib_MAKE_DIR containing the directory to call make on
+#   
+# PROJECT_LIBS
+# PROJECT_EXECUTABLES
+# A target called toplevel which builds all the required targets
+# We'll recurse on this target with different variable values
+
+FEAT_FLAGS=-fPIC
+CXX ?= g++
+CC ?= $(CXX)
+LD=$(CXX)
+AR ?= ar
+ARFLAGS=rcs
+YACC=bison -y
+BISON=bison
+FLEX=flex
+
+.PHONY: opt optlto debug prof proflto eopt eoptlto eproflto eprof fulllto fullltoprof clean distclean fullclean all default toplevel
+
+default: debug
+
+all: eoptlto eopt debug
+
+opt:
+	@echo "Building opt flavor..."
+	@OPTFLAGS="-O2" BUILD_SUFFIX=opt $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
+
+debug:
+	@echo "Building debug flavor..."
+	@OPTFLAGS="-g -fno-inline -O0" BUILD_SUFFIX=debug $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
+
+prof:
+	@echo "Building prof flavor..."
+	@OPTFLAGS="-O2 -pg" BUILD_SUFFIX=prof $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
+
+eopt:
+	@echo "Building eopt flavor..."
+	@OPTFLAGS="-O3" BUILD_SUFFIX=opt $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
+
+eprof:
+	@echo "Building eprof flavor..."
+	@OPTFLAGS="-O3 -pg" BUILD_SUFFIX=prof $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
+
+optlto:
+	@echo "Building optlto flavor..."
+	@OPTFLAGS="-O2 -flto" BUILD_SUFFIX=lto $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
+
+proflto:
+	@echo "Building proflto flavor..."
+	@OPTFLAGS="-O2 -pg -flto" LTO_BUILD="yes" BUILD_SUFFIX=prof $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
+
+eoptlto:
+	@echo "Building eoptlto flavor..."
+	@OPTFLAGS="-ggdb3 -O3 -flto" LTO_BUILD="yes" BUILD_SUFFIX=lto $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
+
+eproflto:
+	@echo "Building eproflto flavor..."
+	@OPTFLAGS="-O3 -pg -flto" LTO_BUILD="yes" BUILD_SUFFIX=prof $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
+
+fulllto:
+	@echo "Building fulllto flavor..."
+	@OPTFLAGS="-O3 -pg -flto" LTO_BUILD="yes" FULL_LTO_BUILD="yes" BUILD_SUFFIX=lto $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
+
+fullltoprof:
+	@echo "Building fullltoprof flavor..."
+	@OPTFLAGS="-O3 -pg -flto" LTO_BUILD="yes" FULL_LTO_BUILD="yes" BUILD_SUFFIX=prof $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
+
+
+OBJ_DIR=$(BASE_OBJ_DIR)/$(BUILD_SUFFIX)
+LIB_DIR=$(BASE_LIB_DIR)/$(BUILD_SUFFIX)
+BIN_DIR=$(BASE_BIN_DIR)/$(BUILD_SUFFIX)
+GEN_DIR=$(BASE_SRC_DIR)/gen/
+
+DEPPRINTNAME="[$(PROJECT_NAME):dep]"
+CXXPRINTNAME="[$(PROJECT_NAME):cxx]"
+ARPRINTNAME="[$(PROJECT_NAME):ar]"
+LDPRINTNAME="[$(PROJECT_NAME):ld]"
+
+VPATH=$(addsuffix /:, $(addprefix $(BASE_SRC_DIR)/, $(PROJECT_MODULES)))
+VPATH+=$(BASE_SRC_DIR)/gen/
+
+PROJECT_OBJS=$(addprefix $(OBJ_DIR), $(PROJECT_SOURCES:.cpp=.o))
+PROJECT_DEPS=$(addprefix $(OBJ_DIR), $(PROJECT_SOURCES:.cpp=.d))
+PROJECT_GEN_OBJS=$(addprefix $(OBJ_DIR), $(PROJECT_GEN_SOURCES:.cpp=.o));
+PROJECT_GEN_DEPS=$(addprefix $(OBJ_DIR), $(PROJECT_GEN_SOURCES:.cpp=.o));
+
+# template for deps
+$(OBJ_DIR)/%.d: %.cpp
+ifeq "x$(VERBOSE_BUILD)" "x"
+	@set -e; rm -f $@; \
+	echo "$(DEPPRINTNAME) `basename $<`"; \
+	$(CXX) -MM -MF $@ -MT "$(OBJ_DIR)/$(strip $(patsubst %.cpp, %.o, $(notdir $<)))" \
+	-MT "$(OBJ_DIR)/$(strip $(patsubst %.cpp, %.d, $(notdir $<)))" $(CXXFLAGS) $<
+else 
+	@set -e; rm -f $@; \
+	echo "Calculating dependencies for `basename $<`..."; \
+	$(CXX) -MM -MF $@ -MT "$(OBJ_DIR)/$(strip $(patsubst %.cpp, %.o, $(notdir $<)))" \
+	-MT "$(OBJ_DIR)/$(strip $(patsubst %.cpp, %.d, $(notdir $<)))" $(CXXFLAGS) $<
+endif
+
+# template for objs
+$(OBJ_DIR)/%.o: %.cpp
+ifeq "x$(VERBOSE_BUILD)" "x"
+	@echo "$(CXXPRINTNAME) `basename $<` --> `basename $@`"; \
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(FEAT_FLAGS) -c $< -o $@
+else
+	$(CXX) $(CXXFLAGS) $(OPTFLAGS) $(FEAT_FLAGS) -c $< -o $@
+endif
+
+define template_exec_build =
+$(addprefix $(OBJ_DIR)/, $($(1)_OBJS)): $(foreach lib, $($(1)_DEP_LIBS), $(LIB_DIR)/lib$(lib).so) \
+										$(foreach lib, $($(1)_EXT_LIBS), $(lib$(1)_FULL_PATH))
+
+$(BIN_DIR)/$(1): 	$(addprefix $(OBJ_DIR)/, $($(1)_OBJS)) \
+					$(foreach lib, $($(1)_DEP_LIBS), $(LIB_DIR)/lib$(lib).so) \
+					$(foreach lib, $($(1)_EXT_LIBS), $(lib$(1)_FULL_PATH))
+ifeq "x$(VERBOSE_BUILD)" "x"
+	@echo "$(LDPRINTNAME) `basename $(BIN_DIR)/$(1)`"; \
+	$(LD) $(CXXFLAGS) $(OPTFLAGS) $(addprefix $(OBJ_DIR)/, $($(1)_OBJS)) -o $(BIN_DIR)/$(1) \
+        $(foreach path, $($(1)_LIB_PATHS), -Wl,-rpath $(path)) \
+		$(foreach path, $($(1)_LIB_PATHS), -L $(path)) \
+		$(foreach lib, $($(1)_DEP_LIBS), -l$(lib)) \
+		$(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) \
+        -L/usr/local/lib/
+else 
+	$(LD) $(CXXFLAGS) $(OPTFLAGS) $(addprefix $(OBJ_DIR)/, $($(1)_OBJS)) -o $(BIN_DIR)/$(1) \
+        $(foreach path, $($(1)_LIB_PATHS), -Wl,-rpath $(path)) \
+		$(foreach path, $($(1)_LIB_PATHS), -L $(path)) \
+		$(foreach lib, $($(1)_DEP_LIBS), -l$(lib)) \
+		$(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) \
+        -L/usr/local/lib/
+endif
+endef
+
+define template_ext_lib_build = 
+$(lib$(1)_FULL_PATH):
+	$(MAKE) -C $(lib$(1)_MAKE_DIR)
+endef 
+
+define template_ext_lib_clean =
+	$(MAKE) -C $(lib$(1)_MAKE_DIR) clean
+endef
+
+define template_lib_build =
+$(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS)): $(foreach lib,$(lib$(1)_EXT_LIBS),$(lib$(lib)_FULL_PATH))
+
+$(LIB_DIR)/lib$(1).so:	$(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS))
+ifeq "x$(VERBOSE_BUILD)" "x"
+	@echo "$(LDPRINTNAME) `basename $(LIB_DIR)/lib$(1).so`"; \
+	$(LD) -shared $(OPTFLAGS) $(LDFLAGS) $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS)) \
+    $(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) \
+	-o $(LIB_DIR)/lib$(1).so \
+    -L/usr/local/lib/
+
+else 
+	$(LD) -shared $(OPTFLAGS) $(LDFLAGS) $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS)) \
+	$(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) \
+	-o $(LIB_DIR)/lib$(1).so \
+    -L/usr/local/lib/
+endif
+
+$(LIB_DIR)/lib$(1).a:	$(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS))
+ifeq "x$(VERBOSE_BUILD)" "x"
+	@echo "$(ARPRINTNAME) `basename $(LIB_DIR)/lib$(1).a`"; \
+	$(AR) rcs $(LIB_DIR)/lib$(1).a $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS))
+else 
+	$(AR) rcs $(LIB_DIR)/lib$(1).a $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS))
+endif
+endef
+
+
+$(foreach lib, $(PROJECT_LIBS), $(eval $(call template_lib_build,$(lib))))
+
+$(foreach exe, $(PROJECT_EXECUTABLES), $(eval $(call template_exec_build,$(exe))))
+
+$(foreach lib, $(PROJECT_EXT_LIBS), \
+	$(eval $(call template_ext_lib_build,$(lib))))
+
+# make the dep rules
+$(foreach exe, $(PROJECT_EXECUTABLES), \
+	$(foreach obj, $($(exe)_OBJS), \
+		$(eval $(OBJ_DIR)/$(obj) : $(OBJ_DIR)/$(obj:.o=.d))))
+
+$(foreach lib, $(PROJECT_LIBS), \
+	$(foreach obj, $(lib$(lib)_OBJS), \
+		$(eval $(OBJ_DIR)/$(obj) : $(OBJ_DIR)/$(obj:.o=.d))))
+
+QUALIFIED_PROJECT_LIBS=$(addsuffix .so, $(addprefix $(LIB_DIR)/lib, $(PROJECT_LIBS)))
+QUALIFIED_PROJECT_LIBS+=$(addsuffix .a, $(addprefix $(LIB_DIR)/lib, $(PROJECT_LIBS)))
+QUALIFIED_PROJECT_EXES=$(addprefix $(BIN_DIR)/, $(PROJECT_EXECUTABLES))
+
+toplevel: $(QUALIFIED_PROJECT_EXES) $(QUALIFIED_PROJECT_LIBS)
+
+clean:
+	rm -rf $(BASE_OBJ_DIR)/debug/*
+	rm -rf $(BASE_OBJ_DIR)/opt/*
+	rm -rf $(BASE_OBJ_DIR)/prof/*
+	rm -rf $(BASE_OBJ_DIR)/lto/*
+	rm -rf $(BASE_LIB_DIR)/debug/*
+	rm -rf $(BASE_LIB_DIR)/opt/*
+	rm -rf $(BASE_LIB_DIR)/prof/*
+	rm -rf $(BASE_LIB_DIR)/lto/*
+	rm -rf $(BASE_BIN_DIR)/debug/*
+	rm -rf $(BASE_BIN_DIR)/opt/*
+	rm -rf $(BASE_BIN_DIR)/prof/*
+	rm -rf $(BASE_BIN_DIR)/lto/*
+
+distclean: clean
+	$(foreach lib,$(PROJECT_EXT_LIBS), \
+		$(MAKE) -C $(lib$(lib)_MAKE_DIR) clean;)
+
+# include the dep files, but only if
+# we're in the actual build level, i.e, 
+# don't include it in the initial make
+ifneq ($(MAKECMDGOALS), clean)
+ifneq ($(MAKECMDGOALS), distclean)
+ifeq ($(MAKECMDGOALS), toplevel)
+$(foreach exe, $(PROJECT_EXECUTABLES), \
+	$(foreach obj, $($(exe)_OBJS), \
+		$(eval -include $(OBJ_DIR)/$(obj:.o=.d))))
+
+$(foreach lib, $(PROJECT_LIBS), \
+	$(foreach obj, $(lib$(lib)_OBJS), \
+		$(eval -include $(OBJ_DIR)/$(obj:.o=.d))))
+endif
+endif
+endif

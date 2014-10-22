@@ -667,6 +667,11 @@ namespace ESMC {
             return sstr.str();
         }
 
+        const StateVec* SafetyViolation::GetInitialState() const
+        {
+            return InitialState;
+        }
+
         const vector<TraceElemT>& SafetyViolation::GetTraceElems() const
         {
             return TraceElems;
@@ -754,6 +759,21 @@ namespace ESMC {
                 LoopElem.second->GetSVPtr()->Recycle();
                 delete LoopElem.second;
             }
+        }
+
+        const ProductState* LivenessViolation::GetInitialState() const
+        {
+            return InitialState;
+        }
+
+        const vector<PSTraceElemT>& LivenessViolation::GetStem() const
+        {
+            return StemPath;
+        }
+
+        const vector<PSTraceElemT>& LivenessViolation::GetLoop() const
+        {
+            return LoopPath;
         }
 
         string LivenessViolation::ToString(u32 Verbosity) const
