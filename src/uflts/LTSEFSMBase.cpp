@@ -1113,7 +1113,7 @@ namespace ESMC {
             auto LocalUpdates = Updates;
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
-            AddOutputTransition(InitState, Guard, Updates, MessageName,
+            AddOutputTransition(InitState, Guard, LocalUpdates, MessageName,
                                 MessageType, MessageParams, AddToFairnessSets);
         }
 
@@ -1196,7 +1196,7 @@ namespace ESMC {
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
             AddOutputTransitions(TransParams, Constraint, InitState,
-                                 Guard, Updates, MessageName, MessageType, 
+                                 Guard, LocalUpdates, MessageName, MessageType, 
                                  MessageParams, FairnessKind, SplatFairness, 
                                  SplatFairnessName);
         }
@@ -1398,7 +1398,7 @@ namespace ESMC {
             auto LocalUpdates = Updates;
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
-            AddInternalTransition(InitState, Guard, Updates, AddToFairnessSets);
+            AddInternalTransition(InitState, Guard, LocalUpdates, AddToFairnessSets);
         }
 
         void EFSMBase::AddInternalTransition(const string& InitState, 
@@ -1447,7 +1447,7 @@ namespace ESMC {
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
             AddInternalTransitions(TransParams, Constraint, InitState, 
-                                   Guard, Updates, FairnessKind, SplatFairness, 
+                                   Guard, LocalUpdates, FairnessKind, SplatFairness, 
                                    SplatFairnessName);
         }
 
