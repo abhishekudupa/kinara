@@ -2532,6 +2532,9 @@ namespace ESMC {
                     NewBoundVars[NumQVars - i - 1] = Mgr->MakeBoundVar(CurType, CurIndex);
                 }
 
+                QuantifierDepth += NumQVars;
+                BoundVars.push_back(NewBoundVars);
+
                 Exp->GetQExpression()->Accept(this);
                 auto NewExp = ExpStack.back();
                 ExpStack.pop_back();

@@ -213,7 +213,8 @@ namespace ESMC {
             vector<RValueInterpreter*> ArgInterps;
             mutable vector<i64> SubEvals;
             const u32 NumSubInterps;
-            unordered_map<vector<i64>, i64> EvalMap;
+            unordered_map<vector<i64>, i64, 
+                          Detail::ValueVecHasher> EvalMap;
             
         public:
             UFInterpreter(const vector<RValueInterpreter*>& ArgInterps,
