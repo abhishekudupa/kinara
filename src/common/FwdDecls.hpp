@@ -226,6 +226,12 @@ namespace ESMC {
     // UID Generators
     class UIDGenerator;
 
+    template <typename T>
+    constexpr bool TruePred(const T& Obj) { return true; }
+
+    template <typename T>
+    constexpr bool FalsePred(const T& Obj) { return false; }
+
 } /* end namespace */
 
 #endif /* ESMC_FWD_DECLS_HPP_ */
