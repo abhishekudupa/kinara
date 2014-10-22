@@ -834,6 +834,7 @@ namespace ESMC {
                                                                MessageName, 
                                                                ActMType);
             auto&& SimpUpdates = SimplifyUpdates(MsgTransformedUpdates);
+            SimpUpdates = ExpandUpdates(SimpUpdates);
             
             auto LocalGuard = 
                 Mgr->MakeExpr(LTSOps::OpAND,
@@ -1069,6 +1070,7 @@ namespace ESMC {
                                                                MessageName, 
                                                                ActMType);
             auto&& SimpUpdates = SimplifyUpdates(MsgTransformedUpdates);
+            SimpUpdates = ExpandUpdates(SimpUpdates);
 
             auto LocalGuard = Mgr->MakeExpr(LTSOps::OpAND, Guard,
                                             Mgr->MakeExpr(LTSOps::OpEQ, 
@@ -1363,6 +1365,7 @@ namespace ESMC {
                                                     "", ExprTypeRef::NullPtr, ExprTypeRef::NullPtr);
             auto&& RebasedUpdates = RebaseUpdates(ParamInst, InstUpdates);
             auto&& SimpUpdates = SimplifyUpdates(RebasedUpdates);
+            SimpUpdates = ExpandUpdates(SimpUpdates);
              
             auto LocalGuard = 
                 Mgr->MakeExpr(LTSOps::OpAND, 

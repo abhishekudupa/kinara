@@ -122,6 +122,9 @@ namespace ESMC {
             ExpT InvariantExp;
             ExpT FinalCondExp;
 
+            // Assignments to clear the message buffer
+            vector<LTSAssignRef> MsgBufferClearUpdates;
+
             // Interface only for friends
             MgrT* GetMgr() const;
 
@@ -235,6 +238,8 @@ namespace ESMC {
 
             const ExpT& GetInvariant() const;
             const ExpT& GetFinalCond() const;
+            const vector<LTSAssignRef>& GetMsgBufferClearUpdates() const;
+
             const vector<pair<ExpT, ExpT>>& GetChanBuffersToSort() const;
         };
 

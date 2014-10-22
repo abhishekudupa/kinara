@@ -360,7 +360,8 @@ namespace ESMC {
 
         LTSChecker::LTSChecker(LabelledTS* TheLTS)
             : TheLTS(TheLTS), AQS(nullptr), ThePS(nullptr),
-              ExceptionState(nullptr)
+              ExceptionState(nullptr), 
+              MsgBufferClearUpdates(TheLTS->GetMsgBufferClearUpdates())
         {
             // Freeze the LTS in any case
             TheLTS->Freeze();
@@ -368,7 +369,8 @@ namespace ESMC {
             Compiler = new LTSCompiler();
             Compiler->CompileLTS(TheLTS);
             Factory = new StateFactory(TheLTS->StateVectorSize,
-                                       TheLTS->GetUnifiedMType()->GetByteSize());
+                                       TheLTS->GetUnifiedMType()->GetByteSize(),
+                                       MsgBufferClearUpdates);
             Printer = new StateVecPrinter(TheLTS, Compiler);
             TheCanonicalizer = new Canonicalizer(TheLTS, Printer);
             GuardedCommands = TheLTS->GetGuardedCmds();
@@ -408,7 +410,6 @@ namespace ESMC {
                     }
                 }
             }
-
         }
 
         LTSChecker::~LTSChecker()

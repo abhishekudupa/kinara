@@ -79,6 +79,90 @@ namespace ESMC {
             return (LHS->ToString() + " := " + RHS->ToString());
         }
 
+        vector<LTSAssignRef> LTSAssignSimple::ExpandNonScalarUpdates() const
+        {
+            vector<LTSAssignRef> Retval;
+            auto Mgr = LHS->GetMgr();
+            auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+
+            if (LHS->GetType()->Is<ExprScalarType>()) {
+                if (RHS->Is<ConstExpression>()) {
+                    auto RHSAsConst = RHS->SAs<ConstExpression>();
+                    auto const& ConstVal = RHSAsConst->GetConstValue();
+                    if (ConstVal == "clear") {
+                        auto ClearExp = Mgr->MakeVal(LHS->GetType()->GetClearValue(),
+                                                     LHS->GetType());
+                        auto NewAsgn = new LTSAssignSimple(LHS, ClearExp);
+                        Retval.push_back(NewAsgn);
+                        return Retval;
+                    }
+                }
+                Retval.push_back(this);
+                return Retval;
+            }
+            
+            
+            if (LHS->GetType()->Is<ExprRecordType>()) {
+                auto TypeAsRec = LHS->GetType()->SAs<ExprRecordType>();
+                auto const& Fields = TypeAsRec->GetMemberVec();
+                for (auto const& Field : Fields) {
+
+                    auto const& FieldName = Field.first;
+                    auto const& FieldType = Field.second;
+
+                    auto NewLHS = Mgr->MakeExpr(LTSOps::OpField, LHS,
+                                                Mgr->MakeVar(FieldName, FAType));
+                    ExpT NewRHS = ExpT::NullPtr;
+                    if (RHS->Is<ConstExpression>()) {
+                        if (!FieldType->Is<ExprScalarType>()) {
+                            NewRHS = Mgr->MakeVal("clear", FieldType);
+                        } else {
+                            NewRHS = Mgr->MakeVal(FieldType->GetClearValue(), FieldType);
+                        }
+                    } else {
+                        NewRHS = Mgr->MakeExpr(LTSOps::OpField, RHS, 
+                                               Mgr->MakeVar(FieldName, FAType));
+                    }
+
+                    auto NewAsgn = new LTSAssignSimple(NewLHS, NewRHS);
+                    auto&& Expansions = NewAsgn->ExpandNonScalarUpdates();
+                    Retval.insert(Retval.end(), Expansions.begin(), Expansions.end());
+                }
+            } else if (LHS->GetType()->Is<ExprArrayType>()) {
+                auto TypeAsArray = LHS->GetType()->SAs<ExprArrayType>();
+                auto const& IndexType = TypeAsArray->GetIndexType();
+                auto const& ValueType = TypeAsArray->GetValueType();
+                auto const& IndexElems = IndexType->GetElements();
+                
+                for (auto const& IndexElem : IndexElems) {
+                    auto IndexExp = Mgr->MakeVal(IndexElem, IndexType);
+                    auto NewLHS = Mgr->MakeExpr(LTSOps::OpIndex, LHS, IndexExp);
+                    
+                    ExpT NewRHS = ExpT::NullPtr;
+                    if (RHS->Is<ConstExpression>()) {
+                        if (!ValueType->Is<ExprScalarType>()) {
+                            NewRHS = Mgr->MakeVal("clear", ValueType);
+                        } else {
+                            NewRHS = Mgr->MakeVal(ValueType->GetClearValue(), ValueType);
+                        }
+                    } else {
+                        NewRHS = Mgr->MakeExpr(LTSOps::OpIndex, RHS, IndexExp);
+                    }
+
+                    auto NewAsgn = new LTSAssignSimple(NewLHS, NewRHS);
+                    auto&& Expansions = NewAsgn->ExpandNonScalarUpdates();
+                    Retval.insert(Retval.end(), Expansions.begin(), Expansions.end());
+                }
+            } else {
+                throw InternalError((string)"Unhandled type:\n" + LHS->GetType()->ToString() +
+                                    "\nwhen trying expand updates in assignment:\n" + 
+                                    this->ToString() + "\nAt: " + __FILE__ + ":" + 
+                                    to_string(__LINE__));
+            }
+            // Get the compiler to shut up
+            return Retval;
+        }
+
         LTSAssignParam::LTSAssignParam(const vector<ExpT>& Params,
                                        const ExpT& Constraint,
                                        const ExpT& LHS, const ExpT& RHS)
@@ -86,17 +170,17 @@ namespace ESMC {
         {
             // If the RHS is an expression of a symmetric type,
             // make sure that it does not refer to any of the params
-            if (RHS->GetType()->Is<ExprSymmetricType>()) {
+            if (LHS->GetType()->Is<ExprSymmetricType>()) {
                 if (RHS->Is<Exprs::ConstExpression>()) {
                     if (RHS->SAs<Exprs::ConstExpression>()->GetConstValue() != "clear") {
                         throw ESMCError((string)"Cannot make a parametric assignment " + 
                                         "to an arbitrary constant of a symmetric type");
                     }
                 }
-                if (RHS->Is<Exprs::VarExpression>()) {
+                if (LHS->Is<Exprs::VarExpression>()) {
                     for (auto const& Param : Params) {
                         if (RHS == Param) {
-                            throw ESMCError((string)"Cannot initialize parameteric RHS to " + 
+                            throw ESMCError((string)"Cannot initialize parameteric LHS to " + 
                                             "the value of a parameter");
                         }
                     }
@@ -122,6 +206,13 @@ namespace ESMC {
         string LTSAssignParam::ToString() const
         {
             return (LHS->ToString() + " := " + RHS->ToString());
+        }
+
+        vector<LTSAssignRef> LTSAssignParam::ExpandNonScalarUpdates() const
+        {
+            throw InternalError((string)"LTSAssignParam::ExpandNonScalarUpdates() " + 
+                                "should never have been called\nAt: " + __FILE__ + 
+                                ":" + to_string(__LINE__));
         }
         
     } /* end namespace LTS */

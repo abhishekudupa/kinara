@@ -95,10 +95,6 @@ namespace ESMC {
             inline void AddConstraint(const ExpT& Constraint);
             inline void AddConstraint(const vector<ExpT>& Constraints);
             
-            // Gets all the terms possible 
-            // aborts if the number of terms capable of 
-            // being generated is unbounded
-            void ExpandExpression(const ExpT& VarExp, set<ExpT>& Expansions);
             set<ExpT> GetDomainTerms(const map<string, ExprTypeRef>& DomainVars);
 
             inline vector<ExprTypeRef> GetSymmTypesInExpr(const ExpT& Exp);

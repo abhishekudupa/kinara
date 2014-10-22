@@ -1737,6 +1737,11 @@ namespace ESMC {
                     CompileExp(Update->GetRHS(), TheLTS);
                 }
             }
+
+            for (auto const& Update : TheLTS->GetMsgBufferClearUpdates()) {
+                CompileExp(Update->GetLHS(), TheLTS);
+                CompileExp(Update->GetRHS(), TheLTS);
+            }
         }
 
         void LTSCompiler::UpdateModel(const Z3Model& Model)

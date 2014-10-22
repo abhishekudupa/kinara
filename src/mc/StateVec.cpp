@@ -39,8 +39,11 @@
 
 #include <string.h>
 
-#include "StateVec.hpp"
 #include "../hash/SpookyHash.hpp"
+#include "../uflts/LTSAssign.hpp"
+
+#include "StateVec.hpp"
+#include "LTSChecker.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -217,16 +220,18 @@ namespace ESMC {
 
         void StateVec::ClearMsgBuffer()
         {
-            Factory->ClearMsgBuffer();
+            Factory->ClearMsgBuffer(this);
         }
 
-        StateFactory::StateFactory(u32 StateSize, u32 MsgSize)
+        StateFactory::StateFactory(u32 StateSize, u32 MsgSize,
+                                   const vector<LTS::LTSAssignRef>& MsgClearUpdates)
             : StateSize(StateSize),
               StateVecPool(new boost::pool<>(sizeof(StateVec))),
               StateVecBufferPool(new boost::pool<>(StateSize)),
               NumActiveStates(0),
               MsgSize(MsgSize),
-              MsgBuffer((u08*)calloc(sizeof(u08), MsgSize))
+              MsgBuffer((u08*)calloc(sizeof(u08), MsgSize)),
+              MsgClearUpdates(MsgClearUpdates)
         {
             // Nothing here
         }
@@ -238,9 +243,10 @@ namespace ESMC {
             free(MsgBuffer);
         }
 
-        void StateFactory::ClearMsgBuffer()
+        void StateFactory::ClearMsgBuffer(StateVec* SV)
         {
             memset(MsgBuffer, 0, MsgSize);
+            ApplyUpdates(MsgClearUpdates, SV, SV);
         }
         
         u08* StateFactory::GetMsgBuffer()

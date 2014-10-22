@@ -187,6 +187,8 @@ namespace ESMC {
             MCExceptionType ExceptionType;
             u32 ExceptionCmdID;
 
+            vector<LTSAssignRef> MsgBufferClearUpdates;
+
             inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);
             inline void DoDFS(StateVec* Root);
             inline void DoBFS(const vector<StateVec*>& Roots);

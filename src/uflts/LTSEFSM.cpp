@@ -245,47 +245,6 @@ namespace ESMC {
              cout << "End of constraint set." << endl;
          }
 
-         void IncompleteEFSM::ExpandExpression(const ExpT& Exp, set<ExpT>& Expansions)
-         {
-             auto VarType = Exp->GetType();
-             auto Mgr = TheLTS->GetMgr();
-             if (VarType->Is<Exprs::ExprScalarType>()) {
-                 Expansions.insert(Exp);
-                 return;
-             }
-
-             if (VarType->Is<Exprs::ExprRecordType>()) {
-                 auto TypeAsRec = VarType->SAs<Exprs::ExprRecordType>();
-                 auto const& Fields = TypeAsRec->GetMemberVec();
-                 auto FAType = TheLTS->MakeFieldAccessType();
-
-                 for (auto const& Field : Fields) {
-                     auto FAVar = TheLTS->MakeVar(Field.first, FAType);
-                     auto CurExpansion = TheLTS->MakeOp(LTSOps::OpField,
-                                                        Exp, FAVar);
-                     ExpandExpression(CurExpansion, Expansions);
-                 }
-                 return;
-             }
-
-             if (VarType->Is<Exprs::ExprArrayType>()) {
-                 auto TypeAsArray = VarType->SAs<Exprs::ExprArrayType>();
-                 auto const& IndexType = TypeAsArray->GetIndexType();
-                 auto const& IndexElems = IndexType->GetElements();
-
-                 for (auto const& IndexElem : IndexElems) {
-                     auto IndexExp = Mgr->MakeVal(IndexElem, IndexType);
-                     auto CurExpansion = TheLTS->MakeOp(LTSOps::OpIndex,
-                                                        Exp, IndexExp);
-                     ExpandExpression(CurExpansion, Expansions);
-                 }
-                 return;
-             }
-
-             // Eh?
-             return;
-         }
-
          set<ExpT> IncompleteEFSM::GetDomainTerms(const map<string, ExprTypeRef>& DomainVars)
          {
              set<ExpT> Retval;

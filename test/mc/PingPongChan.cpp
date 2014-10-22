@@ -61,14 +61,14 @@ int main()
 {
     auto TheLTS = new LabelledTS();
 
-    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 3);
+    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 2);
     auto ParamExp = TheLTS->MakeVar("ClientID", ClientIDType);
     vector<ExpT> Params = { ParamExp };
     auto TrueExp = TheLTS->MakeTrue();
 
     // Add the message types
     vector<pair<string, ExprTypeRef>> MsgFields;
-    auto RangeType = TheLTS->MakeRangeType(0, 9);
+    auto RangeType = TheLTS->MakeRangeType(0, 1);
     MsgFields.push_back(make_pair("Data", RangeType));
 
     auto DataMsgType = TheLTS->MakeMsgTypes(Params, TrueExp, "DataMsg", MsgFields, true);
@@ -153,7 +153,7 @@ int main()
     auto CountExp = TheLTS->MakeVar("Count", RangeType);
     auto ZeroExp = TheLTS->MakeVal("0", RangeType);
     auto OneExp = TheLTS->MakeVal("1", RangeType);
-    auto MaxExp = TheLTS->MakeVal("9", RangeType);
+    auto MaxExp = TheLTS->MakeVal("1", RangeType);
     auto CountIncExp = TheLTS->MakeOp(LTSOps::OpITE, 
                                       TheLTS->MakeOp(LTSOps::OpEQ, CountExp, MaxExp),
                                       ZeroExp,

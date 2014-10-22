@@ -61,6 +61,7 @@ namespace ESMC {
             const ExpT& GetLHS() const;
             const ExpT& GetRHS() const;
             virtual string ToString() const = 0;
+            virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const = 0;
 
             template <typename T>
             T* As()
@@ -100,6 +101,7 @@ namespace ESMC {
             virtual ~LTSAssignSimple();
 
             virtual string ToString() const override;
+            virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const override;
         };
 
         class LTSAssignParam : public LTSAssignBase
@@ -117,7 +119,26 @@ namespace ESMC {
             const ExpT& GetConstraint() const;
 
             virtual string ToString() const override;
+            virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const override;
         };
+
+        // helper method to expand a set of LTSAssignRefs
+        static inline vector<LTSAssignRef> ExpandUpdates(const vector<LTSAssignRef>& Updates)
+        {
+            vector<LTSAssignRef> Retval;
+            for (auto const& Update : Updates) {
+                if (!Update->Is<LTSAssignSimple>()) {
+                    throw InternalError((string)"ExpandUpdates() called on a non-simple " + 
+                                        "update:\n" + Update->ToString() + "\nAt: " + 
+                                        __FILE__ + ":" + to_string(__LINE__));
+                }
+
+                auto&& Expansions = Update->ExpandNonScalarUpdates();
+                Retval.insert(Retval.end(), Expansions.begin(), Expansions.end());
+            }
+            return Retval;
+        }
+        
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

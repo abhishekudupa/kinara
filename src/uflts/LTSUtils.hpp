@@ -465,6 +465,54 @@ namespace ESMC {
             return Retval;
         }
 
+         static inline void ExpandExpression(const ExpT& Exp, set<ExpT>& Expansions)
+         {
+             auto VarType = Exp->GetType();
+             auto Mgr = Exp->GetMgr();
+             if (VarType->Is<Exprs::ExprScalarType>()) {
+                 Expansions.insert(Exp);
+                 return;
+             }
+
+             if (VarType->Is<Exprs::ExprRecordType>()) {
+                 auto TypeAsRec = VarType->SAs<Exprs::ExprRecordType>();
+                 auto const& Fields = TypeAsRec->GetMemberVec();
+                 auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+
+                 for (auto const& Field : Fields) {
+                     auto FAVar = Mgr->MakeVar(Field.first, FAType);
+                     auto CurExpansion = Mgr->MakeExpr(LTSOps::OpField,
+                                                       Exp, FAVar);
+                     ExpandExpression(CurExpansion, Expansions);
+                 }
+                 return;
+             }
+
+             if (VarType->Is<Exprs::ExprArrayType>()) {
+                 auto TypeAsArray = VarType->SAs<Exprs::ExprArrayType>();
+                 auto const& IndexType = TypeAsArray->GetIndexType();
+                 auto const& IndexElems = IndexType->GetElements();
+
+                 for (auto const& IndexElem : IndexElems) {
+                     auto IndexExp = Mgr->MakeVal(IndexElem, IndexType);
+                     auto CurExpansion = Mgr->MakeExpr(LTSOps::OpIndex,
+                                                       Exp, IndexExp);
+                     ExpandExpression(CurExpansion, Expansions);
+                 }
+                 return;
+             }
+
+             // Eh?
+             return;
+         }
+
+        static inline vector<ExpT> GetScalarTerms(const ExpT& Exp)
+        {
+            set<ExpT> ExpandedTerms;
+            ExpandExpression(Exp, ExpandedTerms);
+            return vector<ExpT>(ExpandedTerms.begin(), ExpandedTerms.end());
+        }
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

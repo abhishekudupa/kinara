@@ -411,7 +411,7 @@ namespace ESMC {
         {
             auto UMType = UnifiedMsgType->As<ExprUnionType>();
             const u32 NumMsgTypes = UMType->GetMemberTypes().size();
-            MsgCanonMap = vector<vector<u32>>(NumMsgTypes);
+            MsgCanonMap = vector<vector<u32>>(NumMsgTypes + 1);
             
             vector<u32> TypeSizes;
             for (auto const& Type : UsedSymmTypes) {
@@ -420,10 +420,13 @@ namespace ESMC {
             
             PermutationSet PermSet(TypeSizes, true);
             const u32 NumPerms = PermSet.GetSize();
-            for (u32 i = 0; i < NumMsgTypes; ++i) {
+            for (u32 i = 0; i < NumMsgTypes + 1; ++i) {
                 MsgCanonMap[i] = vector<u32>(NumPerms);
             }
-            
+            for (u32 i = 0; i < NumPerms; ++i) {
+                MsgCanonMap[0][i] = 0;
+            }
+
             vector<vector<ExpT>> ParamElems;
             for (auto const& Type : UsedSymmTypes) {
                 ParamElems.push_back(vector<ExpT>());
@@ -472,7 +475,8 @@ namespace ESMC {
             }
 
             // We also populate the msg type map
-            MsgTypeMap = vector<string>(NumMsgTypes);
+            MsgTypeMap = vector<string>(NumMsgTypes + 1);
+            MsgTypeMap[0] = "undefined_mtype";
             for (auto const& NameType : MsgTypes) {
                 auto const& Type = NameType.second;
                 auto const& Name = NameType.first;
@@ -594,6 +598,11 @@ namespace ESMC {
             UnifiedMsgType = Mgr->MakeType<ExprUnionType>("UnifiedMsgType",
                                                           UnionMembers, 
                                                           TypeIDFieldType);
+            LTSAssignRef ClearAsgn = new LTSAssignSimple(Mgr->MakeVar(ProductMsgName,
+                                                                      UnifiedMsgType),
+                                                         Mgr->MakeVal("clear",
+                                                                      UnifiedMsgType));
+            MsgBufferClearUpdates = ClearAsgn->ExpandNonScalarUpdates();
         }
 
         const vector<vector<LTSAssignRef>>& 
@@ -1070,6 +1079,14 @@ namespace ESMC {
                 }
             }
 
+            vector<vector<LTSAssignRef>> FlattenedISGens;
+            for (auto const& ISGen : InitStateGenerators) {
+                auto&& FlattenedISGen = ExpandUpdates(ISGen);
+                FlattenedISGens.push_back(FlattenedISGen);
+            }
+
+            InitStateGenerators = FlattenedISGens;
+
             SymTab.Pop();
         }
 
@@ -1091,6 +1108,11 @@ namespace ESMC {
             CheckExpr(ElimExp, SymTab, Mgr);
             InvariantExp = Mgr->MakeExpr(LTSOps::OpAND, InvariantExp, ElimExp);
             InvariantExp = Mgr->Simplify(InvariantExp);
+        }
+
+        const vector<LTSAssignRef>& LabelledTS::GetMsgBufferClearUpdates() const
+        {
+            return MsgBufferClearUpdates;
         }
 
     } /* end namespace LTS */

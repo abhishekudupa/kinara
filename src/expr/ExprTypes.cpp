@@ -190,6 +190,11 @@ namespace ESMC {
             }
         }
 
+        string ExprBoolType::GetClearValue() const
+        {
+            return "false";
+        }
+
         ExprIntType::ExprIntType()
             : ExprScalarType()
         {
@@ -257,6 +262,11 @@ namespace ESMC {
         string ExprIntType::ValToConst(i64 Val) const
         {
             return to_string(Val);
+        }
+
+        string ExprIntType::GetClearValue() const
+        {
+            return "0";
         }
 
         // Inclusive range
@@ -363,6 +373,11 @@ namespace ESMC {
         string ExprRangeType::ValToConst(i64 Val) const
         {
             return to_string(Val);
+        }
+
+        string ExprRangeType::GetClearValue() const
+        {
+            return to_string(RangeLow);
         }
 
         ExprEnumType::ExprEnumType(const string& Name, 
@@ -530,6 +545,11 @@ namespace ESMC {
             return MemberVec[Val];
         }
 
+        string ExprEnumType::GetClearValue() const
+        {
+            return MemberVec[0];
+        }
+
         ExprSymmetricType::ExprSymmetricType(const string& Name, u32 Size)
             : ExprScalarType(), Name(Name), Size(Size), Members(Size)
         {
@@ -648,6 +668,11 @@ namespace ESMC {
         string ExprSymmetricType::ValToConst(i64 Val) const
         {
             return Members[Val];
+        }
+
+        string ExprSymmetricType::GetClearValue() const
+        {
+            return "clear";
         }
 
         static inline string MangleName(const string& Name, 
@@ -776,6 +801,12 @@ namespace ESMC {
             return Retval;
         }
 
+        string ExprFuncType::GetClearValue() const
+        {
+            throw ESMCError((string)"ExprFuncType::GetClearValue() should never have " + 
+                            "been called");
+        }
+
         u32 ExprFuncType::GetCardinality() const
         {
             throw ESMCError((string)"Cannot GetCardinality() of a function type");
@@ -891,6 +922,12 @@ namespace ESMC {
         u32 ExprArrayType::GetCardinality() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
+        }
+
+        string ExprArrayType::GetClearValue() const
+        {
+            throw ESMCError((string)"ExprArrayType::GetClearValue() should never have " + 
+                            "been called");            
         }
 
         ExprRecordType::ExprRecordType(const string& Name,
@@ -1078,6 +1115,12 @@ namespace ESMC {
             return Align(Retval, 4);
         }
 
+        string ExprRecordType::GetClearValue() const
+        {
+            throw ESMCError((string)"ExprRecordType::GetClearValue() should never " +
+                            "have been called");
+        }
+
         ExprParametricType::ExprParametricType(const ExprTypeRef& BaseType,
                                                const vector<ExprTypeRef>& ParameterTypes)
             : ExprTypeBase(), BaseType(BaseType), ParameterTypes(ParameterTypes)
@@ -1195,6 +1238,12 @@ namespace ESMC {
                                 "have been called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
         }
 
+        string ExprParametricType::GetClearValue() const
+        {
+            throw ESMCError((string)"ExprParametricType::GetClearValue() should never " + 
+                            "have been called");
+        }
+
         ExprFieldAccessType::ExprFieldAccessType()
             : ExprTypeBase()
         {
@@ -1254,6 +1303,12 @@ namespace ESMC {
                                 "have been called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
         }
 
+        string ExprFieldAccessType::GetClearValue() const
+        {
+            throw InternalError((string)"ExprFieldAccessType::GetClearValue() " + 
+                                "should never have been called");
+        }
+
         ExprUnionType::ExprUnionType(const string& Name,
                                          const set<ExprTypeRef>& MemberTypes,
                                          const ExprTypeRef& TypeIDFieldType)
@@ -1279,7 +1334,7 @@ namespace ESMC {
                                 "member types");
             }
             
-            u32 NumTypesSeen = 0;
+            u32 NumTypesSeen = 1;
             // Find the maximum number of occurences of each type
             // in each member type
             map<ExprTypeRef, u32> MaxOccCount;
@@ -1400,7 +1455,7 @@ namespace ESMC {
             auto it = MemberTypeToID.find(TypeAsRec);
             if (it == MemberTypeToID.end()) {
                 throw ESMCError((string)"Type \"" + MemType->ToString() + " \" does not " + 
-                                "seem to be a member of message type");
+                                "seem to be a member of union type");
             }
             return it->second;
         }
@@ -1409,8 +1464,8 @@ namespace ESMC {
         {
             auto it = IDToMemberType.find(TypeID);
             if (it == IDToMemberType.end()) {
-                throw ESMCError((string)"TypeID " + to_string(TypeID) + " not a valid type id for " + 
-                                "message type");
+                throw ESMCError((string)"TypeID " + to_string(TypeID) + 
+                                " not a valid type id for message type");
             }
             return it->second;
         }
@@ -1428,7 +1483,7 @@ namespace ESMC {
             auto it = MemberTypeToID.find(TypeAsRec);
             if (it == MemberTypeToID.end()) {
                 throw ESMCError((string)"Type \"" + MemberType->ToString() + " \" does not " + 
-                                "seem to be a member of message type");                
+                                "seem to be a member of union type");                
             }
             auto TypeID = it->second;
 
@@ -1445,14 +1500,14 @@ namespace ESMC {
         {
             auto it = FieldToMemberField.find(TypeID);
             if (it == FieldToMemberField.end()) {
-                throw ESMCError((string)"TypeID " + to_string(TypeID) + " not a valid type id for " + 
-                                "message type");
+                throw ESMCError((string)"TypeID " + to_string(TypeID) + " not a valid " + 
+                                "type id for union type");
             }
             auto const& Map = it->second;
             auto it2 = Map.find(FieldName);
             if (it2 == Map.end()) {
                 throw ESMCError((string)"Field Name \"" + FieldName + "\" does not " + 
-                                "seem to be a member of message type");
+                                "seem to be a member of union type");
             }
             return it2->second;
         }
@@ -1495,6 +1550,12 @@ namespace ESMC {
             } else {
                 return 0;
             }
+        }
+
+        string ExprUnionType::GetClearValue() const
+        {
+            throw ESMCError((string)"ExprUnionType::GetClearValue() should never " + 
+                            "have been called");
         }
         
     } /* end namespace Exprs */

@@ -112,15 +112,17 @@ namespace ESMC {
             u32 NumActiveStates;
             u32 MsgSize;
             u08* MsgBuffer;
+            vector<LTS::LTSAssignRef> MsgClearUpdates;
 
             u08* GetStateBuffer(bool Clear = true);
             void ReleaseStateBuffer(u08* BufferPtr);
             StateVec* MakeState(const StateVec* Other);
             u08* GetMsgBuffer();
-            void ClearMsgBuffer();
+            void ClearMsgBuffer(StateVec* SV);
 
         public:
-            StateFactory(u32 StateSize, u32 MsgSize);
+            StateFactory(u32 StateSize, u32 MsgSize, 
+                         const vector<LTS::LTSAssignRef>& MsgClearUpdates);
             ~StateFactory();
             StateVec* MakeState();
             void TakeState(const StateVec* StatePtr);
