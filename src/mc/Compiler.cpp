@@ -387,11 +387,12 @@ namespace ESMC {
             }
                 break;
 
-            default:
-                throw UnimplementedException("Uninterpreted Function Interpretations",
-                                             __FILE__, __LINE__);
+            default: {
+                // must be an uninterpreted function
+                Ext.Interp = new UFInterpreter(SubInterps, Exp);
             }
-
+            }
+                
             Compiler->RegisterInterp(Ext.Interp);
         }
 
@@ -662,6 +663,32 @@ namespace ESMC {
                 SubEvals[i] = ArgInterps[i]->EvaluateScalar(StateVector);
             }
             return DoEval();
+        }
+
+        const u08* UFInterpreter::Evaluate(const StateVec* StateVector) const
+        {
+            throw ESMCError((string)"Uninterpreted function interpreter cannot have " + 
+                            "Evaluate() called on it");
+        }
+
+        i64 UFInterpreter::EvaluateScalarNE(const StateVec* StateVector) const
+        {
+            // We are guaranteed that range and domain are scalars
+            for (u32 i = 0; i < NumArgInterps; ++i) {
+                SubEvals[i] = ArgInterps[i]->EvaluateScalarNE(StateVector);
+            }
+            return DoEval();
+        }
+
+        void UFInterpreter::UpdateModel(const Z3Model& Model) const
+        {
+            this->Model = Model;
+        }
+
+        const u08* UFInterpreter::EvaluateNE(const StateVec* StateVector) const
+        {
+            throw ESMCError((string)"Uninterpreted function interpreter cannot have " + 
+                            "EvaluateNE() called on it");
         }
 
         OpInterpreter::OpInterpreter(bool Scalar, u32 Size,

@@ -220,7 +220,7 @@ namespace ESMC {
             const u32 NumArgInterps;
             mutable unordered_map<vector<i64>, i64, 
                                   Detail::ValueVecHasher> EvalMap;
-            Z3Model Model;
+            mutable Z3Model Model;
 
             inline i64 DoEval() const;
             
