@@ -1689,15 +1689,20 @@ namespace ESMC {
                     auto const& TypeName = TypeAsSymm->GetName();
                     const u32 NumConsts = Members.size();
                     Z3_symbol Z3TypeName = Z3_mk_string_symbol(*Ctx, TypeName.c_str());
-                    Z3_symbol* ConstNames = new Z3_symbol[NumConsts];
-                    Z3_func_decl* ConstFuncs = new Z3_func_decl[NumConsts];
-                    Z3_func_decl* ConstTests = new Z3_func_decl[NumConsts];
+
+                    // We need to add a constructor for the undef value
+                    Z3_symbol* ConstNames = new Z3_symbol[NumConsts + 1];
+                    Z3_func_decl* ConstFuncs = new Z3_func_decl[NumConsts + 1];
+                    Z3_func_decl* ConstTests = new Z3_func_decl[NumConsts + 1];
 
                     for (u32 i = 0; i < NumConsts; ++i) {
                         ConstNames[i] = Z3_mk_string_symbol(*Ctx, Members[i].c_str());
                     }
 
-                    auto Z3EnumSort = Z3_mk_enumeration_sort(*Ctx, Z3TypeName, NumConsts,
+                    ConstNames[NumConsts] = 
+                        Z3_mk_string_symbol(*Ctx, (TypeName + "::" + "clear").c_str());
+
+                    auto Z3EnumSort = Z3_mk_enumeration_sort(*Ctx, Z3TypeName, NumConsts + 1,
                                                              ConstNames, ConstFuncs, ConstTests);
 
                     LoweredSort = Z3Sort(Ctx, Z3EnumSort);
@@ -2328,7 +2333,11 @@ namespace ESMC {
                                             "\" when attempting to raise expression:\n" + 
                                             Z3_ast_to_string(*Ctx, LExp));
                     }
-                    return Mgr->MakeVal(DeclName, Type);
+                    if (SplitComps[1] == "clear") {
+                        return Mgr->MakeVal("clear", Type);
+                    } else {
+                        return Mgr->MakeVal(DeclName, Type);
+                    }
                 }
 
                 default:
@@ -2595,6 +2604,7 @@ namespace ESMC {
             inline i64 RegisterUninterpretedFunction(const string& Name,
                                                      const vector<TypeT>& DomTypes,
                                                      const TypeT& RangeType);
+            inline TypeT LookupUninterpretedFunction(i64 OpCode) const;
 
             inline ExpT RaiseExpr(MgrType* Mgr, const LExpT& LExp, const LTSLCRef& LTSCtx);
             inline LExpT LowerExpr(const ExpT& Exp, const LTSLCRef& ExpCtx);
@@ -2694,6 +2704,18 @@ namespace ESMC {
                 }
                 return UFID;
             }
+        }
+
+        template <typename E>
+        inline typename LTSTermSemanticizer<E>::TypeT
+        LTSTermSemanticizer<E>::LookupUninterpretedFunction(i64 OpCode) const
+        {
+            auto it = UFMap.find(OpCode);
+            if (it == UFMap.end()) {
+                throw ExprTypeError((string)"No uninterpreted function corresponds to " + 
+                                    "opcode = " + to_string(OpCode));
+            }
+            return it->second;
         }
 
         template <typename E>

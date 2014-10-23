@@ -432,21 +432,21 @@ namespace ESMC {
 
         // Z3Model implementation
         Z3Model::Z3Model()
-            : Z3Object(), Model(nullptr)
+            : Z3Object(), Model(nullptr), TPPtr(nullptr)
         {
             // Nothing here
         }
         
         Z3Model::Z3Model(const Z3Model& Other) 
-            : Z3Object(Other), Model(Other.Model)
+            : Z3Object(Other), Model(Other.Model), TPPtr(Other.TPPtr)
         {
             if (Ctx != Z3Ctx::NullPtr && Model != nullptr) {
                 Z3_model_inc_ref(*Ctx, Model);
             }
         }
 
-        Z3Model::Z3Model(Z3Ctx Ctx, Z3_model Model)
-            : Z3Object(Ctx), Model(Model)
+        Z3Model::Z3Model(Z3Ctx Ctx, Z3_model Model, TheoremProver* TPPtr)
+            : Z3Object(Ctx), Model(Model), TPPtr(TPPtr)
         {
             if (Ctx != Z3Ctx::NullPtr && Model != nullptr) {
                 Z3_model_inc_ref(*Ctx, Model);
@@ -458,6 +458,7 @@ namespace ESMC {
         {
             swap(Ctx, Other.Ctx);
             swap(Model, Other.Model);
+            swap(TPPtr, Other.TPPtr);
         }
 
         Z3Model::~Z3Model()
@@ -471,6 +472,7 @@ namespace ESMC {
         {
             swap(Ctx, Other.Ctx);
             swap(Model, Other.Model);
+            swap(TPPtr, Other.TPPtr);
             return *this;
         }
 
@@ -479,7 +481,8 @@ namespace ESMC {
             auto OtherAsPtr = Other.As<Z3Model>();
             return (OtherAsPtr != nullptr &&
                     OtherAsPtr->Ctx == Ctx &&
-                    OtherAsPtr->Model == Model);
+                    OtherAsPtr->Model == Model &&
+                    TPPtr == OtherAsPtr->TPPtr);
         }
 
         string Z3Model::ToString() const
@@ -502,6 +505,11 @@ namespace ESMC {
         Z3_model Z3Model::GetModel() const
         {
             return Model;
+        }
+
+        TheoremProver* Z3Model::GetTPPtr() const
+        {
+            return TPPtr;
         }
 
         Z3Model Z3Model::NullModel;

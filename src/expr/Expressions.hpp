@@ -622,6 +622,7 @@ namespace ESMC {
             inline i64 MakeUninterpretedFunction(const string& Name, 
                                                  const vector<TypeT>& Range,
                                                  const TypeT& Domain);
+            inline TypeT LookupUninterpretedFunction(i64 OpCode) const;
 
             template <class T, typename... ArgTypes>
             inline ExpT ApplyTransform(const ExpT& Exp, ArgTypes&&... Args);
@@ -2479,6 +2480,13 @@ namespace ESMC {
                                                             const TypeT& Range)
         {
             return Sem->RegisterUninterpretedFunction(Name, Domain, Range);
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::TypeT
+        ExprMgr<E, S>::LookupUninterpretedFunction(i64 OpCode) const
+        {
+            return Sem->LookupUninterpretedFunction(OpCode);
         }
 
         template <typename E, template <typename> class S>

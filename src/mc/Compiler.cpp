@@ -22,7 +22,7 @@
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
 // 
-// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLD ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
 // DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
@@ -43,6 +43,7 @@
 #include "../utils/SizeUtils.hpp"
 #include "../uflts/LTSTransitions.hpp"
 #include "../uflts/LTSAssign.hpp"
+#include "../tpinterface/TheoremProver.hpp"
 
 #include "Compiler.hpp"
 #include "StateVec.hpp"
@@ -181,8 +182,8 @@ namespace ESMC {
         }
 
         // Interpreters
-        RValueInterpreter::RValueInterpreter(bool Scalar, u32 Size)
-            : Scalar(Scalar), Size(Size)
+        RValueInterpreter::RValueInterpreter(bool Scalar, u32 Size, ExpPtrT Exp)
+            : Scalar(Scalar), Size(Size), Exp(Exp)
         {
             // Nothing here
         }
@@ -202,6 +203,11 @@ namespace ESMC {
             return Size;
         }
 
+        ExpPtrT RValueInterpreter::GetExp() const
+        {
+            return Exp;
+        }
+
         void RValueInterpreter::MakeInterpreter(const ExpT& Exp, LTSCompiler* Compiler)
         {
             auto& Ext = Exp->ExtensionData;
@@ -213,15 +219,15 @@ namespace ESMC {
             if (Ext.ConstCompiled) {
                 if (Ext.ClearConstant) {
                     Ext.Interp = 
-                        new CompiledConstInterpreter(Type->GetByteSize(), ZeroPage::Get());
+                        new CompiledConstInterpreter(Type->GetByteSize(), ZeroPage::Get(), Exp);
                     Compiler->RegisterInterp(Ext.Interp);
                 } else {
                     auto TypeAsScalar = Type->As<ExprScalarType>();
                     if (!TypeAsScalar->Is<ExprIntType>()) {
                         Ext.Interp = 
-                            new CompiledConstInterpreter(Type->GetByteSize(), Ext.ConstVal);
+                            new CompiledConstInterpreter(Type->GetByteSize(), Ext.ConstVal, Exp);
                     } else {
-                        Ext.Interp = new CompiledConstInterpreter(4, Ext.ConstVal);
+                        Ext.Interp = new CompiledConstInterpreter(4, Ext.ConstVal, Exp);
                     }
                     Compiler->RegisterInterp(Ext.Interp);
                 }
@@ -246,7 +252,7 @@ namespace ESMC {
                                                            Ext.IsMsg, 
                                                            Type->Is<Exprs::ExprScalarType>(),
                                                            Ext.Offset,
-                                                           Low, High);
+                                                           Low, High, Exp);
                 Compiler->RegisterInterp(Ext.Interp);
                 return;
             }
@@ -274,58 +280,58 @@ namespace ESMC {
 
             switch (OpCode) {
             case LTSOps::OpEQ:
-                Ext.Interp = new EQInterpreter(SubInterps);
+                Ext.Interp = new EQInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpNOT:
-                Ext.Interp = new NOTInterpreter(SubInterps);
+                Ext.Interp = new NOTInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpITE:
-                Ext.Interp = new ITEInterpreter(SubInterps);
+                Ext.Interp = new ITEInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpOR:
-                Ext.Interp = new ORInterpreter(SubInterps);
+                Ext.Interp = new ORInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpAND:
-                Ext.Interp = new ANDInterpreter(SubInterps);
+                Ext.Interp = new ANDInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpIMPLIES:
-                Ext.Interp = new IMPLIESInterpreter(SubInterps);
+                Ext.Interp = new IMPLIESInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpIFF:
-                Ext.Interp = new IFFInterpreter(SubInterps);
+                Ext.Interp = new IFFInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpXOR:
-                Ext.Interp = new XORInterpreter(SubInterps);
+                Ext.Interp = new XORInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpADD:
-                Ext.Interp = new ADDInterpreter(SubInterps);
+                Ext.Interp = new ADDInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpSUB:
-                Ext.Interp = new SUBInterpreter(SubInterps);
+                Ext.Interp = new SUBInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpMINUS:
-                Ext.Interp = new MINUSInterpreter(SubInterps);
+                Ext.Interp = new MINUSInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpMUL:
-                Ext.Interp = new MULInterpreter(SubInterps);
+                Ext.Interp = new MULInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpDIV:
-                Ext.Interp = new DIVInterpreter(SubInterps);
+                Ext.Interp = new DIVInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpMOD:
-                Ext.Interp = new MODInterpreter(SubInterps);
+                Ext.Interp = new MODInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpGT:
-                Ext.Interp = new GTInterpreter(SubInterps);
+                Ext.Interp = new GTInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpGE:
-                Ext.Interp = new GEInterpreter(SubInterps);
+                Ext.Interp = new GEInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpLT:
-                Ext.Interp = new LTInterpreter(SubInterps);
+                Ext.Interp = new LTInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpLE:
-                Ext.Interp = new LEInterpreter(SubInterps);
+                Ext.Interp = new LEInterpreter(SubInterps, Exp);
                 break;
             case LTSOps::OpIndex: {
                 i64 Low = 0;
@@ -353,7 +359,7 @@ namespace ESMC {
                                                   SubInterps[0]->As<LValueInterpreter>(), 
                                                   SubInterps[1],
                                                   ElemSize,
-                                                  Low, High);
+                                                  Low, High, Exp);
             }
                 break;
 
@@ -377,7 +383,7 @@ namespace ESMC {
                                                   Ext.IsMsg, Type->Is<Exprs::ExprScalarType>(),
                                                   SubInterps[0]->As<LValueInterpreter>(), 
                                                   Ext.FieldOffset,
-                                                  Low, High);
+                                                  Low, High, Exp);
             }
                 break;
 
@@ -389,9 +395,16 @@ namespace ESMC {
             Compiler->RegisterInterp(Ext.Interp);
         }
 
+        // default action: do nothing
+        void RValueInterpreter::UpdateModel(const Z3Model& Model) const
+        {
+            return;
+        }
+
         LValueInterpreter::LValueInterpreter(u32 Size, bool Msg, 
-                                             bool Scalar, i64 Low, i64 High)
-            : RValueInterpreter(Scalar, Size), Msg(Msg), Low(Low), High(High)
+                                             bool Scalar, i64 Low, i64 High,
+                                             ExpPtrT Exp)
+            : RValueInterpreter(Scalar, Size, Exp), Msg(Msg), Low(Low), High(High)
         {
             // Nothing here
         }
@@ -428,14 +441,16 @@ namespace ESMC {
             }
         }
         
-        CompiledConstInterpreter::CompiledConstInterpreter(u32 Size, i64 Value)
-            : RValueInterpreter(true, Size), Value(Value), Ptr(nullptr)
+        CompiledConstInterpreter::CompiledConstInterpreter(u32 Size, i64 Value, 
+                                                           ExpPtrT Exp)
+            : RValueInterpreter(true, Size, Exp), Value(Value), Ptr(nullptr)
         {
             // Nothing here
         }
 
-        CompiledConstInterpreter::CompiledConstInterpreter(u32 Size, u08* Ptr)
-            : RValueInterpreter(false, Size), Value(INT64_MAX), Ptr(Ptr)
+        CompiledConstInterpreter::CompiledConstInterpreter(u32 Size, u08* Ptr,
+                                                           ExpPtrT Exp)
+            : RValueInterpreter(false, Size, Exp), Value(INT64_MAX), Ptr(Ptr)
         {
             // Nothing here
         }
@@ -474,8 +489,9 @@ namespace ESMC {
 
         CompiledLValueInterpreter::CompiledLValueInterpreter(u32 Size, bool Msg, 
                                                              bool Scalar, u32 Offset, 
-                                                             i64 Low, i64 High)
-            : LValueInterpreter(Size, Msg, Scalar, Low, High), Offset(Offset)
+                                                             i64 Low, i64 High,
+                                                             ExpPtrT Exp)
+            : LValueInterpreter(Size, Msg, Scalar, Low, High, Exp), Offset(Offset)
         {
             // Nothing here
         }
@@ -584,9 +600,74 @@ namespace ESMC {
             return Offset;
         }
 
+        // Uninterpreted function interpreter implementation
+        UFInterpreter::UFInterpreter(const vector<RValueInterpreter*>& ArgInterps,
+                                     ExpPtrT Exp)
+            : RValueInterpreter(true, 4, Exp), 
+              ArgInterps(ArgInterps), SubEvals(ArgInterps.size()),
+              NumArgInterps(ArgInterps.size()), Model(Z3Model::NullModel)
+        {
+            // Nothing here
+        }
+
+        UFInterpreter::~UFInterpreter()
+        {
+            // Nothing here
+        }
+
+        inline i64 UFInterpreter::DoEval() const
+        {
+            auto it = EvalMap.find(SubEvals);
+            if (it != EvalMap.end()) {
+                return it->second;
+            }
+
+            // We need to create a new entry
+            auto Mgr = Exp->GetMgr();
+            auto ExpAsOp = Exp->SAs<Exprs::OpExpression>();
+            auto OpCode = ExpAsOp->GetOpCode();
+            vector<ExpT> AppArgExps;
+
+            for (u32 i = 0; i < NumArgInterps; ++i) {
+                auto CurInterp = ArgInterps[i];
+                auto ArgType = CurInterp->GetExp()->GetType()->As<Exprs::ExprScalarType>();
+                auto AppArgExp = Mgr->MakeVal(ArgType->ValToConst(SubEvals[i]),
+                                              CurInterp->GetExp()->GetType());
+                AppArgExps.push_back(AppArgExp);
+            }
+
+            auto ConcAppExp = Mgr->MakeExpr(OpCode, AppArgExps);
+            
+            // Evaluate the expression in the model
+            TPRef TP = Model.GetTPPtr();
+            auto EvalExp = TP->Evaluate(ConcAppExp);
+            auto EvalAsConst = EvalExp->As<Exprs::ConstExpression>();
+            if (EvalAsConst == nullptr) {
+                throw ESMCError((string)"Evaluating a term on the model did not " + 
+                                "result in a constant valued interpretation.\nTerm:\n" + 
+                                ConcAppExp->ToString() + "\nEvaluation:\n" + EvalExp->ToString());
+            }
+            auto RangeType = EvalExp->GetType()->As<Exprs::ExprScalarType>();
+            auto Val = RangeType->ConstToVal(EvalAsConst->GetConstValue());
+
+            // cache the result
+            EvalMap[SubEvals] = Val;
+            return Val;
+        }
+
+        i64 UFInterpreter::EvaluateScalar(const StateVec* StateVector) const
+        {
+            // We are guaranteed that range and domain are scalars
+            for (u32 i = 0; i < NumArgInterps; ++i) {
+                SubEvals[i] = ArgInterps[i]->EvaluateScalar(StateVector);
+            }
+            return DoEval();
+        }
+
         OpInterpreter::OpInterpreter(bool Scalar, u32 Size,
-                                     const vector<RValueInterpreter*>& SubInterps)
-            : RValueInterpreter(Scalar, Size), SubInterps(SubInterps), 
+                                     const vector<RValueInterpreter*>& SubInterps,
+                                     ExpPtrT Exp)
+            : RValueInterpreter(Scalar, Size, Exp), SubInterps(SubInterps), 
               SubEvals(SubInterps.size()), NumSubInterps(SubInterps.size())
         {
             // Nothing here
@@ -608,8 +689,9 @@ namespace ESMC {
             }
         }
 
-        EQInterpreter::EQInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 1, SubInterps)
+        EQInterpreter::EQInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                     ExpPtrT Exp)
+            : OpInterpreter(true, 1, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -662,8 +744,9 @@ namespace ESMC {
         }
 
 
-        NOTInterpreter::NOTInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 1, SubInterps)
+        NOTInterpreter::NOTInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                       ExpPtrT Exp)
+            : OpInterpreter(true, 1, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -699,9 +782,10 @@ namespace ESMC {
             throw InternalError((string)"Evaluate() called on scalar type");
         }
 
-        ITEInterpreter::ITEInterpreter(const vector<RValueInterpreter*>& SubInterps)
+        ITEInterpreter::ITEInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                       ExpPtrT Exp)
             : OpInterpreter(SubInterps[1]->IsScalar(), SubInterps[1]->GetSize(),
-                            SubInterps)
+                            SubInterps, Exp)
         {
             // Nothing here
         }
@@ -763,8 +847,9 @@ namespace ESMC {
             }
         }
 
-        ORInterpreter::ORInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 1, SubInterps)
+        ORInterpreter::ORInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                     ExpPtrT Exp)
+            : OpInterpreter(true, 1, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -814,8 +899,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
-        ANDInterpreter::ANDInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 1, SubInterps)
+        ANDInterpreter::ANDInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                       ExpPtrT Exp)
+            : OpInterpreter(true, 1, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -865,8 +951,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
-        IMPLIESInterpreter::IMPLIESInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 1, SubInterps)
+        IMPLIESInterpreter::IMPLIESInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                               ExpPtrT Exp)
+            : OpInterpreter(true, 1, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -913,8 +1000,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
-        IFFInterpreter::IFFInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 1, SubInterps)
+        IFFInterpreter::IFFInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                       ExpPtrT Exp)
+            : OpInterpreter(true, 1, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -949,8 +1037,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
-        XORInterpreter::XORInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 1, SubInterps)
+        XORInterpreter::XORInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                       ExpPtrT Exp)
+            : OpInterpreter(true, 1, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -984,8 +1073,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
-        ADDInterpreter::ADDInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 4, SubInterps)
+        ADDInterpreter::ADDInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                       ExpPtrT Exp)
+            : OpInterpreter(true, 4, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -1029,8 +1119,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
-        SUBInterpreter::SUBInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 4, SubInterps)
+        SUBInterpreter::SUBInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                       ExpPtrT Exp)
+            : OpInterpreter(true, 4, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -1083,8 +1174,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
         
-        MINUSInterpreter::MINUSInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 4, SubInterps)
+        MINUSInterpreter::MINUSInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                           ExpPtrT Exp)
+            : OpInterpreter(true, 4, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -1122,8 +1214,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
-        MULInterpreter::MULInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 4, SubInterps)
+        MULInterpreter::MULInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                       ExpPtrT Exp)
+            : OpInterpreter(true, 4, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -1167,8 +1260,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
         
-        DIVInterpreter::DIVInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 4, SubInterps)
+        DIVInterpreter::DIVInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                       ExpPtrT Exp)
+            : OpInterpreter(true, 4, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -1206,8 +1300,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
-        MODInterpreter::MODInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 4, SubInterps)
+        MODInterpreter::MODInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                       ExpPtrT Exp)
+            : OpInterpreter(true, 4, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -1245,8 +1340,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
-        GTInterpreter::GTInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 1, SubInterps)
+        GTInterpreter::GTInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                     ExpPtrT Exp)
+            : OpInterpreter(true, 1, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -1284,8 +1380,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
         
-        GEInterpreter::GEInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 1, SubInterps)
+        GEInterpreter::GEInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                     ExpPtrT Exp)
+            : OpInterpreter(true, 1, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -1324,8 +1421,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
-        LTInterpreter::LTInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 1, SubInterps)
+        LTInterpreter::LTInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                     ExpPtrT Exp)
+            : OpInterpreter(true, 1, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -1364,8 +1462,9 @@ namespace ESMC {
             throw InternalError((string)"EvaluateNE() called on scalar type");
         }
 
-        LEInterpreter::LEInterpreter(const vector<RValueInterpreter*>& SubInterps)
-            : OpInterpreter(true, 1, SubInterps)
+        LEInterpreter::LEInterpreter(const vector<RValueInterpreter*>& SubInterps,
+                                     ExpPtrT Exp)
+            : OpInterpreter(true, 1, SubInterps, Exp)
         {
             // Nothing here
         }
@@ -1407,8 +1506,9 @@ namespace ESMC {
                                            LValueInterpreter* ArrayInterp,
                                            RValueInterpreter* IndexInterp,
                                            u32 ElemSize,
-                                           i64 Low, i64 High)
-            : LValueInterpreter(Size, Msg, IsScalar, Low, High),
+                                           i64 Low, i64 High,
+                                           ExpPtrT Exp)
+            : LValueInterpreter(Size, Msg, IsScalar, Low, High, Exp),
               ArrayInterp(ArrayInterp), IndexInterp(IndexInterp),
               ElemSize(ElemSize)
         {
@@ -1566,8 +1666,9 @@ namespace ESMC {
         FieldInterpreter::FieldInterpreter(u32 Size, bool Msg, bool IsScalar,
                                            LValueInterpreter* RecInterp,
                                            u32 FieldOffset,
-                                           i64 Low, i64 High)
-            : LValueInterpreter(Size, Msg, IsScalar, Low, High),
+                                           i64 Low, i64 High,
+                                           ExpPtrT Exp)
+            : LValueInterpreter(Size, Msg, IsScalar, Low, High, Exp),
               RecInterp(RecInterp), FieldOffset(FieldOffset)
         {
             // Nothing here

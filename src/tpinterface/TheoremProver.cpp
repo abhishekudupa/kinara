@@ -296,7 +296,8 @@ namespace ESMC {
             if (TheModel == Z3Model::NullModel) {
                 TheModel = Z3Model(Ctx, Z3_solver_get_model(*Ctx, 
                                                          (LastSolveWasFlash ? 
-                                                          FlashSolver : Solver)));
+                                                          FlashSolver : Solver)), 
+                                   const_cast<Z3TheoremProver*>(this));
             }
 
             auto Mgr = Exp->GetMgr();

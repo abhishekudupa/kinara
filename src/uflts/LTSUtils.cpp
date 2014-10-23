@@ -271,11 +271,17 @@ namespace ESMC {
                 auto const& Type = Exp->GetType();
                 if (!Type->Is<ExprSymmetricType>()) {
                     ExpStack.push_back(Exp);
+                    return;
                 }
 
                 auto TypeAsSym = Type->SAs<ExprSymmetricType>();
                 // Symmetric type. Permute
                 auto const& ConstVal = Exp->GetConstValue();
+                if (ConstVal == "clear") {
+                    // The undef value permutes to itself regardless
+                    ExpStack.push_back(Exp);
+                    return;
+                }
                 auto ConstIdx = TypeAsSym->GetMemberIdx(ConstVal);
                 auto it = TypeOffsets.find(Type);
                 

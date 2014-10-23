@@ -454,6 +454,17 @@ namespace ESMC {
             vector<vector<string>> SymmArgValues;
             for (auto const& SymmArg : SymmArgs) {
                 SymmArgValues.push_back(SymmArg->GetType()->GetElements());
+                // Add the clear value if arg is an lvalue
+                if (SymmArg->Is<Exprs::VarExpression>()) {
+                    auto ArgAsVar = SymmArg->SAs<Exprs::VarExpression>();
+                    auto const& VarName = ArgAsVar->GetVarName();
+                    auto Res = SymTab.Lookup(VarName);
+                    if (Res->Is<ParamDecl>()) {
+                        continue;
+                    } else {
+                        SymmArgValues.back().push_back("clear");
+                    }
+                }
             }
             auto&& ValueTuples = CrossProduct<string>(SymmArgValues.begin(), 
                                                       SymmArgValues.end());
@@ -484,7 +495,8 @@ namespace ESMC {
                 } else {
                     // The range itself is symmetric
                     auto const& RangeType = Exp->GetType();
-                    auto const& RangeElems = RangeType->GetElements();
+                    auto RangeElems = RangeType->GetElements();
+                    RangeElems.push_back("clear");
                     
                     for (auto const& RangeElem : RangeElems) {
                         auto CurVal = Mgr->MakeVal(RangeElem, RangeType);
