@@ -26,6 +26,7 @@ PROJECT_MODULES= \
 	mc \
 	symexec \
 	symmetry \
+	synth \
 	tpinterface \
 	uflts \
 	utils \
@@ -68,6 +69,7 @@ libesmc_OBJS= \
 	LTSUtils.o \
 	OmegaAutomaton.o \
 	Permutations.o \
+	Solver.o \
 	SpookyHash.o \
 	StateVec.o \
 	StateVecPrinter.o \

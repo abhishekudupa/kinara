@@ -682,6 +682,7 @@ namespace ESMC {
 
         void UFInterpreter::UpdateModel(const Z3Model& Model) const
         {
+            EvalMap.clear();
             this->Model = Model;
         }
 
@@ -1874,7 +1875,11 @@ namespace ESMC {
 
         void LTSCompiler::UpdateModel(const Z3Model& Model)
         {
-            
+            // Push the model through all the registered
+            // interpreters
+            for (auto const& Interp : InterpsToFree) {
+                Interp->UpdateModel(Model);
+            }
         }
 
     } /* end namespace */

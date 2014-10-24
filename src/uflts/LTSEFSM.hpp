@@ -80,9 +80,12 @@ namespace ESMC {
         
         class IncompleteEFSM : public DetEFSM
         {
+            friend class ESMC::Synth::Solver;
+
         private:
             // Constraints over uninterpreted functions
             set<ExpT> Constraints;
+            set<i64> GuardUFIDs;
             map<string, set<SymmMsgDeclRef>> BlockedCompletions;
             set<string> CompleteStates;
             set<string> ReadOnlyVars;
@@ -94,7 +97,8 @@ namespace ESMC {
             // Constraint addition methods. mainly for logging
             inline void AddConstraint(const ExpT& Constraint);
             inline void AddConstraint(const vector<ExpT>& Constraints);
-            
+
+            inline void FilterTerms(set<ExpT>& DomainTerms, const ExprTypeRef& RangeType);
             set<ExpT> GetDomainTerms(const map<string, ExprTypeRef>& DomainVars);
 
             inline vector<ExprTypeRef> GetSymmTypesInExpr(const ExpT& Exp);
@@ -155,14 +159,23 @@ namespace ESMC {
             // particular state
             void IgnoreMsgOnState(const SymmMsgDeclRef& MsgDecl,
                                   const string& StateName);
+            void IgnoreAllMsgsOnState(const string& StateName);
+            void HandleMsgOnState(const SymmMsgDeclRef& MsgDecl,
+                                  const string& StateName);
             
             // Do not add any more completions on any message 
             // type on a particular state
             void MarkStateComplete(const string& StateName);
+            void MarkAllStatesComplete();
+            void MarkStateIncomplete(const string& StateName);
 
             // Do not include updates to variables
             // in completion
             void MarkVariableReadOnly(const string& VarName);
+            void MarkAllVariablesReadOnly();
+            void MarkVariableWriteable(const string& VarName);
+            
+            const set<i64>& GetGuardUFIDs() const;
 
             // override freeze to add additional transitions
             // and such

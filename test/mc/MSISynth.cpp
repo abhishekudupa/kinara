@@ -83,7 +83,7 @@ int main()
     auto AddressParam = TheLTS->MakeVar("AddressID", AddressType);
     auto ValueParam = TheLTS->MakeVar("ValueID", ValueType);
 
-    auto AckType = TheLTS->MakeRangeType(-((i64)NumCaches), NumCaches);
+    auto AckType = TheLTS->MakeRangeType(-((i64)(NumCaches - 1)), NumCaches - 1);
     auto FAType = TheLTS->MakeFieldAccessType();
     
     // Useful expressions for constraints
@@ -456,8 +456,8 @@ int main()
 
     CacheEFSM->AddInputMsg(TheLTS->GetNamedType("FwdGetSMsgType'"),
                            CacheParams);
-    CacheEFSM->AddInputMsg(TheLTS->GetNamedType("FwdGetXMsgType'"),
-                           CacheParams);
+    auto FwdGetXInMsgDecl = CacheEFSM->AddInputMsg(TheLTS->GetNamedType("FwdGetXMsgType'"),
+                                                   CacheParams);
     CacheEFSM->AddInputMsgs({ CacheParam1 }, CacheNEQCache1, 
                             TheLTS->GetNamedType("InvAckMsgType'"), 
                             { CacheParam1, CacheParam, DirParam, AddressParam });
@@ -824,6 +824,12 @@ int main()
 
     CacheEFSM->AddOutputTransition("C_II_SENDACK", "C_I", TrueExp, Updates, 
                                    "OutMsg", EVAckMsgType, CacheParams);
+
+    auto CacheAsInc = CacheEFSM->As<IncompleteEFSM>();
+    CacheAsInc->MarkAllStatesComplete();
+    CacheAsInc->MarkStateIncomplete("C_IM_FWD");
+    // CacheAsInc->IgnoreAllMsgsOnState("C_IM_FWD");
+    // CacheAsInc->HandleMsgOnState(FwdGetXInMsgDecl, "C_IM_FWD");
 
     // Done!
     CacheEFSM->Freeze();
@@ -1229,6 +1235,11 @@ int main()
                                  TheLTS->GetNamedType("UnblockXMsgType'"),
                                  { CacheParam, DirParam, AddressParam });
     Updates.clear();
+
+    auto DirAsInc = DirEFSM->SAs<IncompleteEFSM>();
+    DirAsInc->MarkAllStatesComplete();
+
+    DirEFSM->Freeze();
 
     TheLTS->FreezeAutomata();
 

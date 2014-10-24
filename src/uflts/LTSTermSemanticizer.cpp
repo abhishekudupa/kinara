@@ -193,7 +193,7 @@ namespace ESMC {
         LTSLoweredContext::AssumptionSetT 
         LTSLoweredContext::PopAssumptionScope() const
         {
-            auto&& Scope = Assumptions.back();
+            auto Scope = Assumptions.back();
             Assumptions.pop_back();
             return Scope;
         }

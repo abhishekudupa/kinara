@@ -355,6 +355,35 @@ namespace ESMC {
                 Do(const LExpT& LExp, const unordered_map<string, i64>& UFNameToIDMap,
                    const LTSLCRef& LTSCtx, MgrT* Mgr);
             };
+            
+            
+            template <typename E, template <typename> class S>
+            class DeBruijnShifter : public ExpressionVisitorBase<E, S>
+            {
+            private:
+                typedef ExprMgr<E, S> MgrT;
+                typedef Expr<E, S> ExpT;
+
+                vector<ExpT> ExpStack;
+                MgrT* Mgr;
+                i32 ShiftValue;
+
+            public:
+                DeBruijnShifter(MgrT* Mgr, i32 ShiftValue);
+                virtual ~DeBruijnShifter();
+                
+                inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+                inline virtual void 
+                VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) override;
+                inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+                inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+                inline virtual void 
+                VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) override;
+                inline virtual void 
+                VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override;
+                
+                static ExpT Do(MgrT* Mgr, const ExpT& Exp, i32 ShiftValue);
+            };
 
             // A class that unrolls quantifiers
             template <typename E, template <typename> class S>
@@ -366,8 +395,6 @@ namespace ESMC {
 
                 vector<ExpT> ExpStack;
                 MgrT* Mgr;
-                vector<vector<ExpT>> BoundVars;
-                u32 QuantifierDepth;
 
                 inline vector<ExpT> UnrollQuantifier(const QuantifiedExpressionBase<E, S>* Exp);
                 
@@ -1706,8 +1733,8 @@ namespace ESMC {
                                                              ConstNames, ConstFuncs, ConstTests);
 
                     LoweredSort = Z3Sort(Ctx, Z3EnumSort);
-                    LoweredSort.AddFuncDecls(NumConsts, ConstFuncs);
-                    LoweredSort.AddFuncDecls(NumConsts, ConstTests);
+                    LoweredSort.AddFuncDecls(NumConsts + 1, ConstFuncs);
+                    LoweredSort.AddFuncDecls(NumConsts + 1, ConstTests);
                     
                     delete[] ConstNames;
                     delete[] ConstFuncs;
@@ -1817,8 +1844,15 @@ namespace ESMC {
                     }
 
                 } else if (Type->template Is<ExprSymmetricType>()) {
+                    string ActualVal;
+                    if (Val == "clear") {
+                        ActualVal = Type->template SAs<ExprSymmetricType>()->GetName() + 
+                            "::clear";
+                    } else {
+                        ActualVal = Val;
+                    }
                     auto const& LoweredType = LowerType(Type);
-                    auto Decl = LoweredType.GetFuncDecl(Val);
+                    auto Decl = LoweredType.GetFuncDecl(ActualVal);
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_app(*Ctx, Decl, 0, nullptr)));
                 } else if (Type->template Is<ExprEnumType>()) {
                     // enum constants are unqualified
@@ -2142,10 +2176,18 @@ namespace ESMC {
                 auto ActualBody = Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs));
 
                 if (Exp->IsForAll()) {
+                    auto ActualBody = Z3Expr(Ctx, 
+                                             Z3_mk_implies(*Ctx, AssumptionLExp,
+                                                           LoweredQExpr));
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_forall(*Ctx, 0, 0, nullptr, 
                                                                 NumQVars, QVarSorts,
                                                                 QVarNames, ActualBody)));
                 } else {
+                    Z3_ast AndArgs[2];
+                    AndArgs[0] = AssumptionLExp;
+                    AndArgs[1] = LoweredQExpr;
+                    auto ActualBody = Z3Expr(Ctx,
+                                             Z3_mk_and(*Ctx, 2, AndArgs));
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_exists(*Ctx, 0, 0, nullptr, 
                                                                 NumQVars, QVarSorts,
                                                                 QVarNames, ActualBody)));
@@ -2396,11 +2438,95 @@ namespace ESMC {
                 return Retval;
             }
 
+            template <typename E, template <typename> class S>
+            inline DeBruijnShifter<E, S>::DeBruijnShifter(MgrT* Mgr, i32 ShiftValue)
+                : ExpressionVisitorBase<E, S>("DeBruijnShifter"),
+                  Mgr(Mgr), ShiftValue(ShiftValue)
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline DeBruijnShifter<E, S>::~DeBruijnShifter()
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            DeBruijnShifter<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            DeBruijnShifter<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            DeBruijnShifter<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+            {
+                auto OldIdx = Exp->GetVarIdx();
+                auto const& Type = Exp->GetVarType();
+                ExpStack.push_back(Mgr->MakeBoundVar(Type, OldIdx + ShiftValue));
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            DeBruijnShifter<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+            {
+                ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+                auto const& OldChildren = Exp->GetChildren();
+                const u32 NumChildren = OldChildren.size();
+                vector<ExpT> NewChildren(NumChildren);
+
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    NewChildren[NumChildren - i - 1] = ExpStack.back();
+                    ExpStack.pop_back();
+                }
+
+                ExpStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            DeBruijnShifter<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto NewBody = ExpStack.back();
+                ExpStack.pop_back();
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                ExpStack.push_back(Mgr->MakeExists(QVarTypes, NewBody));
+            }
+
+            template <typename E, template <typename> class S>
+            inline void 
+            DeBruijnShifter<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto NewBody = ExpStack.back();
+                ExpStack.pop_back();
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewBody));
+            }
+
+            template <typename E, template <typename> class S>
+            inline typename DeBruijnShifter<E, S>::ExpT
+            DeBruijnShifter<E, S>::Do(MgrT* Mgr, const ExpT& Exp, i32 ShiftValue)
+            {
+                DeBruijnShifter<E, S> TheShifter(Mgr, ShiftValue);
+                Exp->Accept(&TheShifter);
+                return TheShifter.ExpStack[0];
+            }
+
             // implementation of quantifier unroller
             template <typename E, template <typename> class S>
             inline QuantifierUnroller<E, S>::QuantifierUnroller(MgrT* Mgr)
-                : ExpressionVisitorBase<E, S>("QuantifierUnroller"), Mgr(Mgr),
-                  QuantifierDepth(0)
+                : ExpressionVisitorBase<E, S>("QuantifierUnroller"), Mgr(Mgr)
             {
                 // Nothing here
             }
@@ -2465,27 +2591,16 @@ namespace ESMC {
                 for (auto const& CPElem : CP) {
                     typename MgrT::SubstMapT SubstMap;
                     for (u32 i = 0; i < NumQVars; ++i) {
-                        auto const& BoundVarExp = Mgr->MakeBoundVar(QVarTypes[i], i);
+                        auto const& BoundVarExp = 
+                            Mgr->MakeBoundVar(QVarTypes[i], NumQVars - i - 1);
                         auto const& ValExp = Mgr->MakeVal(CPElem[i], QVarTypes[i]);
                         SubstMap[BoundVarExp] = ValExp;
                     }
                     auto SubstExp = Mgr->Substitute(SubstMap, QBody);
                     // We also need to replace higher number debruijn indices
                     // by lower numbered ones
-                    SubstMap.clear();
-                    for (u32 i = 0; i < BoundVars.size() - 1; ++i) {
-                        const u32 NumBoundVars = BoundVars[i].size();
-                        for (u32 j = 0; j < NumBoundVars; ++j) {
-                            auto const& CurBoundVar = BoundVars[i][NumBoundVars - j - 1];
-                            auto const& VarType = CurBoundVar->GetType();
-                            auto const VarIndex = 
-                                CurBoundVar->template As<BoundVarExpression>()->GetVarIdx();
-                            SubstMap[CurBoundVar] = 
-                                Mgr->MakeBoundVar(VarType, VarIndex - NumQVars);
-                        }
-                    }
-                    
-                    Retval.push_back(Mgr->Substitute(SubstMap, SubstExp));
+                    Retval.push_back(Mgr->template ApplyTransform<DeBruijnShifter<E, S>>(SubstExp, 
+                                                                                         -NumQVars));
                 }
                 return Retval;
             }
@@ -2495,24 +2610,10 @@ namespace ESMC {
             QuantifierUnroller<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* 
                                                                  Exp)
             {
-                // Add new bound vars
-                auto const& QVarTypes = Exp->GetQVarTypes();
-                auto const NumQVars = QVarTypes.size();
-                vector<ExpT> NewBoundVars(NumQVars);
-                
-                for (u32 i = 0; i < NumQVars; ++i) {
-                    auto CurType = QVarTypes[NumQVars - i - 1];
-                    auto CurIndex = QuantifierDepth + i;
-                    NewBoundVars[NumQVars - i - 1] = Mgr->MakeBoundVar(CurType, CurIndex);
-                }
-
-                QuantifierDepth += NumQVars;
-                BoundVars.push_back(NewBoundVars);
-
                 Exp->GetQExpression()->Accept(this);
                 auto NewExp = ExpStack.back();
                 ExpStack.pop_back();
-                auto NewQExp = Mgr->MakeExists(QVarTypes, NewExp);
+                auto NewQExp = Mgr->MakeExists(Exp->GetQVarTypes(), NewExp);
                 auto&& UnrolledExps = 
                     UnrollQuantifier(NewQExp->template SAs<Exprs::QuantifiedExpressionBase>());
                 if (UnrolledExps.size() == 1) {
@@ -2520,9 +2621,6 @@ namespace ESMC {
                 } else {
                     ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpOR, UnrolledExps));
                 }
-
-                BoundVars.pop_back();
-                QuantifierDepth -= NumQVars;
             }
 
             template <typename E, template <typename> class S>
@@ -2530,20 +2628,6 @@ namespace ESMC {
             QuantifierUnroller<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* 
                                                                  Exp)
             {
-                // Add new bound vars
-                auto const& QVarTypes = Exp->GetQVarTypes();
-                auto const NumQVars = QVarTypes.size();
-                vector<ExpT> NewBoundVars(NumQVars);
-                
-                for (u32 i = 0; i < NumQVars; ++i) {
-                    auto CurType = QVarTypes[NumQVars - i - 1];
-                    auto CurIndex = QuantifierDepth + i;
-                    NewBoundVars[NumQVars - i - 1] = Mgr->MakeBoundVar(CurType, CurIndex);
-                }
-
-                QuantifierDepth += NumQVars;
-                BoundVars.push_back(NewBoundVars);
-
                 Exp->GetQExpression()->Accept(this);
                 auto NewExp = ExpStack.back();
                 ExpStack.pop_back();
@@ -2555,9 +2639,6 @@ namespace ESMC {
                 } else {
                     ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpAND, UnrolledExps));
                 }
-
-                BoundVars.pop_back();
-                QuantifierDepth -= NumQVars;
             }
 
             template <typename E, template <typename> class S>

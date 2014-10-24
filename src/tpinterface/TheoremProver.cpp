@@ -191,6 +191,9 @@ namespace ESMC {
                                      bool UnrollQuantifiers) const
         {
             auto Mgr = Assertion->GetMgr();
+            // cout << "Non Unrolled assertion:" << endl 
+            //      << Assertion->ToString() << endl;
+            // flush(cout);
             LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
             ExpT UnrolledExp = ExpT::NullPtr;
             
@@ -201,7 +204,12 @@ namespace ESMC {
             }
             TheoremProver::Assert(Assertion);
 
-            Z3_solver_assert(*Ctx, Solver, Mgr->LowerExpr(Assertion, LTSCtx));
+            // cout << "[Z3TheoremProver] Original:" << endl;
+            // cout << UnrolledExp->ToString() << endl;
+            auto LoweredAssertion = Mgr->LowerExpr(UnrolledExp, LTSCtx);
+            Z3_solver_assert(*Ctx, Solver, LoweredAssertion);
+            // cout << "[Z3TheoremProver] Asserted:" << endl
+            //      << LoweredAssertion.ToString() << endl;
             
             // Assert the constraints from the lowered context as well
             auto const& Assumptions = LTSCtx->GetAllAssumptions();
@@ -210,6 +218,15 @@ namespace ESMC {
                     Z3_solver_assert(*Ctx, Solver, Assumption);
                 }
             }
+
+            // auto Res = CheckSat();
+            // if (Res == TPResult::UNSATISFIABLE) {
+            //     cout << "Assertions are unsat!" << endl;
+            // } else if (Res == TPResult::SATISFIABLE) {
+            //     cout << "Assertions are sat!" << endl;
+            // } else {
+            //     cout << "Unknown Solve Result" << endl;
+            // }
         }
 
         void Z3TheoremProver::Assert(const vector<ExpT>& Assertions,
@@ -316,6 +333,15 @@ namespace ESMC {
 
         const Z3Model& Z3TheoremProver::GetModel() const
         {
+            if (LastSolveResult != TPResult::SATISFIABLE) {
+                throw ESMCError((string)"Z3TheoremProver::GetModel() called, but " + 
+                                "last solve was not satisfiable. No model to return.");
+            }
+            if (TheModel == Z3Model::NullModel) {
+                TheModel = Z3Model(Ctx, Z3_solver_get_model(*Ctx, (LastSolveWasFlash ? 
+                                                                   FlashSolver : Solver)),
+                                   const_cast<Z3TheoremProver*>(this));
+            }
             return TheModel;
         }
 

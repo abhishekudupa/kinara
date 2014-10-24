@@ -219,6 +219,8 @@ namespace ESMC {
                                                        const ExpT& Constraint);
 
             vector<TraceBase*> CheckLiveness(const string& BuchiMonitorName);
+            LabelledTS* GetLTS() const;
+            LTSCompiler* GetCompiler() const;
         };
 
         extern void ApplyUpdates(const vector<LTSAssignRef>& Updates, 

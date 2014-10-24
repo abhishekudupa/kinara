@@ -51,11 +51,13 @@
 #include "../../src/uflts/LTSTransitions.hpp"
 #include "../../src/mc/LTSChecker.hpp"
 #include "../../src/mc/OmegaAutomaton.hpp"
+#include "../../src/synth/Solver.hpp"
 
 using namespace ESMC;
 using namespace LTS;
 using namespace Exprs;
 using namespace MC;
+using namespace Synth;
 
 int main()
 {
@@ -286,6 +288,13 @@ int main()
     }
 
     auto Checker = new LTSChecker(TheLTS);
+
+    // Attempt synthesis
+    auto TheSolver = new Solver(TheLTS, Checker->GetCompiler());
+    TheSolver->Solve();
+    return 0;
+
+
     Checker->BuildAQS();
 
     auto Monitor = Checker->MakeStateBuchiMonitor("GFZero", Params, TrueExp);

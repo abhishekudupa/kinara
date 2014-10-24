@@ -1104,6 +1104,16 @@ namespace ESMC {
             return Retval;
         }
 
+        LabelledTS* LTSChecker::GetLTS() const
+        {
+            return TheLTS;
+        }
+
+        LTSCompiler* LTSChecker::GetCompiler() const
+        {
+            return Compiler;
+        }
+
     } /* end namespace MC */
 } /* end namespace ESMC */
 

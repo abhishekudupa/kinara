@@ -223,6 +223,10 @@ namespace ESMC {
         
     } /* end namespace TP */
 
+    namespace Synth {
+        class Solver;
+    } 
+
     // UID Generators
     class UIDGenerator;
 
