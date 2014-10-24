@@ -306,7 +306,7 @@ namespace ESMC {
 
             for (auto const& Trans : TransVec) {
                 auto Interp = Trans.first->ExtensionData.Interp;
-                if (Interp->EvaluateScalar(StateVector) != 0) {
+                if (Interp->Evaluate(StateVector) != 0) {
                     Retval.push_back(Trans.second);
                 }
             }

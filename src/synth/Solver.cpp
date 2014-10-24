@@ -42,6 +42,7 @@
 #include "../uflts/LabelledTS.hpp"
 #include "../uflts/LTSTypes.hpp"
 #include "../uflts/LTSEFSM.hpp"
+#include "../mc/LTSChecker.hpp"
 
 #include "Solver.hpp"
 
@@ -54,21 +55,11 @@ namespace ESMC {
 
         using LTS::ExpT;
 
-        Solver::Solver(LabelledTS* TheLTS, LTSCompiler* Compiler)
-            : TP(new Z3TheoremProver()), TheLTS(TheLTS), Compiler(Compiler), 
-              Bound(0)
+        Solver::Solver(LTSChecker* Checker)
+            : TP(new Z3TheoremProver()), TheLTS(Checker->TheLTS), 
+              Compiler(Checker->Compiler), Bound(0)
         {
-            auto&& IncompleteEFSMs = 
-                TheLTS->GetEFSMs([&](const EFSMBase* EFSM) -> bool
-                                 {
-                                     return EFSM->Is<IncompleteEFSM>();
-                                 });
-            for (auto const& EFSM : IncompleteEFSMs) {
-                auto IncEFSM = EFSM->SAs<IncompleteEFSM>();
-                auto const& Constraints = IncEFSM->Constraints;
-                vector<ExpT> ConstraintVec(Constraints.begin(), Constraints.end());
-                TP->Assert(ConstraintVec, true);
-            }
+            // Nothing here
         }
 
         Solver::~Solver()
@@ -78,19 +69,6 @@ namespace ESMC {
 
         void Solver::Solve()
         {
-            cout << "Beginning Solve... ";
-            flush(cout);
-            auto Res = TP->CheckSat();
-            cout << "Done!" << endl;
-            if (Res == TPResult::SATISFIABLE) {
-                auto Model = TP->SAs<Z3TheoremProver>()->GetModel();
-                cout << "Model:" << endl;
-                cout << Model.ToString() << endl;
-            } else if (Res == TPResult::UNSATISFIABLE) {
-                cout << "Unsat!" << endl;
-            } else if (Res == TPResult::UNKNOWN) {
-                cout << "Unknown!" << endl;
-            }
             
         }
 

@@ -172,7 +172,7 @@ namespace ESMC {
         {
             u32 Retval = 1;
             for (auto const& Param : Params) {
-                Retval *= Param->GetType()->GetCardinality();
+                Retval *= Param->GetType()->GetCardinalityNoUndef();
             }
             return Retval;
         }

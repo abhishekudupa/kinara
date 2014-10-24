@@ -393,9 +393,8 @@ int main()
     EnvEFSM->Freeze();
 
     auto CacheEFSM = 
-        TheLTS->MakeEFSM<IncompleteEFSM>("Cache", 
-                                         { CacheParam, DirParam, AddressParam }, 
-                                         TrueExp, LTSFairnessType::Strong);
+        TheLTS->MakeEFSM<GeneralEFSM>("Cache", { CacheParam, DirParam, AddressParam }, 
+                                      TrueExp, LTSFairnessType::Strong);
     
     CacheEFSM->AddState("C_I");
     CacheEFSM->AddState("C_I_LD");
@@ -830,8 +829,8 @@ int main()
 
     // The directory now
     vector<ExpT> DirParams = { DirParam, AddressParam };
-    auto DirEFSM = TheLTS->MakeEFSM<IncompleteEFSM>("Directory", DirParams, TrueExp, 
-                                                    LTSFairnessType::Strong);
+    auto DirEFSM = TheLTS->MakeEFSM<GeneralEFSM>("Directory", DirParams, TrueExp, 
+                                                 LTSFairnessType::Strong);
     DirEFSM->AddState("D_I");
     DirEFSM->AddState("D_I_GETX");
     DirEFSM->AddState("D_I_GETS");
@@ -1471,11 +1470,6 @@ int main()
     Monitor->AddTransition("Initial", "Accepting", MonCacheDotStateEQSMIM);
     Monitor->AddTransition("Accepting", "Accepting", MonCacheDotStateNEQM);
     Monitor->Freeze();
-
-    // Attempt synthesis
-    auto TheSolver = new Solver(TheLTS, Checker->GetCompiler());
-    TheSolver->Solve();
-    return 0;
 
     auto&& Traces = Checker->BuildAQS();
 

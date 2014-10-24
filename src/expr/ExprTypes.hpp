@@ -111,8 +111,10 @@ namespace ESMC {
             virtual string ToString() const = 0;
             virtual i32 Compare(const ExprTypeBase& Other) const = 0;
             virtual vector<string> GetElements() const = 0;
+            virtual vector<string> GetElementsNoUndef() const = 0;
             virtual u32 GetByteSize() const = 0;
             virtual u32 GetCardinality() const = 0;
+            virtual u32 GetCardinalityNoUndef() const = 0;
             virtual string GetClearValue() const = 0;
             
             u64 Hash() const;
@@ -240,8 +242,10 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
             virtual string ValToConst(i64 Val) const override;
@@ -262,9 +266,11 @@ namespace ESMC {
             
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual vector<string> GetElementsNoUndef() const override;            
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
             virtual string ValToConst(i64 Val) const override;
@@ -292,8 +298,10 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;            
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
             virtual string ValToConst(i64 Val) const override;
@@ -324,8 +332,10 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;            
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
             virtual string ValToConst(i64 Val) const override;
@@ -338,6 +348,7 @@ namespace ESMC {
             string Name;
             u32 Size;
             vector<string> Members;
+            vector<string> MembersNoUndef;
             set<string> MemberSet;
             
             // An index into the permutation
@@ -365,8 +376,10 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;            
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
             virtual string ValToConst(i64 Val) const override;
@@ -397,8 +410,10 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;            
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
             virtual string GetClearValue() const override;
         };
 
@@ -425,8 +440,10 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;            
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
             virtual string GetClearValue() const override;
         };
 
@@ -464,8 +481,10 @@ namespace ESMC {
             virtual string ToString() const;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;            
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
             virtual string GetClearValue() const override;
         };
 
@@ -493,8 +512,10 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;            
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
             virtual string GetClearValue() const override;
         };
 
@@ -511,8 +532,10 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;            
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
             virtual string GetClearValue() const override;
         };
 

@@ -162,6 +162,8 @@ namespace ESMC {
         {
             friend class Detail::FairnessChecker;
             friend class TraceBase;
+            friend class Synth::Solver;
+
         private:
             LabelledTS* TheLTS;
             StateFactory* Factory;
@@ -219,8 +221,13 @@ namespace ESMC {
                                                        const ExpT& Constraint);
 
             vector<TraceBase*> CheckLiveness(const string& BuchiMonitorName);
+
             LabelledTS* GetLTS() const;
             LTSCompiler* GetCompiler() const;
+
+            // Methods to assist synthesis
+            vector<TraceBase*> GetAllDeadlocks();
+            vector<TraceBase*> GetAllSafetyViolations();
         };
 
         extern void ApplyUpdates(const vector<LTSAssignRef>& Updates, 

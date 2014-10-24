@@ -56,10 +56,11 @@ namespace ESMC {
             TPRef TP;
             LabelledTS* TheLTS;
             LTSCompiler* Compiler;
+            LTSChecker* Checker;
             u32 Bound;
 
         public:
-            Solver(LabelledTS* TheLTS, LTSCompiler* Compiler);
+            Solver(LTSChecker* Checker);
             virtual ~Solver();
 
             void Solve();

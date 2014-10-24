@@ -1484,9 +1484,9 @@ int main()
     Monitor->Freeze();
 
     // Attempt synthesis
-    auto TheSolver = new Solver(TheLTS, Checker->GetCompiler());
-    TheSolver->Solve();
-    return 0;
+    // auto TheSolver = new Solver(TheLTS, Checker->GetCompiler());
+    // TheSolver->Solve();
+    // return 0;
 
     auto&& Traces = Checker->BuildAQS();
 

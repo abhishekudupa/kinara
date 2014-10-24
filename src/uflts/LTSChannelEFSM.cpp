@@ -330,16 +330,24 @@ namespace ESMC {
                     auto Cond = Mgr->MakeExpr(LTSOps::OpGE, Mgr->MakeVal(to_string(i),
                                                                          IndexType),
                                               ChooseExp);
-                    auto IfBranch = Mgr->MakeExpr(LTSOps::OpIndex, 
-                                                  ArrayExp, 
-                                                  Mgr->MakeVal(to_string(i+1), 
-                                                               IndexType));
-                    auto ElseBranch = Mgr->MakeExpr(LTSOps::OpIndex, 
-                                                    ArrayExp, 
-                                                    Mgr->MakeVal(to_string(i), 
-                                                                 IndexType));
-                    auto ITEExp = Mgr->MakeExpr(LTSOps::OpITE, Cond, IfBranch, ElseBranch);
-                    Updates.push_back(new LTSAssignSimple(ElseBranch, ITEExp));
+                    auto const& Fields = ValType->SAs<ExprRecordType>()->GetMemberVec();
+                    for (auto const& Field : Fields) {
+                        auto FieldVar = Mgr->MakeVar(Field.first, FAType);
+                        auto IExp = Mgr->MakeVal(to_string(i), IndexType);
+                        auto IPlusOneExp = Mgr->MakeVal(to_string(i + 1), IndexType);
+                        auto ArrayIndexExpIf = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, 
+                                                             IPlusOneExp);
+                        auto ArrayIndexExpElse = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, 
+                                                               IExp);
+                        auto IfBranch = Mgr->MakeExpr(LTSOps::OpField, 
+                                                      ArrayIndexExpIf, 
+                                                      FieldVar);
+                        auto ElseBranch = Mgr->MakeExpr(LTSOps::OpField, 
+                                                        ArrayIndexExpElse, 
+                                                        FieldVar);
+                        auto ITEExp = Mgr->MakeExpr(LTSOps::OpITE, Cond, IfBranch, ElseBranch);
+                        Updates.push_back(new LTSAssignSimple(ElseBranch, ITEExp));
+                    }
                 }
 
                 EFSMBase::AddOutputTransForInstance(InstanceID,

@@ -185,7 +185,7 @@ namespace ESMC {
                 } else if (ExpType->Is<ExprArrayType>()) {
                     auto ExpTypeAsArrayType = ExpType->As<ExprArrayType>();
                     auto IndexType = ExpTypeAsArrayType->GetIndexType();
-                    for (auto Element: IndexType->GetElements()) {
+                    for (auto Element: IndexType->GetElementsNoUndef()) {
                         auto ArrayElement = Exp->GetMgr()->MakeExpr(LTSOps::OpIndex, Exp, Exp->GetMgr()->MakeVal(Element, IndexType));
                         ExpressionsToCheck.push_back(ArrayElement);
                     }

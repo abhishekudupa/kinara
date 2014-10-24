@@ -122,7 +122,7 @@ namespace ESMC {
             auto TypeAsArr = ArrayType->As<ExprArrayType>();
             auto const& IndexType = TypeAsArr->GetIndexType();
             auto const& ValueType = TypeAsArr->GetValueType();
-            NumElems = IndexType->GetCardinality();
+            NumElems = IndexType->GetCardinalityNoUndef();
             ElemSize = ValueType->GetByteSize();
             ElemSize = Align(ElemSize, ElemSize);
 
@@ -132,7 +132,7 @@ namespace ESMC {
                 IsSymmArray = false;
             } else {
                 IsSymmArray = true;
-                PermSize = IndexType->GetCardinality();
+                PermSize = IndexType->GetCardinalityNoUndef();
                 auto TypeExt = IndexType->GetExtension<LTSTypeExtensionT>();
                 TypeOffset = TypeExt->TypeOffset;
             }
@@ -281,17 +281,8 @@ namespace ESMC {
             } else {
                 ActVal = InStateVector->ReadWord(Offset);
             }
-            if (ActVal == 0) {
-                // undefined, leave it alone
-                return;
-            } else {
-                // defined, so remove the 1 offset that
-                // we've added
-                ActVal -= 1;
-            }
-
             // Add back the 1 offset
-            u32 PermVal = MsgCanonMap[ActVal][PermIdx] + 1;
+            u32 PermVal = MsgCanonMap[ActVal][PermIdx];
             
             if (TypeSize == 1) {
                 OutStateVector->WriteByte(Offset, (u08)PermVal);
@@ -308,7 +299,7 @@ namespace ESMC {
         {
             auto TypeExt = SymmType->GetExtension<LTSTypeExtensionT>();
             TypeOffset = TypeExt->TypeOffset;
-            PermSize = SymmType->As<ExprSymmetricType>()->GetCardinality();
+            PermSize = SymmType->As<ExprSymmetricType>()->GetCardinalityNoUndef();
         }
 
         SymmTypePermuter::~SymmTypePermuter()
@@ -393,7 +384,7 @@ namespace ESMC {
             auto WorkingVec = OutStateVector->Clone();
             u08* WorkBasePtr = WorkingVec->GetStateBuffer();
 
-            auto NumElems = CountExp->ExtensionData.Interp->EvaluateScalar(OutStateVector);
+            auto NumElems = CountExp->ExtensionData.Interp->Evaluate(OutStateVector);
 
             for (u32 i = 0; i < NumElems - 1; ++i) {
                 u32 MinIndex = i;
@@ -452,7 +443,7 @@ namespace ESMC {
             vector<u32> TypeSizes(SymmTypes.size());
             i64 PermutationSize = 1;
             for (auto const& SymmType : SymmTypes) {
-                u32 CurTypeSize = SymmType->As<ExprSymmetricType>()->GetCardinality();
+                u32 CurTypeSize = SymmType->As<ExprSymmetricType>()->GetCardinalityNoUndef();
                 TypeSizes[SymmType->GetExtension<LTSTypeExtensionT>()->TypeID] = CurTypeSize;
 
                 PermutationSize *= Factorial(CurTypeSize);

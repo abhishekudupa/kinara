@@ -437,7 +437,7 @@ namespace ESMC {
             // Run offset, run!!
             u32 RunningOffset = 0;
             for (auto const& SymmType : SymmTypes) {
-                auto const CurSize = SymmType->GetCardinality();
+                auto const CurSize = SymmType->GetCardinalityNoUndef();
                 DomainSizes.push_back(CurSize);
                 TypeOffsets[SymmType] = RunningOffset;
                 RunningOffset += CurSize;
@@ -449,7 +449,8 @@ namespace ESMC {
             // Get the cross product of values for symmetric arguments
             vector<vector<string>> SymmArgValues;
             for (auto const& SymmArg : SymmArgs) {
-                SymmArgValues.push_back(SymmArg->GetType()->GetElements());
+                auto const& ArgValues = SymmArg->GetType()->GetElementsNoUndef();
+                SymmArgValues.push_back(ArgValues);
                 // Add the clear value if arg is an lvalue
                 if (SymmArg->Is<Exprs::VarExpression>()) {
                     auto ArgAsVar = SymmArg->SAs<Exprs::VarExpression>();
@@ -458,7 +459,8 @@ namespace ESMC {
                     if (Res->Is<ParamDecl>()) {
                         continue;
                     } else {
-                        SymmArgValues.back().push_back("clear");
+                        auto TypeAsSym = SymmArg->GetType()->SAs<Exprs::ExprSymmetricType>();
+                        SymmArgValues.back().push_back(TypeAsSym->GetClearValue());
                     }
                 }
             }
@@ -494,7 +496,6 @@ namespace ESMC {
                     // The range itself is symmetric
                     auto const& RangeType = Exp->GetType();
                     auto RangeElems = RangeType->GetElements();
-                    RangeElems.push_back("clear");
                     
                     for (auto const& RangeElem : RangeElems) {
                         auto CurVal = Mgr->MakeVal(RangeElem, RangeType);

@@ -58,7 +58,7 @@ namespace ESMC {
 
         ScalarPrinter::ScalarPrinter(u32 Offset, const ExprTypeRef& Type)
             : Offset(Offset), Size(Type->GetByteSize()), Type(Type), Low(0), 
-              High(INT64_MAX)
+              High(INT64_MAX), IsMsgType(false)
         {
             if (!Type->Is<ExprScalarType>()) {
                 throw InternalError((string)"Scalar printer with non-scalar type:\n" + 
@@ -75,7 +75,15 @@ namespace ESMC {
 
         ScalarPrinter::ScalarPrinter(const ScalarPrinter& Other)
             : Offset(Other.Offset), Size(Other.Size), Type(Other.Type),
-              Low(Other.Low), High(Other.High)
+              Low(Other.Low), High(Other.High), MsgNameMap(Other.MsgNameMap),
+              IsMsgType(Other.IsMsgType)
+        {
+            // Nothing here
+        }
+
+        ScalarPrinter::ScalarPrinter(u32 Offset, const vector<string> MsgNameMap)
+            : Offset(Offset), Size(0), Type(ExprTypeRef::NullPtr),
+              Low(-1), High(-1), MsgNameMap(MsgNameMap), IsMsgType(true)
         {
             // Nothing here
         }
@@ -95,6 +103,8 @@ namespace ESMC {
             Type = Other.Type;
             High = Other.High;
             Low = Other.Low;
+            MsgNameMap = Other.MsgNameMap;
+            IsMsgType = Other.IsMsgType;
             return *this;
         }
 
@@ -107,9 +117,15 @@ namespace ESMC {
 
         string ScalarPrinter::Print(const StateVec* StateVector) const
         {
+            if (IsMsgType) {
+                auto ActVal = StateVector->ReadShort(Offset);
+                return MsgNameMap[ActVal];
+            }
+
             if (Type == ExprTypeRef::NullPtr) {
                 return (string)"printer error at: " + __FILE__ + ":" + to_string(__LINE__);
             }
+
             auto TypeAsScalar = Type->SAs<ExprScalarType>();
             i64 ActVal;
             if (Size == 1) {
@@ -120,12 +136,8 @@ namespace ESMC {
                 ActVal = StateVector->ReadWord(Offset);
             }
 
-            if (ActVal == 0) {
-                return "undefined";
-            } else {
-                ActVal = ActVal + Low - 1;
-                return TypeAsScalar->ValToConst(ActVal);
-            }
+            ActVal = ActVal + Low;
+            return TypeAsScalar->ValToConst(ActVal);
         }
 
         void StateVecPrinter::MakePrinters(const ExpT& Exp, LabelledTS* TheLTS)
@@ -139,7 +151,7 @@ namespace ESMC {
             } else if (Type->Is<ExprArrayType>()) {
                 auto TypeAsArr = Type->SAs<ExprArrayType>();
                 auto const& IndexType = TypeAsArr->GetIndexType();
-                auto&& IndexElems = IndexType->GetElements();
+                auto&& IndexElems = IndexType->GetElementsNoUndef();
                 for (auto const& Elem : IndexElems) {
                     MakePrinters(Mgr->MakeExpr(LTSOps::OpIndex, Exp, 
                                                Mgr->MakeVal(Elem, IndexType)), 
@@ -150,6 +162,19 @@ namespace ESMC {
                 auto const& MemberVec = TypeAsRec->GetMemberVec();
                 auto const& FAType = Mgr->MakeType<ExprFieldAccessType>();
                 for (auto const& MemType : MemberVec) {
+                    if (Type == TheLTS->GetUnifiedMType() &&
+                        MemType.first == 
+                        TheLTS->GetUnifiedMType()->SAs<ExprUnionType>()->GetTypeIDFieldName()) {
+                        auto FieldExp = Mgr->MakeExpr(LTSOps::OpField, Exp,
+                                                      Mgr->MakeVar(MemType.first, FAType));
+                        Compiler->CompileExp(FieldExp, TheLTS);
+                        
+                        auto Offset = FieldExp->ExtensionData.Offset;
+                        ExpsToPrint.push_back(make_pair(FieldExp, 
+                                                        ScalarPrinter(Offset, 
+                                                                      TheLTS->GetMsgTypeMap())));
+                        continue;
+                    }
                     MakePrinters(Mgr->MakeExpr(LTSOps::OpField, Exp,
                                                Mgr->MakeVar(MemType.first, FAType)),
                                  TheLTS);

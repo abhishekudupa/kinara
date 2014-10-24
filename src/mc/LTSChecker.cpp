@@ -348,7 +348,7 @@ namespace ESMC {
         {
             auto const& Guard = Cmd->GetGuard();
             auto GuardInterp = Guard->ExtensionData.Interp;
-            auto Res = GuardInterp->EvaluateScalarNE(InputState);
+            auto Res = GuardInterp->Evaluate(InputState);
             if (Res == UndefValue) {
                 throw ESMCError((string)"Undefined value obtained while evaluating guard");
             } else if (Res == 0) {
@@ -442,7 +442,7 @@ namespace ESMC {
         {
             while(++LastFired < NumGuardedCmds) {
                 auto const& Guard = GuardedCommands[LastFired]->GetGuard();
-                auto GRes = Guard->ExtensionData.Interp->EvaluateScalarNE(State);
+                auto GRes = Guard->ExtensionData.Interp->Evaluate(State);
                 if (GRes == UndefValue) {
                     throw MCException(MCExceptionType::MCUNDEFVALUE, (u32)LastFired);
                 } else if (GRes != 0) {
@@ -535,7 +535,7 @@ namespace ESMC {
                     // This is a new state, check for error
                     auto const& Invar = TheLTS->GetInvariant();
                     auto Interp = Invar->ExtensionData.Interp;
-                    auto InvarRes = Interp->EvaluateScalarNE(CanonState);
+                    auto InvarRes = Interp->Evaluate(CanonState);
                     if (InvarRes == UndefValue) {
                         throw ESMCError((string)"Obtained undefined value when " + 
                                         "evaluating invariant");
@@ -616,7 +616,7 @@ namespace ESMC {
                             // New state, check for errors;
                             auto const& Invar = TheLTS->GetInvariant();
                             auto Interp = Invar->ExtensionData.Interp;
-                            auto InvarRes = Interp->EvaluateScalarNE(CanonNextState);
+                            auto InvarRes = Interp->Evaluate(CanonNextState);
                             if (InvarRes == UndefValue) {
                                 throw ESMCError((string)"Undefined value obtained in " + 
                                                 "evaluation of invariant");

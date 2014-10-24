@@ -156,6 +156,12 @@ namespace ESMC {
             return Retval;
         }
 
+        vector<string> ExprBoolType::GetElementsNoUndef() const
+        {
+            vector<string> Retval = { "true", "false" };
+            return Retval;
+        }
+        
         void ExprBoolType::ComputeHashValue() const
         {
             HashCode = 0;
@@ -168,6 +174,11 @@ namespace ESMC {
         }
 
         u32 ExprBoolType::GetCardinality() const
+        {
+            return 2;
+        }
+
+        u32 ExprBoolType::GetCardinalityNoUndef() const
         {
             return 2;
         }
@@ -243,6 +254,11 @@ namespace ESMC {
             throw ESMCError((string)"Cannot GetElements() on unbounded type IntType");
         }
 
+        vector<string> ExprIntType::GetElementsNoUndef() const
+        {
+            return GetElements();
+        }
+
         u32 ExprIntType::GetByteSize() const
         {
             throw InternalError((string)"ExprIntType::GetByteSize() should never have been " + 
@@ -250,6 +266,11 @@ namespace ESMC {
         }
 
         u32 ExprIntType::GetCardinality() const
+        {
+            throw ESMCError((string)"Cannot get cardinality of unbounded type IntType");
+        }
+
+        u32 ExprIntType::GetCardinalityNoUndef() const
         {
             throw ESMCError((string)"Cannot get cardinality of unbounded type IntType");
         }
@@ -360,7 +381,17 @@ namespace ESMC {
             return Retval;
         }
 
+        vector<string> ExprRangeType::GetElementsNoUndef() const
+        {
+            return GetElements();
+        }
+
         u32 ExprRangeType::GetCardinality() const
+        {
+            return (RangeHigh - RangeLow + 1);
+        }
+
+        u32 ExprRangeType::GetCardinalityNoUndef() const
         {
             return (RangeHigh - RangeLow + 1);
         }
@@ -508,6 +539,11 @@ namespace ESMC {
             return Members.size();
         }
 
+        u32 ExprEnumType::GetCardinalityNoUndef() const
+        {
+            return Members.size();
+        }
+
         i32 ExprEnumType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherPtr = &Other;
@@ -535,6 +571,11 @@ namespace ESMC {
             return (vector<string>(Members.begin(), Members.end()));
         }
 
+        vector<string> ExprEnumType::GetElementsNoUndef() const
+        {
+            return GetElements();
+        }
+
         i64 ExprEnumType::ConstToVal(const string& ConstVal) const
         {
             return GetMemberIdx(ConstVal);
@@ -551,12 +592,16 @@ namespace ESMC {
         }
 
         ExprSymmetricType::ExprSymmetricType(const string& Name, u32 Size)
-            : ExprScalarType(), Name(Name), Size(Size), Members(Size)
+            : ExprScalarType(), Name(Name), Size(Size), Members(Size + 1)
         {
-            for(u32 i = 0; i < Size; ++i) {
+            Members[0] = Name + "::undef";
+            MemberSet.insert(Members[0]);
+            for(u32 i = 1; i <= Size; ++i) {
                 Members[i] = Name + "::" + to_string(i);
-                MemberSet.insert(Name + "::" + to_string(i));
+                MemberSet.insert(Members[i]);
             }
+
+            MembersNoUndef = vector<string>(next(Members.begin()), Members.end());
         }
 
         ExprSymmetricType::~ExprSymmetricType()
@@ -634,6 +679,11 @@ namespace ESMC {
             return MemberSet.size();
         }
 
+        u32 ExprSymmetricType::GetCardinalityNoUndef() const
+        {
+            return MembersNoUndef.size();
+        }
+
         i32 ExprSymmetricType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
@@ -657,7 +707,12 @@ namespace ESMC {
 
         vector<string> ExprSymmetricType::GetElements() const
         {
-            return (vector<string>(MemberSet.begin(), MemberSet.end()));
+            return Members;
+        }
+
+        vector<string> ExprSymmetricType::GetElementsNoUndef() const
+        {
+            return MembersNoUndef;
         }
 
         i64 ExprSymmetricType::ConstToVal(const string& ConstVal) const
@@ -672,7 +727,7 @@ namespace ESMC {
 
         string ExprSymmetricType::GetClearValue() const
         {
-            return "clear";
+            return (Name + "::undef");
         }
 
         static inline string MangleName(const string& Name, 
@@ -790,6 +845,11 @@ namespace ESMC {
             throw ESMCError((string)"Cannot GetElements() of a function type");
         }
 
+        vector<string> ExprFuncType::GetElementsNoUndef() const
+        {
+            throw ESMCError((string)"Cannot GetElements() of a function type");
+        }
+
         u32 ExprFuncType::GetByteSize() const
         {
             // We return the byte size of the range multiplied
@@ -808,6 +868,11 @@ namespace ESMC {
         }
 
         u32 ExprFuncType::GetCardinality() const
+        {
+            throw ESMCError((string)"Cannot GetCardinality() of a function type");
+        }
+
+        u32 ExprFuncType::GetCardinalityNoUndef() const
         {
             throw ESMCError((string)"Cannot GetCardinality() of a function type");
         }
@@ -905,6 +970,11 @@ namespace ESMC {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
+        vector<string> ExprArrayType::GetElementsNoUndef() const
+        {
+            throw ESMCError((string)"Cannot get elements of non-scalar type");
+        }
+
         void ExprArrayType::ComputeHashValue() const
         {
             HashCode = 0;
@@ -920,6 +990,11 @@ namespace ESMC {
         }
 
         u32 ExprArrayType::GetCardinality() const
+        {
+            throw ESMCError((string)"Cannot get elements of non-scalar type");
+        }
+
+        u32 ExprArrayType::GetCardinalityNoUndef() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
@@ -1091,7 +1166,17 @@ namespace ESMC {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
+        vector<string> ExprRecordType::GetElementsNoUndef() const
+        {
+            throw ESMCError((string)"Cannot get elements of non-scalar type");
+        }
+
         u32 ExprRecordType::GetCardinality() const
+        {
+            throw ESMCError((string)"Cannot get cardinality of non-scalar type");
+        }
+
+        u32 ExprRecordType::GetCardinalityNoUndef() const
         {
             throw ESMCError((string)"Cannot get cardinality of non-scalar type");
         }
@@ -1227,7 +1312,17 @@ namespace ESMC {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
+        vector<string> ExprParametricType::GetElementsNoUndef() const
+        {
+            throw ESMCError((string)"Cannot get elements of non-scalar type");
+        }
+
         u32 ExprParametricType::GetCardinality() const
+        {
+            throw ESMCError((string)"Cannot get cardinality of non-scalar type");
+        }
+
+        u32 ExprParametricType::GetCardinalityNoUndef() const
         {
             throw ESMCError((string)"Cannot get cardinality of non-scalar type");
         }
@@ -1287,7 +1382,17 @@ namespace ESMC {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
+        vector<string> ExprFieldAccessType::GetElementsNoUndef() const
+        {
+            throw ESMCError((string)"Cannot get elements of non-scalar type");
+        }
+
         u32 ExprFieldAccessType::GetCardinality() const
+        {
+            throw ESMCError((string)"Cannot get cardinality of non-scalar type");
+        }
+
+        u32 ExprFieldAccessType::GetCardinalityNoUndef() const
         {
             throw ESMCError((string)"Cannot get cardinality of non-scalar type");
         }

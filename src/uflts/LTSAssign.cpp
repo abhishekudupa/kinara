@@ -132,7 +132,7 @@ namespace ESMC {
                 auto TypeAsArray = LHS->GetType()->SAs<ExprArrayType>();
                 auto const& IndexType = TypeAsArray->GetIndexType();
                 auto const& ValueType = TypeAsArray->GetValueType();
-                auto const& IndexElems = IndexType->GetElements();
+                auto const& IndexElems = IndexType->GetElementsNoUndef();
                 
                 for (auto const& IndexElem : IndexElems) {
                     auto IndexExp = Mgr->MakeVal(IndexElem, IndexType);

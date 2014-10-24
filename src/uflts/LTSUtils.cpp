@@ -196,7 +196,7 @@ namespace ESMC {
                 auto ArrayType = Children[0]->GetType()->SAs<ExprArrayType>();
                 auto IndexType = ArrayType->GetIndexType();
                 auto ValueType = ArrayType->GetValueType();
-                auto const& IndexElems = IndexType->GetElements();
+                auto const& IndexElems = IndexType->GetElementsNoUndef();
                 const u32 IndexCardinality = IndexElems.size();
 
                 if (IndexCardinality == 1) {

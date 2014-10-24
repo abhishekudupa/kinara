@@ -646,6 +646,11 @@ namespace ESMC {
                         throw ExprTypeError((string)"ite op requires a boolean predicate " + 
                                             "and the types of the branches to match");
                     }
+                    if (!ChildTypes[1]->template Is<ExprScalarType>() ||
+                        !ChildTypes[2]->template Is<ExprScalarType>()) {
+                        throw ExprTypeError((string)"ite op requires both branches to be " + 
+                                            "scalar typed");
+                    }
                     Exp->SetType(ChildTypes[1]);
                     break;
                 }
@@ -1718,23 +1723,20 @@ namespace ESMC {
                     Z3_symbol Z3TypeName = Z3_mk_string_symbol(*Ctx, TypeName.c_str());
 
                     // We need to add a constructor for the undef value
-                    Z3_symbol* ConstNames = new Z3_symbol[NumConsts + 1];
-                    Z3_func_decl* ConstFuncs = new Z3_func_decl[NumConsts + 1];
-                    Z3_func_decl* ConstTests = new Z3_func_decl[NumConsts + 1];
+                    Z3_symbol* ConstNames = new Z3_symbol[NumConsts];
+                    Z3_func_decl* ConstFuncs = new Z3_func_decl[NumConsts];
+                    Z3_func_decl* ConstTests = new Z3_func_decl[NumConsts];
 
                     for (u32 i = 0; i < NumConsts; ++i) {
                         ConstNames[i] = Z3_mk_string_symbol(*Ctx, Members[i].c_str());
                     }
 
-                    ConstNames[NumConsts] = 
-                        Z3_mk_string_symbol(*Ctx, (TypeName + "::" + "clear").c_str());
-
-                    auto Z3EnumSort = Z3_mk_enumeration_sort(*Ctx, Z3TypeName, NumConsts + 1,
+                    auto Z3EnumSort = Z3_mk_enumeration_sort(*Ctx, Z3TypeName, NumConsts,
                                                              ConstNames, ConstFuncs, ConstTests);
 
                     LoweredSort = Z3Sort(Ctx, Z3EnumSort);
-                    LoweredSort.AddFuncDecls(NumConsts + 1, ConstFuncs);
-                    LoweredSort.AddFuncDecls(NumConsts + 1, ConstTests);
+                    LoweredSort.AddFuncDecls(NumConsts, ConstFuncs);
+                    LoweredSort.AddFuncDecls(NumConsts, ConstTests);
                     
                     delete[] ConstNames;
                     delete[] ConstFuncs;
@@ -2584,7 +2586,7 @@ namespace ESMC {
 
                 vector<vector<string>> QVarElems;
                 for (auto const& QVarType : QVarTypes) {
-                    QVarElems.push_back(QVarType->GetElements());
+                    QVarElems.push_back(QVarType->GetElementsNoUndef());
                 }
                 auto&& CP = CrossProduct<string>(QVarElems.begin(), 
                                                   QVarElems.end());

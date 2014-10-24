@@ -49,7 +49,6 @@ namespace ESMC {
             : IsMsg(false), Offset(-1), 
               ConstCompiled(false), 
               ConstVal(0), 
-              ClearConstant(false),
               FieldOffset(0),
               Interp(nullptr)
         {

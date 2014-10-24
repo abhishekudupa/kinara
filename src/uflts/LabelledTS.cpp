@@ -393,7 +393,7 @@ namespace ESMC {
         }
 
         MgrT::SubstMapT LabelledTS::ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
-                                                     const vector<u08>& Perm)
+                                              const vector<u08>& Perm)
         {
             MgrT::SubstMapT Retval;
             for (auto const& ParamElemVec : ParamElems) {
@@ -415,7 +415,7 @@ namespace ESMC {
             
             vector<u32> TypeSizes;
             for (auto const& Type : UsedSymmTypes) {
-                TypeSizes.push_back(Type->GetCardinality());
+                TypeSizes.push_back(Type->GetCardinalityNoUndef());
             }
             
             PermutationSet PermSet(TypeSizes, true);
@@ -430,7 +430,7 @@ namespace ESMC {
             vector<vector<ExpT>> ParamElems;
             for (auto const& Type : UsedSymmTypes) {
                 ParamElems.push_back(vector<ExpT>());
-                auto&& Elems = Type->GetElements();
+                auto&& Elems = Type->GetElementsNoUndef();
                 for (auto const Elem : Elems) {
                     ParamElems.back().push_back(Mgr->MakeVal(Elem, Type));
                 }
@@ -526,7 +526,7 @@ namespace ESMC {
                 u64 TotalPermSize = 1;
                 for (auto const& Param : EFSMParams) {
                     UsedSymmTypes.insert(Param->GetType());
-                    TotalPermSize *= (Factorial(Param->GetType()->GetCardinality()));
+                    TotalPermSize *= (Factorial(Param->GetType()->GetCardinalityNoUndef()));
                     if (TotalPermSize > UINT32_MAX) {
                         throw ESMCError((string)"Product of permutation sizes of " + 
                                         "symmetric types exceeds the maximum supported " + 
@@ -552,7 +552,7 @@ namespace ESMC {
                 auto Extension = SymmType->GetExtension<LTSTypeExtensionT>();
                 Extension->TypeID = TypeIDCounter++;
                 Extension->TypeOffset = TypeOffsetCounter;
-                TypeOffsetCounter += SymmType->As<ExprSymmetricType>()->GetCardinality();
+                TypeOffsetCounter += SymmType->As<ExprSymmetricType>()->GetCardinalityNoUndef();
             }
 
             // Make a list of channel buffers that require

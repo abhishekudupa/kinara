@@ -385,7 +385,7 @@ namespace ESMC {
             vector<vector<string>> CPElems;
 
             for (auto const& Param : Params) {
-                CPElems.push_back(Param->GetType()->GetElements());
+                CPElems.push_back(Param->GetType()->GetElementsNoUndef());
             }
 
             auto&& CPRes = CrossProduct<string>(CPElems.begin(), CPElems.end());
@@ -465,46 +465,46 @@ namespace ESMC {
             return Retval;
         }
 
-         static inline void ExpandExpression(const ExpT& Exp, set<ExpT>& Expansions)
-         {
-             auto VarType = Exp->GetType();
-             auto Mgr = Exp->GetMgr();
-             if (VarType->Is<Exprs::ExprScalarType>()) {
-                 Expansions.insert(Exp);
-                 return;
-             }
+        static inline void ExpandExpression(const ExpT& Exp, set<ExpT>& Expansions)
+        {
+            auto VarType = Exp->GetType();
+            auto Mgr = Exp->GetMgr();
+            if (VarType->Is<Exprs::ExprScalarType>()) {
+                Expansions.insert(Exp);
+                return;
+            }
 
-             if (VarType->Is<Exprs::ExprRecordType>()) {
-                 auto TypeAsRec = VarType->SAs<Exprs::ExprRecordType>();
-                 auto const& Fields = TypeAsRec->GetMemberVec();
-                 auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+            if (VarType->Is<Exprs::ExprRecordType>()) {
+                auto TypeAsRec = VarType->SAs<Exprs::ExprRecordType>();
+                auto const& Fields = TypeAsRec->GetMemberVec();
+                auto FAType = Mgr->MakeType<ExprFieldAccessType>();
 
-                 for (auto const& Field : Fields) {
-                     auto FAVar = Mgr->MakeVar(Field.first, FAType);
-                     auto CurExpansion = Mgr->MakeExpr(LTSOps::OpField,
-                                                       Exp, FAVar);
-                     ExpandExpression(CurExpansion, Expansions);
-                 }
-                 return;
-             }
+                for (auto const& Field : Fields) {
+                    auto FAVar = Mgr->MakeVar(Field.first, FAType);
+                    auto CurExpansion = Mgr->MakeExpr(LTSOps::OpField,
+                                                      Exp, FAVar);
+                    ExpandExpression(CurExpansion, Expansions);
+                }
+                return;
+            }
 
-             if (VarType->Is<Exprs::ExprArrayType>()) {
-                 auto TypeAsArray = VarType->SAs<Exprs::ExprArrayType>();
-                 auto const& IndexType = TypeAsArray->GetIndexType();
-                 auto const& IndexElems = IndexType->GetElements();
+            if (VarType->Is<Exprs::ExprArrayType>()) {
+                auto TypeAsArray = VarType->SAs<Exprs::ExprArrayType>();
+                auto const& IndexType = TypeAsArray->GetIndexType();
+                auto const& IndexElems = IndexType->GetElementsNoUndef();
 
-                 for (auto const& IndexElem : IndexElems) {
-                     auto IndexExp = Mgr->MakeVal(IndexElem, IndexType);
-                     auto CurExpansion = Mgr->MakeExpr(LTSOps::OpIndex,
-                                                       Exp, IndexExp);
-                     ExpandExpression(CurExpansion, Expansions);
-                 }
-                 return;
-             }
+                for (auto const& IndexElem : IndexElems) {
+                    auto IndexExp = Mgr->MakeVal(IndexElem, IndexType);
+                    auto CurExpansion = Mgr->MakeExpr(LTSOps::OpIndex,
+                                                      Exp, IndexExp);
+                    ExpandExpression(CurExpansion, Expansions);
+                }
+                return;
+            }
 
-             // Eh?
-             return;
-         }
+            // Eh?
+            return;
+        }
 
         static inline vector<ExpT> GetScalarTerms(const ExpT& Exp)
         {

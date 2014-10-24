@@ -62,8 +62,6 @@ namespace ESMC {
             // info about constants
             bool ConstCompiled;
             i64 ConstVal;
-            bool ClearConstant;
-
             // Info for record accesses
             u32 FieldOffset;
             // Interpreter for whatever 
