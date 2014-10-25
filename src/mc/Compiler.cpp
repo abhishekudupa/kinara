@@ -102,15 +102,7 @@ namespace ESMC {
 
             auto Type = Exp->GetConstType();
             auto const& ConstVal = Exp->GetConstValue();
-            string ActualValue;
-            
-            if (ConstVal == "clear" && Type->Is<ExprSymmetricType>()) {
-                ActualValue = Type->SAs<ExprSymmetricType>()->GetName() + "::clear";
-            } else {
-                ActualValue = ConstVal;
-            }
-            
-            auto Val = Type->As<ExprScalarType>()->ConstToVal(ActualValue);
+            auto Val = Type->As<ExprScalarType>()->ConstToVal(ConstVal);
             Exp->ExtensionData.ConstVal = Val;
             Exp->ExtensionData.ConstCompiled = true;
         }
@@ -146,12 +138,20 @@ namespace ESMC {
                 if (Children[0]->ExtensionData.Offset != -1 &&
                     Children[1]->Is<ConstExpression>()) {
                     auto ArrayType = Children[0]->GetType()->As<ExprArrayType>();
+                    auto IndexType = ArrayType->GetIndexType();
                     auto ValueType = ArrayType->GetValueType();
                     auto ValueSize = ValueType->GetByteSize();
                     ValueSize = Align(ValueSize, ValueSize);
-                    Exp->ExtensionData.Offset = 
-                        Children[0]->ExtensionData.Offset + 
-                        (ValueSize * (Children[1]->ExtensionData.ConstVal));
+                    
+                    if (IndexType->Is<ExprSymmetricType>()) {
+                        Exp->ExtensionData.Offset = 
+                            Children[0]->ExtensionData.Offset + 
+                            (ValueSize * (Children[1]->ExtensionData.ConstVal - 1));
+                    } else {
+                        Exp->ExtensionData.Offset = 
+                            Children[0]->ExtensionData.Offset + 
+                            (ValueSize * (Children[1]->ExtensionData.ConstVal));
+                    }
                     return;
                 }
             }
@@ -453,7 +453,8 @@ namespace ESMC {
             if (!Scalar) {
                 throw InternalError((string)"Write() called on non-scalar type");
             }
-            else if (Value < Low || Value > High) {
+
+            if (Value < Low || Value > High) {
                 throw MCException(MCExceptionType::MCOOBWRITE, 0);
             } else {
                 RawValue = Value - Low;

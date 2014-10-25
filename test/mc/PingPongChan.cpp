@@ -286,7 +286,7 @@ int main()
     }
 
     auto Checker = new LTSChecker(TheLTS);
-    Checker->BuildAQS();
+    Checker->BuildAQS(Z3Model::NullModel, AQSConstructionMethod::DepthFirst);
 
     auto Monitor = Checker->MakeStateBuchiMonitor("GFZero", Params, TrueExp);
     Monitor->AddState("InitState", true, false);

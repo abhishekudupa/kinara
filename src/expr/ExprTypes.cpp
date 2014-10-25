@@ -412,7 +412,7 @@ namespace ESMC {
         }
 
         ExprEnumType::ExprEnumType(const string& Name, 
-                                 const set<string>& Members)
+                                   const set<string>& Members)
             : ExprScalarType(), Name(Name), Members(Members),
               MemberVec(Members.begin(), Members.end())
         {
@@ -597,7 +597,7 @@ namespace ESMC {
             Members[0] = Name + "::undef";
             MemberSet.insert(Members[0]);
             for(u32 i = 1; i <= Size; ++i) {
-                Members[i] = Name + "::" + to_string(i);
+                Members[i] = Name + "::" + to_string(i-1);
                 MemberSet.insert(Members[i]);
             }
 
@@ -717,7 +717,7 @@ namespace ESMC {
 
         i64 ExprSymmetricType::ConstToVal(const string& ConstVal) const
         {
-            return GetMemberIdx(ConstVal);
+            return (GetMemberIdx(ConstVal));
         }
 
         string ExprSymmetricType::ValToConst(i64 Val) const
@@ -986,7 +986,7 @@ namespace ESMC {
         {
             u32 Retval = ValueType->GetByteSize();
             Retval = Align(Retval, Retval);
-            return (Retval * IndexType->GetElements().size());
+            return (Retval * IndexType->GetElementsNoUndef().size());
         }
 
         u32 ExprArrayType::GetCardinality() const

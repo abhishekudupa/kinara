@@ -732,6 +732,17 @@ namespace ESMC {
                     if (!CheckTypeCompat(ExpIndexType, ChildTypes[1])) {
                         throw ExprTypeError("Invalid type for index expression");
                     }
+                    if (Children[1]->template Is<ConstExpression>() &&
+                        ChildTypes[1]->template Is<ExprSymmetricType>()) {
+                        auto const& ConstVal = 
+                            Children[1]->template SAs<ConstExpression>()->GetConstValue();
+                        auto const& TypeName = 
+                            ChildTypes[1]->template SAs<ExprSymmetricType>()->GetName();
+                        if (ConstVal == "clear" || ConstVal == (TypeName + "::clear")) {
+                            throw ExprTypeError((string)"Indexing with undefined value into " + 
+                                                "a symmetric array");
+                        }
+                    }
 
                     ExprTypeRef ElemType;
 

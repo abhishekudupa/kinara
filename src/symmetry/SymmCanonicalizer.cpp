@@ -281,7 +281,7 @@ namespace ESMC {
             } else {
                 ActVal = InStateVector->ReadWord(Offset);
             }
-            // Add back the 1 offset
+            
             u32 PermVal = MsgCanonMap[ActVal][PermIdx];
             
             if (TypeSize == 1) {

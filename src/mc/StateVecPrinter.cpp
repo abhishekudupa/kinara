@@ -119,6 +119,8 @@ namespace ESMC {
         {
             if (IsMsgType) {
                 auto ActVal = StateVector->ReadShort(Offset);
+                // return (MsgNameMap[ActVal] + " { Offset : " + to_string(Offset) + 
+                //         ", Raw Value : " + to_string(ActVal) + " }");
                 return MsgNameMap[ActVal];
             }
 
@@ -137,6 +139,8 @@ namespace ESMC {
             }
 
             ActVal = ActVal + Low;
+            // return (TypeAsScalar->ValToConst(ActVal) + " { Offset : " + to_string(Offset) + 
+            //         ", Raw Value : " + to_string(ActVal) + " }");
             return TypeAsScalar->ValToConst(ActVal);
         }
 

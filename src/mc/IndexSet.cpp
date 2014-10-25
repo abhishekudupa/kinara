@@ -156,7 +156,7 @@ namespace ESMC {
                     auto const& CurVal = CurExp->GetConstValue();
                     auto const& CurType = CurExp->GetConstType()->As<Exprs::ExprScalarType>();
                     
-                    auto IndexVal = CurType->ConstToVal(CurVal);
+                    auto IndexVal = CurType->ConstToVal(CurVal) - 1;
                     CurIV[i] = (u08)IndexVal;
                 }
                 auto TheIV = new IndexVector(CurIV, IndexVectorSize);

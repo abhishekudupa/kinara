@@ -472,6 +472,7 @@ namespace ESMC {
                 auto& LastFired = CurEntry.GetLastFired();
                 bool Deadlocked = (LastFired == -1);
                 StateVec* NextState = nullptr;
+                // StateVec* TempNextState = nullptr;
 
                 try {
                     auto const& Cmd = GetNextEnabledCmd(State, LastFired);
@@ -491,6 +492,15 @@ namespace ESMC {
                 
                     // Successors remain to be explored
                     NextState = ExecuteCommand(Cmd, State);
+
+                    // cout << "Firing guarded command:" << endl;
+                    // cout << Cmd->ToString() << endl;
+                    // cout << "Got Next State (Uncanonicalized):" << endl;
+                    // cout << "--------------------------------------------------------" << endl;
+                    // Printer->PrintState(NextState, cout);
+                    // cout << "--------------------------------------------------------" << endl;
+                    // TempNextState = NextState->Clone();
+
                 } catch (const MCException& Exc) {
                     ExceptionState = State;
                     ExceptionType = Exc.GetType();
@@ -498,18 +508,12 @@ namespace ESMC {
                     return;
                 }
 
-                // cout << "Firing guarded command:" << endl;
-                // cout << Cmd->ToString() << endl;
-                // cout << "Got Next State (Uncanonicalized):" << endl;
-                // cout << "--------------------------------------------------------" << endl;
-                // Printer->PrintState(NextState, cout);
-                // cout << "--------------------------------------------------------" << endl;
-                // auto TempNextState = NextState->Clone();
                 
                 u32 PermID;
                 auto CanonState = TheCanonicalizer->Canonicalize(NextState, PermID);
 
-                // cout << "Canonicalized Next State:" << endl;
+                // cout << "Canonicalized Next State with Permutation ID " 
+                //      << PermID << ":" << endl;
                 // cout << "--------------------------------------------------------" << endl;
                 // if (CanonState->Equals(*TempNextState)) {
                 //     cout << "Canonicalized state is the same as uncanonicalized state!" 
@@ -607,7 +611,7 @@ namespace ESMC {
                             //      << endl;
                             // Printer->PrintState(CanonNextState, cout);
                             // cout << "-------------------------------------------------------"
-                            //      << endl;                                
+                            //      << endl;
 
                             AQS->Insert(CanonNextState);
                             AQS->AddEdge(CurState, CanonNextState, PermID, i);
