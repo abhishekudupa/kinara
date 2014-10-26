@@ -61,6 +61,7 @@ namespace ESMC {
 
         using LTS::LabelledTS;
         using Symm::Canonicalizer;
+        using LTS::ExpT;
 
         TraceBase::TraceBase(StateVecPrinter* Printer)
             : Printer(Printer)
@@ -448,14 +449,16 @@ namespace ESMC {
         }
         
         SafetyViolation* TraceBase::MakeSafetyViolation(const StateVec* ErrorState, 
-                                                        LTSChecker* Checker)
+                                                        LTSChecker* Checker,
+                                                        const ExpT& BlownInvariant)
         {
             vector<TraceElemT> PathElems;
             auto TheAQS = Checker->AQS;
             auto PPath = TheAQS->FindShortestPath(ErrorState);
             auto UnwoundInitState = UnwindPermPath(PPath, Checker, PathElems);
             delete PPath;
-            return new SafetyViolation(UnwoundInitState, PathElems, Checker->Printer);
+            return new SafetyViolation(UnwoundInitState, PathElems, 
+                                       Checker->Printer, BlownInvariant);
         }
 
         DeadlockViolation* TraceBase::MakeDeadlockViolation(const StateVec* ErrorState, 
@@ -466,20 +469,9 @@ namespace ESMC {
             auto PPath = TheAQS->FindShortestPath(ErrorState);
             auto UnwoundInitState = UnwindPermPath(PPath, Checker, PathElems);
             delete PPath;
-            return new DeadlockViolation(UnwoundInitState, PathElems, Checker->Printer);
-        }
-
-        MCExceptionTrace* TraceBase::MakeMCExceptionTrace(const StateVec* ErrorState, 
-                                                          MCExceptionType ExceptionType, 
-                                                          u32 CmdID, LTSChecker* Checker)
-        {
-            vector<TraceElemT> PathElems;
-            auto TheAQS = Checker->AQS;
-            auto PPath = TheAQS->FindShortestPath(ErrorState);
-            auto UnwoundInitState = UnwindPermPath(PPath, Checker, PathElems);
-            delete PPath;
-            return new MCExceptionTrace(UnwoundInitState, PathElems, ExceptionType, CmdID, 
-                                        Checker->Printer);
+            auto const& BlownInvariant = Checker->DeadlockFreeInvariant;
+            return new DeadlockViolation(UnwoundInitState, PathElems, 
+                                         Checker->Printer, BlownInvariant);
         }
 
         LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot, 
@@ -610,8 +602,10 @@ namespace ESMC {
         // and initial state
         SafetyViolation::SafetyViolation(const StateVec* InitialState,
                                          const vector<TraceElemT>& TraceElems,
-                                         StateVecPrinter* Printer)
-            : TraceBase(Printer), InitialState(InitialState), TraceElems(TraceElems)
+                                         StateVecPrinter* Printer,
+                                         const ExpT& BlownInvariant)
+            : TraceBase(Printer), InitialState(InitialState), 
+              TraceElems(TraceElems), BlownInvariant(BlownInvariant)
         {
             // Nothing here
         }
@@ -622,65 +616,6 @@ namespace ESMC {
             for (auto const& TraceElem : TraceElems) {
                 TraceElem.second->Recycle();
             }
-        }
-
-        MCExceptionTrace::MCExceptionTrace(const StateVec* InitialState,
-                                           const vector<TraceElemT>& TraceElems,
-                                           MCExceptionType ExceptionType,
-                                           u32 CmdID,
-                                           StateVecPrinter* Printer)
-            : SafetyViolation(InitialState, TraceElems, Printer),
-              ExceptionType(ExceptionType), CmdID(CmdID)
-        {
-            // Nothing here
-        }
-
-        MCExceptionTrace::~MCExceptionTrace()
-        {
-            // Nothing here
-        }
-
-        string MCExceptionTrace::ToString(u32 Verbosity) const
-        {
-            ostringstream sstr;
-            sstr << "Trace to model checking exception with " << TraceElems.size() 
-                 << " steps:" << endl << endl;
-            sstr << "Initial State (in full)" << endl;
-            sstr << "-----------------------------------------------------" << endl;
-            Printer->PrintState(InitialState, sstr);
-            sstr << "-----------------------------------------------------" << endl << endl;
-
-            auto PrevState = InitialState;
-            for (auto const& TraceElem : TraceElems) {
-                auto const& MsgType = TraceElem.first->GetMsgType();
-                auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
-                if (Verbosity < 1) {
-                    sstr << "Fired Guarded Command with label: " 
-                         << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() : 
-                             "(internal transition)") << endl;
-                } else {
-                    sstr << "Fired Guarded Command:" << endl;
-                    sstr << TraceElem.first->ToString() << endl;
-                }
-                sstr << "Obtained next state (delta from previous state):" << endl;
-                sstr << "-----------------------------------------------------" << endl;
-                Printer->PrintState(TraceElem.second, PrevState, sstr);
-                sstr << "-----------------------------------------------------" << endl << endl;
-                PrevState = TraceElem.second;
-            }
-
-            sstr << "Last state of trace (in full):" << endl;
-            sstr << "-----------------------------------------------------" << endl;
-            Printer->PrintState(PrevState, sstr);
-            sstr << "-----------------------------------------------------" << endl << endl;
-
-            sstr << "In this state, " << (ExceptionType == MCExceptionType::MCOOBWRITE ? 
-                                          "an out of bound write " : 
-                                          "an undefined value in computation ")
-                 << "was encountered while evaluating guard or executing command with index "
-                 << to_string(CmdID) << endl;
-                
-            return sstr.str();
         }
 
         const StateVec* SafetyViolation::GetInitialState() const
@@ -736,8 +671,9 @@ namespace ESMC {
 
         DeadlockViolation::DeadlockViolation(const StateVec* InitialState,
                                              const vector<TraceElemT>& TraceElems,
-                                             StateVecPrinter* Printer)
-            : SafetyViolation(InitialState, TraceElems, Printer)
+                                             StateVecPrinter* Printer,
+                                             const ExpT& BlownInvariant)
+            : SafetyViolation(InitialState, TraceElems, Printer, BlownInvariant)
         {
             // Nothing here
         }

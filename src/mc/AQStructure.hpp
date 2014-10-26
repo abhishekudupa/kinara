@@ -246,13 +246,6 @@ namespace ESMC {
             boost::pool<>* EdgePool;
             LabelledTS* TheLTS;
 
-            // An error state (if any)
-            const StateVec* ErrorState;
-            u32 ErrorDepth;
-            // A deadlock state (if any)
-            const StateVec* DeadlockState;
-            u32 DeadlockDepth;
-
         public:
             AQStructure(LabelledTS* TheLTS);
             virtual ~AQStructure();
@@ -268,13 +261,6 @@ namespace ESMC {
             const vector<StateVec*>& GetInitStates() const;
 
             LabelledTS* GetLTS() const;
-
-            // Tracking for error states
-            void AddErrorState(const StateVec* ErrorState, u32 Depth);
-            void AddDeadlockState(const StateVec* DeadlockState, u32 Depth);
-
-            const StateVec* GetErrorState() const;
-            const StateVec* GetDeadlockState() const;
 
             // Path finding methods
             AQSPermPath* FindPath(const set<const StateVec*>& Origins, 

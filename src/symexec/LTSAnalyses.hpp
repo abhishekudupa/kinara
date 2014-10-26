@@ -79,7 +79,7 @@ namespace ESMC {
 
         class TraceAnalyses
         {
-        private:
+        public:
             static vector<ExpT> GetAllScalarLeaves(ExpT InitialExp);
             static set<LTSFairObjRef> GetLTSFairnessObjects(LTS::LabelledTS* TheLTS);
 
@@ -93,20 +93,34 @@ namespace ESMC {
 
             static vector<GCmdRef> GuardedCommandsFromTrace(MC::TraceBase* Trace);
 
-            static MgrT::SubstMapT GetSubstitutionsForTransMsg(const vector<LTSAssignRef>& updates);
+            static MgrT::SubstMapT 
+            GetSubstitutionsForTransMsg(const vector<LTSAssignRef>& updates);
 
-            static bool IsGuardedCommandEnabled(LTS::LabelledTS* TheLTS, const MC::StateVec* StateVector, LTS::GCmdRef GuardedCommand);
+            static bool IsGuardedCommandEnabled(LTS::LabelledTS* TheLTS, 
+                                                const MC::StateVec* StateVector, 
+                                                LTS::GCmdRef GuardedCommand);
 
             static map<pair<LTS::EFSMBase*, vector<LTS::ExpT> >, string>
-            AutomataStatesFromStateVector(LTS::LabelledTS* TheLTS, const MC::StateVec* StateVector);
+            AutomataStatesFromStateVector(LTS::LabelledTS* TheLTS, 
+                                          const MC::StateVec* StateVector);
 
-            static LTS::ExpT WeakestPrecondition(LTS::ExpT InitialPhi, MC::TraceBase* Trace);
+            static LTS::ExpT WeakestPrecondition(LTS::ExpT InitialPhi, 
+                                                 MC::TraceBase* Trace);
 
-            static LTS::ExpT WeakestPreconditionForLiveness(LTS::LabelledTS* TheLTS, MC:: StateBuchiAutomaton* Monitor, MC::LivenessViolation* LivenessViolation);
+            static LTS::ExpT 
+            WeakestPreconditionForLiveness(LTS::LabelledTS* TheLTS, 
+                                           MC::StateBuchiAutomaton* Monitor, 
+                                           MC::LivenessViolation* LivenessViolation);
+            
+            static LTS::ExpT 
+            SymbolicExecution(LTS::ExpT Phi, 
+                              MC::TraceBase* Trace, 
+                              vector<MgrT::SubstMapT>& symbolic_states);
 
-            static LTS::ExpT SymbolicExecution(LTS::ExpT Phi, MC::TraceBase* Trace, vector<MgrT::SubstMapT>& symbolic_states);
-
-            static vector<LTS::ExpT> SymbolicExecution(LTS::LabelledTS* TheLTS, MC::TraceBase* Trace, vector<vector<MgrT::SubstMapT>>& symbolic_states);
+            static vector<LTS::ExpT> 
+            SymbolicExecution(LTS::LabelledTS* TheLTS, 
+                              MC::TraceBase* Trace, 
+                              vector<vector<MgrT::SubstMapT>>& symbolic_states);
 
             static map<pair<LTS::EFSMBase*, vector<LTS::ExpT>>, string>
             GuardedCommandInitialStates(LTS::GCmdRef GuardedCommand);

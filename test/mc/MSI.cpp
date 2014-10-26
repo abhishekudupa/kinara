@@ -1471,24 +1471,27 @@ int main()
     Monitor->AddTransition("Accepting", "Accepting", MonCacheDotStateNEQM);
     Monitor->Freeze();
 
-    auto&& Traces = Checker->BuildAQS();
+    bool Status = Checker->BuildAQS();
 
-    for (auto const& Trace : Traces) {
-        cout << Trace->ToString() << endl << endl;
+    if (!Status) {
+        cout << "Bugs in AQS" << endl;
+        delete Checker;
+        exit(1);
     }
 
     cout << "Checking Liveness Property \"LDLiveness\"..." << endl;
-    auto&& LiveTraces = Checker->CheckLiveness("LDLiveness");
-
-    for (auto const& Trace : LiveTraces) {
-        cout << Trace->ToString() << endl << endl;
+    auto LiveTrace = Checker->CheckLiveness("LDLiveness");
+    if (LiveTrace != nullptr) {
+        cout << LiveTrace->ToString() << endl << endl;
+        delete LiveTrace;
     }
 
     cout << "Checking Liveness Property \"STLiveness\"..." << endl;
-    auto&& LiveTraces2 = Checker->CheckLiveness("STLiveness");
+    LiveTrace = Checker->CheckLiveness("STLiveness");
 
-    for (auto const& Trace : LiveTraces2) {
-        cout << Trace->ToString() << endl << endl;
+    if (LiveTrace != nullptr) {
+        cout << LiveTrace->ToString() << endl << endl;
+        delete LiveTrace;
     }
 
     // These lines below check a property that is false

@@ -51,6 +51,7 @@ namespace ESMC {
 
         using LTS::GCmdRef;
         using LTS::LabelledTS;
+        using LTS::ExpT;
         using Symm::Canonicalizer;
 
         namespace Detail {
@@ -196,14 +197,10 @@ namespace ESMC {
 
         public:
             static SafetyViolation* MakeSafetyViolation(const StateVec* ErrorState,
-                                                        LTSChecker* Checker);
+                                                        LTSChecker* Checker,
+                                                        const ExpT& BlownInvariant);
             static DeadlockViolation* MakeDeadlockViolation(const StateVec* ErrorState,
                                                             LTSChecker* Checker);
-            static MCExceptionTrace* MakeMCExceptionTrace(const StateVec* ErrorState,
-                                                          MCExceptionType ExceptionType,
-                                                          u32 CmdID,
-                                                          LTSChecker* Checker);
-
             // Accepts the root of a fair accepting (green) SCC.
             static LivenessViolation* MakeLivenessViolation(const ProductState* SCCRoot,
                                                             LTSChecker* Checker);
@@ -216,16 +213,19 @@ namespace ESMC {
         protected:
             const StateVec* InitialState;
             vector<TraceElemT> TraceElems;
+            ExpT BlownInvariant;
 
             SafetyViolation(const StateVec* InitialState,
                             const vector<TraceElemT>& TraceElems,
-                            StateVecPrinter* Printer);
+                            StateVecPrinter* Printer,
+                            const ExpT& BlownInvariant);
 
         public:
             virtual ~SafetyViolation();
             const StateVec* GetInitialState() const;
             const vector<TraceElemT>& GetTraceElems() const;
             virtual string ToString(u32 Verbosity = 0) const override;
+            const ExpT& GetInvariantBlown() const;
         };
 
         class DeadlockViolation : public SafetyViolation
@@ -235,29 +235,10 @@ namespace ESMC {
         protected:
             DeadlockViolation(const StateVec* InitialState,
                               const vector<TraceElemT>& TraceElems,
-                              StateVecPrinter* Printer);
+                              StateVecPrinter* Printer,
+                              const ExpT& BlownInvariant);
         public:
             virtual ~DeadlockViolation();
-        };
-
-        class MCExceptionTrace : public SafetyViolation
-        {
-            friend class TraceBase;
-
-        private:
-            MCExceptionType ExceptionType;
-            u32 CmdID;
-
-        protected:
-            MCExceptionTrace(const StateVec* InitialState,
-                             const vector<TraceElemT>& TraceElems,
-                             MCExceptionType ExceptionType,
-                             u32 CmdID,
-                             StateVecPrinter* Printer);
-
-        public:
-            virtual ~MCExceptionTrace();
-            virtual string ToString(u32 Verbosity = 0) const override;
         };
 
         class LivenessViolation : public TraceBase

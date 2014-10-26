@@ -454,7 +454,7 @@ namespace ESMC {
                 }
             }
 
-            // Finally, IF the guard of a guarded command is true, then 
+            // Third, IF the guard of a guarded command is true, then 
             // the RHS of every update to a range typed term must be within
             // the bounds of the range type
             
@@ -487,6 +487,41 @@ namespace ESMC {
                     BoundsConstraint = Mgr->MakeExpr(LTSOps::OpIMPLIES, Guard, BoundsConstraint);
                     BoundsInvariants.insert(Mgr->Simplify(BoundsConstraint));
                 }
+            }
+
+            // Finally, it must be possible to evaluate the invariant
+            // on ANY state, without exception
+            auto&& IndexTerms = GatherTermsInIndex(TheLTS->InvariantExp);
+            MakeIndexTermInvariants(Mgr->MakeTrue(), IndexTerms);
+        }
+
+        inline void LTSChecker::RecordErrorState(const StateVec* ErrorState)
+        {
+            if (ErrorStates.find(ErrorState) != ErrorStates.end()) {
+                return;
+            }
+
+            bool FoundBlown = false;
+            for (auto const& Invar : BoundsInvariants) {
+                auto Interp = Invar->ExtensionData.Interp;
+                auto Res = Interp->Evaluate(ErrorState);
+                if (Res == UndefValue) {
+                    continue;
+                } else if (Res == 0) {
+                    FoundBlown = true;
+                    ErrorStates[ErrorState] = Invar;
+                    break;
+                }
+            }
+
+            if (!FoundBlown) {
+                ostringstream sstr;
+                Printer->PrintState(ErrorState, sstr);
+                throw InternalError((string)"Could not find the bounds invariant that " + 
+                                    "was blown in call to LTSChecker::RecordErrorState()\n" + 
+                                    "The State:\n" + sstr.str() + "\nCould not find bounds " + 
+                                    "invariant that was blown for the state listed above.\n" + 
+                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
             }
         }
 
@@ -624,15 +659,10 @@ namespace ESMC {
                 auto const& Cmd = GetNextEnabledCmd(State, LastFired, Exception);
 
                 if (Exception) {
-                    // TODO: Handle exception
-                }
-                    
-                if (Cmd == GCmdRef::NullPtr) {
+                    RecordErrorState(State);
+                } else if (Cmd == GCmdRef::NullPtr) {
                     if (Deadlocked) {
-                        // Remember this state, but continue on
-                        // with the AQS construction, we'll report
-                        // all counter-examples later
-                        AQS->AddDeadlockState(State, DFSStack.size());
+                        ErrorStates[State] = DeadlockFreeInvariant;
                     }
                     // cout << "No more successors, popping from stack!" << endl;
                     // Done exploring this state
@@ -642,6 +672,16 @@ namespace ESMC {
                 
                 // Successors remain to be explored
                 NextState = ExecuteCommand(Cmd, State);
+
+                if (NextState == nullptr) {
+                    // An exception was encountered firing this
+                    // command on the State. Store it, and pop from 
+                    // stack, since only one error is remembered
+                    // per state
+                    RecordErrorState(State);
+                    DFSStack.pop();
+                    continue;
+                }
                 
                 // cout << "Firing guarded command:" << endl;
                 // cout << Cmd->ToString() << endl;
@@ -684,13 +724,13 @@ namespace ESMC {
                     auto Interp = Invar->ExtensionData.Interp;
                     auto InvarRes = Interp->Evaluate(CanonState);
                     if (InvarRes == UndefValue) {
-                        throw ESMCError((string)"Obtained undefined value when " + 
-                                        "evaluating invariant");
+                        RecordErrorState(CanonState);
+                        DFSStack.pop();
                     } else if (InvarRes == 0) {
-                        AQS->AddErrorState(CanonState, DFSStack.size());
+                        ErrorStates[CanonState] = Invar;
+                        DFSStack.pop();
                     }
                     continue;
-
                 } else {
                     // Successor already explored, add edge
                     // and continue
@@ -731,7 +771,9 @@ namespace ESMC {
                     
                     NextState = TryExecuteCommand(Cmd, CurState, Exception);
                     if (Exception) {
-                        // TODO: Handle exception
+                        RecordErrorState(CurState);
+                        // Already an error. Don't try any more commands
+                        break;
                     }
 
                     if (NextState != nullptr) {
@@ -761,33 +803,34 @@ namespace ESMC {
                             auto Interp = Invar->ExtensionData.Interp;
                             auto InvarRes = Interp->Evaluate(CanonNextState);
                             if (InvarRes == UndefValue) {
-                                throw ESMCError((string)"Undefined value obtained in " + 
-                                                "evaluation of invariant");
+                                RecordErrorState(CanonNextState);
+                                // Remove it from the queue
+                                BFSQueue.pop_back();
+
                             } else if (InvarRes == 0) {
                                 // Again, remember this state, but continue
                                 // on with the AQS construction
                                 // We only want the first one to be stored
                                 // so use itercount
-                                AQS->AddErrorState(CanonNextState, IterCount);
+                                ErrorStates[CanonNextState] = Invar;
+                                BFSQueue.pop_back();
                             }
                         }
                     }
                 }
 
                 if (Deadlocked) {
-                    // State has no successors
-                    AQS->AddDeadlockState(CurState, IterCount);
+                    ErrorStates[CurState] = DeadlockFreeInvariant;
                 }
             }
         }
 
-        vector<TraceBase*> LTSChecker::BuildAQS(const Z3Model& Model,
-                                                AQSConstructionMethod Method)
+        bool LTSChecker::BuildAQS(const Z3Model& Model, AQSConstructionMethod Method)
         {
             vector<TraceBase*> Retval;
 
             if (AQS != nullptr) {
-                return Retval;
+                return (ErrorStates.size() == 0);
             }
 
             AQS = new AQStructure(TheLTS);
@@ -828,23 +871,41 @@ namespace ESMC {
             cout << "AQS contains " << AQS->GetNumStates() << " states and " 
                  << AQS->GetNumEdges() << " edges." << endl;
             cout << Factory->GetNumActiveStates() << " active states from state factory." << endl;
-
-            // Do we have errors?
-            // We currently only report at most one error trace 
-            // and at most one deadlock trace
-            auto ErrorState = AQS->GetErrorState();
-            auto DeadlockState = AQS->GetDeadlockState();
-
-            if (ErrorState != nullptr) {
-                auto CurTrace = TraceBase::MakeSafetyViolation(ErrorState, this);
-                Retval.push_back(CurTrace);
+            if (ErrorStates.size() > 0) {
+                cout << "One or more safety/deadlock violations found!" << endl;
+                return false;
             }
-            if (DeadlockState != nullptr) {
-                auto CurTrace = TraceBase::MakeDeadlockViolation(DeadlockState, this);
-                Retval.push_back(CurTrace);
-            }
+            return true;
+        }
 
-            return Retval;
+        const unordered_map<const StateVec*, ExpT> LTSChecker::GetAllErrorStates() const
+        {
+            return ErrorStates;
+        }
+
+        AQStructure* LTSChecker::GetAQS() const
+        {
+            return AQS;
+        }
+
+        ProductStructure* LTSChecker::GetPS() const
+        {
+            return ThePS;
+        }
+
+        TraceBase* LTSChecker::MakeTraceToError(const StateVec* ErrorState)
+        {
+            auto it = ErrorStates.find(ErrorState);
+            if (it == ErrorStates.end()) {
+                throw ESMCError((string)"Argument to LTSChecker::MakeTraceToError() is " + 
+                                "not marked as an error state by the checker");
+            }
+            auto const& BlownInvariant = it->second;
+            if (BlownInvariant == DeadlockFreeInvariant) {
+                return TraceBase::MakeDeadlockViolation(ErrorState, this);
+            } else {
+                return TraceBase::MakeSafetyViolation(ErrorState, this, BlownInvariant);
+            }
         }
 
         void LTSChecker::ClearAQS() 
@@ -1155,10 +1216,8 @@ namespace ESMC {
             return Retval;
         }
 
-        vector<TraceBase*> LTSChecker::CheckLiveness(const string& BuchiMonitorName) 
+        TraceBase* LTSChecker::CheckLiveness(const string& BuchiMonitorName) 
         {
-            vector<TraceBase*> Retval;
-
             auto it = AllBuchiAutomata.find(BuchiMonitorName);
             if (it == AllBuchiAutomata.end()) {
                 throw ESMCError((string)"Buchi Monitor with name \"" + BuchiMonitorName + 
@@ -1168,8 +1227,7 @@ namespace ESMC {
                 throw ESMCError((string)"AQS not built to check liveness property!");
             }
 
-            if (AQS->GetErrorState() != nullptr || 
-                AQS->GetDeadlockState() != nullptr) {
+            if (ErrorStates.size() > 0) {
                 throw ESMCError((string)"AQS contains one or more deadlocked and/or " + 
                                 "error states. Liveness checks aborted due to this!");
             }
@@ -1229,14 +1287,13 @@ namespace ESMC {
                         // Fair, turn this into a counterexample
                         cout << "Found fair accepting SCC" << endl;
                         auto Trace = TraceBase::MakeLivenessViolation(SCCRoot, this);
-                        Retval.push_back(Trace);
-                        return Retval;
+                        return Trace;
                     }
                 }
             }
 
             cout << "No liveness violations found! :-)" << endl;
-            return Retval;
+            return nullptr;
         }
 
         LabelledTS* LTSChecker::GetLTS() const

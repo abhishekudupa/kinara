@@ -301,16 +301,10 @@ int main()
     }
 
     auto Checker = new LTSChecker(TheLTS);
-    auto&& Traces = Checker->BuildAQS();
+    auto Status = Checker->BuildAQS();
     
-    if (Traces.size() > 0) {
+    if (!Status) {
         cout << "Found Bugs!" << endl;
-        for (auto const& Trace : Traces) {
-            cout << Trace->ToString() << endl << endl;
-        }
-        for (auto Trace : Traces) {
-            delete Trace;
-        }
         delete Checker;
         exit(0);
     }
@@ -346,11 +340,11 @@ int main()
 
     // Checker->CheckLiveness("GFZero");
 
-    Traces = Checker->CheckLiveness("FGZero");
+    auto Trace = Checker->CheckLiveness("FGZero");
     
-    for (auto const& Trace : Traces) {
+    if (Trace != nullptr) {
         cout << Trace->ToString() << endl;
-        cout << WeakestPreconditionForLiveness(TheLTS, Monitor, Trace->As<LivenessViolation>()) << endl;
+        cout << TraceAnalyses::WeakestPreconditionForLiveness(TheLTS, Monitor, Trace->As<LivenessViolation>()) << endl;
         delete Trace;
     }
 

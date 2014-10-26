@@ -189,11 +189,18 @@ namespace ESMC {
             set<ExpT> BoundsInvariants;
             ExpT DeadlockFreeInvariant;
 
+            // The set of all error states, mapping to the 
+            // invariant expression that was blown
+            unordered_map<const StateVec*, ExpT> ErrorStates;
+
             // returns <Cmd, false> if successful
             // returns <null, false> if no more commands
             // returns <null, true> if exception
             inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired,
                                                     bool& Exception);
+            
+            inline void RecordErrorState(const StateVec* ErrorState);
+
             inline void DoDFS(StateVec* Root);
             inline void DoBFS(const vector<StateVec*>& Roots);
 
@@ -222,23 +229,30 @@ namespace ESMC {
             LTSChecker(LabelledTS* TheLTS);
             virtual ~LTSChecker();
 
-            vector<TraceBase*> BuildAQS(const Z3Model& Model = Z3Model::NullModel,
-                                        AQSConstructionMethod Method = 
-                                        AQSConstructionMethod::BreadthFirst);
+            // Returns true if no errors encountered
+            // false otherwise
+            bool BuildAQS(const Z3Model& Model = Z3Model::NullModel,
+                          AQSConstructionMethod Method = 
+                          AQSConstructionMethod::BreadthFirst);
+
             void ClearAQS();
 
             StateBuchiAutomaton* MakeStateBuchiMonitor(const string& Name, 
                                                        const vector<ExpT>& SymmIndices,
                                                        const ExpT& Constraint);
 
-            vector<TraceBase*> CheckLiveness(const string& BuchiMonitorName);
+            TraceBase* CheckLiveness(const string& BuchiMonitorName);
 
             LabelledTS* GetLTS() const;
             LTSCompiler* GetCompiler() const;
+            AQStructure* GetAQS() const;
+            ProductStructure* GetPS() const;
 
             // Methods to assist synthesis
             vector<TraceBase*> GetAllDeadlocks();
             vector<TraceBase*> GetAllSafetyViolations();
+            const unordered_map<const StateVec*, ExpT> GetAllErrorStates() const;
+            TraceBase* MakeTraceToError(const StateVec* ErrorState);
         };
         
         // Returns false if exception encountered

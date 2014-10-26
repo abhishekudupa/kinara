@@ -50,9 +50,7 @@ namespace ESMC {
 
         AQStructure::AQStructure(LabelledTS* TheLTS)
             : EdgePool(new boost::pool<>(sizeof(AQSEdge))),
-              TheLTS(TheLTS), ErrorState(nullptr), 
-              ErrorDepth(UINT32_MAX), DeadlockState(nullptr),
-              DeadlockDepth(UINT32_MAX)
+              TheLTS(TheLTS)
         {
             // Nothing here
         }
@@ -67,31 +65,6 @@ namespace ESMC {
             return TheLTS;
         }
 
-        void AQStructure::AddErrorState(const StateVec* ErrorState, u32 Depth)
-        {
-            if (StateHashSet.find(const_cast<StateVec*>(ErrorState)) == StateHashSet.end()) {
-                throw ESMCError((string)"State not in AQS in call to " + 
-                                "AQStructure::AddErrorState()");
-            }
-            if (Depth < ErrorDepth) {
-                this->ErrorState = ErrorState;
-                ErrorDepth = Depth;
-            }
-        }
-
-        void AQStructure::AddDeadlockState(const StateVec* DeadlockState, u32 Depth)
-        {
-            if (StateHashSet.find(const_cast<StateVec*>(DeadlockState)) == StateHashSet.end()) {
-                throw ESMCError((string)"State not in AQS in call to " + 
-                                "AQStructure::AddDeadlockState()");
-            }
-
-            if (Depth < DeadlockDepth) {
-                this->DeadlockState = DeadlockState;
-                DeadlockDepth = Depth;
-            }
-        }
-
         StateVec* AQStructure::Find(StateVec* SV) const
         {
             auto it = StateHashSet.find(SV);
@@ -100,16 +73,6 @@ namespace ESMC {
             } else {
                 return it->first;
             }
-        }
-
-        const StateVec* AQStructure::GetErrorState() const
-        {
-            return ErrorState;
-        }
-
-        const StateVec* AQStructure::GetDeadlockState() const
-        {
-            return DeadlockState;
         }
 
         void AQStructure::Insert(StateVec* SV)
