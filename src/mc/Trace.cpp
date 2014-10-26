@@ -452,26 +452,39 @@ namespace ESMC {
                                                         LTSChecker* Checker,
                                                         const ExpT& BlownInvariant)
         {
-            vector<TraceElemT> PathElems;
             auto TheAQS = Checker->AQS;
             auto PPath = TheAQS->FindShortestPath(ErrorState);
-            auto UnwoundInitState = UnwindPermPath(PPath, Checker, PathElems);
-            delete PPath;
-            return new SafetyViolation(UnwoundInitState, PathElems, 
-                                       Checker->Printer, BlownInvariant);
+            return MakeSafetyViolation(PPath, Checker, BlownInvariant);
         }
 
         DeadlockViolation* TraceBase::MakeDeadlockViolation(const StateVec* ErrorState, 
                                                             LTSChecker* Checker)
         {
-            vector<TraceElemT> PathElems;
             auto TheAQS = Checker->AQS;
             auto PPath = TheAQS->FindShortestPath(ErrorState);
-            auto UnwoundInitState = UnwindPermPath(PPath, Checker, PathElems);
-            delete PPath;
-            auto const& BlownInvariant = Checker->DeadlockFreeInvariant;
-            return new DeadlockViolation(UnwoundInitState, PathElems, 
-                                         Checker->Printer, BlownInvariant);
+            return MakeDeadlockViolation(PPath, Checker);
+        }
+
+        SafetyViolation* TraceBase::MakeSafetyViolation(AQSPermPath* PermPath, 
+                                                        LTSChecker* Checker, 
+                                                        const ExpT& BlownInvariant)
+        {
+            vector<TraceElemT> PathElems;
+            auto UnwoundInitState = UnwindPermPath(PermPath, Checker, PathElems);
+            delete PermPath;
+            return new SafetyViolation(UnwoundInitState, PathElems,
+                                       Checker->Printer, BlownInvariant);
+        }
+
+        DeadlockViolation* TraceBase::MakeDeadlockViolation(AQSPermPath* PermPath, 
+                                                            LTSChecker* Checker)
+        {
+            vector<TraceElemT> PathElems;
+            auto UnwoundInitState = UnwindPermPath(PermPath, Checker, PathElems);
+            delete PermPath;
+            return new DeadlockViolation(UnwoundInitState, PathElems,
+                                         Checker->Printer, 
+                                         Checker->DeadlockFreeInvariant);
         }
 
         LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot, 

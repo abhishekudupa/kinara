@@ -161,7 +161,8 @@ namespace ESMC {
                                           const vector<LTSAssignRef>& Updates,
                                           const string& MessageName, 
                                           const ExprTypeRef& MessageType,
-                                          const ExprTypeRef& ActMType);
+                                          const ExprTypeRef& ActMType,
+                                          const LTSSymbTransRef& SymbTrans);
 
             void AddOutputTransForInstance(u32 InstanceID, 
                                            const MgrT::SubstMapT& SubstMap,
@@ -171,14 +172,16 @@ namespace ESMC {
                                            const string& MessageName,
                                            const ExprTypeRef& MessageType,
                                            const ExprTypeRef& ActMType,
-                                           const set<string>& AddToFairnessSets);
+                                           const set<string>& AddToFairnessSets,
+                                           const LTSSymbTransRef& SymbTrans);
 
             void AddInternalTransForInstance(u32 InstanceID, 
                                              const MgrT::SubstMapT& SubstMap,
                                              const string& InitState,
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
-                                             const set<string>& AddToFairnessSets);
+                                             const set<string>& AddToFairnessSets,
+                                             const LTSSymbTransRef& SymbTrans);
 
         public:
             EFSMBase(LabelledTS* TheLTS, const string& Name,
@@ -240,7 +243,8 @@ namespace ESMC {
                                             const vector<LTSAssignRef>& Updates,
                                             const string& MessageName,
                                             const ExprTypeRef& MessageType,
-                                            const vector<ExpT>& MessageParams);
+                                            const vector<ExpT>& MessageParams,
+                                            bool Tentative = false);
 
             // Final state specified in update
             virtual void AddInputTransition(const string& InitState,
@@ -248,7 +252,8 @@ namespace ESMC {
                                             const vector<LTSAssignRef>& Updates,
                                             const string& MessageName,
                                             const ExprTypeRef& MessageType,
-                                            const vector<ExpT>& MessageParams);
+                                            const vector<ExpT>& MessageParams,
+                                            bool Tentative = false);
             
             virtual void AddInputTransitions(const vector<ExpT>& TransParams,
                                              const ExpT& Constraint,
@@ -258,7 +263,8 @@ namespace ESMC {
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
                                              const ExprTypeRef& MessageType,
-                                             const vector<ExpT>& MessageParams);
+                                             const vector<ExpT>& MessageParams,
+                                             bool Tentative = false);
 
             // Final state specified in updates
             virtual void AddInputTransitions(const vector<ExpT>& TransParams,
@@ -268,7 +274,8 @@ namespace ESMC {
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
                                              const ExprTypeRef& MessageType,
-                                             const vector<ExpT>& MessageParams);
+                                             const vector<ExpT>& MessageParams,
+                                             bool Tentative = false);
 
             virtual void AddOutputTransition(const string& InitState,
                                              const string& FinalState,
@@ -278,7 +285,8 @@ namespace ESMC {
                                              const ExprTypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
                                              const set<string>& AddToFairnessSets = 
-                                             set<string>());
+                                             set<string>(),
+                                             bool Tentative = false);
 
             // Final state specified in updates
             virtual void AddOutputTransition(const string& InitState,
@@ -288,7 +296,8 @@ namespace ESMC {
                                              const ExprTypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
                                              const set<string>& AddToFairnessSets = 
-                                             set<string>());
+                                             set<string>(),
+                                             bool Tentative = false);
 
             virtual void AddOutputTransitions(const vector<ExpT>& TransParams,
                                               const ExpT& Constraint,
@@ -301,7 +310,8 @@ namespace ESMC {
                                               const vector<ExpT>& MessageParams,
                                               LTSFairnessType FairnessKind,
                                               SplatFairnessType SplatFairness,
-                                              const string& SplatFairnessName);
+                                              const string& SplatFairnessName,
+                                              bool Tentative = false);
 
             // Final state specified in updates
             virtual void AddOutputTransitions(const vector<ExpT>& TransParams,
@@ -314,21 +324,24 @@ namespace ESMC {
                                               const vector<ExpT>& MessageParams,
                                               LTSFairnessType FairnessKind,
                                               SplatFairnessType SplatFairness,
-                                              const string& SplatFairnessName);
+                                              const string& SplatFairnessName,
+                                              bool Tentative = false);
 
             virtual void AddInternalTransition(const string& InitState,
                                                const string& FinalState,
                                                const ExpT& Guard,
                                                const vector<LTSAssignRef>& Updates,
                                                const set<string>& AddToFairnessSets = 
-                                               set<string>());
+                                               set<string>(),
+                                               bool Tentative = false);
             
             // Final state specified in updates
             virtual void AddInternalTransition(const string& InitState,
                                                const ExpT& Guard,
                                                const vector<LTSAssignRef>& Updates,
                                                const set<string>& AddToFairnessSets = 
-                                               set<string>());
+                                               set<string>(),
+                                               bool Tentative = false);
 
             virtual void AddInternalTransitions(const vector<ExpT>& TransParams,
                                                 const ExpT& Constraint,
@@ -340,7 +353,8 @@ namespace ESMC {
                                                 LTSFairnessType::None,
                                                 SplatFairnessType SplatFairness =
                                                 SplatFairnessType::None,
-                                                const string& SplatFairnessName = "");
+                                                const string& SplatFairnessName = "",
+                                                bool Tentative = false);
             
             // Final state specified in updates
             virtual void AddInternalTransitions(const vector<ExpT>& TransParams,
@@ -352,7 +366,8 @@ namespace ESMC {
                                                 LTSFairnessType::None,
                                                 SplatFairnessType SplatFairness =
                                                 SplatFairnessType::None,
-                                                const string& SplatFairnessName = "");
+                                                const string& SplatFairnessName = "",
+                                                bool Tentative = false);
 
             virtual string ToString() const override;
 

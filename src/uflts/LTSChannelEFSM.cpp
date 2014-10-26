@@ -175,7 +175,8 @@ namespace ESMC {
                                                    Updates, 
                                                    InMsgName, 
                                                    MessageType, 
-                                                   MessageType);
+                                                   MessageType,
+                                                   LTSSymbTransRef::NullPtr);
             } else {
                 vector<LTSAssignRef> Step2Updates;
                 Step2Updates.push_back(new LTSAssignSimple(IndexExp, LastMsgExp));
@@ -203,7 +204,8 @@ namespace ESMC {
                                                        NoCountUpdates, 
                                                        InMsgName, 
                                                        MessageType,
-                                                       MessageType);
+                                                       MessageType,
+                                                       LTSSymbTransRef::NullPtr);
                     Guard2 = TrueExp;
                 } else {
                     EFSMBase::AddInputTransForInstance(InstanceID,
@@ -213,7 +215,8 @@ namespace ESMC {
                                                        NoCountUpdates,
                                                        InMsgName, 
                                                        MessageType,
-                                                       MessageType);
+                                                       MessageType,
+                                                       LTSSymbTransRef::NullPtr);
                     Guard2 = Guard;
                 }
 
@@ -232,14 +235,16 @@ namespace ESMC {
                                                       "LossDecideState", 
                                                       TrueExp, 
                                                       LossUpdates, 
-                                                      set<string>());
+                                                      set<string>(),
+                                                      LTSSymbTransRef::NullPtr);
                 // Non lossy
                 EFSMBase::AddInternalTransForInstance(InstanceID,
                                                       SubstMap,
                                                       "LossDecideState", 
                                                       Guard2, 
                                                       Step2Updates, 
-                                                      AddToFairnessSets);
+                                                      AddToFairnessSets,
+                                                      LTSSymbTransRef::NullPtr);
             }
         }
 
@@ -358,7 +363,8 @@ namespace ESMC {
                                                     OutMsgName, 
                                                     PMessageType, 
                                                     PMessageType,
-                                                    AddToFairnessSets);
+                                                    AddToFairnessSets,
+                                                    LTSSymbTransRef::NullPtr);
                 if (Duplicating) {
                     EFSMBase::AddOutputTransForInstance(InstanceID,
                                                         SubstMap,
@@ -370,7 +376,8 @@ namespace ESMC {
                                                         PMessageType,
                                                         (AddFairnessToDup ? 
                                                          AddToFairnessSets : 
-                                                         set<string>()));
+                                                         set<string>()),
+                                                        LTSSymbTransRef::NullPtr);
                 }
             }
         }
@@ -478,7 +485,8 @@ namespace ESMC {
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
                                              const ExprTypeRef& MessageType,
-                                             const vector<ExpT>& MessageParams)
+                                             const vector<ExpT>& MessageParams,
+                                             bool Tentative)
         {
             throw ESMCError((string)"ChannelEFSM::AddInputTransition() should not be called");
         }
@@ -490,7 +498,8 @@ namespace ESMC {
                                               const vector<LTSAssignRef>& Updates,
                                               const string& MessageName,
                                               const ExprTypeRef& MessageType,
-                                              const vector<ExpT>& MessageParams)
+                                              const vector<ExpT>& MessageParams,
+                                              bool Tentative)
         {
             throw ESMCError((string)"ChannelEFSM::AddInputTransitions() should not be called");
         }
@@ -501,7 +510,8 @@ namespace ESMC {
                                               const string& MessageName,
                                               const ExprTypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
-                                              const set<string>& AddToFairnessSets)
+                                              const set<string>& AddToFairnessSets,
+                                              bool Tentative)
         {
             throw ESMCError((string)"ChannelEFSM::AddOutputTransition() should not be called");
         }
@@ -516,7 +526,8 @@ namespace ESMC {
                                                const vector<ExpT>& MessageParams,
                                                LTSFairnessType MessageFairness,
                                                SplatFairnessType SplatFairness,
-                                               const string& SplatFairnessName)
+                                               const string& SplatFairnessName,
+                                               bool Tentative)
         {
             throw ESMCError((string)"ChannelEFSM::AddOutputTransitions() should not be called");
         }
@@ -525,7 +536,8 @@ namespace ESMC {
         void ChannelEFSM::AddInternalTransition(const string& InitState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
-                                                const set<string>& AddToFairnessSets)
+                                                const set<string>& AddToFairnessSets,
+                                                bool Tentative)
         {
             throw ESMCError((string)"ChannelEFSM::AddInternalTransition() should not be called");
         }
@@ -537,7 +549,8 @@ namespace ESMC {
                                                  const vector<LTSAssignRef>& Updates,
                                                  LTSFairnessType MessageFairness,
                                                  SplatFairnessType SplatFairness,
-                                                 const string& SplatFairnessName)
+                                                 const string& SplatFairnessName,
+                                                 bool Tentative)
         {
             throw ESMCError((string)"ChannelEFSM::AddInternalTransitions() should not be called");
         }

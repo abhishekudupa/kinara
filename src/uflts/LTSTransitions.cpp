@@ -84,9 +84,10 @@ namespace ESMC {
                                              const vector<ExpT>& ParamInst,
                                              const LTSState& InitState,
                                              const ExpT& Guard,
-                                             const vector<LTSAssignRef>& Updates)
+                                             const vector<LTSAssignRef>& Updates,
+                                             const LTSSymbTransRef& SymbolicTransition)
             : AutomatonTransitionBase(TheEFSM, ParamInst, InitState, Guard),
-              Updates(Updates)
+              Updates(Updates), SymbolicTransition(SymbolicTransition)
         {
             // Nothing here
         }
@@ -106,6 +107,16 @@ namespace ESMC {
             return Updates;
         }
 
+        const LTSSymbTransRef& LTSTransitionBase::GetSymbolicTransition() const
+        {
+            return SymbolicTransition;
+        }
+
+        bool LTSTransitionBase::IsTentative() const
+        {
+            return (SymbolicTransition != LTSSymbTransRef::NullPtr && 
+                    SymbolicTransition->IsTentative());
+        }
 
         LTSTransitionIOBase::LTSTransitionIOBase(EFSMBase* TheEFSM,
                                                  const vector<ExpT>& ParamInst,
@@ -113,8 +124,9 @@ namespace ESMC {
                                                  const ExpT& Guard,
                                                  const vector<LTSAssignRef>& Updates,
                                                  const string& MessageName,
-                                                 const ExprTypeRef& MessageType)
-            : LTSTransitionBase(TheEFSM, ParamInst, InitState, Guard, Updates),
+                                                 const ExprTypeRef& MessageType,
+                                                 const LTSSymbTransRef& SymbolicTransition)
+            : LTSTransitionBase(TheEFSM, ParamInst, InitState, Guard, Updates, SymbolicTransition),
               MessageName(MessageName), MessageType(MessageType)
         {
             // Nothing here
@@ -141,9 +153,10 @@ namespace ESMC {
                                                const ExpT& Guard,
                                                const vector<LTSAssignRef>& Updates,
                                                const string& MessageName,
-                                               const ExprTypeRef& MessageType)
+                                               const ExprTypeRef& MessageType,
+                                               const LTSSymbTransRef& SymbolicTransition)
             : LTSTransitionIOBase(TheEFSM, ParamInst, InitState, Guard, Updates,
-                                  MessageName, MessageType)
+                                  MessageName, MessageType, SymbolicTransition)
         {
             // Nothing here
         }
@@ -178,9 +191,10 @@ namespace ESMC {
                                                  const vector<LTSAssignRef>& Updates,
                                                  const string& MessageName,
                                                  const ExprTypeRef& MessageType,
-                                                 const set<string>& CompOfFairnessSets)
+                                                 const set<string>& CompOfFairnessSets,
+                                                 const LTSSymbTransRef& SymbolicTransition)
             : LTSTransitionIOBase(TheEFSM, ParamInst, InitState, Guard, Updates,
-                                  MessageName, MessageType),  
+                                  MessageName, MessageType, SymbolicTransition),  
               CompOfFairnessSets(CompOfFairnessSets)
         {
             // Nothing here
@@ -219,8 +233,9 @@ namespace ESMC {
                                                      const LTSState& InitState,
                                                      const ExpT& Guard,
                                                      const vector<LTSAssignRef>& Updates,
-                                                     const set<string>& CompOfFairnessSets)
-            : LTSTransitionBase(TheEFSM, ParamInst, InitState, Guard, Updates),
+                                                     const set<string>& CompOfFairnessSets,
+                                                     const LTSSymbTransRef& SymbolicTransition)
+            : LTSTransitionBase(TheEFSM, ParamInst, InitState, Guard, Updates, SymbolicTransition),
               CompOfFairnessSets(CompOfFairnessSets)
         {
             // Nothing here
@@ -259,7 +274,12 @@ namespace ESMC {
                                              const set<LTSFairObjRef>& Fairnesses,
                                              const vector<LTSTransRef>& ProductTrans)
             : Guard(Guard), Updates(Updates), MsgType(MsgType), MsgTypeID(MsgTypeID),
-              FairnessObjs(Fairnesses.begin(), Fairnesses.end()), ProductTrans(ProductTrans)
+              FairnessObjs(Fairnesses.begin(), Fairnesses.end()), ProductTrans(ProductTrans),
+              Tentative(any_of(ProductTrans.begin(), ProductTrans.end(), 
+                               [&] (const LTSTransRef& Trans) -> bool
+                               {
+                                   return Trans->IsTentative();
+                               }))
         {
             set<LTSFairSetRef> FairSets;
             for (auto const& FairObj : FairnessObjs) {
@@ -336,6 +356,11 @@ namespace ESMC {
             return sstr.str();
         }
 
+        bool LTSGuardedCommand::IsTentative() const
+        {
+            return Tentative;
+        }
+
         LTSInitState::LTSInitState(const vector<ExpT>& Params,
                                    const ExpT& Constraint,
                                    const vector<LTSAssignRef>& Updates)
@@ -372,9 +397,12 @@ namespace ESMC {
                                                      AutomatonBase* Automaton,
                                                      const LTSState& InitState,
                                                      const ExpT& Guard,
-                                                     const vector<LTSAssignRef>& Updates)
+                                                     const vector<LTSAssignRef>& Updates,
+                                                     bool Tentative)
           : TransParams(TransParams), Params(Params), Constraint(Constraint), 
-            Automaton(Automaton), InitState(InitState), Guard(Guard), Updates(Updates)
+            Automaton(Automaton), InitState(InitState), Guard(Guard), Updates(Updates),
+            Tentative(Tentative)
+                           
         {
             // Nothing here
         }
@@ -419,6 +447,11 @@ namespace ESMC {
             return Updates;
         }
 
+        bool LTSSymbTransitionBase::IsTentative() const
+        {
+            return Tentative;
+        }
+
         LTSSymbIOTransitionBase::LTSSymbIOTransitionBase(const vector<ExpT>& TransParams,
                                                          const vector<ExpT>& Params,
                                                          const ExpT& Constraint,
@@ -428,9 +461,10 @@ namespace ESMC {
                                                          const vector<LTSAssignRef>& Updates,
                                                          const string& MessageName,
                                                          const ExprTypeRef& MessageType,
-                                                         const vector<ExpT>& MessageParams)
+                                                         const vector<ExpT>& MessageParams,
+                                                         bool Tentative)
         : LTSSymbTransitionBase(TransParams, Params, Constraint, Automaton, 
-                                InitState, Guard, Updates),
+                                InitState, Guard, Updates, Tentative),
           MessageName(MessageName), MessageType(MessageType), MessageParams(MessageParams)
         {
             // Nothing here

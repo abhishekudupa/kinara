@@ -204,6 +204,12 @@ namespace ESMC {
             // Accepts the root of a fair accepting (green) SCC.
             static LivenessViolation* MakeLivenessViolation(const ProductState* SCCRoot,
                                                             LTSChecker* Checker);
+
+            static SafetyViolation* MakeSafetyViolation(AQSPermPath* PermPath,
+                                                        LTSChecker* Checker,
+                                                        const ExpT& BlownInvariant);
+            static DeadlockViolation* MakeDeadlockViolation(AQSPermPath* PermPath,
+                                                            LTSChecker* Checker);
         };
 
         class SafetyViolation : public TraceBase

@@ -736,13 +736,13 @@ namespace ESMC {
             if (NewParams.size() == 0) {
                 AddInputTransition(InitStateName, GuardExp, 
                                    Updates, "InMsg", MsgDecl->GetMessageType(),
-                                   MsgDecl->GetMessageParams());
+                                   MsgDecl->GetMessageParams(), true);
             } else {
                 AddInputTransitions(NewParams, MsgDecl->GetConstraint(), 
                                     InitStateName,
                                     GuardExp, Updates, "InMsg", 
                                     MsgDecl->GetMessageType(), 
-                                    MsgDecl->GetMessageParams());
+                                    MsgDecl->GetMessageParams(), true);
             }
         }
 

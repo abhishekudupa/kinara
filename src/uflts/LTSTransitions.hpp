@@ -104,148 +104,6 @@ namespace ESMC {
             }
         };
 
-        class LTSTransitionBase : public AutomatonTransitionBase
-        {
-        protected:
-            // The EFSM that this transition is a part of 
-            vector<LTSAssignRef> Updates;
-            
-        public:
-            LTSTransitionBase(EFSMBase* TheEFSM,
-                              const vector<ExpT>& ParamInst,
-                              const LTSState& InitState,
-                              const ExpT& Guard,
-                              const vector<LTSAssignRef>& Updates);
-            virtual ~LTSTransitionBase();
-
-            EFSMBase* GetEFSM() const;
-            const vector<LTSAssignRef>& GetUpdates() const;
-        };
-
-        class LTSTransitionIOBase : public LTSTransitionBase
-        {
-        protected:
-            string MessageName;
-            ExprTypeRef MessageType;
-
-        public:
-            LTSTransitionIOBase(EFSMBase* TheEFSM,
-                                const vector<ExpT>& ParamInst,
-                                const LTSState& InitState,
-                                const ExpT& Guard,
-                                const vector<LTSAssignRef>& Updates,
-                                const string& MessageName,
-                                const ExprTypeRef& MessageType);
-            virtual ~LTSTransitionIOBase();
-
-            const string& GetMessageName() const;
-            const ExprTypeRef& GetMessageType() const;
-        };
-
-        class LTSTransitionInput : public LTSTransitionIOBase
-        {
-        public:
-            LTSTransitionInput(EFSMBase* TheEFSM,
-                               const vector<ExpT>& ParamInst,
-                               const LTSState& InitState,
-                               const ExpT& Guard,
-                               const vector<LTSAssignRef>& Updates,
-                               const string& MessageName,
-                               const ExprTypeRef& MessageType);
-            virtual ~LTSTransitionInput();
-
-            virtual string ToString(u32 Indent = 0) const override;
-        };
-
-        class LTSTransitionOutput : public LTSTransitionIOBase
-        {
-        private:
-            set<string> CompOfFairnessSets;
-
-        public:
-            LTSTransitionOutput(EFSMBase* TheEFSM,
-                                const vector<ExpT>& ParamInst,
-                                const LTSState& InitState,
-                                const ExpT& Guard,
-                                const vector<LTSAssignRef>& Updates,
-                                const string& MessageName,
-                                const ExprTypeRef& MessageType,
-                                const set<string>& CompOfFairnessSets);
-            virtual ~LTSTransitionOutput();
-
-            const set<string>& GetCompOfFairnessSets() const;
-
-            virtual string ToString(u32 Indent = 0) const override;
-        };
-
-        class LTSTransitionInternal : public LTSTransitionBase
-        {
-        private:
-            set<string> CompOfFairnessSets;
-
-        public:
-            LTSTransitionInternal(EFSMBase* TheEFSM,
-                                  const vector<ExpT>& ParamInst,
-                                  const LTSState& InitState,
-                                  const ExpT& Guard,
-                                  const vector<LTSAssignRef>& Updates,
-                                  const set<string>& CompOfFairnessSets);
-            virtual ~LTSTransitionInternal();
-
-            const set<string>& GetCompOfFairnessSets() const;
-            virtual string ToString(u32 Indent = 0) const override;
-        };
-
-        class LTSGuardedCommand : public RefCountable
-        {
-        private:
-            ExpT Guard;
-            vector<LTSAssignRef> Updates;
-            ExprTypeRef MsgType;
-            i32 MsgTypeID;
-            vector<LTSFairObjRef> FairnessObjs;
-            vector<LTSFairSetRef> FairnessSets;
-            vector<LTSTransRef> ProductTrans;
-            mutable u32 CmdID;
-
-        public:
-            LTSGuardedCommand(const ExpT& Guard,
-                              const vector<LTSAssignRef>& Updates,
-                              const ExprTypeRef& MsgType, i32 MsgTypeID,
-                              const set<LTSFairObjRef>& Fairnesses,
-                              const vector<LTSTransRef>& ProductTrans);
-            virtual ~LTSGuardedCommand();
-
-            const ExpT& GetGuard() const;
-            const vector<LTSAssignRef>& GetUpdates() const;
-            const ExprTypeRef& GetMsgType() const;
-            i32 GetMsgTypeID() const;
-            const vector<LTSFairObjRef>& GetFairnessObjs() const;
-            const vector<LTSFairSetRef>& GetFairnessSets() const;
-            const vector<LTSTransRef>& GetProductTransition() const;
-            u32 GetCmdID() const;
-            void SetCmdID(u32 CmdID) const;
-            string ToString() const;
-        };
-
-        class LTSInitState : public RefCountable
-        {
-        private:
-            vector<ExpT> Params;
-            ExpT Constraint;
-            vector<LTSAssignRef> Updates;
-
-        public:
-            LTSInitState(const vector<ExpT>& Params,
-                         const ExpT& Constraint,
-                         const vector<LTSAssignRef>& Updates);
-            virtual ~LTSInitState();
-            
-            const vector<ExpT>& GetParams() const;
-            const ExpT& GetConstraint() const;
-            const vector<LTSAssignRef>& GetUpdates() const;
-        };
-
         class LTSSymbTransitionBase : public RefCountable
         {
         protected:
@@ -256,6 +114,7 @@ namespace ESMC {
             LTSState InitState;
             ExpT Guard;
             vector<LTSAssignRef> Updates;
+            bool Tentative;
             
         public:
             LTSSymbTransitionBase(const vector<ExpT>& TransParams,
@@ -264,7 +123,8 @@ namespace ESMC {
                                   AutomatonBase* Automaton,
                                   const LTSState& InitState,
                                   const ExpT& Guard,
-                                  const vector<LTSAssignRef>& Updates);
+                                  const vector<LTSAssignRef>& Updates,
+                                  bool Tentative);
             virtual ~LTSSymbTransitionBase();
 
             const vector<ExpT>& GetTransParams() const;
@@ -274,6 +134,7 @@ namespace ESMC {
             const LTSState& GetInitState() const;
             const ExpT& GetGuard() const;
             const vector<LTSAssignRef>& GetUpdates() const;
+            bool IsTentative() const;
 
             virtual string ToString() const = 0;
 
@@ -325,7 +186,8 @@ namespace ESMC {
                                     const vector<LTSAssignRef>& Updates,
                                     const string& MessageName,
                                     const ExprTypeRef& MessageType,
-                                    const vector<ExpT>& MessageParams);
+                                    const vector<ExpT>& MessageParams,
+                                    bool Tentative);
             virtual ~LTSSymbIOTransitionBase();
 
             const string& GetMessageName() const;
@@ -358,6 +220,159 @@ namespace ESMC {
 
             virtual string ToString() const override;
         };
+
+        class LTSTransitionBase : public AutomatonTransitionBase
+        {
+        protected:
+            // The EFSM that this transition is a part of 
+            vector<LTSAssignRef> Updates;
+            LTSSymbTransRef SymbolicTransition;
+            
+        public:
+            LTSTransitionBase(EFSMBase* TheEFSM,
+                              const vector<ExpT>& ParamInst,
+                              const LTSState& InitState,
+                              const ExpT& Guard,
+                              const vector<LTSAssignRef>& Updates,
+                              const LTSSymbTransRef& SymbolicTransition);
+            virtual ~LTSTransitionBase();
+
+            EFSMBase* GetEFSM() const;
+            const vector<LTSAssignRef>& GetUpdates() const;
+            const LTSSymbTransRef& GetSymbolicTransition() const;
+            bool IsTentative() const;
+        };
+
+        class LTSTransitionIOBase : public LTSTransitionBase
+        {
+        protected:
+            string MessageName;
+            ExprTypeRef MessageType;
+
+        public:
+            LTSTransitionIOBase(EFSMBase* TheEFSM,
+                                const vector<ExpT>& ParamInst,
+                                const LTSState& InitState,
+                                const ExpT& Guard,
+                                const vector<LTSAssignRef>& Updates,
+                                const string& MessageName,
+                                const ExprTypeRef& MessageType,
+                                const LTSSymbTransRef& SymbolicTransition);
+            virtual ~LTSTransitionIOBase();
+
+            const string& GetMessageName() const;
+            const ExprTypeRef& GetMessageType() const;
+        };
+
+        class LTSTransitionInput : public LTSTransitionIOBase
+        {
+        public:
+            LTSTransitionInput(EFSMBase* TheEFSM,
+                               const vector<ExpT>& ParamInst,
+                               const LTSState& InitState,
+                               const ExpT& Guard,
+                               const vector<LTSAssignRef>& Updates,
+                               const string& MessageName,
+                               const ExprTypeRef& MessageType, 
+                               const LTSSymbTransRef& SymbolicTransition);
+            virtual ~LTSTransitionInput();
+
+            virtual string ToString(u32 Indent = 0) const override;
+        };
+
+        class LTSTransitionOutput : public LTSTransitionIOBase
+        {
+        private:
+            set<string> CompOfFairnessSets;
+
+        public:
+            LTSTransitionOutput(EFSMBase* TheEFSM,
+                                const vector<ExpT>& ParamInst,
+                                const LTSState& InitState,
+                                const ExpT& Guard,
+                                const vector<LTSAssignRef>& Updates,
+                                const string& MessageName,
+                                const ExprTypeRef& MessageType,
+                                const set<string>& CompOfFairnessSets,
+                                const LTSSymbTransRef& SymbolicTransition);
+            virtual ~LTSTransitionOutput();
+
+            const set<string>& GetCompOfFairnessSets() const;
+
+            virtual string ToString(u32 Indent = 0) const override;
+        };
+
+        class LTSTransitionInternal : public LTSTransitionBase
+        {
+        private:
+            set<string> CompOfFairnessSets;
+
+        public:
+            LTSTransitionInternal(EFSMBase* TheEFSM,
+                                  const vector<ExpT>& ParamInst,
+                                  const LTSState& InitState,
+                                  const ExpT& Guard,
+                                  const vector<LTSAssignRef>& Updates,
+                                  const set<string>& CompOfFairnessSets,
+                                  const LTSSymbTransRef& SymbolicTransition);
+            virtual ~LTSTransitionInternal();
+
+            const set<string>& GetCompOfFairnessSets() const;
+            virtual string ToString(u32 Indent = 0) const override;
+        };
+
+        class LTSGuardedCommand : public RefCountable
+        {
+        private:
+            ExpT Guard;
+            vector<LTSAssignRef> Updates;
+            ExprTypeRef MsgType;
+            i32 MsgTypeID;
+            vector<LTSFairObjRef> FairnessObjs;
+            vector<LTSFairSetRef> FairnessSets;
+            vector<LTSTransRef> ProductTrans;
+            mutable u32 CmdID;
+            bool Tentative;
+
+        public:
+            LTSGuardedCommand(const ExpT& Guard,
+                              const vector<LTSAssignRef>& Updates,
+                              const ExprTypeRef& MsgType, i32 MsgTypeID,
+                              const set<LTSFairObjRef>& Fairnesses,
+                              const vector<LTSTransRef>& ProductTrans);
+            virtual ~LTSGuardedCommand();
+
+            const ExpT& GetGuard() const;
+            const vector<LTSAssignRef>& GetUpdates() const;
+            const ExprTypeRef& GetMsgType() const;
+            i32 GetMsgTypeID() const;
+            const vector<LTSFairObjRef>& GetFairnessObjs() const;
+            const vector<LTSFairSetRef>& GetFairnessSets() const;
+            const vector<LTSTransRef>& GetProductTransition() const;
+            u32 GetCmdID() const;
+            void SetCmdID(u32 CmdID) const;
+            string ToString() const;
+            bool IsTentative() const;
+        };
+
+        class LTSInitState : public RefCountable
+        {
+        private:
+            vector<ExpT> Params;
+            ExpT Constraint;
+            vector<LTSAssignRef> Updates;
+
+        public:
+            LTSInitState(const vector<ExpT>& Params,
+                         const ExpT& Constraint,
+                         const vector<LTSAssignRef>& Updates);
+            virtual ~LTSInitState();
+            
+            const vector<ExpT>& GetParams() const;
+            const ExpT& GetConstraint() const;
+            const vector<LTSAssignRef>& GetUpdates() const;
+        };
+
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

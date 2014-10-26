@@ -188,7 +188,10 @@ namespace ESMC {
                     auto ExpTypeAsArrayType = ExpType->As<ExprArrayType>();
                     auto IndexType = ExpTypeAsArrayType->GetIndexType();
                     for (auto Element: IndexType->GetElementsNoUndef()) {
-                        auto ArrayElement = Exp->GetMgr()->MakeExpr(LTSOps::OpIndex, Exp, Exp->GetMgr()->MakeVal(Element, IndexType));
+                        auto ArrayElement = 
+                            Exp->GetMgr()->MakeExpr(LTSOps::OpIndex, 
+                                                    Exp, 
+                                                    Exp->GetMgr()->MakeVal(Element, IndexType));
                         ExpressionsToCheck.push_back(ArrayElement);
                     }
                 } else if (ExpType->Is<ExprRecordType>()) {
@@ -515,7 +518,8 @@ namespace ESMC {
                                                    it->second);
 
                 MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
-                MgrT::SubstMapT SubstMapForTransition = TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
+                MgrT::SubstMapT SubstMapForTransition = 
+                    TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
 
                 Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
                 Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
@@ -581,8 +585,10 @@ namespace ESMC {
             return PathCondition;
         }
 
-        vector<ExpT> TraceAnalyses::SymbolicExecution(LabelledTS* TheLTS, TraceBase* Trace,
-                                                      vector<vector<MgrT::SubstMapT>>& symbolic_states_per_initial)
+        vector<ExpT> 
+        TraceAnalyses::SymbolicExecution(LabelledTS* TheLTS, TraceBase* Trace,
+                                         vector<vector<MgrT::SubstMapT>>& 
+                                         symbolic_states_per_initial)
         {
             vector<ExpT> PathConditions;
             MgrT::SubstMapT Memory;
