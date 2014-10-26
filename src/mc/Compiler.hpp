@@ -141,12 +141,15 @@ namespace ESMC {
             // Failure could be due to undef values
             // or out of bounds values
             virtual bool Write(i64 Value, const StateVec* InStateVector, 
-                               StateVec* OutStateVector) const = 0;
+                               StateVec* OutStateVector) const 
+                __attribute__ ((warn_unused_result)) = 0;
+
             virtual i64 GetOffset(const StateVec* StateVector) const = 0;
 
             // Return success or failure, same as Write
             bool Update(const RValueInterpreter* RHS, const StateVec* InStateVector,
-                        StateVec* OutStateVector) const;
+                        StateVec* OutStateVector) const 
+                __attribute__ ((warn_unused_result));
         };
 
         class CompiledConstInterpreter : public RValueInterpreter

@@ -187,8 +187,13 @@ namespace ESMC {
 
             // Set of invariant expressions for bounds, etc.
             set<ExpT> BoundsInvariants;
+            ExpT DeadlockFreeInvariant;
 
-            inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);
+            // returns <Cmd, false> if successful
+            // returns <null, false> if no more commands
+            // returns <null, true> if exception
+            inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired,
+                                                    bool& Exception);
             inline void DoDFS(StateVec* Root);
             inline void DoBFS(const vector<StateVec*>& Roots);
 
@@ -208,6 +213,9 @@ namespace ESMC {
 
             void FoldTransMsgExp(const ExpT& Exp, const vector<GCmdRef>& Updates,
                                  u32 CurrentIndex);
+
+            inline void MakeIndexTermInvariants(const ExpT& Precondition,
+                                                const set<ExpT>& IndexTerms);
             inline void MakeBoundsInvariants();
 
         public:
@@ -232,16 +240,24 @@ namespace ESMC {
             vector<TraceBase*> GetAllDeadlocks();
             vector<TraceBase*> GetAllSafetyViolations();
         };
-
-        extern void ApplyUpdates(const vector<LTSAssignRef>& Updates, 
+        
+        // Returns false if exception encountered
+        extern bool ApplyUpdates(const vector<LTSAssignRef>& Updates, 
                                  const StateVec* InputState, 
                                  StateVec *OutputState);
 
+        // Returns null if exception encountered
         extern StateVec* ExecuteCommand(const GCmdRef& Cmd,
                                         const StateVec* InputState);
 
+        // returns <null, true> if command cannot be executed
+        // returns <statevec, true> if command CAN be executed
+        // returns <null, false> if command CAN be executed
+        // but results in an exception when actually executing it
+        // or if an error was encountered evaluating the guard of Cmd
         extern StateVec* TryExecuteCommand(const GCmdRef& Cmd,
-                                           const StateVec* InputState);
+                                           const StateVec* InputState,
+                                           bool& Exception);
 
     } /* end namespace MC */
 } /* end namespace ESMC */

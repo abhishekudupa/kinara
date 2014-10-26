@@ -319,7 +319,7 @@ namespace ESMC {
         using namespace Detail;
 
         // Extern helper function definitions
-        void ApplyUpdates(const vector<LTSAssignRef>& Updates, 
+        bool ApplyUpdates(const vector<LTSAssignRef>& Updates, 
                           const StateVec* InputState, 
                           StateVec* OutputState)
         {
@@ -328,9 +328,12 @@ namespace ESMC {
                 auto const& RHS = Update->GetRHS();
                 auto const& LHSInterp = LHS->ExtensionData.Interp->SAs<LValueInterpreter>();
                 auto const& RHSInterp = RHS->ExtensionData.Interp;
-                LHSInterp->Update(RHSInterp, InputState, OutputState);
+                auto Status = LHSInterp->Update(RHSInterp, InputState, OutputState);
+                if (!Status) {
+                    return false;
+                }
             }
-            return;
+            return true;
         }
 
         StateVec* ExecuteCommand(const GCmdRef& Cmd,
@@ -338,22 +341,36 @@ namespace ESMC {
         {
             auto Retval = InputState->Clone();
             auto const& Updates = Cmd->GetUpdates();
-            ApplyUpdates(Updates, InputState, Retval);
-            return Retval;
+            auto Status = ApplyUpdates(Updates, InputState, Retval);
+            if (!Status) {
+                Retval->Recycle();
+                return nullptr;
+            } else {
+                return Retval;
+            }
         }
 
         StateVec* TryExecuteCommand(const GCmdRef& Cmd,
-                                    const StateVec* InputState)
+                                    const StateVec* InputState,
+                                    bool& Exception)
         {
+            Exception = false;
+
             auto const& Guard = Cmd->GetGuard();
             auto GuardInterp = Guard->ExtensionData.Interp;
             auto Res = GuardInterp->Evaluate(InputState);
             if (Res == UndefValue) {
-                throw ESMCError((string)"Undefined value obtained while evaluating guard");
+                Exception = true;
+                return nullptr;
             } else if (Res == 0) {
                 return nullptr;
             } else {
-                return ExecuteCommand(Cmd, InputState);
+                auto OutState = ExecuteCommand(Cmd, InputState);
+                if (OutState == nullptr) {
+                    Exception = true;
+                    return nullptr;
+                }
+                return OutState;
             }
         }
 
@@ -391,6 +408,23 @@ namespace ESMC {
             return Retval;
         }
 
+        inline void LTSChecker::MakeIndexTermInvariants(const ExpT& Precondition,
+                                                        const set<ExpT>& IndexTerms)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            for (auto const& IndexTerm : IndexTerms) {
+                auto const& IndexType = IndexTerm->GetType();
+                auto Invar = Mgr->MakeExpr(LTSOps::OpEQ, IndexTerm,
+                                           Mgr->MakeVal(IndexType->GetClearValue(),
+                                                        IndexType));
+                Invar = Mgr->MakeExpr(LTSOps::OpNOT, Invar);
+                Invar = Mgr->MakeExpr(LTSOps::OpIMPLIES, Precondition, Invar);
+                Invar = Mgr->Simplify(Invar);
+                Compiler->CompileExp(Invar, TheLTS);
+                BoundsInvariants.insert(Invar);
+            }
+        }
+
         inline void LTSChecker::MakeBoundsInvariants()
         {
             auto Mgr = TheLTS->GetMgr();
@@ -398,15 +432,7 @@ namespace ESMC {
             for (auto const& Cmd : GuardedCommands) {
                 auto const& Guard = Cmd->GetGuard();
                 auto&& IndexTerms = GatherTermsInIndex(Guard);
-                for (auto const& IndexTerm : IndexTerms) {
-                    auto const& IndexType = IndexTerm->GetType();
-                    auto Invar = Mgr->MakeExpr(LTSOps::OpEQ, IndexTerm,
-                                               Mgr->MakeVal(IndexType->GetClearValue(),
-                                                            IndexType));
-                    Invar = Mgr->MakeExpr(LTSOps::OpNOT, Invar);
-                    Compiler->CompileExp(Invar, TheLTS);
-                    BoundsInvariants.insert(Invar);
-                }
+                MakeIndexTermInvariants(Mgr->MakeTrue(), IndexTerms);
             }
 
             // Second, IF the guard of a guarded command is true, then ALL
@@ -416,6 +442,51 @@ namespace ESMC {
             for (auto const& Cmd : GuardedCommands) {
                 auto const& Guard = Cmd->GetGuard();
                 auto const& Updates = Cmd->GetUpdates();
+                
+                for (auto const& Update : Updates) {
+                    auto const& LHS = Update->GetLHS();
+                    auto const& RHS = Update->GetRHS();
+
+                    auto&& IndexTermsLHS = GatherTermsInIndex(LHS);
+                    MakeIndexTermInvariants(Guard, IndexTermsLHS);
+                    auto&& IndexTermsRHS = GatherTermsInIndex(RHS);
+                    MakeIndexTermInvariants(Guard, IndexTermsRHS);
+                }
+            }
+
+            // Finally, IF the guard of a guarded command is true, then 
+            // the RHS of every update to a range typed term must be within
+            // the bounds of the range type
+            
+            for (auto const& Cmd : GuardedCommands) {
+                auto const& Guard = Cmd->GetGuard();
+                auto const& Updates = Cmd->GetUpdates();
+                
+                for (auto const& Update : Updates) {
+                    auto const& LHS = Update->GetLHS();
+                    auto const& RHS = Update->GetRHS();
+
+                    auto LValType = LHS->GetType();
+                    if (!LValType->Is<ExprRangeType>()) {
+                        continue;
+                    }
+
+                    // This is a range typed update
+                    auto TypeAsRange = LValType->SAs<ExprRangeType>();
+                    auto RangeLow = TypeAsRange->GetLow();
+                    auto RangeHigh = TypeAsRange->GetHigh();
+                    
+                    auto LowVal = Mgr->MakeVal(to_string(RangeLow), TypeAsRange);
+                    auto HighVal = Mgr->MakeVal(to_string(RangeHigh), TypeAsRange);
+
+                    auto LowConstraint = Mgr->MakeExpr(LTSOps::OpGE, RHS, LowVal);
+                    auto HighConstraint = Mgr->MakeExpr(LTSOps::OpLE, RHS, HighVal);
+
+                    auto BoundsConstraint = Mgr->MakeExpr(LTSOps::OpAND, LowConstraint,
+                                                          HighConstraint);
+                    BoundsConstraint = Mgr->MakeExpr(LTSOps::OpIMPLIES, Guard, BoundsConstraint);
+                    BoundsInvariants.insert(Mgr->Simplify(BoundsConstraint));
+                }
             }
         }
 
@@ -468,6 +539,21 @@ namespace ESMC {
                 }
             }
 
+            auto Mgr = TheLTS->GetMgr();
+            // Make the deadlock freedom invariant
+            vector<ExpT> DLFDisjunctions;
+            for (auto const& Cmd : GuardedCommands) {
+                DLFDisjunctions.push_back(Cmd->GetGuard());
+            }
+            if (DLFDisjunctions.size() == 0) {
+                DeadlockFreeInvariant = Mgr->MakeFalse();
+            } else if (DLFDisjunctions.size() == 1) {
+                DeadlockFreeInvariant = DLFDisjunctions[0];
+            } else {
+                DeadlockFreeInvariant = Mgr->MakeExpr(LTSOps::OpOR, DLFDisjunctions);
+            }
+            
+            // Make the invariant on undef and bounds
             MakeBoundsInvariants();
         }
 
@@ -497,13 +583,16 @@ namespace ESMC {
             }
         }
 
-        inline const GCmdRef& LTSChecker::GetNextEnabledCmd(StateVec* State, i64& LastFired)
+        inline const GCmdRef& LTSChecker::GetNextEnabledCmd(StateVec* State, i64& LastFired,
+                                                            bool& Exception)
         {
+            Exception = false;
             while(++LastFired < NumGuardedCmds) {
                 auto const& Guard = GuardedCommands[LastFired]->GetGuard();
                 auto GRes = Guard->ExtensionData.Interp->Evaluate(State);
                 if (GRes == UndefValue) {
-                    throw MCException(MCExceptionType::MCUNDEFVALUE, (u32)LastFired);
+                    Exception = true;
+                    return GCmdRef::NullPtr;
                 } else if (GRes != 0) {
                     return GuardedCommands[LastFired];
                 }
@@ -531,37 +620,37 @@ namespace ESMC {
                 StateVec* NextState = nullptr;
                 // StateVec* TempNextState = nullptr;
 
-                try {
-                    auto const& Cmd = GetNextEnabledCmd(State, LastFired);
-                    
-                    if (Cmd == GCmdRef::NullPtr) {
-                        if (Deadlocked) {
-                            // Remember this state, but continue on
-                            // with the AQS construction, we'll report
-                            // all counter-examples later
-                            AQS->AddDeadlockState(State, DFSStack.size());
-                        }
-                        // cout << "No more successors, popping from stack!" << endl;
-                        // Done exploring this state
-                        DFSStack.pop();
-                        continue;
-                    }
-                
-                    // Successors remain to be explored
-                    NextState = ExecuteCommand(Cmd, State);
+                bool Exception = false;
+                auto const& Cmd = GetNextEnabledCmd(State, LastFired, Exception);
 
-                    // cout << "Firing guarded command:" << endl;
-                    // cout << Cmd->ToString() << endl;
-                    // cout << "Got Next State (Uncanonicalized):" << endl;
-                    // cout << "--------------------------------------------------------" << endl;
-                    // Printer->PrintState(NextState, cout);
-                    // cout << "--------------------------------------------------------" << endl;
-                    // TempNextState = NextState->Clone();
-
-                } catch (const MCException& Exc) {
-                    // TODO: Handle MCException into safety trace
+                if (Exception) {
+                    // TODO: Handle exception
                 }
-
+                    
+                if (Cmd == GCmdRef::NullPtr) {
+                    if (Deadlocked) {
+                        // Remember this state, but continue on
+                        // with the AQS construction, we'll report
+                        // all counter-examples later
+                        AQS->AddDeadlockState(State, DFSStack.size());
+                    }
+                    // cout << "No more successors, popping from stack!" << endl;
+                    // Done exploring this state
+                    DFSStack.pop();
+                    continue;
+                }
+                
+                // Successors remain to be explored
+                NextState = ExecuteCommand(Cmd, State);
+                
+                // cout << "Firing guarded command:" << endl;
+                // cout << Cmd->ToString() << endl;
+                // cout << "Got Next State (Uncanonicalized):" << endl;
+                // cout << "--------------------------------------------------------" << endl;
+                // Printer->PrintState(NextState, cout);
+                // cout << "--------------------------------------------------------" << endl;
+                // TempNextState = NextState->Clone();
+                
                 
                 u32 PermID;
                 auto CanonState = TheCanonicalizer->Canonicalize(NextState, PermID);
@@ -638,11 +727,11 @@ namespace ESMC {
                     auto const& Cmd = GuardedCommands[i];
 
                     StateVec* NextState = nullptr;
-
-                    try {
-                        NextState = TryExecuteCommand(Cmd, CurState);
-                    } catch (const MCException& Exc) {
-                        // TODO: Handle MCException to safety violation
+                    bool Exception = false;
+                    
+                    NextState = TryExecuteCommand(Cmd, CurState, Exception);
+                    if (Exception) {
+                        // TODO: Handle exception
                     }
 
                     if (NextState != nullptr) {

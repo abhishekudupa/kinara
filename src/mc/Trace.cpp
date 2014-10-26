@@ -119,7 +119,10 @@ namespace ESMC {
                 // unwound state to the next unwound state
                 bool FoundCmd = false;
                 for (auto const& Cmd : GuardedCommands) {
-                    auto CandidateState = TryExecuteCommand(Cmd, CurUnwoundState);
+
+                    // Ignore the exception here
+                    bool Exception = false;
+                    auto CandidateState = TryExecuteCommand(Cmd, CurUnwoundState, Exception);
                     if (CandidateState == nullptr) {
                         continue;
                     }
@@ -178,7 +181,10 @@ namespace ESMC {
                 // find out which command takes us here
                 bool FoundCmd = false;
                 for (auto const& Cmd : GuardedCommands) {
-                    auto CandidateSV = TryExecuteCommand(Cmd, CurUnwoundState->GetSVPtr());
+                    // we ignore the exception here
+                    bool Exception = false;
+                    auto CandidateSV = TryExecuteCommand(Cmd, CurUnwoundState->GetSVPtr(), 
+                                                         Exception);
                     if (CandidateSV == nullptr) {
                         continue;
                     }
@@ -311,7 +317,11 @@ namespace ESMC {
                     bool FoundCmd = false;
                     for (u32 i = 0; i < NumGuardedCmds; ++i) {
                         auto const& Cmd = GuardedCmds[i];
-                        auto CandidateSV = TryExecuteCommand(Cmd, CurUnwoundPS->GetSVPtr());
+
+                        // We ignore the exception here
+                        bool Exception = false;
+                        auto CandidateSV = TryExecuteCommand(Cmd, CurUnwoundPS->GetSVPtr(),
+                                                             Exception);
                         if (CandidateSV == nullptr) {
                             continue;
                         }
@@ -416,8 +426,11 @@ namespace ESMC {
                         auto PS = TraceElem.second;
                         bool FoundOne = false;
                         for (auto SatCmd : SatCmds) {
+
+                            // We ignore the exception here
+                            bool Exception = false;
                             auto NS = TryExecuteCommand(GuardedCmds[SatCmd], 
-                                                        PS->GetSVPtr());
+                                                        PS->GetSVPtr(), Exception);
                             if (NS != nullptr) {
                                 NS->Recycle();
                                 FoundOne = true;
@@ -534,8 +547,11 @@ namespace ESMC {
                                     [&] (u32 CmdID, const ProductState* State) -> bool
                                     {
                                         for (auto SatCmdID : SatCmds) {
+                                            // we ignore exceptions here
+                                            bool Exception = false;
                                             auto NS = TryExecuteCommand(GuardedCmds[SatCmdID], 
-                                                                        State->GetSVPtr());
+                                                                        State->GetSVPtr(),
+                                                                        Exception);
                                             if (NS != nullptr) {
                                                 NS->Recycle();
                                                 return false;
