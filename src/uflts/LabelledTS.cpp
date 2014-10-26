@@ -360,7 +360,7 @@ namespace ESMC {
                                                          Trans->GetUpdates(),
                                                          ExprTypeRef::NullPtr,
                                                          -1, ActualFairSet,
-                                                         {CurTrans});
+                                                         {Trans});
                     GuardedCommands.push_back(CurGCmd);
                     GuardedCommands.back()->SetCmdID(GCmdCounter++);
                 }

@@ -8,7 +8,7 @@ BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
 CXX?=g++
 
-CXXFLAGS=-std=c++11 -Wall -pipe
+CXXFLAGS=-std=c++11 -Wall -pedantic -Wno-gnu-folding-constant -pipe
 CXXFLAGS+=-I/usr/local/Cellar/google-sparsehash/2.0.2/include/sparsehash/ -I/usr/local/include/
 
 PROJECT_MODULES= \
