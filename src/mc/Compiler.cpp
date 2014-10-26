@@ -44,6 +44,7 @@
 #include "../uflts/LTSTransitions.hpp"
 #include "../uflts/LTSAssign.hpp"
 #include "../tpinterface/TheoremProver.hpp"
+#include "../uflts/LTSFairnessSet.hpp"
 
 #include "Compiler.hpp"
 #include "StateVec.hpp"
@@ -70,12 +71,6 @@ namespace ESMC {
         void OffsetCompiler::VisitVarExpression(const VarExpT* Exp)
         {
             if (Exp->ExtensionData.Offset != -1) {
-                return;
-            }
-            if (Exp->GetVarName() == TheLTS->GetProductMsgName() &&
-                Exp->GetVarType() == TheLTS->GetUnifiedMType()) {
-                Exp->ExtensionData.Offset = 0;
-                Exp->ExtensionData.IsMsg = true;
                 return;
             }
             if (Exp->GetVarType()->Is<ExprFieldAccessType>()) {
@@ -134,7 +129,6 @@ namespace ESMC {
             auto const& Children = Exp->GetChildren();
 
             if (OpCode == LTSOps::OpIndex) {
-                Exp->ExtensionData.IsMsg = Children[0]->ExtensionData.IsMsg;
                 if (Children[0]->ExtensionData.Offset != -1 &&
                     Children[1]->Is<ConstExpression>()) {
                     auto ArrayType = Children[0]->GetType()->As<ExprArrayType>();
@@ -157,7 +151,6 @@ namespace ESMC {
             }
 
             if (OpCode == LTSOps::OpField) {
-                Exp->ExtensionData.IsMsg = Children[0]->ExtensionData.IsMsg;
                 auto ChildAsVar = Children[1]->As<VarExpression>();
                 auto const& FieldName = ChildAsVar->GetVarName();
                 auto RecType = Children[0]->GetType()->As<ExprRecordType>();
@@ -209,7 +202,7 @@ namespace ESMC {
 
             // Compiled LValue
             if (Ext.Offset != -1) {
-                Ext.Interp = new CompiledLValueInterpreter(Ext.IsMsg, Ext.Offset, Exp);
+                Ext.Interp = new CompiledLValueInterpreter(Ext.Offset, Exp);
                 Compiler->RegisterInterp(Ext.Interp);
                 return;
             }
@@ -295,8 +288,7 @@ namespace ESMC {
                     throw InternalError((string)"Expected an LValueInterpreter.\nAt: " +
                                         __FILE__ + ":" + to_string(__LINE__));
                 }
-                Ext.Interp = new IndexInterpreter(Ext.IsMsg, 
-                                                  SubInterps[0]->SAs<LValueInterpreter>(),
+                Ext.Interp = new IndexInterpreter(SubInterps[0]->SAs<LValueInterpreter>(),
                                                   SubInterps[1], Exp);
                 break;
 
@@ -309,8 +301,7 @@ namespace ESMC {
                 auto const& FieldName = Children[1]->SAs<VarExpression>()->GetVarName();
                 auto FieldOffset = RecType->GetFieldOffset(FieldName);
                 
-                Ext.Interp = new FieldInterpreter(Ext.IsMsg, 
-                                                  SubInterps[0]->SAs<LValueInterpreter>(),
+                Ext.Interp = new FieldInterpreter(SubInterps[0]->SAs<LValueInterpreter>(),
                                                   FieldOffset, Exp);
                                                   
             }
@@ -331,8 +322,8 @@ namespace ESMC {
             return;
         }
 
-        LValueInterpreter::LValueInterpreter(bool Msg, ExpPtrT Exp)
-            : RValueInterpreter(Exp), Msg(Msg)
+        LValueInterpreter::LValueInterpreter(ExpPtrT Exp)
+            : RValueInterpreter(Exp)
         {
             auto const& Type  = Exp->GetType();
             Scalar = Type->Is<ExprScalarType>();
@@ -368,11 +359,6 @@ namespace ESMC {
             return High;
         }
 
-        bool LValueInterpreter::IsMsg() const
-        {
-            return Msg;
-        }
-
         bool LValueInterpreter::IsScalar() const
         {
             return Scalar;
@@ -383,11 +369,11 @@ namespace ESMC {
             return Size;
         }
 
-        void LValueInterpreter::Update(const RValueInterpreter *RHS, 
+        bool LValueInterpreter::Update(const RValueInterpreter *RHS, 
                                        const StateVec *InStateVector, 
                                        StateVec *OutStateVector) const
         {
-            Write(RHS->Evaluate(InStateVector), InStateVector, OutStateVector);
+            return Write(RHS->Evaluate(InStateVector), InStateVector, OutStateVector);
         }
         
         CompiledConstInterpreter::CompiledConstInterpreter(i64 Value, ExpPtrT Exp)
@@ -406,10 +392,8 @@ namespace ESMC {
             return Value;
         }
 
-        CompiledLValueInterpreter::CompiledLValueInterpreter(bool Msg, 
-                                                             u32 Offset, 
-                                                             ExpPtrT Exp)
-            : LValueInterpreter(Msg, Exp), Offset(Offset)
+        CompiledLValueInterpreter::CompiledLValueInterpreter(u32 Offset, ExpPtrT Exp)
+            : LValueInterpreter(Exp), Offset(Offset)
         {
             // Nothing here
         }
@@ -426,27 +410,17 @@ namespace ESMC {
                                     "\nAt: " + __FILE__ + ":" + to_string(__LINE__));
             }
             i64 RawVal = 0;
-            if (Msg) {
-                if (Size == 1) {
-                    RawVal = StateVector->ReadByteMsg(Offset);
-                } else if (Size == 2) {
-                    RawVal = StateVector->ReadShortMsg(Offset);
-                } else if (Size == 4) {
-                    RawVal = StateVector->ReadWordMsg(Offset);
-                }
-            } else {
-                if (Size == 1) {
-                    RawVal = StateVector->ReadByte(Offset);
-                } else if (Size == 2) {
-                    RawVal = StateVector->ReadShort(Offset);
-                } else if (Size == 4) {
-                    RawVal = StateVector->ReadWord(Offset);
-                }
+            if (Size == 1) {
+                RawVal = StateVector->ReadByte(Offset);
+            } else if (Size == 2) {
+                RawVal = StateVector->ReadShort(Offset);
+            } else if (Size == 4) {
+                RawVal = StateVector->ReadWord(Offset);
             }
             return RawVal + Low;
         }
 
-        void CompiledLValueInterpreter::Write(i64 Value, const StateVec* InStateVector,
+        bool CompiledLValueInterpreter::Write(i64 Value, const StateVec* InStateVector,
                                               StateVec* StateVector) const 
         {
             i64 RawValue = 0;
@@ -455,27 +429,19 @@ namespace ESMC {
             }
 
             if (Value < Low || Value > High) {
-                throw MCException(MCExceptionType::MCOOBWRITE, 0);
+                return false;
             } else {
                 RawValue = Value - Low;
             }
-            if (Msg) {
-                if (Size == 1) {
-                    StateVector->WriteByteMsg(Offset, (u08)RawValue);
-                } else if (Size == 2) {
-                    StateVector->WriteShortMsg(Offset, (u16)RawValue);
-                } else if (Size == 4) {
-                    StateVector->WriteWordMsg(Offset, (u32)RawValue);
-                }
-            } else {
-                if (Size == 1) {
-                    StateVector->WriteByte(Offset, (u08)RawValue);
-                } else if (Size == 2) {
-                    StateVector->WriteShort(Offset, (u16)RawValue);
-                } else if (Size == 4) {
-                    StateVector->WriteWord(Offset, (u32)RawValue);
-                }
+            if (Size == 1) {
+                StateVector->WriteByte(Offset, (u08)RawValue);
+            } else if (Size == 2) {
+                StateVector->WriteShort(Offset, (u16)RawValue);
+            } else if (Size == 4) {
+                StateVector->WriteWord(Offset, (u32)RawValue);
             }
+
+            return true;
         }
 
         i64 CompiledLValueInterpreter::GetOffset(const StateVec* StateVector) const
@@ -936,11 +902,10 @@ namespace ESMC {
             return (SubEvals[0] <= SubEvals[1]);
         }
 
-        IndexInterpreter::IndexInterpreter(bool Msg,
-                                           LValueInterpreter* ArrayInterp,
+        IndexInterpreter::IndexInterpreter(LValueInterpreter* ArrayInterp,
                                            RValueInterpreter* IndexInterp,
                                            ExpPtrT Exp)
-            : LValueInterpreter(Msg, Exp),
+            : LValueInterpreter(Exp),
               ArrayInterp(ArrayInterp), IndexInterp(IndexInterp)
         {
             auto const& ArrayType = ArrayInterp->GetExp()->GetType();
@@ -966,13 +931,7 @@ namespace ESMC {
                 return UndefValue;
             }
 
-            const u08* BasePtr = nullptr;
-            if (Msg) {
-                BasePtr = StateVector->GetMsgBuffer();
-            } else {
-                BasePtr = StateVector->GetStateBuffer();
-            }
-
+            auto BasePtr = StateVector->GetStateBuffer();
             auto DstPtr = BasePtr + Offset;
 
             i64 RawVal = 0;
@@ -987,7 +946,7 @@ namespace ESMC {
             return RawVal + Low;
         }
 
-        void IndexInterpreter::Write(i64 Value, const StateVec* InStateVector,
+        bool IndexInterpreter::Write(i64 Value, const StateVec* InStateVector,
                                      StateVec* StateVector) const
         {
             if (!Scalar) {
@@ -996,15 +955,9 @@ namespace ESMC {
 
             auto Offset = GetOffset(InStateVector);
             if (Offset == UndefValue) {
-                throw MCException(MCExceptionType::MCUNDEFVALUE, 0);
+                return false;
             }
-            u08* BasePtr = nullptr;
-            if (Msg) {
-                BasePtr = StateVector->GetMsgBuffer();
-            } else {
-                BasePtr = StateVector->GetStateBuffer();
-            }
-
+            auto BasePtr = StateVector->GetStateBuffer();
             auto DstPtr = BasePtr + Offset;
 
             i64 RawVal = Value - Low;
@@ -1016,6 +969,8 @@ namespace ESMC {
             } else {
                 *((u32*)(DstPtr)) = (u32)RawVal;
             }
+            
+            return true;
         }
 
         i64 IndexInterpreter::GetOffset(const StateVec* StateVector) const
@@ -1036,11 +991,9 @@ namespace ESMC {
             return BaseOffset + (IndexValue * ElemSize);
         }
 
-        FieldInterpreter::FieldInterpreter(bool Msg,
-                                           LValueInterpreter* RecInterp,
-                                           u32 FieldOffset,
-                                           ExpPtrT Exp)
-            : LValueInterpreter(Msg, Exp),
+        FieldInterpreter::FieldInterpreter(LValueInterpreter* RecInterp,
+                                           u32 FieldOffset, ExpPtrT Exp)
+            : LValueInterpreter(Exp),
               RecInterp(RecInterp), FieldOffset(FieldOffset)
         {
             // Nothing here
@@ -1057,12 +1010,7 @@ namespace ESMC {
                 throw ESMCError((string)"Evaluate() called on non-scalar type");
             }
 
-            const u08* BasePtr;
-            if (Msg) {
-                BasePtr = StateVector->GetMsgBuffer();
-            } else {
-                BasePtr = StateVector->GetStateBuffer();
-            }
+            auto BasePtr = StateVector->GetStateBuffer();
 
             auto Offset = GetOffset(StateVector);
             if (Offset == UndefValue) {
@@ -1091,7 +1039,7 @@ namespace ESMC {
             return BaseOffset + FieldOffset;
         }
 
-        void FieldInterpreter::Write(i64 Value, const StateVec* InStateVector,
+        bool FieldInterpreter::Write(i64 Value, const StateVec* InStateVector,
                                      StateVec* StateVector) const
         {
             if (!Scalar) {
@@ -1100,16 +1048,11 @@ namespace ESMC {
 
             i64 RawVal = Value - Low;
 
-            u08* BasePtr = nullptr;
-            if (Msg) {
-                BasePtr = StateVector->GetMsgBuffer();
-            } else {
-                BasePtr = StateVector->GetStateBuffer();
-            }
-            
+            auto BasePtr = StateVector->GetStateBuffer();
             auto Offset = GetOffset(InStateVector);
+
             if (Offset == UndefValue) {
-                throw MCException(MCExceptionType::MCUNDEFVALUE, 0);
+                return false;
             }
             auto DstPtr = BasePtr + Offset;
 
@@ -1120,6 +1063,8 @@ namespace ESMC {
             } else {
                 *((u32*)(DstPtr)) = (u32)RawVal;
             }
+
+            return true;
         }
 
         LTSCompiler::LTSCompiler()
@@ -1168,11 +1113,63 @@ namespace ESMC {
                     CompileExp(Update->GetRHS(), TheLTS);
                 }
             }
+        }
+        
+        inline bool LTSCompiler::HasMsgLValue(const ExpT& Exp, ESMC::LTS::LabelledTS* TheLTS)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto&& Vars = 
+                Mgr->Gather(Exp, 
+                            [&] (const ExpBaseT* Exp) -> bool 
+                            {
+                                auto ExpAsVar = Exp->As<VarExpression>();
+                                if (ExpAsVar != nullptr) {
+                                    if (ExpAsVar->GetType() == TheLTS->GetUnifiedMType() &&
+                                        ExpAsVar->GetVarName() == TheLTS->GetProductMsgName()) {
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            });
+            return (Vars.size() > 0);
+        }
 
-            for (auto const& Update : TheLTS->GetMsgBufferClearUpdates()) {
-                CompileExp(Update->GetLHS(), TheLTS);
-                CompileExp(Update->GetRHS(), TheLTS);
+        // Removes the dependence on the __trans_msg__ variable
+        vector<GCmdRef> LTSCompiler::CompileCommands(const vector<GCmdRef>& Commands,
+                                                     LabelledTS* TheLTS)
+        {
+            vector<GCmdRef> Retval;
+            auto Mgr = TheLTS->GetMgr();
+            for (auto const& Cmd : Commands) {
+                MgrT::SubstMapT SubstMap;
+                auto const& Updates = Cmd->GetUpdates();
+                vector<LTSAssignRef> NewUpdates;
+                for (auto const& Update : Updates) {
+                    auto const& LHS = Update->GetLHS();
+                    auto const& RHS = Update->GetRHS();
+
+                    if (HasMsgLValue(LHS, TheLTS)) {
+                        SubstMap[LHS] = Mgr->TermSubstitute(SubstMap, RHS);
+                    } else {
+                        auto NewRHS = Mgr->TermSubstitute(SubstMap, RHS);
+                        auto SimpLHS = Mgr->Simplify(LHS);
+                        auto SimpRHS = Mgr->Simplify(NewRHS);
+                        NewUpdates.push_back(new LTSAssignSimple(SimpLHS, SimpRHS));
+                    }
+                }
+
+                set<LTSFairObjRef> FairObjSet(Cmd->GetFairnessObjs().begin(),
+                                              Cmd->GetFairnessObjs().end());
+
+                Retval.push_back(new LTSGuardedCommand(Mgr->Simplify(Cmd->GetGuard()),
+                                                       NewUpdates, 
+                                                       Cmd->GetMsgType(),
+                                                       Cmd->GetMsgTypeID(),
+                                                       FairObjSet,
+                                                       Cmd->GetProductTransition()));
+                Retval.back()->SetCmdID(Cmd->GetCmdID());
             }
+            return Retval;
         }
 
         void LTSCompiler::UpdateModel(const Z3Model& Model)

@@ -337,7 +337,6 @@ namespace ESMC {
                                  const StateVec* InputState)
         {
             auto Retval = InputState->Clone();
-            Retval->ClearMsgBuffer();
             auto const& Updates = Cmd->GetUpdates();
             ApplyUpdates(Updates, InputState, Retval);
             return Retval;
@@ -358,19 +357,77 @@ namespace ESMC {
             }
         }
 
+        inline set<ExpT> LTSChecker::GatherTermsInIndex(const ExpT& Exp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+
+            // first, gather array terms which are indexed by a variable
+            auto&& ArrayTerms = 
+                Mgr->Gather(Exp, 
+                            [&] (const ExpBaseT* ExpPtr) -> bool
+                            {
+                                auto ExpAsOp = ExpPtr->As<OpExpression>();
+                                if (ExpAsOp == nullptr) {
+                                    return false;
+                                }
+                                if (ExpAsOp->GetOpCode() != LTSOps::OpIndex) {
+                                    return false;
+                                }
+                                auto const& Children = ExpAsOp->GetChildren();
+                                if (!Children[1]->Is<ConstExpression>()) {
+                                    return true;
+                                }
+                                return false;
+                            });
+
+            // Now, gather the terms used as index
+            set<ExpT> Retval;
+            for (auto const& ArrayTerm : ArrayTerms) {
+                auto ExpAsOp = ArrayTerm->SAs<OpExpression>();
+                auto const& Children = ExpAsOp->GetChildren();
+                Retval.insert(Children[1]);
+            }
+            
+            return Retval;
+        }
+
+        inline void LTSChecker::MakeBoundsInvariants()
+        {
+            auto Mgr = TheLTS->GetMgr();
+            // First, ALL index terms used in guards must never be undef
+            for (auto const& Cmd : GuardedCommands) {
+                auto const& Guard = Cmd->GetGuard();
+                auto&& IndexTerms = GatherTermsInIndex(Guard);
+                for (auto const& IndexTerm : IndexTerms) {
+                    auto const& IndexType = IndexTerm->GetType();
+                    auto Invar = Mgr->MakeExpr(LTSOps::OpEQ, IndexTerm,
+                                               Mgr->MakeVal(IndexType->GetClearValue(),
+                                                            IndexType));
+                    Invar = Mgr->MakeExpr(LTSOps::OpNOT, Invar);
+                    Compiler->CompileExp(Invar, TheLTS);
+                    BoundsInvariants.insert(Invar);
+                }
+            }
+
+            // Second, IF the guard of a guarded command is true, then ALL
+            // the index terms used in the LHS or RHS of updates can never 
+            // be undef
+
+            for (auto const& Cmd : GuardedCommands) {
+                auto const& Guard = Cmd->GetGuard();
+                auto const& Updates = Cmd->GetUpdates();
+            }
+        }
+
         LTSChecker::LTSChecker(LabelledTS* TheLTS)
-            : TheLTS(TheLTS), AQS(nullptr), ThePS(nullptr),
-              ExceptionState(nullptr), 
-              MsgBufferClearUpdates(TheLTS->GetMsgBufferClearUpdates())
+            : TheLTS(TheLTS), AQS(nullptr), ThePS(nullptr)
         {
             // Freeze the LTS in any case
             TheLTS->Freeze();
 
             Compiler = new LTSCompiler();
             Compiler->CompileLTS(TheLTS);
-            Factory = new StateFactory(TheLTS->StateVectorSize,
-                                       TheLTS->GetUnifiedMType()->GetByteSize(),
-                                       MsgBufferClearUpdates);
+            Factory = new StateFactory(TheLTS->StateVectorSize);
             Printer = new StateVecPrinter(TheLTS, Compiler);
             TheCanonicalizer = new Canonicalizer(TheLTS, Printer);
             GuardedCommands = TheLTS->GetGuardedCmds();
@@ -410,6 +467,8 @@ namespace ESMC {
                     }
                 }
             }
+
+            MakeBoundsInvariants();
         }
 
         LTSChecker::~LTSChecker()
@@ -454,8 +513,6 @@ namespace ESMC {
 
         inline void LTSChecker::DoDFS(StateVec *Root)
         {
-            ExceptionState = nullptr;
-            
             stack<DFSStackEntry> DFSStack;
             AQS->InsertInitState(Root);
             DFSStack.push(DFSStackEntry(Root));
@@ -502,10 +559,7 @@ namespace ESMC {
                     // TempNextState = NextState->Clone();
 
                 } catch (const MCException& Exc) {
-                    ExceptionState = State;
-                    ExceptionType = Exc.GetType();
-                    ExceptionCmdID = LastFired;
-                    return;
+                    // TODO: Handle MCException into safety trace
                 }
 
                 
@@ -565,7 +619,6 @@ namespace ESMC {
 
         inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots)
         {
-            ExceptionState = nullptr;
             deque<StateVec*> BFSQueue(Roots.begin(), Roots.end());
             for (auto State : BFSQueue) {
                 AQS->InsertInitState(State);
@@ -589,10 +642,7 @@ namespace ESMC {
                     try {
                         NextState = TryExecuteCommand(Cmd, CurState);
                     } catch (const MCException& Exc) {
-                        ExceptionState = CurState;
-                        ExceptionType = Exc.GetType();
-                        ExceptionCmdID = Exc.GetCmdID();
-                        return;
+                        // TODO: Handle MCException to safety violation
                     }
 
                     if (NextState != nullptr) {
@@ -658,7 +708,6 @@ namespace ESMC {
 
             for (auto const& ISGen : ISGens) {
                 auto CurState = Factory->MakeState();
-                CurState->ClearMsgBuffer();
                 ApplyUpdates(ISGen, ZeroState, CurState);
 
                 cout << "Initial State:" << endl;
@@ -683,15 +732,8 @@ namespace ESMC {
             } else {
                 DoBFS(InitStates);
             }
-
-            // Did we hit an exception while building AQS?
-            if (ExceptionState != nullptr) {
-                auto CurTrace = 
-                    TraceBase::MakeMCExceptionTrace(ExceptionState, ExceptionType, 
-                                                    ExceptionCmdID, this);
-                Retval.push_back(CurTrace);
-                return Retval;
-            }
+            
+            // TODO: Handle any violations found during model checking
 
             cout << "AQS Built!" << endl;
             cout << "AQS contains " << AQS->GetNumStates() << " states and " 

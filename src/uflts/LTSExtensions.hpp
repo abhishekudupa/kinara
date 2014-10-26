@@ -56,7 +56,6 @@ namespace ESMC {
         class LTSExtensionT
         {
         public:
-            bool IsMsg;
             // Offset != -1 ==> Fixed offset
             i32 Offset;
             // info about constants

@@ -46,7 +46,7 @@ namespace ESMC {
     namespace LTS {
 
         LTSExtensionT::LTSExtensionT()
-            : IsMsg(false), Offset(-1), 
+            : Offset(-1), 
               ConstCompiled(false), 
               ConstVal(0), 
               FieldOffset(0),

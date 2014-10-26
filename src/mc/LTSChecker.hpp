@@ -185,11 +185,8 @@ namespace ESMC {
             map<string, StateBuchiAutomaton*> StateBuchiAutomata;
             map<string, MsgBuchiAutomaton*> MsgBuchiAutomata;
 
-            StateVec* ExceptionState;
-            MCExceptionType ExceptionType;
-            u32 ExceptionCmdID;
-
-            vector<LTSAssignRef> MsgBufferClearUpdates;
+            // Set of invariant expressions for bounds, etc.
+            set<ExpT> BoundsInvariants;
 
             inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);
             inline void DoDFS(StateVec* Root);
@@ -206,6 +203,12 @@ namespace ESMC {
 
             inline unordered_set<const ProductState*> ExpandSCC(const ProductState* SCCRoot);
             inline vector<TraceBase*> MakeFairTrace(const ProductState* SCCRoot);
+            
+            inline set<ExpT> GatherTermsInIndex(const ExpT& Exp);
+
+            void FoldTransMsgExp(const ExpT& Exp, const vector<GCmdRef>& Updates,
+                                 u32 CurrentIndex);
+            inline void MakeBoundsInvariants();
 
         public:
             LTSChecker(LabelledTS* TheLTS);

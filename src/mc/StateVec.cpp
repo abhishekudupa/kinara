@@ -101,46 +101,6 @@ namespace ESMC {
             *ActPointer = Value;
         }
 
-        u08 StateVec::ReadByteMsg(u32 Offset) const
-        {
-            auto StateBuffer = Factory->GetMsgBuffer();
-            return StateBuffer[Offset];
-        }
-
-        void StateVec::WriteByteMsg(u32 Offset, u08 Value)
-        {
-            auto StateBuffer = Factory->GetMsgBuffer();
-            StateBuffer[Offset] = Value;
-        }
-
-        u16 StateVec::ReadShortMsg(u32 Offset) const
-        {
-            auto StateBuffer = Factory->GetMsgBuffer();
-            u16* ActPointer = (u16*)(StateBuffer + Offset);
-            return *ActPointer;
-        }
-
-        void StateVec::WriteShortMsg(u32 Offset, u16 Value)
-        {
-            auto StateBuffer = Factory->GetMsgBuffer();
-            u16* ActPointer = (u16*)(StateBuffer + Offset);
-            *ActPointer = Value;
-        }
-
-        u32 StateVec::ReadWordMsg(u32 Offset) const
-        {
-            auto StateBuffer = Factory->GetMsgBuffer();
-            u32* ActPointer = (u32*)(StateBuffer + Offset);
-            return *ActPointer;
-        }
-
-        void StateVec::WriteWordMsg(u32 Offset, u32 Value)
-        {
-            auto StateBuffer = Factory->GetMsgBuffer();
-            u32* ActPointer = (u32*)(StateBuffer + Offset);
-            *ActPointer = Value;
-        }        
-
         u08& StateVec::operator [] (u32 Offset)
         {
             return StateBuffer[Offset];
@@ -154,11 +114,6 @@ namespace ESMC {
         u32 StateVec::GetSize() const
         {
             return Factory->GetSize();
-        }
-
-        u32 StateVec::GetMsgSize() const
-        {
-            return Factory->GetMsgSize();
         }
 
         bool StateVec::Equals(const StateVec& Other) const
@@ -208,30 +163,11 @@ namespace ESMC {
             return Factory;
         }
 
-        u08* StateVec::GetMsgBuffer()
-        {
-            return Factory->GetMsgBuffer();
-        }
-
-        const u08* StateVec::GetMsgBuffer() const
-        {
-            return Factory->GetMsgBuffer();
-        }
-
-        void StateVec::ClearMsgBuffer()
-        {
-            Factory->ClearMsgBuffer(this);
-        }
-
-        StateFactory::StateFactory(u32 StateSize, u32 MsgSize,
-                                   const vector<LTS::LTSAssignRef>& MsgClearUpdates)
+        StateFactory::StateFactory(u32 StateSize)
             : StateSize(StateSize),
               StateVecPool(new boost::pool<>(sizeof(StateVec))),
               StateVecBufferPool(new boost::pool<>(StateSize)),
-              NumActiveStates(0),
-              MsgSize(MsgSize),
-              MsgBuffer((u08*)calloc(sizeof(u08), MsgSize)),
-              MsgClearUpdates(MsgClearUpdates)
+              NumActiveStates(0)
         {
             // Nothing here
         }
@@ -240,18 +176,6 @@ namespace ESMC {
         {
             delete StateVecPool;
             delete StateVecBufferPool;
-            free(MsgBuffer);
-        }
-
-        void StateFactory::ClearMsgBuffer(StateVec* SV)
-        {
-            memset(MsgBuffer, 0, MsgSize);
-            ApplyUpdates(MsgClearUpdates, SV, SV);
-        }
-        
-        u08* StateFactory::GetMsgBuffer()
-        {
-            return MsgBuffer;
         }
 
         StateVec* StateFactory::MakeState()
@@ -293,11 +217,6 @@ namespace ESMC {
         u32 StateFactory::GetSize() const
         {
             return StateSize;
-        }
-
-        u32 StateFactory::GetMsgSize() const
-        {
-            return MsgSize;
         }
 
         u32 StateFactory::GetNumActiveStates() const

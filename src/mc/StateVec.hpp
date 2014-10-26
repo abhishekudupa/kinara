@@ -72,17 +72,6 @@ namespace ESMC {
             u32 ReadWord(u32 Offset) const;
             void WriteWord(u32 Offset, u32 Value);
 
-            u08 ReadByteMsg(u32 Offset) const;
-            void WriteByteMsg(u32 Offset, u08 Value);
-
-            u16 ReadShortMsg(u32 Offset) const;
-            void WriteShortMsg(u32 Offset, u16 Value);
-            
-            u32 ReadWordMsg(u32 Offset) const;
-            void WriteWordMsg(u32 Offset, u32 Value);
-
-            u32 GetMsgSize() const;
-
             u08& operator [] (u32 Offset);
             const u08& operator [] (u32 Offset) const;
 
@@ -93,9 +82,6 @@ namespace ESMC {
             StateVec* Clone() const;
             u08* GetStateBuffer();
             const u08* GetStateBuffer() const;
-            u08* GetMsgBuffer();
-            const u08* GetMsgBuffer() const;
-            void ClearMsgBuffer();
             StateFactory* GetFactory() const;
             void Set(const StateVec& Other);
             void Recycle() const;
@@ -110,24 +96,17 @@ namespace ESMC {
             boost::pool<>* StateVecPool;
             boost::pool<>* StateVecBufferPool;
             u32 NumActiveStates;
-            u32 MsgSize;
-            u08* MsgBuffer;
-            vector<LTS::LTSAssignRef> MsgClearUpdates;
 
             u08* GetStateBuffer(bool Clear = true);
             void ReleaseStateBuffer(u08* BufferPtr);
             StateVec* MakeState(const StateVec* Other);
-            u08* GetMsgBuffer();
-            void ClearMsgBuffer(StateVec* SV);
 
         public:
-            StateFactory(u32 StateSize, u32 MsgSize, 
-                         const vector<LTS::LTSAssignRef>& MsgClearUpdates);
+            StateFactory(u32 StateSize);
             ~StateFactory();
             StateVec* MakeState();
             void TakeState(const StateVec* StatePtr);
             u32 GetSize() const;
-            u32 GetMsgSize() const;
             u32 GetNumActiveStates() const;
         };
 

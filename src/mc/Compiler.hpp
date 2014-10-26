@@ -123,28 +123,29 @@ namespace ESMC {
         class LValueInterpreter : public RValueInterpreter
         {
         protected:
-            // Should we refer to the message
-            // and not the state vector itself?
-            bool Msg;
             i64 Low;
             i64 High;
             u32 Size;
             bool Scalar;
 
         public:
-            LValueInterpreter(bool Msg, ExpPtrT Exp);
+            LValueInterpreter(ExpPtrT Exp);
             virtual ~LValueInterpreter();
 
             i64 GetLow() const;
             i64 GetHigh() const;
             bool IsScalar() const;
             u32 GetSize() const;
-            bool IsMsg() const;
 
-            virtual void Write(i64 Value, const StateVec* InStateVector, 
+            // Return success or failure
+            // Failure could be due to undef values
+            // or out of bounds values
+            virtual bool Write(i64 Value, const StateVec* InStateVector, 
                                StateVec* OutStateVector) const = 0;
             virtual i64 GetOffset(const StateVec* StateVector) const = 0;
-            void Update(const RValueInterpreter* RHS, const StateVec* InStateVector,
+
+            // Return success or failure, same as Write
+            bool Update(const RValueInterpreter* RHS, const StateVec* InStateVector,
                         StateVec* OutStateVector) const;
         };
 
@@ -167,14 +168,14 @@ namespace ESMC {
             u32 Offset;
             
         public:
-            CompiledLValueInterpreter(bool Msg, u32 Offset, ExpPtrT Exp);
+            CompiledLValueInterpreter(u32 Offset, ExpPtrT Exp);
             virtual ~CompiledLValueInterpreter();
             
             u32 GetOffset() const;
 
             virtual i64 GetOffset(const StateVec* StateVector) const override;
             virtual i64 Evaluate(const StateVec* StateVector) const override;
-            virtual void Write(i64 Value, const StateVec* InStateVector,
+            virtual bool Write(i64 Value, const StateVec* InStateVector,
                                StateVec* OutStateVector) const override;
         };
 
@@ -405,14 +406,14 @@ namespace ESMC {
             bool IndexSymmetric;
 
         public:
-            IndexInterpreter(bool Msg, LValueInterpreter* ArrayInterp,
+            IndexInterpreter(LValueInterpreter* ArrayInterp,
                              RValueInterpreter* IndexInterp, ExpPtrT Exp);
             virtual ~IndexInterpreter();
 
             bool IsScalar() const;
 
             virtual i64 Evaluate(const StateVec* StateVector) const override;
-            virtual void Write(i64 Value, const StateVec* InStateVector,
+            virtual bool Write(i64 Value, const StateVec* InStateVector,
                                StateVec* StateVector) const override;
             virtual i64 GetOffset(const StateVec* StateVector) const override;
         };
@@ -424,12 +425,12 @@ namespace ESMC {
             u32 FieldOffset;
 
         public:
-            FieldInterpreter(bool Msg, LValueInterpreter* RecInterp,
+            FieldInterpreter(LValueInterpreter* RecInterp,
                              u32 FieldOffset, ExpPtrT Exp);
             virtual ~FieldInterpreter();
 
             virtual i64 Evaluate(const StateVec* StateVector) const override;
-            virtual void Write(i64 Value, const StateVec* InStateVector,
+            virtual bool Write(i64 Value, const StateVec* InStateVector,
                                StateVec* OutStateVector) const override;
             virtual i64 GetOffset(const StateVec* StateVector) const override;
         };
@@ -439,6 +440,8 @@ namespace ESMC {
         private:
             vector<RValueInterpreter*> RegisteredInterps;
 
+            inline bool HasMsgLValue(const ExpT& Exp, LabelledTS* TheLTS);
+
         public:
             LTSCompiler();
             ~LTSCompiler();
@@ -446,6 +449,8 @@ namespace ESMC {
             void RegisterInterp(RValueInterpreter* Interp);
             void CompileExp(const ExpT& Exp, LabelledTS* TheLTS);
             void CompileLTS(LabelledTS* TheLTS);
+            vector<GCmdRef> CompileCommands(const vector<GCmdRef>& Commands,
+                                            LabelledTS* TheLTS);
             void UpdateModel(const Z3Model& Model);
         };
         

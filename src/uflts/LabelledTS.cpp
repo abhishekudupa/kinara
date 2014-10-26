@@ -41,6 +41,7 @@
 
 #include "../utils/CombUtils.hpp"
 #include "../symmetry/Permutations.hpp"
+#include "../mc/Compiler.hpp"
 
 #include "LabelledTS.hpp"
 #include "LTSUtils.hpp"
@@ -210,6 +211,13 @@ namespace ESMC {
             vector<LTSAssignRef> UpdateComps;
             ExprTypeRef MsgType = ExprTypeRef::NullPtr;
 
+            // All the fields of the message are initially set to be
+            // undefined
+            auto MsgLHS = Mgr->MakeVar(ProductMsgName, UnifiedMsgType);
+            auto MsgRHS = Mgr->MakeVal("clear", UnifiedMsgType);
+            LTSAssignRef MsgClear = new LTSAssignSimple(MsgLHS, MsgRHS);
+            UpdateComps = MsgClear->ExpandNonScalarUpdates();
+
             for (auto const& Trans : ProductTrans) {
                 if (!Trans->Is<LTSTransitionIOBase>()) {
                     throw InternalError((string)"Expected transition to be an IO " + 
@@ -357,6 +365,11 @@ namespace ESMC {
                     GuardedCommands.back()->SetCmdID(GCmdCounter++);
                 }
             }
+
+            // Compile the guarded commands
+            auto Compiler = new MC::LTSCompiler();
+            GuardedCommands = Compiler->CompileCommands(GuardedCommands, this);
+            delete Compiler;
 
             // Build the invariant and final condition
             for (auto const& NameEFSM : AllEFSMs) {
@@ -598,11 +611,6 @@ namespace ESMC {
             UnifiedMsgType = Mgr->MakeType<ExprUnionType>("UnifiedMsgType",
                                                           UnionMembers, 
                                                           TypeIDFieldType);
-            LTSAssignRef ClearAsgn = new LTSAssignSimple(Mgr->MakeVar(ProductMsgName,
-                                                                      UnifiedMsgType),
-                                                         Mgr->MakeVal("clear",
-                                                                      UnifiedMsgType));
-            MsgBufferClearUpdates = ClearAsgn->ExpandNonScalarUpdates();
         }
 
         const vector<vector<LTSAssignRef>>& 
@@ -759,6 +767,12 @@ namespace ESMC {
                                 "created");
             }
 
+            for (auto const& Member : Members) {
+                if (!Member.second->Is<ExprScalarType>()) {
+                    throw ESMCError((string)"Message fields can only be scalar typed");
+                }
+            }
+
             NamedTypes[Name] = MsgTypes[Name] = Mgr->MakeType<ExprRecordType>(Name, Members);
             if (IncludePrimed) {
                 auto PrimedName = Name + "'";
@@ -793,6 +807,12 @@ namespace ESMC {
                 MsgTypes.find(Name) != MsgTypes.end()) {
                 throw ESMCError((string)"Message type name \"" + Name + "\" has already been " + 
                                 "created");
+            }
+
+            for (auto const& Member : Members) {
+                if (!Member.second->Is<ExprScalarType>()) {
+                    throw ESMCError((string)"Message fields can only be scalar typed");
+                }
             }
 
             auto BaseRecType = Mgr->MakeType<ExprRecordType>(Name, Members);
@@ -1108,11 +1128,6 @@ namespace ESMC {
             CheckExpr(ElimExp, SymTab, Mgr);
             InvariantExp = Mgr->MakeExpr(LTSOps::OpAND, InvariantExp, ElimExp);
             InvariantExp = Mgr->Simplify(InvariantExp);
-        }
-
-        const vector<LTSAssignRef>& LabelledTS::GetMsgBufferClearUpdates() const
-        {
-            return MsgBufferClearUpdates;
         }
 
     } /* end namespace LTS */

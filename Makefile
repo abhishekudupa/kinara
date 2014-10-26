@@ -79,7 +79,6 @@ libesmc_OBJS= \
 	Trace.o \
 	UIDGenerator.o \
 	Z3Objects.o \
-	ZeroPage.o \
 
 
 PROJECT_EXT_LIBS=boost z3
