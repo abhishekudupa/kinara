@@ -955,7 +955,7 @@ namespace ESMC {
             UpdateableVariables[VarName] = STEntry->GetType();
         }
 
-        const set<LTSSymbTransRef, set<ExpT>>& 
+        const map<LTSSymbTransRef, set<ExpT>>& 
         IncompleteEFSM::GetConstraintsByTransition() const
         {
             return ConstraintsByTransition;
