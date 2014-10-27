@@ -20,6 +20,7 @@ PROJECT_MODULES= \
 	mc \
 	symmetry \
     symexec \
+    synth \
 	tpinterface \
 	uflts \
 	utils \
@@ -59,6 +60,7 @@ libesmc_OBJS= \
 	LTSUtils.o \
 	OmegaAutomaton.o \
 	Permutations.o \
+    Solver.o \
 	SpookyHash.o \
 	StateVec.o \
 	StateVecPrinter.o \
@@ -68,7 +70,6 @@ libesmc_OBJS= \
 	Trace.o \
 	UIDGenerator.o \
 	Z3Objects.o \
-	ZeroPage.o \
 
 
 PROJECT_EXT_LIBS=boost z3
