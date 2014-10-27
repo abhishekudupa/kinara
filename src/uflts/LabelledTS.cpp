@@ -250,16 +250,7 @@ namespace ESMC {
                     UpdateComps.push_back(new LTSAssignSimple(SubstLHS, SubstRHS));
                 }
             }
-            
-            ExpT Guard;
-            if (GuardComps.size() == 0) {
-                Guard = Mgr->MakeTrue();
-            } else if (GuardComps.size() == 1) {
-                Guard = GuardComps[0];
-            } else {
-                Guard = Mgr->MakeExpr(LTSOps::OpAND, GuardComps);
-            }
-            
+                        
             // Get the fairness sets
             auto OutputTrans = ProductTrans[0]->As<LTSTransitionOutput>();
             auto OutputEFSM = OutputTrans->GetAutomaton()->As<EFSMBase>();
@@ -274,9 +265,8 @@ namespace ESMC {
             }
             auto UMTypeAsUnion = UnifiedMsgType->As<ExprUnionType>();
             auto MsgTypeID = UMTypeAsUnion->GetTypeIDForMemberType(MsgType);
-            return (new LTSGuardedCommand(Guard, UpdateComps, MsgType, 
-                                          MsgTypeID, ActualFairnesses,
-                                          ProductTrans));
+            return (new LTSGuardedCommand(Mgr, GuardComps, UpdateComps, MsgType, 
+                                          MsgTypeID, ActualFairnesses, ProductTrans));
         }
 
         void LabelledTS::Freeze()
@@ -356,11 +346,12 @@ namespace ESMC {
                         ActualFairSet.insert(ActFairness);
                     }
 
-                    auto CurGCmd = new LTSGuardedCommand(Trans->GetGuard(),
+                    auto CurGCmd = new LTSGuardedCommand(Mgr,
+                                                         { Trans->GetGuard() },
                                                          Trans->GetUpdates(),
                                                          ExprTypeRef::NullPtr,
                                                          -1, ActualFairSet,
-                                                         {Trans});
+                                                         { Trans });
                     GuardedCommands.push_back(CurGCmd);
                     GuardedCommands.back()->SetCmdID(GCmdCounter++);
                 }

@@ -513,6 +513,19 @@ namespace ESMC {
             return vector<ExpT>(ExpandedTerms.begin(), ExpandedTerms.end());
         }
 
+        static inline MgrT::ExpSetT GetSynthExps(const ExpT& Exp)
+        {
+            auto Mgr = Exp->GetMgr();
+            return Mgr->Gather(Exp,
+                               [&] (const ExpBaseT* Exp) -> bool
+                               {
+                                   auto ExpAsOp = Exp->As<OpExpression>();
+                                   return (ExpAsOp != nullptr &&
+                                           LTSReservedOps.find(ExpAsOp->GetOpCode()) ==
+                                           LTSReservedOps.end());
+                               });
+        }
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

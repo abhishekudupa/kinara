@@ -622,15 +622,24 @@ namespace ESMC {
                                                             bool& Exception)
         {
             Exception = false;
-            while(++LastFired < NumGuardedCmds) {
-                auto const& Guard = GuardedCommands[LastFired]->GetGuard();
+            set<u32>::iterator it;
+            if (LastFired == -1) {
+                it = InterpretedCommands.begin();
+            } else {
+                it = next(InterpretedCommands.find(LastFired));
+            }
+            while (it != InterpretedCommands.end()) {
+                auto CurCmdID = *it;
+                auto const& Guard = GuardedCommands[CurCmdID]->GetGuard();
                 auto GRes = Guard->ExtensionData.Interp->Evaluate(State);
                 if (GRes == UndefValue) {
                     Exception = true;
                     return GCmdRef::NullPtr;
                 } else if (GRes != 0) {
-                    return GuardedCommands[LastFired];
+                    LastFired = CurCmdID;
+                    return GuardedCommands[CurCmdID];
                 }
+                ++it;
             }
             return GCmdRef::NullPtr;
         }
@@ -760,9 +769,8 @@ namespace ESMC {
                 BFSQueue.pop_front();
 
                 bool Deadlocked = true;
-                const u32 NumCommands = GuardedCommands.size();
 
-                for (u32 i = 0; i < NumCommands; ++i) {
+                for (auto i : InterpretedCommands) {
 
                     auto const& Cmd = GuardedCommands[i];
 
@@ -831,6 +839,15 @@ namespace ESMC {
 
             if (AQS != nullptr) {
                 return (ErrorStates.size() == 0);
+            }
+
+            // Gather the commands that are relevant
+            InterpretedCommands.clear();
+            
+            for (auto const& Cmd : GuardedCommands) {
+                if (Cmd->IsFullyInterpreted()) {
+                    InterpretedCommands.insert(Cmd->GetCmdID());
+                }
             }
 
             AQS = new AQStructure(TheLTS);

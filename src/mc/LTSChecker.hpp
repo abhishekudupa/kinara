@@ -193,6 +193,12 @@ namespace ESMC {
             // invariant expression that was blown
             unordered_map<const StateVec*, ExpT> ErrorStates;
 
+            // A set of commands that need to be tested
+            // these are all the commands that are "fully"
+            // interpreted, i.e., have been "unlocked" and 
+            // have a model supporting them
+            set<u32> InterpretedCommands;
+
             // returns <Cmd, false> if successful
             // returns <null, false> if no more commands
             // returns <null, true> if exception

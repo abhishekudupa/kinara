@@ -42,6 +42,7 @@
 #include "LTSAssign.hpp"
 #include "LTSEFSM.hpp"
 #include "LTSFairnessSet.hpp"
+#include "LTSUtils.hpp"
 
 namespace ESMC {
     namespace LTS {
@@ -268,18 +269,21 @@ namespace ESMC {
             return sstr.str();
         }
 
-        LTSGuardedCommand::LTSGuardedCommand(const ExpT& Guard,
+        LTSGuardedCommand::LTSGuardedCommand(MgrT* Mgr,
+                                             const vector<ExpT>& GuardComps,
                                              const vector<LTSAssignRef>& Updates,
                                              const ExprTypeRef& MsgType, i32 MsgTypeID,
                                              const set<LTSFairObjRef>& Fairnesses,
                                              const vector<LTSTransRef>& ProductTrans)
-            : Guard(Guard), Updates(Updates), MsgType(MsgType), MsgTypeID(MsgTypeID),
-              FairnessObjs(Fairnesses.begin(), Fairnesses.end()), ProductTrans(ProductTrans),
+            : Mgr(Mgr), GuardComps(GuardComps), Updates(Updates), MsgType(MsgType), 
+              MsgTypeID(MsgTypeID), FairnessObjs(Fairnesses.begin(), Fairnesses.end()), 
+              ProductTrans(ProductTrans),
               Tentative(any_of(ProductTrans.begin(), ProductTrans.end(), 
                                [&] (const LTSTransRef& Trans) -> bool
                                {
                                    return Trans->IsTentative();
-                               }))
+                               })),
+              FullyInterpreted(!Tentative)
         {
             set<LTSFairSetRef> FairSets;
             for (auto const& FairObj : FairnessObjs) {
@@ -287,6 +291,60 @@ namespace ESMC {
             }
 
             FairnessSets.insert(FairnessSets.begin(), FairSets.begin(), FairSets.end());
+            // Make the guard
+            if (GuardComps.size() == 0) {
+                Guard = Mgr->MakeTrue();
+            } else if (GuardComps.size() == 1) {
+                Guard = GuardComps[0];
+            } else {
+                Guard = Mgr->MakeExpr(LTSOps::OpAND, GuardComps);
+            }
+
+            Guard = Mgr->Simplify(Guard);
+
+            // Set up the fixed interpretation
+            vector<ExpT> FixedComps;
+            for (auto const& GuardComp : GuardComps) {
+                auto&& SynthExps = GetSynthExps(GuardComp);
+                if (SynthExps.size() == 0) {
+                    FixedComps.push_back(GuardComp);
+                }
+            }
+
+            if (FixedComps.size() == 0) {
+                FixedInterpretation = Mgr->MakeTrue();
+            } else if (FixedComps.size() == 1) {
+                FixedInterpretation = FixedComps[0];
+            } else {
+                FixedInterpretation = Mgr->MakeExpr(LTSOps::OpAND, FixedComps);
+            }
+
+            FixedInterpretation = Mgr->Simplify(FixedInterpretation);
+        }
+
+        MgrT* LTSGuardedCommand::GetMgr() const
+        {
+            return Mgr;
+        }
+
+        const vector<ExpT>& LTSGuardedCommand::GetGuardComps() const
+        {
+            return GuardComps;
+        }
+
+        bool LTSGuardedCommand::IsFullyInterpreted() const
+        {
+            return FullyInterpreted;
+        }
+
+        void LTSGuardedCommand::SetFullyInterpreted(bool NewValue) const
+        {
+            FullyInterpreted = NewValue;
+        }
+
+        const ExpT& LTSGuardedCommand::GetFixedInterpretation() const
+        {
+            return FixedInterpretation;
         }
 
         u32 LTSGuardedCommand::GetCmdID() const

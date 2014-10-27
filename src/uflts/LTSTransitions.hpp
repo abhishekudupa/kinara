@@ -324,7 +324,9 @@ namespace ESMC {
         class LTSGuardedCommand : public RefCountable
         {
         private:
+            MgrT* Mgr;
             ExpT Guard;
+            vector<ExpT> GuardComps;
             vector<LTSAssignRef> Updates;
             ExprTypeRef MsgType;
             i32 MsgTypeID;
@@ -333,16 +335,21 @@ namespace ESMC {
             vector<LTSTransRef> ProductTrans;
             mutable u32 CmdID;
             bool Tentative;
+            mutable bool FullyInterpreted;
+            ExpT FixedInterpretation;
 
         public:
-            LTSGuardedCommand(const ExpT& Guard,
+            LTSGuardedCommand(MgrT* Mgr,
+                              const vector<ExpT>& GuardComps,
                               const vector<LTSAssignRef>& Updates,
                               const ExprTypeRef& MsgType, i32 MsgTypeID,
                               const set<LTSFairObjRef>& Fairnesses,
                               const vector<LTSTransRef>& ProductTrans);
             virtual ~LTSGuardedCommand();
 
+            MgrT* GetMgr() const;
             const ExpT& GetGuard() const;
+            const vector<ExpT>& GetGuardComps() const;
             const vector<LTSAssignRef>& GetUpdates() const;
             const ExprTypeRef& GetMsgType() const;
             i32 GetMsgTypeID() const;
@@ -353,6 +360,9 @@ namespace ESMC {
             void SetCmdID(u32 CmdID) const;
             string ToString() const;
             bool IsTentative() const;
+            bool IsFullyInterpreted() const;
+            void SetFullyInterpreted(bool NewValue) const;
+            const ExpT& GetFixedInterpretation() const;
         };
 
         class LTSInitState : public RefCountable

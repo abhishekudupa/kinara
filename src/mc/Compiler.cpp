@@ -471,6 +471,10 @@ namespace ESMC {
 
         inline i64 UFInterpreter::DoEval() const
         {
+            if (Model == Z3Model::NullModel) {
+                return 0;
+            }
+
             auto it = EvalMap.find(SubEvals);
             if (it != EvalMap.end()) {
                 return it->second;
@@ -1161,7 +1165,8 @@ namespace ESMC {
                 set<LTSFairObjRef> FairObjSet(Cmd->GetFairnessObjs().begin(),
                                               Cmd->GetFairnessObjs().end());
 
-                Retval.push_back(new LTSGuardedCommand(Mgr->Simplify(Cmd->GetGuard()),
+                Retval.push_back(new LTSGuardedCommand(Cmd->GetMgr(),
+                                                       Cmd->GetGuardComps(),
                                                        NewUpdates, 
                                                        Cmd->GetMsgType(),
                                                        Cmd->GetMsgTypeID(),
