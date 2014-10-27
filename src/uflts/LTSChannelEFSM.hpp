@@ -82,13 +82,13 @@ namespace ESMC {
             inline void MakeInputTransition(u32 InstanceID,
                                             const MgrT::SubstMapT& SubstMap,
                                             const ExprTypeRef& MessageType,
-                                            LossDupFairnessType LossDupFairness);
+                                            const set<string>& AddToFairnessSets);
 
             inline void MakeOutputTransition(u32 InstanceID,
                                              const MgrT::SubstMapT& SubstMap,
                                              const ExprTypeRef& MessageType,
-                                             LTSFairnessType MessageFairness,
-                                             LossDupFairnessType LossDupFairness);
+                                             const set<string>& NonDupOutputFairnessSets,
+                                             const set<string>& DupOutputFairnessSets);
 
         public:
             ChannelEFSM(LabelledTS* TheLTS, const string& Name,

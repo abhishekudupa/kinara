@@ -64,7 +64,6 @@ namespace ESMC {
             virtual ~Solver();
 
             void Solve();
-            void ProcessCounterExample(const TraceBase* Trace);
         };
 
     } /* end namespace Synth */

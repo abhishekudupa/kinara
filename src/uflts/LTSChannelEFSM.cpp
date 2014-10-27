@@ -128,7 +128,7 @@ namespace ESMC {
         inline void ChannelEFSM::MakeInputTransition(u32 InstanceID,
                                                      const MgrT::SubstMapT& SubstMap,
                                                      const ExprTypeRef& MessageType,
-                                                     LossDupFairnessType LossDupFairness)
+                                                     const set<string>& InputFairnessSets)
         {
             auto Mgr = TheLTS->GetMgr();
             auto const& UMType = TheLTS->GetUnifiedMType();
@@ -220,15 +220,6 @@ namespace ESMC {
                     Guard2 = Guard;
                 }
 
-                set<string> AddToFairnessSets;
-                if (LossDupFairness == LossDupFairnessType::NotAlwaysLost || 
-                    LossDupFairness == LossDupFairnessType::NotAlwaysLostOrDup) {
-                    auto LDFairID = LossDupFairnessUIDGen.GetUID();
-                    string FairName = "LossFairness_ " + to_string(LDFairID);
-                    EFSMBase::AddFairnessSet(FairName, FairSetFairnessType::Strong);
-                    AddToFairnessSets.insert(FairName);
-                }
-
                 // Lossy transition
                 EFSMBase::AddInternalTransForInstance(InstanceID,
                                                       SubstMap,
@@ -243,7 +234,7 @@ namespace ESMC {
                                                       "LossDecideState", 
                                                       Guard2, 
                                                       Step2Updates, 
-                                                      AddToFairnessSets,
+                                                      InputFairnessSets,
                                                       LTSSymbTransRef::NullPtr);
             }
         }
@@ -251,8 +242,8 @@ namespace ESMC {
         void ChannelEFSM::MakeOutputTransition(u32 InstanceID,
                                                const MgrT::SubstMapT& SubstMap,
                                                const ExprTypeRef& MessageType, 
-                                               LTSFairnessType MessageFairness, 
-                                               ESMC::LTS::LossDupFairnessType LossDupFairness)
+                                               const set<string>& NonDupOutputFairnessSets,
+                                               const set<string>& DupOutputFairnessSets)
         {
             auto Mgr = TheLTS->GetMgr();
             auto PMessageType = TheLTS->GetPrimedType(MessageType);
@@ -265,38 +256,6 @@ namespace ESMC {
                 }
             } else {
                 ChooseExps.push_back(ZeroExp);
-            }
-
-            set<string> AddToFairnessSets;
-            bool AddFairnessToDup = false;
-            if (!Duplicating) {
-                if (MessageFairness != LTSFairnessType::None) {
-                    string FairnessSetName = "MessageFairness_" + 
-                        to_string(MessageFairnessUIDGen.GetUID());
-                    EFSMBase::AddFairnessSet(FairnessSetName,
-                                             MessageFairness == LTSFairnessType::Strong ? 
-                                             FairSetFairnessType::Strong : 
-                                             FairSetFairnessType::Weak);
-                    AddToFairnessSets.insert(FairnessSetName);
-                }
-            } else {
-                if (LossDupFairness == LossDupFairnessType::NotAlwaysDup ||
-                    LossDupFairness == LossDupFairnessType::NotAlwaysLostOrDup) {
-                    string FairnessSetName = "DupFairness_" + 
-                        to_string(LossDupFairnessUIDGen.GetUID());
-                    EFSMBase::AddFairnessSet(FairnessSetName,
-                                             FairSetFairnessType::Strong);
-                    AddToFairnessSets.insert(FairnessSetName);
-                } else if (MessageFairness != LTSFairnessType::None) {
-                    string FairnessSetName = "MessageFairness_" + 
-                        to_string(MessageFairnessUIDGen.GetUID());
-                    EFSMBase::AddFairnessSet(FairnessSetName,
-                                             MessageFairness == LTSFairnessType::Strong ? 
-                                             FairSetFairnessType::Strong : 
-                                             FairSetFairnessType::Weak);
-                    AddToFairnessSets.insert(FairnessSetName);
-                    AddFairnessToDup = true;
-                }
             }
 
             for (auto const& ChooseExp : ChooseExps) {
@@ -363,7 +322,7 @@ namespace ESMC {
                                                     OutMsgName, 
                                                     PMessageType, 
                                                     PMessageType,
-                                                    AddToFairnessSets,
+                                                    NonDupOutputFairnessSets,
                                                     LTSSymbTransRef::NullPtr);
                 if (Duplicating) {
                     EFSMBase::AddOutputTransForInstance(InstanceID,
@@ -374,9 +333,7 @@ namespace ESMC {
                                                         OutMsgName,
                                                         PMessageType, 
                                                         PMessageType,
-                                                        (AddFairnessToDup ? 
-                                                         AddToFairnessSets : 
-                                                         set<string>()),
+                                                        DupOutputFairnessSets,
                                                         LTSSymbTransRef::NullPtr);
                 }
             }
@@ -392,14 +349,57 @@ namespace ESMC {
             EFSMBase::AddInputMsg(MessageType, Params);
             EFSMBase::AddOutputMsg(PMessageType, Params);
 
+            set<string> InputFairnessSets;
+            set<string> NonDupOutputFairnessSets;
+            set<string> DupOutputFairnessSets;
+
+            if (Lossy && (LossDupFairness == LossDupFairnessType::NotAlwaysLost || 
+                          LossDupFairness == LossDupFairnessType::NotAlwaysLostOrDup)) {
+                auto FairID = LossDupFairnessUIDGen.GetUID();
+                string FairnessName = "LossFairness_" + to_string(FairID);
+                EFSMBase::AddFairnessSet(FairnessName, FairSetFairnessType::Strong);
+                InputFairnessSets.insert(FairnessName);
+            }
+
+            if (!Duplicating) {
+                if (MessageFairness != LTSFairnessType::None) {
+                    string FairnessSetName = "MessageFairness_" + 
+                        to_string(MessageFairnessUIDGen.GetUID());
+                    EFSMBase::AddFairnessSet(FairnessSetName,
+                                             MessageFairness == LTSFairnessType::Strong ? 
+                                             FairSetFairnessType::Strong : 
+                                             FairSetFairnessType::Weak);
+                    NonDupOutputFairnessSets.insert(FairnessSetName);
+                }
+            } else {
+                if (LossDupFairness == LossDupFairnessType::NotAlwaysDup ||
+                    LossDupFairness == LossDupFairnessType::NotAlwaysLostOrDup) {
+                    string FairnessSetName = "DupFairness_" + 
+                        to_string(LossDupFairnessUIDGen.GetUID());
+                    EFSMBase::AddFairnessSet(FairnessSetName,
+                                             FairSetFairnessType::Strong);
+                    NonDupOutputFairnessSets.insert(FairnessSetName);
+                } else if (MessageFairness != LTSFairnessType::None) {
+                    string FairnessSetName = "MessageFairness_" + 
+                        to_string(MessageFairnessUIDGen.GetUID());
+                    EFSMBase::AddFairnessSet(FairnessSetName,
+                                             MessageFairness == LTSFairnessType::Strong ? 
+                                             FairSetFairnessType::Strong : 
+                                             FairSetFairnessType::Weak);
+                    NonDupOutputFairnessSets.insert(FairnessSetName);
+                    DupOutputFairnessSets = NonDupOutputFairnessSets;
+                }
+            }
+
             const u32 NumInsts = ParamInsts.size();
             for (u32 i = 0; i < NumInsts; ++i) {
                 auto const& SubstMap = ParamSubsts[i];
                 auto&& SubstParams = SubstAll(Params, SubstMap, Mgr);
                 
                 auto ActMType = InstantiateType(MessageType, SubstParams, Mgr);
-                MakeInputTransition(i, SubstMap, ActMType, LossDupFairness);
-                MakeOutputTransition(i, SubstMap, ActMType, MessageFairness, LossDupFairness);
+                MakeInputTransition(i, SubstMap, ActMType, InputFairnessSets);
+                MakeOutputTransition(i, SubstMap, ActMType, NonDupOutputFairnessSets, 
+                                     DupOutputFairnessSets);
             }
         }
 
@@ -426,10 +426,57 @@ namespace ESMC {
             const u32 NumNewParams = NewParams.size();
             const u32 NumInsts = ParamInsts.size();
 
+            set<string> InputFairnessSets;
+            set<string> NonDupOutputFairnessSets;
+            set<string> DupOutputFairnessSets;
+
+
             for (u32 i = 0; i < NumInsts; ++i) {
                 auto const& SubstMap = ParamSubsts[i];
                 auto SubstConstraint = Mgr->Substitute(SubstMap, Constraint);
                 auto const&& NewInsts = InstantiateParams(NewParams, SubstConstraint, Mgr);
+                
+                if (i == 0) {
+                    if (Lossy && (LossDupFairness == LossDupFairnessType::NotAlwaysLost || 
+                                  LossDupFairness == LossDupFairnessType::NotAlwaysLostOrDup)) {
+                        auto FairID = LossDupFairnessUIDGen.GetUID();
+                        string FairnessName = "LossFairness_" + to_string(FairID);
+                        EFSMBase::AddFairnessSet(FairnessName, FairSetFairnessType::Strong);
+                        InputFairnessSets.insert(FairnessName);
+                    }
+
+                    if (!Duplicating) {
+                        if (MessageFairness != LTSFairnessType::None) {
+                            string FairnessSetName = "MessageFairness_" + 
+                                to_string(MessageFairnessUIDGen.GetUID());
+                            EFSMBase::AddFairnessSet(FairnessSetName,
+                                                     MessageFairness == LTSFairnessType::Strong ? 
+                                                     FairSetFairnessType::Strong : 
+                                                     FairSetFairnessType::Weak);
+                            NonDupOutputFairnessSets.insert(FairnessSetName);
+                        }
+                    } else {
+                        if (LossDupFairness == LossDupFairnessType::NotAlwaysDup ||
+                            LossDupFairness == LossDupFairnessType::NotAlwaysLostOrDup) {
+                            string FairnessSetName = "DupFairness_" + 
+                                to_string(LossDupFairnessUIDGen.GetUID());
+                            EFSMBase::AddFairnessSet(FairnessSetName,
+                                                     FairSetFairnessType::Strong);
+                            NonDupOutputFairnessSets.insert(FairnessSetName);
+                        } else if (MessageFairness != LTSFairnessType::None) {
+                            string FairnessSetName = "MessageFairness_" + 
+                                to_string(MessageFairnessUIDGen.GetUID());
+                            EFSMBase::AddFairnessSet(FairnessSetName,
+                                                     MessageFairness == LTSFairnessType::Strong ? 
+                                                     FairSetFairnessType::Strong : 
+                                                     FairSetFairnessType::Weak);
+                            NonDupOutputFairnessSets.insert(FairnessSetName);
+                            DupOutputFairnessSets = NonDupOutputFairnessSets;
+                        }
+                    }
+                }
+
+
                 for (auto const& NewInst : NewInsts) {
                     auto LocalSubstMap = SubstMap;
                     for (u32 j = 0; j < NumNewParams; ++j) {
@@ -439,9 +486,9 @@ namespace ESMC {
                     auto MType = InstantiateType(MessageType, SubstParams, Mgr);
                     auto PMType = TheLTS->GetPrimedType(MType);
 
-                    MakeInputTransition(i, LocalSubstMap, MType, LossDupFairness);
-                    MakeOutputTransition(i, LocalSubstMap, MType, MessageFairness, 
-                                         LossDupFairness);
+                    MakeInputTransition(i, LocalSubstMap, MType, InputFairnessSets);
+                    MakeOutputTransition(i, LocalSubstMap, MType, NonDupOutputFairnessSets, 
+                                         DupOutputFairnessSets);
                 }
             }
         }
