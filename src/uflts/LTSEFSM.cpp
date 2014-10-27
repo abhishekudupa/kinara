@@ -192,6 +192,7 @@ namespace ESMC {
             auto SimpConstraint = Mgr->Simplify(Constraint);
             cout << "Adding Constraint:" << endl << SimpConstraint->ToString() << endl;
             Constraints.insert(SimpConstraint);
+            CurrentConstraints.insert(SimpConstraint);
         }
 
         inline void IncompleteEFSM::AddConstraint(const vector<ExpT>& Constraints)
@@ -202,6 +203,7 @@ namespace ESMC {
                 auto SimpConstraint = Mgr->Simplify(Constraint);
                 cout << SimpConstraint->ToString() << endl << endl;
                 this->Constraints.insert(SimpConstraint);
+                CurrentConstraints.insert(SimpConstraint);
             }
             cout << "End of constraint set." << endl;
         }
@@ -710,6 +712,8 @@ namespace ESMC {
                 LocalDomVars[ParamName] = ParamAsVar->GetVarType();
             }
 
+            CurrentConstraints.clear();
+
             // Get the domain terms
             auto&& DomainTerms = GetDomainTerms(LocalDomVars);
             FilterTerms(DomainTerms, TheLTS->MakeBoolType());
@@ -744,6 +748,8 @@ namespace ESMC {
                                     MsgDecl->GetMessageType(), 
                                     MsgDecl->GetMessageParams(), true);
             }
+
+            ConstraintsByTransition[SymbolicTransitions.back()] = CurrentConstraints;
         }
 
         inline void 
@@ -947,6 +953,12 @@ namespace ESMC {
             }
             ReadOnlyVars.erase(VarName);
             UpdateableVariables[VarName] = STEntry->GetType();
+        }
+
+        const set<LTSSymbTransRef, set<ExpT>>& 
+        IncompleteEFSM::GetConstraintsByTransition() const
+        {
+            return ConstraintsByTransition;
         }
         
     } /* end namespace LTS */

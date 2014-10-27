@@ -85,6 +85,12 @@ namespace ESMC {
         private:
             // Constraints over uninterpreted functions
             set<ExpT> Constraints;
+
+            // A temporary to store current constraints
+            set<ExpT> CurrentConstraints;
+            // Constraints by symbolic transitions
+            set<LTSSymbTransRef, set<ExpT>> ConstraintsByTransition;
+
             set<i64> GuardUFIDs;
             map<string, set<SymmMsgDeclRef>> BlockedCompletions;
             set<string> CompleteStates;
@@ -176,6 +182,7 @@ namespace ESMC {
             void MarkVariableWriteable(const string& VarName);
             
             const set<i64>& GetGuardUFIDs() const;
+            const set<LTSSymbTransRef, set<ExpT>> GetConstraintsByTransition() const;
 
             // override freeze to add additional transitions
             // and such
