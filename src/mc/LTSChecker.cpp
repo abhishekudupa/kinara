@@ -950,6 +950,7 @@ namespace ESMC {
                                                   Constraint, Compiler);
             AllBuchiAutomata[Name] = Retval;
             StateBuchiAutomata[Name] = Retval;
+            BuchiMonitorNames.push_back(Name);
             return Retval;
         }
 
@@ -1311,6 +1312,11 @@ namespace ESMC {
 
             cout << "No liveness violations found! :-)" << endl;
             return nullptr;
+        }
+
+        const vector<string>& LTSChecker::GetBuchiMonitorNames() const
+        {
+            return BuchiMonitorNames;
         }
 
         LabelledTS* LTSChecker::GetLTS() const

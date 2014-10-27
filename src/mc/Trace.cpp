@@ -453,7 +453,7 @@ namespace ESMC {
                                                         const ExpT& BlownInvariant)
         {
             auto TheAQS = Checker->AQS;
-            auto PPath = TheAQS->FindShortestPath(ErrorState);
+            auto PPath = TheAQS->FindPath(ErrorState);
             return MakeSafetyViolation(PPath, Checker, BlownInvariant);
         }
 
@@ -461,7 +461,7 @@ namespace ESMC {
                                                             LTSChecker* Checker)
         {
             auto TheAQS = Checker->AQS;
-            auto PPath = TheAQS->FindShortestPath(ErrorState);
+            auto PPath = TheAQS->FindPath(ErrorState);
             return MakeDeadlockViolation(PPath, Checker);
         }
 

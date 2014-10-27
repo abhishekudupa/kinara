@@ -44,6 +44,7 @@
 #include "../containers/RefCountable.hpp"
 #include "../uflts/LTSTransitions.hpp"
 #include "../utils/UIDGenerator.hpp"
+#include "../mc/AQStructure.hpp"
 
 namespace ESMC {
     namespace Synth {
@@ -51,6 +52,41 @@ namespace ESMC {
         using namespace ESMC::LTS;
         using namespace ESMC::MC;
         using namespace ESMC::TP;
+
+        extern const u64 TentativeEdgeCost;
+
+        namespace Detail {
+
+            // A cost functor for shortest paths
+            class SynthCostFunction
+            {
+            private:
+                const unordered_set<u32>& TentativeCommands;
+
+            public:
+                inline SynthCostFunction(const unordered_set<u32>& TentativeCommands) 
+                    : TentativeCommands(TentativeCommands)
+                {
+                    // Nothing here
+                }
+
+                ~SynthCostFunction()
+                {
+                    // Nothing here
+                }
+
+                inline u64 operator () (const StateVec* SVPtr, const AQSEdge* Edge) const
+                {
+                    auto it = TentativeCommands.find(Edge->GetGCmdIndex());
+                    if (it == TentativeCommands.end()) {
+                        return 1;
+                    } else {
+                        return TentativeEdgeCost;
+                    }
+                }
+            };
+
+        } /* end namespace Detail */
         
         class Solver : public RefCountable
         {
@@ -63,13 +99,23 @@ namespace ESMC {
             u32 Bound;
             vector<GCmdRef> GuardedCommands;
             set<u32> UnlockedCommands;
+            unordered_set<u32> EnabledCommands;
+            unordered_set<i64> InterpretedOps;
             Z3TheoremProver* TPAsZ3;
             Z3Ctx Ctx;
             UIDGenerator BoundsVarUIDGenerator;
             UIDGenerator IndicatorUIDGenerator;
+            vector<i64> IndicatorVarToGuardOp;
             
             Z3Expr BoundExpr;
             Z3Expr BoundsVar;
+
+            inline void AssertBoundsConstraint();
+            inline void HandleSafetyViolations();
+            inline void HandleOneSafetyViolation(const StateVec* ErrorState,
+                                                 const ExpT& BlownInvariant);
+            inline void HandleOneDeadlockViolation(const StateVec* ErrorState);
+            inline void HandleLivenessViolation(const LivenessViolation* Trace);
 
         public:
             Solver(LTSChecker* Checker);

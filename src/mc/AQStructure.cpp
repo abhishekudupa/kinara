@@ -270,7 +270,7 @@ namespace ESMC {
         AQSPermPath* 
         AQStructure::FindShortestPath(const set<const StateVec*>& Origins,
                                       const StateVec* Target,
-                                      const function<u32(const StateVec*, const AQSEdge*)>&
+                                      const function<u64(const StateVec*, const AQSEdge*)>&
                                       CostFunction) const
         {
             if (StateHashSet.find(const_cast<StateVec*>(Target)) == StateHashSet.end()) {
@@ -287,7 +287,7 @@ namespace ESMC {
         AQSPermPath* 
         AQStructure::FindShortestPath(const set<const StateVec*>& Origins,
                                       const function<bool(const StateVec*)>& TargetPred,
-                                      const function<u32(const StateVec*, const AQSEdge*)>&
+                                      const function<u64(const StateVec*, const AQSEdge*)>&
                                       CostFunction) const
         {
             return FindShortestPath(Origins,
@@ -308,7 +308,7 @@ namespace ESMC {
                                       const function<const StateVec*(const StateVec* State,
                                                                      const AQSEdge* Edge)>& 
                                       TargetEdgePred,
-                                      const function<u32(const StateVec*, const AQSEdge*)>&
+                                      const function<u64(const StateVec*, const AQSEdge*)>&
                                       CostFunction) const
         {
             using boost::heap::fibonacci_heap;
@@ -410,7 +410,7 @@ namespace ESMC {
 
         AQSPermPath*
         AQStructure::FindShortestPath(const StateVec* Target,
-                                      const function<u32(const StateVec*, const AQSEdge*)>&
+                                      const function<u64(const StateVec*, const AQSEdge*)>&
                                       CostFunction) const
         {
             return FindShortestPath(set<const StateVec*>(InitStates.begin(), InitStates.end()),
@@ -419,7 +419,7 @@ namespace ESMC {
 
         AQSPermPath*
         AQStructure::FindShortestPath(const function<bool(const StateVec*)>& TargetPred,
-                                      const function<u32(const StateVec*, const AQSEdge*)>&
+                                      const function<u64(const StateVec*, const AQSEdge*)>&
                                       CostFunction) const
         {
             return FindShortestPath(set<const StateVec*>(InitStates.begin(), InitStates.end()),
@@ -430,7 +430,7 @@ namespace ESMC {
         AQStructure::FindShortestPath(const function<const StateVec*(const StateVec*,
                                                                      const AQSEdge*)>& 
                                       TargetEdgePred,
-                                      const function<u32(const StateVec*, const AQSEdge*)>&
+                                      const function<u64(const StateVec*, const AQSEdge*)>&
                                       CostFunction) const
         {
             return FindShortestPath(set<const StateVec*>(InitStates.begin(), InitStates.end()),
@@ -853,7 +853,7 @@ namespace ESMC {
         PSPermPath* 
         ProductStructure::FindShortestPath(const set<const ProductState*>& Origins,
                                            const ProductState* Target,
-                                           const function<u32(const ProductState*, 
+                                           const function<u64(const ProductState*, 
                                                               const ProductEdge*)>&
                                            CostFunction) const
         {
@@ -872,7 +872,7 @@ namespace ESMC {
         PSPermPath* 
         ProductStructure::FindShortestPath(const set<const ProductState*>& Origins,
                                            const function<bool(const ProductState*)>& TargetPred,
-                                           const function<u32(const ProductState*, 
+                                           const function<u64(const ProductState*, 
                                                               const ProductEdge*)>&
                                            CostFunction) const
         {
@@ -895,7 +895,7 @@ namespace ESMC {
                                            const function<const ProductState*(const ProductState*,
                                                                               const ProductEdge*)>&
                                            TargetEdgePred,
-                                           const function<u32(const ProductState*, 
+                                           const function<u64(const ProductState*, 
                                                               const ProductEdge*)>&
                                            CostFunction) const
         {
@@ -992,7 +992,7 @@ namespace ESMC {
         // From the initial states
         PSPermPath* 
         ProductStructure::FindShortestPath(const ProductState* Target,
-                                           const function<u32(const ProductState*, 
+                                           const function<u64(const ProductState*, 
                                                               const ProductEdge*)>&
                                            CostFunction) const
         {
@@ -1003,7 +1003,7 @@ namespace ESMC {
 
         PSPermPath* 
         ProductStructure::FindShortestPath(const function<bool(const ProductState*)>& TargetPred,
-                                           const function<u32(const ProductState*, 
+                                           const function<u64(const ProductState*, 
                                                               const ProductEdge*)>&
                                            CostFunction) const
         {
@@ -1016,7 +1016,7 @@ namespace ESMC {
         ProductStructure::FindShortestPath(const function<const ProductState*(const ProductState*,
                                                                               const ProductEdge*)>&
                                            TargetEdgePred,
-                                           const function<u32(const ProductState*, 
+                                           const function<u64(const ProductState*, 
                                                               const ProductEdge*)>&
                                            CostFunction) const
         {

@@ -184,6 +184,7 @@ namespace ESMC {
             map<string, BuchiAutomatonBase*> AllBuchiAutomata;
             map<string, StateBuchiAutomaton*> StateBuchiAutomata;
             map<string, MsgBuchiAutomaton*> MsgBuchiAutomata;
+            vector<string> BuchiMonitorNames;
 
             // Set of invariant expressions for bounds, etc.
             set<ExpT> BoundsInvariants;
@@ -254,11 +255,9 @@ namespace ESMC {
             AQStructure* GetAQS() const;
             ProductStructure* GetPS() const;
 
-            // Methods to assist synthesis
-            vector<TraceBase*> GetAllDeadlocks();
-            vector<TraceBase*> GetAllSafetyViolations();
             const unordered_map<const StateVec*, ExpT> GetAllErrorStates() const;
             TraceBase* MakeTraceToError(const StateVec* ErrorState);
+            const vector<string>& GetBuchiMonitorNames() const;
         };
         
         // Returns false if exception encountered
