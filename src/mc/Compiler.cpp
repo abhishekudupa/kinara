@@ -317,7 +317,8 @@ namespace ESMC {
         }
 
         // default action: do nothing
-        void RValueInterpreter::UpdateModel(const Z3Model& Model) const
+        void RValueInterpreter::UpdateModel(const Z3Model& Model,
+                                            const unordered_set<i64>& InterpretedOps) const
         {
             return;
         }
@@ -459,7 +460,8 @@ namespace ESMC {
                                      ExpPtrT Exp)
             : RValueInterpreter(Exp), 
               ArgInterps(ArgInterps), SubEvals(ArgInterps.size()),
-              NumArgInterps(ArgInterps.size()), Model(Z3Model::NullModel)
+              NumArgInterps(ArgInterps.size()), Model(Z3Model::NullModel),
+              Enabled(false), MyOpCode(Exp->As<OpExpression>()->GetOpCode())
         {
             // Nothing here
         }
@@ -471,10 +473,6 @@ namespace ESMC {
 
         inline i64 UFInterpreter::DoEval() const
         {
-            if (Model == Z3Model::NullModel) {
-                return 0;
-            }
-
             auto it = EvalMap.find(SubEvals);
             if (it != EvalMap.end()) {
                 return it->second;
@@ -515,6 +513,10 @@ namespace ESMC {
 
         i64 UFInterpreter::Evaluate(const StateVec* StateVector) const
         {
+            if (!Enabled) {
+                return 0;
+            }
+
             // We are guaranteed that range and domain are scalars
             for (u32 i = 0; i < NumArgInterps; ++i) {
                 SubEvals[i] = ArgInterps[i]->Evaluate(StateVector);
@@ -522,10 +524,16 @@ namespace ESMC {
             return DoEval();
         }
 
-        void UFInterpreter::UpdateModel(const Z3Model& Model) const
+        void UFInterpreter::UpdateModel(const Z3Model& Model,
+                                        const unordered_set<i64>& InterpretedOps) const
         {
-            EvalMap.clear();
-            this->Model = Model;
+            if (InterpretedOps.find(MyOpCode) == InterpretedOps.end()) {
+                Enabled = false;
+            } else {
+                EvalMap.clear();
+                this->Model = Model;
+                Enabled = true;
+            }
         }
 
         OpInterpreter::OpInterpreter(const vector<RValueInterpreter*>& SubInterps,
@@ -1178,12 +1186,13 @@ namespace ESMC {
             return Retval;
         }
 
-        void LTSCompiler::UpdateModel(const Z3Model& Model)
+        void LTSCompiler::UpdateModel(const Z3Model& Model,
+                                      const unordered_set<i64>& InterpretedOps)
         {
             // Push the model through all the registered
             // interpreters
             for (auto const& Interp : RegisteredInterps) {
-                Interp->UpdateModel(Model);
+                Interp->UpdateModel(Model, InterpretedOps);
             }
         }
 

@@ -173,6 +173,8 @@ namespace ESMC {
             virtual void Assert(const vector<ExpT>& Assertions,
                                 bool UnrollQuantifiers = false) const override;
 
+            void Assert(const Z3Expr& Assertion) const;
+
             virtual TPResult CheckSat() const override;
             virtual TPResult CheckSat(const ExpT& Assertion,
                                       bool UnrollQuantifiers = false) const override;

@@ -370,6 +370,7 @@ namespace ESMC {
                                                 bool Tentative = false);
 
             virtual string ToString() const override;
+            const MgrT::SubstMapT& GetRebaseSubstMap(const vector<ExpT>& ParamInst) const;
 
             const vector<LTSSymbTransRef>& GetSymbolicTransitions() const;
 

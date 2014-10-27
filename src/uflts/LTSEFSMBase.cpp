@@ -1640,6 +1640,17 @@ namespace ESMC {
             return sstr.str();
         }
 
+        const MgrT::SubstMapT& EFSMBase::GetRebaseSubstMap(const vector<ExpT>& ParamInst) const
+        {
+            auto it = RebaseSubstMaps.find(ParamInst);
+            if (it == RebaseSubstMaps.end()) {
+                throw InternalError((string)"Requested rebase substitution map of non-existent " + 
+                                    "instance of EFSM \"" + Name + "\"\nAt: " + __FILE__ + 
+                                    ":" + to_string(__LINE__));
+            }
+            return it->second;
+        }
+
         const vector<LTSSymbTransRef>& EFSMBase::GetSymbolicTransitions() const
         {
             return SymbolicTransitions;

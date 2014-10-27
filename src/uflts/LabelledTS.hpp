@@ -59,6 +59,7 @@ namespace ESMC {
             friend class MC::StateVecPrinter;
             friend class MC::BuchiAutomatonBase;
             friend class MC::StateBuchiAutomaton;
+            friend class Synth::Solver;
 
             static const string ProductMsgName;
 

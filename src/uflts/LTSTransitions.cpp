@@ -304,11 +304,15 @@ namespace ESMC {
 
             // Set up the fixed interpretation
             vector<ExpT> FixedComps;
-            for (auto const& GuardComp : GuardComps) {
-                auto&& SynthExps = GetSynthExps(GuardComp);
-                if (SynthExps.size() == 0) {
-                    FixedComps.push_back(GuardComp);
-                }
+            for (auto const& Trans : ProductTrans) {
+                auto EFSM = Trans->GetAutomaton()->SAs<EFSMBase>();
+                auto const& StateType = EFSM->GetStateType();
+                auto const& InitStateName = Trans->GetInitState().GetName();
+                auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, 
+                                           Mgr->MakeVar("state", StateType),
+                                           Mgr->MakeVal(InitStateName, StateType));
+                auto const& RebaseSubstMap = EFSM->GetRebaseSubstMap(Trans->GetParamInst());
+                FixedComps.push_back(Mgr->Substitute(RebaseSubstMap, EQExp));
             }
 
             if (FixedComps.size() == 0) {

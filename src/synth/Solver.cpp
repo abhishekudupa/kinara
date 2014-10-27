@@ -55,12 +55,29 @@ namespace ESMC {
 
         using LTS::ExpT;
 
+        const string Solver::BoundsVarPrefix = (string)"__SynthBound__";
+
         Solver::Solver(LTSChecker* Checker)
             : TP(new Z3TheoremProver()), TheLTS(Checker->TheLTS), 
               Compiler(Checker->Compiler), Bound(0), 
               GuardedCommands(TheLTS->GetGuardedCmds())
         {
-            // Nothing here
+            auto Mgr = TheLTS->GetMgr();
+            // push a scope onto the theorem prover and assert
+            // true
+            TP->Push();
+            TP->Assert(TheLTS->MakeTrue());
+            
+            TPAsZ3 = const_cast<Z3TheoremProver*>(TP->As<Z3TheoremProver>());
+            Ctx = TPAsZ3->GetCtx();
+            
+            BoundExpr = Z3Expr(Ctx, Z3_mk_int(*Ctx, 0, Z3_mk_int_sort(*Ctx)));
+            auto BoundsVarName = 
+                BoundsVarPrefix + to_string(BoundsVarUIDGenerator.GetUID());
+            auto BoundsVarSym = Z3_mk_string_symbol(*Ctx, BoundsVarName.c_str());
+            BoundsVar = Z3Expr(Ctx, Z3_mk_const(*Ctx, BoundsVarSym, Z3_mk_int_sort(*Ctx)));
+            
+            
         }
 
         Solver::~Solver()
@@ -89,7 +106,10 @@ namespace ESMC {
         //       continue
         void Solver::Solve()
         {
-            
+            while (true) {
+                
+                auto TPRes = TP->CheckSat();
+            }            
         }
 
     } /* end namespace Synth */

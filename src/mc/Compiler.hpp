@@ -85,7 +85,8 @@ namespace ESMC {
             ExpPtrT GetExp() const;
 
             virtual i64 Evaluate(const StateVec* StateVector) const = 0;
-            virtual void UpdateModel(const Z3Model& Model) const;
+            virtual void UpdateModel(const Z3Model& Model,
+                                     const unordered_set<i64>& InterpretedOps) const;
 
             static void MakeInterpreter(const ExpT& Exp, LTSCompiler* Compiler);
 
@@ -209,6 +210,8 @@ namespace ESMC {
             mutable unordered_map<vector<i64>, i64, 
                                   Detail::ValueVecHasher> EvalMap;
             mutable Z3Model Model;
+            mutable bool Enabled;
+            i64 MyOpCode;
 
             inline i64 DoEval() const;
             
@@ -218,7 +221,9 @@ namespace ESMC {
             virtual ~UFInterpreter();
 
             virtual i64 Evaluate(const StateVec* StateVector) const override;
-            virtual void UpdateModel(const Z3Model& Model) const override;
+            virtual void UpdateModel(const Z3Model& Model,
+                                     const unordered_set<i64>& InterpretedOps) const override;
+            bool IsEnabled() const;
         };
 
         class OpInterpreter : public RValueInterpreter
@@ -454,7 +459,8 @@ namespace ESMC {
             void CompileLTS(LabelledTS* TheLTS);
             vector<GCmdRef> CompileCommands(const vector<GCmdRef>& Commands,
                                             LabelledTS* TheLTS);
-            void UpdateModel(const Z3Model& Model);
+            void UpdateModel(const Z3Model& Model,
+                             const unordered_set<i64>& InterpretedOps);
         };
         
     } /* end namespace MC */

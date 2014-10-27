@@ -43,6 +43,7 @@
 #include "../common/FwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../uflts/LTSTransitions.hpp"
+#include "../utils/UIDGenerator.hpp"
 
 namespace ESMC {
     namespace Synth {
@@ -54,6 +55,7 @@ namespace ESMC {
         class Solver : public RefCountable
         {
         private:
+            static const string BoundsVarPrefix;
             TPRef TP;
             LabelledTS* TheLTS;
             LTSCompiler* Compiler;
@@ -61,6 +63,13 @@ namespace ESMC {
             u32 Bound;
             vector<GCmdRef> GuardedCommands;
             set<u32> UnlockedCommands;
+            Z3TheoremProver* TPAsZ3;
+            Z3Ctx Ctx;
+            UIDGenerator BoundsVarUIDGenerator;
+            UIDGenerator IndicatorUIDGenerator;
+            
+            Z3Expr BoundExpr;
+            Z3Expr BoundsVar;
 
         public:
             Solver(LTSChecker* Checker);

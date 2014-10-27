@@ -237,6 +237,11 @@ namespace ESMC {
             }
         }
 
+        void Z3TheoremProver::Assert(const Z3Expr& Assertion) const
+        {
+            Z3_solver_assert(*Ctx, Solver, Assertion);
+        }
+
         TPResult Z3TheoremProver::CheckSat() const
         {
             auto Res = Z3_solver_check(*Ctx, Solver);
