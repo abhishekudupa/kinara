@@ -1153,7 +1153,8 @@ namespace ESMC {
                     auto const& RHS = Update->GetRHS();
 
                     if (HasMsgLValue(LHS, TheLTS)) {
-                        SubstMap[LHS] = Mgr->TermSubstitute(SubstMap, RHS);
+                        auto NewSubstitution = Mgr->TermSubstitute(SubstMap, RHS);
+                        SubstMap[LHS] = NewSubstitution;
                     } else {
                         auto NewRHS = Mgr->TermSubstitute(SubstMap, RHS);
                         auto SimpLHS = Mgr->Simplify(LHS);

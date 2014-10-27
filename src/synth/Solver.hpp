@@ -42,6 +42,7 @@
 
 #include "../common/FwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
+#include "../uflts/LTSTransitions.hpp"
 
 namespace ESMC {
     namespace Synth {
@@ -58,6 +59,8 @@ namespace ESMC {
             LTSCompiler* Compiler;
             LTSChecker* Checker;
             u32 Bound;
+            vector<GCmdRef> GuardedCommands;
+            set<u32> UnlockedCommands;
 
         public:
             Solver(LTSChecker* Checker);

@@ -57,7 +57,8 @@ namespace ESMC {
 
         Solver::Solver(LTSChecker* Checker)
             : TP(new Z3TheoremProver()), TheLTS(Checker->TheLTS), 
-              Compiler(Checker->Compiler), Bound(0)
+              Compiler(Checker->Compiler), Bound(0), 
+              GuardedCommands(TheLTS->GetGuardedCmds())
         {
             // Nothing here
         }
@@ -67,6 +68,25 @@ namespace ESMC {
             // Nothing here
         }
 
+        // Algorithm:
+        // unlocked := {}
+        // bound := 0
+        // while (true) 
+        //   success := model check
+        //   if success then
+        //     return completed protocol
+        //   else
+        //     Analyze counterexample
+        //       - Safety: Add constraints
+        //       - Deadlock: "unlock" additional transitions
+        //                   and add constraints
+        //       - Liveness: "unlock" additional transitions
+        //                   and add constraints
+        //     model := get an interpretation based on the constraints
+        //     if model is undefined (unsat) then
+        //       bound := bound + 1 and retry model generation
+        //     else
+        //       continue
         void Solver::Solve()
         {
             
