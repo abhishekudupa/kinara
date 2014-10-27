@@ -44,6 +44,7 @@
 #include "../uflts/LTSTypes.hpp"
 #include "../uflts/LTSEFSM.hpp"
 #include "../mc/LTSChecker.hpp"
+#include "../symexec/LTSAnalyses.hpp"
 
 #include "Solver.hpp"
 
@@ -53,6 +54,7 @@ namespace ESMC {
         using namespace ESMC::LTS;
         using namespace ESMC::MC;
         using namespace ESMC::TP;
+        using namespace ESMC::Analyses;
 
         using LTS::ExpT;
 
@@ -137,7 +139,11 @@ namespace ESMC {
             } else {
                 GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
             }
-            
+
+            auto WPConditions = 
+                TraceAnalyses::WeakestPrecondition(TheLTS, 
+                                                   Trace->As<SafetyViolation>(), 
+                                                   GoodExp);
             // TODO:
             // 1. Palm the trace off to the analysis engine
             // 2. Add constraints and unlock commands as required
