@@ -51,6 +51,7 @@ namespace ESMC {
     namespace Analyses {
 
         using namespace LTS;
+        using namespace MC;
 
         class SubstitutorForWP : VisitorBaseT
         {
@@ -88,6 +89,21 @@ namespace ESMC {
             static set<LTSFairObjRef>
             GetLoopFairnessObjects(LTS::LabelledTS* TheLTS,
                                    MC::LivenessViolation* LivenessViolation);
+
+            static set<LTSFairObjRef>
+            TriviallySatisfiedFairnessObjectsInLoop(LTS::LabelledTS* TheLTS,
+                                                    MC::LivenessViolation* LivenessViolation);
+
+            ExpT WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
+                                                StateBuchiAutomaton* Monitor,
+                                                LivenessViolation* Trace,
+                                                ExpT InitialCondition,
+                                                int StartIndexInLoop);
+
+            vector<ExpT>
+            EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
+                                        MC::LivenessViolation* LivenessViolation,
+                                        set<LTSFairObjRef> FairnessObjects);
 
             static vector<LTS::GCmdRef> TentativeGuardedCommandsInLTS(LTS::LabelledTS* TheLTS);
 

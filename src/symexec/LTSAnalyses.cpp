@@ -464,6 +464,114 @@ namespace ESMC {
             return Retval;
         }
 
+        set<LTSFairObjRef>
+        TraceAnalyses::TriviallySatisfiedFairnessObjectsInLoop(LabelledTS* TheLTS,
+                                                               LivenessViolation* LivenessViolation)
+        {
+            auto Retval = GetLTSFairnessObjects(TheLTS);
+            auto LoopFairnessObjects = GetLoopFairnessObjects(TheLTS, LivenessViolation);
+            Retval.erase(LoopFairnessObjects.begin(), LoopFairnessObjects.end());
+            return Retval;
+        }
+
+        ExpT TraceAnalyses::WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
+                                                           StateBuchiAutomaton* Monitor,
+                                                           LivenessViolation* Trace,
+                                                           ExpT InitialCondition,
+                                                           int StartIndexInLoop)
+        {
+            vector<PSTraceElemT> Loop = Trace->GetLoop();
+            vector<PSTraceElemT> Stem = Trace->GetStem();
+            auto LastStem = Stem.back();
+            auto PreviousMonitorState = LastStem.second->GetMonitorState();
+            vector<pair<LTS::GCmdRef, ExpT>> LoopGuardedCommandsAndMonitorGuards;
+            for (auto PSTraceElement: Loop) {
+                auto GuardedCommand = PSTraceElement.first;
+                auto ProductState = PSTraceElement.second;
+                auto MonitorGuard = Monitor->GetGuardForTransition(PreviousMonitorState,
+                                                                   ProductState->GetMonitorState(),
+                                                                   ProductState->GetIndexID());
+                auto Pair = make_pair(GuardedCommand, MonitorGuard);
+                LoopGuardedCommandsAndMonitorGuards.push_back(Pair);
+                PreviousMonitorState = ProductState->GetMonitorState();
+            }
+            vector<pair<LTS::GCmdRef, ExpT>> StemGuardedCommandsAndMonitorGuards;
+            auto InitialState = Trace->GetInitialState();
+            PreviousMonitorState = InitialState->GetMonitorState();
+            for (auto PSTraceElement: Stem) {
+                auto GuardedCommand = PSTraceElement.first;
+                auto ProductState = PSTraceElement.second;
+                auto MonitorGuard = Monitor->GetGuardForTransition(PreviousMonitorState,
+                                                                   ProductState->GetMonitorState(),
+                                                                   ProductState->GetIndexID());
+                auto Pair = make_pair(GuardedCommand, MonitorGuard);
+                StemGuardedCommandsAndMonitorGuards.push_back(Pair);
+                PreviousMonitorState = ProductState->GetMonitorState();
+            }
+            auto Phi = InitialCondition;
+
+            for (auto it = LoopGuardedCommandsAndMonitorGuards.begin() + StartIndexInLoop;
+                 it != LoopGuardedCommandsAndMonitorGuards.begin();
+                 --it) {
+                GCmdRef GuardedCommand = it->first;
+                const vector<LTSAssignRef>& updates = GuardedCommand->GetUpdates();
+                const ExpT& Guard = GuardedCommand->GetGuard();
+                ExpT ProductGuard = TheLTS->MakeOp(LTSOps::OpAND,
+                                                   Guard,
+                                                   it->second);
+                MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
+                MgrT::SubstMapT SubstMapForTransition =
+                    TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
+
+                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
+                Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
+            }
+
+            for (auto it = StemGuardedCommandsAndMonitorGuards.rbegin();
+                 it != StemGuardedCommandsAndMonitorGuards.rend();
+                 ++it) {
+                GCmdRef GuardedCommand = it->first;
+                const vector<LTSAssignRef>& updates = GuardedCommand->GetUpdates();
+                const ExpT& Guard = GuardedCommand->GetGuard();
+                ExpT ProductGuard = TheLTS->MakeOp(LTSOps::OpAND,
+                                                   Guard,
+                                                   it->second);
+
+                MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
+                MgrT::SubstMapT SubstMapForTransition =
+                    TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
+
+                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
+                Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
+            }
+            return Phi;
+        }
+
+        vector<ExpT>
+        TraceAnalyses::EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
+                                                   LivenessViolation* LivenessViolation,
+                                                   set<LTSFairObjRef> FairnessObjects)
+        {
+            vector<ExpT> Retval;
+            auto Loop = LivenessViolation->GetLoop();
+            for (auto FairnessObject : FairnessObjects) {
+                for (PSTraceElemT TraceElement : Loop) {
+                    // Check if there is any guarded command that conains
+                    // the fairness object.
+                    for (auto GuardedCommand : TheLTS->GetGuardedCmds()) {
+                        auto GCmdFairObjs = GuardedCommand->GetFairnessObjs();
+                        auto it = find(GCmdFairObjs.begin(), GCmdFairObjs.end(), FairnessObject);
+                        if (it != GCmdFairObjs.end()) {
+                            // enable command
+                            // Get condition to enable command
+
+                        }
+                    }
+                }
+            }
+            return Retval;
+        }
+
         map<pair<EFSMBase*, vector<ExpT> >, string>
         TraceAnalyses::GuardedCommandInitialStates(GCmdRef GuardedCommand)
         {
