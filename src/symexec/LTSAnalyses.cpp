@@ -38,6 +38,7 @@
 // Code:
 
 #include <algorithm>
+#include <numeric>
 
 #include "LTSAnalyses.hpp"
 #include "../uflts/LabelledTS.hpp"
@@ -353,6 +354,101 @@ namespace ESMC {
             return Retval;
         }
 
+        const StateVec* TraceAnalyses::GetLastState(SafetyViolation* Trace)
+        {
+            return Trace->GetTraceElems().back().second;
+        }
+
+        bool TraceAnalyses::HasUF(ExpT Exp) {
+            auto HasUF = [&] (const ExpBaseT* Exp) -> bool
+                {
+                    auto ExpAsOpExp = Exp->As<OpExpression>();
+                    if (ExpAsOpExp != nullptr) {
+                        auto Code = ExpAsOpExp->GetOpCode();
+                        return (Code >= LTSOps::UFOffset);
+                    }
+                    return false;
+                };
+            return Exp->GetMgr()->Gather(Exp, HasUF).size() > 0;
+        }
+
+        vector<LTS::GCmdRef>
+        TraceAnalyses::TentativeGuardedCommandsInLTS(LTS::LabelledTS* TheLTS)
+        {
+            vector<LTS::GCmdRef> Retval;
+            for (auto GuardedCommand : TheLTS->GetGuardedCmds()) {
+                auto Guard = GuardedCommand->GetGuard();
+                auto HasUF = [&] (const ExpBaseT* Exp) -> bool
+                    {
+                        auto ExpAsOpExp = Exp->As<OpExpression>();
+                        if (ExpAsOpExp != nullptr) {
+                            auto Code = ExpAsOpExp->GetOpCode();
+                            return (Code >= LTSOps::UFOffset);
+                        }
+                        return false;
+                    };
+                auto UFFunctionsinGuard = Guard->GetMgr()->Gather(Guard, HasUF);
+                if (UFFunctionsinGuard.size() > 0) {
+                    Retval.push_back(GuardedCommand);
+                }
+            }
+            return  Retval;
+        }
+
+        map<vector<ExpT>, ExpT>
+        TraceAnalyses::ModelResults(LabelledTS* TheLTS, ExpT UFExp, TPRef TP)
+        {
+            map<vector<ExpT>, ExpT> Retval;
+            vector<vector<ExpT>> Inputs;
+            auto UFExpAsOp = UFExp->As<OpExpression>();
+            auto Children = UFExpAsOp->GetChildren();
+            for (auto Child : Children) {
+                vector<ExpT> ChildrenInputs;
+                for (auto Element : Child->GetType()->GetElements()) {
+                    auto ExpValue = TheLTS->MakeVal(Element, Child->GetType());
+                    ChildrenInputs.push_back(ExpValue);
+                }
+                Inputs.push_back(ChildrenInputs);
+            }
+            auto Product = CrossProduct<ExpT>(Inputs.begin(), Inputs.end());
+            for (auto Combo : Product) {
+                auto NewExp = TheLTS->MakeOp(UFExpAsOp->GetOpCode(), Combo);
+                Retval[Combo] = TP->Evaluate(NewExp);
+            }
+            return Retval;
+        }
+
+        ExpT
+        TraceAnalyses::ConditionToResolveDeadlock(LabelledTS* TheLTS,
+                                                  DeadlockViolation* DeadlockTrace)
+        {
+            vector<GCmdRef> PotentialCommands;
+            auto LastState = GetLastState(DeadlockTrace);
+            for (auto GuardedCommand : TheLTS->GetGuardedCmds()) {
+                if (IsGuardedCommandEnabled(TheLTS, LastState, GuardedCommand)) {
+                    PotentialCommands.push_back(GuardedCommand);
+                }
+            }
+            auto GetGuard = [&](GCmdRef GCmd){return GCmd->GetGuard();};
+            vector<ExpT> PotentialGuards;
+            transform(PotentialCommands.begin(), PotentialCommands.end(),
+                      back_inserter(PotentialGuards), GetGuard);
+            auto Disjunct = [&](ExpT One, ExpT Two)
+                {
+                    if (One == TheLTS->MakeFalse()) {
+                        return Two;
+                    } else {
+                        return TheLTS->MakeOp(LTSOps::OpOR, One, Two);
+                    }
+                };
+            auto GuardCondition = accumulate(PotentialGuards.begin(), PotentialGuards.end(),
+                                             TheLTS->MakeFalse(), Disjunct);
+            auto StateCondition = AutomataStatesCondition(TheLTS, LastState);
+            return TheLTS->MakeOp(LTSOps::OpOR, GuardCondition,
+                                  TheLTS->MakeOp(LTSOps::OpNOT, StateCondition));
+        }
+
+
         set<LTSFairObjRef>
         TraceAnalyses::GetLoopFairnessObjects(LTS::LabelledTS* TheLTS,
                                               MC::LivenessViolation* LivenessViolation)
@@ -411,6 +507,37 @@ namespace ESMC {
             return Retval;
         }
 
+        ExpT
+        TraceAnalyses::AutomataStatesCondition(LabelledTS* TheLTS, const StateVec* StateVector)
+        {
+            ExpT Retval = TheLTS->MakeTrue();
+            auto AllEFSMs = TheLTS->GetEFSMs([&] (const EFSMBase *) {return true;});
+            for (auto EFSM: AllEFSMs) {
+                auto FAType = TheLTS->MakeFieldAccessType();
+                auto EFSMType = TheLTS->GetEFSMType(EFSM->GetName());
+                for (auto ParamInst: EFSM->GetParamInsts()) {
+                    auto EFSMStateVar = TheLTS->MakeVar(EFSM->GetName(), EFSMType);
+                    ExpT EFSMDotState;
+                    for (auto Param: ParamInst) {
+                        EFSMStateVar = TheLTS->MakeOp(LTSOps::OpIndex,
+                                                      EFSMStateVar,
+                                                      Param);
+                    }
+                    EFSMDotState = TheLTS->MakeOp(LTSOps::OpField, EFSMStateVar,
+                                                  TheLTS->MakeVar("state", FAType));
+                    auto Interpreter = EFSMDotState->ExtensionData.Interp;
+                    i64 StateValue = Interpreter->Evaluate(StateVector);
+                    auto EFSMDotStateAsEnum = EFSMDotState->GetType()->As<ExprEnumType>();
+                    string StateName = EFSMDotStateAsEnum->ValToConst(StateValue);
+                    auto State = TheLTS->MakeVal(StateName, EFSMDotState->GetType());
+                    auto StateCondition = TheLTS->MakeOp(LTSOps::OpEQ, EFSMDotState, State);
+                    Retval = TheLTS->MakeOp(LTSOps::OpAND, Retval,
+                                            StateCondition);
+                }
+            }
+            return Retval;
+        }
+
         bool TraceAnalyses::IsGuardedCommandEnabled(LabelledTS* TheLTS,
                                      const StateVec* StateVector,
                                      GCmdRef GuardedCommand) {
@@ -426,6 +553,40 @@ namespace ESMC {
                 }
             }
             return enabled;
+        }
+
+        vector<ExpT>
+        TraceAnalyses::WeakestPrecondition(LabelledTS* TheLTS,
+                                           SafetyViolation* Trace,
+                                           ExpT InitialPredicate)
+        {
+            ExpT Phi = InitialPredicate;
+            auto Mgr = Phi->GetMgr();
+            const vector<TraceElemT>& TraceElements = Trace->GetTraceElems();
+            for (auto it = TraceElements.rbegin(); it != TraceElements.rend(); ++it) {
+                GCmdRef guarded_command = it->first;
+                const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
+                const ExpT& guard = guarded_command->GetGuard();
+                MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
+                MgrT::SubstMapT SubstMapForTransition =
+                    TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
+                Phi = Mgr->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
+                Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, guard, Phi);
+            }
+            vector<ExpT> Retval;
+            auto InitStateGenerators = TheLTS->GetInitStateGenerators();
+            for (auto InitState: InitStateGenerators) {
+                MgrT::SubstMapT InitStateSubstMap;
+                cout << "--------------" << endl;
+                for (auto update: InitState) {
+                    cout << update->ToString() << endl;
+                    InitStateSubstMap[update->GetLHS()] = update->GetRHS();
+                }
+                auto NewPhi = Mgr->ApplyTransform<SubstitutorForWP>(Phi,
+                                                                        InitStateSubstMap);
+                Retval.push_back(NewPhi);
+            }
+            return Retval;
         }
 
         ExpT TraceAnalyses::WeakestPrecondition(ExpT InitialPhi, TraceBase* Trace)
@@ -454,8 +615,8 @@ namespace ESMC {
         }
 
         ExpT TraceAnalyses::WeakestPreconditionForLiveness(LabelledTS* TheLTS,
-                                            StateBuchiAutomaton* Monitor,
-                                            LivenessViolation* Trace)
+                                                           StateBuchiAutomaton* Monitor,
+                                                           LivenessViolation* Trace)
         {
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
             MgrT::SubstMapT LoopValues;

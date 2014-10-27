@@ -44,6 +44,7 @@
 #include "../expr/Expressions.hpp"
 #include "../uflts/LTSTypes.hpp"
 #include "../uflts/LTSFairnessSet.hpp"
+#include "../tpinterface/TheoremProver.hpp"
 
 
 namespace ESMC {
@@ -83,9 +84,20 @@ namespace ESMC {
             static vector<ExpT> GetAllScalarLeaves(ExpT InitialExp);
             static set<LTSFairObjRef> GetLTSFairnessObjects(LTS::LabelledTS* TheLTS);
 
+            static const MC::StateVec* GetLastState(MC::SafetyViolation* Trace);
             static set<LTSFairObjRef>
             GetLoopFairnessObjects(LTS::LabelledTS* TheLTS,
                                    MC::LivenessViolation* LivenessViolation);
+
+            static vector<LTS::GCmdRef> TentativeGuardedCommandsInLTS(LTS::LabelledTS* TheLTS);
+
+            static map<vector<ExpT>, ExpT> ModelResults(LabelledTS* TheLTS, ExpT UFExp, TPRef TP);
+
+            static LTS::ExpT
+            ConditionToResolveDeadlock(LTS::LabelledTS* TheLTS,
+                                       MC::DeadlockViolation* DeadlockTrace);
+
+            static bool HasUF(ExpT Exp);
 
             static MgrT::SubstMapT
             TransitionSubstitutionsGivenTransMsg(const vector<LTSAssignRef>& Updates,
@@ -101,25 +113,33 @@ namespace ESMC {
                                                 LTS::GCmdRef GuardedCommand);
 
             static map<pair<LTS::EFSMBase*, vector<LTS::ExpT> >, string>
-            AutomataStatesFromStateVector(LTS::LabelledTS* TheLTS, 
+
+            AutomataStatesFromStateVector(LTS::LabelledTS* TheLTS,
                                           const MC::StateVec* StateVector);
 
-            static LTS::ExpT WeakestPrecondition(LTS::ExpT InitialPhi, 
+            static LTS::ExpT
+            AutomataStatesCondition(LTS::LabelledTS* TheLTS, const MC::StateVec* StateVector);
+
+            static vector<LTS::ExpT> WeakestPrecondition(LTS::LabelledTS* TheLTS,
+                                                         MC::SafetyViolation* Trace,
+                                                         LTS::ExpT InitialPredicate);
+
+            static LTS::ExpT WeakestPrecondition(LTS::ExpT InitialPhi,
                                                  MC::TraceBase* Trace);
 
-            static LTS::ExpT 
-            WeakestPreconditionForLiveness(LTS::LabelledTS* TheLTS, 
-                                           MC::StateBuchiAutomaton* Monitor, 
+            static LTS::ExpT
+            WeakestPreconditionForLiveness(LTS::LabelledTS* TheLTS,
+                                           MC:: StateBuchiAutomaton* Monitor,
                                            MC::LivenessViolation* LivenessViolation);
-            
-            static LTS::ExpT 
-            SymbolicExecution(LTS::ExpT Phi, 
-                              MC::TraceBase* Trace, 
+
+            static LTS::ExpT
+            SymbolicExecution(LTS::ExpT Phi,
+                              MC::TraceBase* Trace,
                               vector<MgrT::SubstMapT>& symbolic_states);
 
-            static vector<LTS::ExpT> 
-            SymbolicExecution(LTS::LabelledTS* TheLTS, 
-                              MC::TraceBase* Trace, 
+            static vector<LTS::ExpT>
+            SymbolicExecution(LTS::LabelledTS* TheLTS,
+                              MC::TraceBase* Trace,
                               vector<vector<MgrT::SubstMapT>>& symbolic_states);
 
             static map<pair<LTS::EFSMBase*, vector<LTS::ExpT>>, string>
