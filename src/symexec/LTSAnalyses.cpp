@@ -471,7 +471,10 @@ namespace ESMC {
         {
             auto Retval = GetLTSFairnessObjects(TheLTS);
             auto LoopFairnessObjects = GetLoopFairnessObjects(TheLTS, LivenessViolation);
-            Retval.erase(LoopFairnessObjects.begin(), LoopFairnessObjects.end());
+            for (auto FairnessObject : LoopFairnessObjects) {
+                Retval.erase(FairnessObject);
+            }
+            // Retval.erase(LoopFairnessObjects.begin(), LoopFairnessObjects.end());
             return Retval;
         }
 
@@ -548,29 +551,50 @@ namespace ESMC {
             return Phi;
         }
 
-        vector<ExpT>
+        ExpT
         TraceAnalyses::EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
+                                                   StateBuchiAutomaton* Monitor,
                                                    LivenessViolation* LivenessViolation,
-                                                   set<LTSFairObjRef> FairnessObjects)
+                                                   set<LTSFairObjRef> FairnessObjects,
+                                                   set<GCmdRef>& AddedGuardedCmds)
         {
-            vector<ExpT> Retval;
+            vector<ExpT> EnableConditions;
             auto Loop = LivenessViolation->GetLoop();
             for (auto FairnessObject : FairnessObjects) {
+                u16 LoopIndex = 0;
                 for (PSTraceElemT TraceElement : Loop) {
                     // Check if there is any guarded command that conains
                     // the fairness object.
-                    for (auto GuardedCommand : TheLTS->GetGuardedCmds()) {
-                        auto GCmdFairObjs = GuardedCommand->GetFairnessObjs();
+                    for (auto Cmd : TheLTS->GetGuardedCmds()) {
+                        auto GCmdFairObjs = Cmd->GetFairnessObjs();
                         auto it = find(GCmdFairObjs.begin(), GCmdFairObjs.end(), FairnessObject);
                         if (it != GCmdFairObjs.end()) {
-                            // enable command
-                            // Get condition to enable command
-
+                            auto const& FixedInterp = Cmd->GetFixedInterpretation();
+                            auto Interp = FixedInterp->ExtensionData.Interp;
+                            auto Res = Interp->Evaluate(TraceElement.second->GetSVPtr());
+                            if (Res == 0) {
+                                continue;
+                            }
+                            AddedGuardedCmds.insert(Cmd);
+                            auto Condition =
+                                WeakestPreconditionWithMonitor(TheLTS,
+                                                               Monitor,
+                                                               LivenessViolation,
+                                                               Cmd->GetGuard(),
+                                                               LoopIndex);
+                            EnableConditions.push_back(Condition);
                         }
                     }
+                    LoopIndex++;
                 }
             }
-            return Retval;
+            if (EnableConditions.size() == 0) {
+                return TheLTS->MakeFalse();
+            } else if (EnableConditions.size() == 1) {
+                return EnableConditions[0];
+            } else {
+                return TheLTS->MakeOp(LTSOps::OpOR, EnableConditions);
+            }
         }
 
         map<pair<EFSMBase*, vector<ExpT> >, string>
@@ -648,8 +672,8 @@ namespace ESMC {
         }
 
         bool TraceAnalyses::IsGuardedCommandEnabled(LabelledTS* TheLTS,
-                                     const StateVec* StateVector,
-                                     GCmdRef GuardedCommand) {
+                                                    const StateVec* StateVector,
+                                                    GCmdRef GuardedCommand) {
             auto AutomataStates = AutomataStatesFromStateVector(TheLTS, StateVector);
             auto GuardedCommandStates = GuardedCommandInitialStates(GuardedCommand);
             bool enabled = true;
@@ -666,6 +690,7 @@ namespace ESMC {
 
         vector<ExpT>
         TraceAnalyses::WeakestPrecondition(LabelledTS* TheLTS,
+                                           LTSCompiler* Compiler,
                                            SafetyViolation* Trace,
                                            ExpT InitialPredicate)
         {
@@ -686,14 +711,23 @@ namespace ESMC {
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
             for (auto InitState: InitStateGenerators) {
                 MgrT::SubstMapT InitStateSubstMap;
-                cout << "--------------" << endl;
+                vector<ExpT> InitialStateConjuncts;
                 for (auto update: InitState) {
-                    cout << update->ToString() << endl;
-                    InitStateSubstMap[update->GetLHS()] = update->GetRHS();
+                    auto LHS = update->GetLHS();
+                    auto RHS = update->GetRHS();
+                    InitStateSubstMap[LHS] = RHS;
+                    auto EQPred = TheLTS->MakeOp(LTSOps::OpEQ, LHS, RHS);
+                    InitialStateConjuncts.push_back(EQPred);
                 }
-                auto NewPhi = Mgr->ApplyTransform<SubstitutorForWP>(Phi,
+                auto InitialStateLocationPred = TheLTS->MakeOp(LTSOps::OpAND,
+                                                               InitialStateConjuncts);
+                Compiler->CompileExp(InitialStateLocationPred, TheLTS);
+                auto PredInterp = InitialStateLocationPred->ExtensionData.Interp;
+                if (PredInterp->Evaluate(Trace->GetInitialState())) {
+                    auto NewPhi = Mgr->ApplyTransform<SubstitutorForWP>(Phi,
                                                                         InitStateSubstMap);
-                Retval.push_back(NewPhi);
+                    Retval.push_back(NewPhi);
+                }
             }
             return Retval;
         }
@@ -724,8 +758,10 @@ namespace ESMC {
         }
 
         ExpT TraceAnalyses::WeakestPreconditionForLiveness(LabelledTS* TheLTS,
+                                                           LTSCompiler* Compiler,
                                                            StateBuchiAutomaton* Monitor,
-                                                           LivenessViolation* Trace)
+                                                           LivenessViolation* Trace,
+                                                           set<GCmdRef>& AddedGuardedCmds)
         {
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
             MgrT::SubstMapT LoopValues;
@@ -788,7 +824,7 @@ namespace ESMC {
                                                    it->second);
 
                 MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
-                MgrT::SubstMapT SubstMapForTransition = 
+                MgrT::SubstMapT SubstMapForTransition =
                     TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
 
                 Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
@@ -812,7 +848,38 @@ namespace ESMC {
                 Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
                 Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
             }
-            return Phi;
+            auto InitStateGenerators = TheLTS->GetInitStateGenerators();
+            for (auto InitState: InitStateGenerators) {
+                MgrT::SubstMapT InitStateSubstMap;
+                vector<ExpT> InitialStateConjuncts;
+                for (auto update: InitState) {
+                    auto LHS = update->GetLHS();
+                    auto RHS = update->GetRHS();
+                    InitStateSubstMap[LHS] = RHS;
+                    auto EQPred = TheLTS->MakeOp(LTSOps::OpEQ, LHS, RHS);
+                    InitialStateConjuncts.push_back(EQPred);
+                }
+                auto InitialStateLocationPred = TheLTS->MakeOp(LTSOps::OpAND,
+                                                               InitialStateConjuncts);
+                Compiler->CompileExp(InitialStateLocationPred, TheLTS);
+                auto PredInterp = InitialStateLocationPred->ExtensionData.Interp;
+                if (PredInterp->Evaluate(Trace->GetInitialState())) {
+                    auto NewPhi = Mgr->ApplyTransform<SubstitutorForWP>(Phi,
+                                                                        InitStateSubstMap);
+                    Retval.push_back(NewPhi);
+                }
+            }
+
+            auto TrivialFairObjs =
+                TriviallySatisfiedFairnessObjectsInLoop(TheLTS,
+                                                        Trace);
+            auto FairnessCondition =
+                EnableFairnessObjectsInLoop(TheLTS,
+                                            Monitor,
+                                            Trace,
+                                            TrivialFairObjs,
+                                            AddedGuardedCmds);
+            return TheLTS->MakeOp(LTSOps::OpOR, Phi, FairnessCondition);
         }
 
         // TODO Need to deal with clear assignments:
