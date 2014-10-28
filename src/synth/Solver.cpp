@@ -43,6 +43,7 @@
 #include "../uflts/LabelledTS.hpp"
 #include "../uflts/LTSTypes.hpp"
 #include "../uflts/LTSEFSM.hpp"
+#include "../uflts/LTSUtils.hpp"
 #include "../mc/LTSChecker.hpp"
 #include "../symexec/LTSAnalyses.hpp"
 
@@ -74,18 +75,6 @@ namespace ESMC {
             
             TPAsZ3 = const_cast<Z3TheoremProver*>(TP->As<Z3TheoremProver>());
             Ctx = TPAsZ3->GetCtx();
-            
-            BoundExpr = Z3Expr(Ctx, Z3_mk_int(*Ctx, 0, Z3_mk_int_sort(*Ctx)));
-            auto BoundsVarName = 
-                BoundsVarPrefix + to_string(BoundsVarUIDGenerator.GetUID());
-            auto BoundsVarSym = Z3_mk_string_symbol(*Ctx, BoundsVarName.c_str());
-            BoundsVar = Z3Expr(Ctx, Z3_mk_const(*Ctx, BoundsVarSym, Z3_mk_int_sort(*Ctx)));
-        }
-
-        inline void Solver::AssertBoundsConstraint()
-        {
-            TP->Push();
-            TPAsZ3->Assert(Z3Expr(Ctx, Z3_mk_eq(*Ctx, BoundsVar, BoundExpr)));
         }
 
         Solver::~Solver()
@@ -103,6 +92,87 @@ namespace ESMC {
 
             // Palm off to the analyses engine
             delete Trace;
+        }
+
+        inline void Solver::MakeAssertion(const ExpT& Pred)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            TP->Assert(Pred);
+            auto&& SynthOps = GetSynthOps(Pred);
+
+            // Find the structural constraints that need to be added
+            // for the newly exposed operations
+            set<i64> NewGuardOps;
+            auto const& ConstraintsByOp = TheLTS->GetConstraintsByOp();
+            for (auto const& SynthOp : SynthOps) {
+                if (InterpretedOps.find(SynthOp) != InterpretedOps.end()) {
+                    // We've already interpreted these,
+                    // no need to add structural constraints
+                    continue;
+                }
+                InterpretedOps.insert(SynthOp);
+
+                auto it = ConstraintsByOp.find(SynthOp);
+                if (it == ConstraintsByOp.end()) {
+                    continue;
+                }
+
+                // This is a new guard op
+                NewGuardOps.insert(SynthOp);
+
+                auto const& Constraints = it->second;
+
+                for (auto const& Pred : Constraints) {
+                    // Any synth ops in the predicate are also interpreted
+                    auto&& PredOps = GetSynthOps(Pred);
+                    for (auto const& PredOp : PredOps) {
+                        InterpretedOps.insert(PredOp);
+                    }
+                    TP->Assert(Pred);
+                }
+            }
+            
+            // Mark all guards that have a full interpretation as such
+            for (auto const& Cmd : GuardedCommands) {
+                auto const& Guard = Cmd->GetGuard();
+                auto&& SynthOps = GetSynthOps(Guard);
+                bool FullyInterpreted = true;
+                for (auto const& Op : SynthOps) {
+                    if (InterpretedOps.find(Op) == InterpretedOps.end()) {
+                        FullyInterpreted = false;
+                        break;
+                    }
+                }
+                EnabledCommands.insert(Cmd->GetCmdID());
+                Cmd->SetFullyInterpreted(FullyInterpreted);
+            }
+
+            // Create indicator variables for the new guards
+            // and assert constraints on those as well
+            for (auto const& NewOp : NewGuardOps) {
+                auto IndicatorUID = IndicatorUIDGenerator.GetUID();
+                string IndicatorVarName = (string)"__indicator_" + to_string(IndicatorUID);
+                auto FuncType = Mgr->LookupUninterpretedFunction(NewOp)->As<ExprFuncType>();
+                auto const& DomainTypes = FuncType->GetArgTypes();
+                vector<ExpT> BoundArgs;
+                const u32 NumDomainTypes = DomainTypes.size();
+                for (u32 i = 0; i < NumDomainTypes; ++i) {
+                    auto BoundVar = Mgr->MakeBoundVar(DomainTypes[i], NumDomainTypes - i - 1);
+                    BoundArgs.push_back(BoundVar);
+                    i++;
+                }
+                auto AppExp = Mgr->MakeExpr(NewOp, BoundArgs);
+                auto ExistsExp = Mgr->MakeExists(DomainTypes, AppExp);
+                auto IndicatorType = Mgr->MakeType<ExprRangeType>(0, 1);
+                
+                auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
+                IndicatorExps[NewOp] = IndicatorVar;
+
+                auto Implies = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
+                                             Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
+                                                           Mgr->MakeVal("1", IndicatorType)));
+                TP->Assert(Implies);
+            }
         }
 
         inline void Solver::HandleOneDeadlockViolation(const StateVec* ErrorState)
@@ -140,14 +210,15 @@ namespace ESMC {
                 GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
             }
 
-            auto WPConditions = 
+            auto&& WPConditions = 
                 TraceAnalyses::WeakestPrecondition(TheLTS, 
                                                    Trace->As<SafetyViolation>(), 
                                                    GoodExp);
-            // TODO:
-            // 1. Palm the trace off to the analysis engine
-            // 2. Add constraints and unlock commands as required
-            
+
+            for (auto const& Pred : WPConditions) {
+                MakeAssertion(Pred);
+            }
+
             delete Trace;
         }
 
@@ -173,6 +244,21 @@ namespace ESMC {
             return;
         }
 
+        inline void Solver::AssertBoundsConstraint()
+        {
+            auto Mgr = TheLTS->GetMgr();
+            vector<ExpT> Summands;
+            for (auto const& IndexExp : IndicatorExps) {
+                Summands.push_back(IndexExp.second);
+            }
+
+            auto SumExp = Mgr->MakeExpr(LTSOps::OpAND, Summands);
+            auto BoundExp = Mgr->MakeVal(to_string(Bound), 
+                                         Mgr->MakeType<ExprRangeType>(0, Bound));
+            auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundExp);
+            TP->Assert(EQExp);
+        }
+
         // Algorithm:
         // unlocked := {}
         // bound := 0
@@ -195,19 +281,24 @@ namespace ESMC {
         void Solver::Solve()
         {
             while (true) {
+
+                TP->Push();
                 AssertBoundsConstraint();
                 auto TPRes = TP->CheckSat();
+                TP->Pop();
+
                 if (TPRes == TPResult::UNSATISFIABLE) {
-                    // TODO: Handle unsat by increasing bounds
+                    // TODO: Bound the bound
+                    ++Bound;
+                    continue;
                 } else if (TPRes == TPResult::UNKNOWN) {
                     throw ESMCError((string)"Could not solve constraints!");
                 }
 
                 // all good. extract a model
                 auto const& Model = TPAsZ3->GetModel();
-                TP->Pop();
 
-                Compiler->UpdateModel(Model, InterpretedOps);
+                Compiler->UpdateModel(Model, InterpretedOps, IndicatorExps);
 
                 // Okay, we're good to model check now
                 Checker->ClearAQS();

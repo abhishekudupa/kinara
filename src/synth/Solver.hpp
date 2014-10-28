@@ -98,18 +98,17 @@ namespace ESMC {
             LTSChecker* Checker;
             u32 Bound;
             vector<GCmdRef> GuardedCommands;
-            set<u32> UnlockedCommands;
             unordered_set<u32> EnabledCommands;
             unordered_set<i64> InterpretedOps;
+            unordered_map<i64, ExpT> IndicatorExps;
             Z3TheoremProver* TPAsZ3;
             Z3Ctx Ctx;
-            UIDGenerator BoundsVarUIDGenerator;
             UIDGenerator IndicatorUIDGenerator;
-            vector<i64> IndicatorVarToGuardOp;
-            
-            Z3Expr BoundExpr;
-            Z3Expr BoundsVar;
 
+            // makes an assertion. Also fixes up interpretations
+            // and marks the appropriate set of commands as having a
+            // fixed interpretation.
+            inline void MakeAssertion(const ExpT& Pred);
             inline void AssertBoundsConstraint();
             inline void HandleSafetyViolations();
             inline void HandleOneSafetyViolation(const StateVec* ErrorState,

@@ -278,7 +278,8 @@ namespace ESMC {
             return GuardedCommands;
         }
 
-        MgrT::SubstMapT TraceAnalyses::GetSubstitutionsForTransMsg(const vector<LTSAssignRef>& updates)
+        MgrT::SubstMapT 
+        TraceAnalyses::GetSubstitutionsForTransMsg(const vector<LTSAssignRef>& updates)
         {
             MgrT::SubstMapT SubstMapForTransMsg;
             for (LTSAssignRef update: updates) {
