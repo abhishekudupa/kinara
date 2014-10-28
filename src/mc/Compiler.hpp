@@ -86,7 +86,8 @@ namespace ESMC {
 
             virtual i64 Evaluate(const StateVec* StateVector) const = 0;
             virtual void UpdateModel(const Z3Model& Model,
-                                     const unordered_set<i64>& InterpretedOps) const;
+                                     const unordered_set<i64>& InterpretedOps,
+                                     const unordered_map<i64, ExpT>& IndicatorExps) const;
 
             static void MakeInterpreter(const ExpT& Exp, LTSCompiler* Compiler);
 
@@ -222,7 +223,8 @@ namespace ESMC {
 
             virtual i64 Evaluate(const StateVec* StateVector) const override;
             virtual void UpdateModel(const Z3Model& Model,
-                                     const unordered_set<i64>& InterpretedOps) const override;
+                                     const unordered_set<i64>& InterpretedOps,
+                                     const unordered_map<i64, ExpT>& IndicatorExps) const override;
             bool IsEnabled() const;
         };
 
@@ -460,7 +462,8 @@ namespace ESMC {
             vector<GCmdRef> CompileCommands(const vector<GCmdRef>& Commands,
                                             LabelledTS* TheLTS);
             void UpdateModel(const Z3Model& Model,
-                             const unordered_set<i64>& InterpretedOps);
+                             const unordered_set<i64>& InterpretedOps,
+                             const unordered_map<i64, ExpT>& IndicatorExps);
         };
         
     } /* end namespace MC */

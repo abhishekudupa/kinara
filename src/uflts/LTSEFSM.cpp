@@ -748,8 +748,9 @@ namespace ESMC {
                                     MsgDecl->GetMessageType(), 
                                     MsgDecl->GetMessageParams(), true);
             }
+            auto GuardOp = GuardExp->SAs<OpExpression>()->GetOpCode();
 
-            ConstraintsByTransition[SymbolicTransitions.back()] = CurrentConstraints;
+            ConstraintsByGuardOp[GuardOp] = CurrentConstraints;
         }
 
         inline void 
@@ -955,10 +956,10 @@ namespace ESMC {
             UpdateableVariables[VarName] = STEntry->GetType();
         }
 
-        const map<LTSSymbTransRef, set<ExpT>>& 
-        IncompleteEFSM::GetConstraintsByTransition() const
+        const unordered_map<i64, set<ExpT>>& 
+        IncompleteEFSM::GetConstraintsByGuardOp() const
         {
-            return ConstraintsByTransition;
+            return ConstraintsByGuardOp;
         }
         
     } /* end namespace LTS */

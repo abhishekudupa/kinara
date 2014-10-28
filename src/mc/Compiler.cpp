@@ -37,6 +37,7 @@
 
 // Code:
 
+#include <unordered_map>
 #include <boost/lexical_cast.hpp>
 
 #include "../uflts/LabelledTS.hpp"
@@ -318,7 +319,8 @@ namespace ESMC {
 
         // default action: do nothing
         void RValueInterpreter::UpdateModel(const Z3Model& Model,
-                                            const unordered_set<i64>& InterpretedOps) const
+                                            const unordered_set<i64>& InterpretedOps,
+                                            const unordered_map<i64, ExpT>& IndicatorExps) const
         {
             return;
         }
@@ -525,14 +527,34 @@ namespace ESMC {
         }
 
         void UFInterpreter::UpdateModel(const Z3Model& Model,
-                                        const unordered_set<i64>& InterpretedOps) const
+                                        const unordered_set<i64>& InterpretedOps,
+                                        const unordered_map<i64, ExpT>& IndicatorExps) const
         {
             if (InterpretedOps.find(MyOpCode) == InterpretedOps.end()) {
                 Enabled = false;
             } else {
-                EvalMap.clear();
-                this->Model = Model;
-                Enabled = true;
+                auto it = IndicatorExps.find(MyOpCode);
+                if (it != IndicatorExps.end()) {
+                    // check if my indicator is true
+                    TPRef TP = Model.GetTPPtr();
+                    auto Res = TP->Evaluate(it->second);
+                    auto ResAsConst = Res->As<Exprs::ConstExpression>();
+                    if (ResAsConst == nullptr) {
+                        throw ESMCError((string)"Evaluating an indicator variable on the model " +
+                                        "did not result in a constant valued interpretation.\n" + 
+                                        "Term:\n" + it->second->ToString() + 
+                                        "\nEvaluation:\n" + Res->ToString());
+                    }
+                    if (ResAsConst->GetConstValue() != "0") {
+                        Enabled = true;
+                    } else {
+                        Enabled = false;
+                    }
+                } else {
+                    EvalMap.clear();
+                    this->Model = Model;
+                    Enabled = true;
+                }
             }
         }
 
@@ -1106,6 +1128,7 @@ namespace ESMC {
         {
             for (auto const& GCmd : TheLTS->GuardedCommands) {
                 CompileExp(GCmd->GetGuard(), TheLTS);
+                CompileExp(GCmd->GetFixedInterpretation(), TheLTS);
                 for (auto const& Update : GCmd->GetUpdates()) {
                     CompileExp(Update->GetLHS(), TheLTS);
                     CompileExp(Update->GetRHS(), TheLTS);
@@ -1187,12 +1210,13 @@ namespace ESMC {
         }
 
         void LTSCompiler::UpdateModel(const Z3Model& Model,
-                                      const unordered_set<i64>& InterpretedOps)
+                                      const unordered_set<i64>& InterpretedOps,
+                                      const unordered_map<i64, ExpT>& IndicatorExps)
         {
             // Push the model through all the registered
             // interpreters
             for (auto const& Interp : RegisteredInterps) {
-                Interp->UpdateModel(Model, InterpretedOps);
+                Interp->UpdateModel(Model, InterpretedOps, IndicatorExps);
             }
         }
 

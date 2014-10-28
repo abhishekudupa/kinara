@@ -526,6 +526,21 @@ namespace ESMC {
                                });
         }
 
+        static inline unordered_set<i64> GetSynthOps(const ExpT& Exp)
+        {
+            unordered_set<i64> Retval;
+            auto SynthExps = GetSynthExps(Exp);
+            for (auto const& SynthExp : SynthExps) {
+                auto ExpAsOp = SynthExp->As<OpExpression>();
+                if (ExpAsOp == nullptr) {
+                    throw InternalError((string)"Expected an op expression.\nAt: " + 
+                                        __FILE__ + ":" + to_string(__LINE__));
+                }
+                Retval.insert(ExpAsOp->GetOpCode());
+            }
+            return Retval;
+        }
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

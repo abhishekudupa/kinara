@@ -374,6 +374,19 @@ namespace ESMC {
 
             InvariantExp = Mgr->Simplify(InvariantExp);
             FinalCondExp = Mgr->Simplify(FinalCondExp);
+
+            // unify the constraints by op for each incomplete efsm
+            for (auto const& NameEFSM : AllEFSMs) {
+                auto EFSM = NameEFSM.second;
+                if (!EFSM->Is<IncompleteEFSM>()) {
+                    continue;
+                }
+
+                auto CurConstraints = EFSM->SAs<IncompleteEFSM>()->GetConstraintsByGuardOp();
+                for (auto const& OpConstraints : CurConstraints) {
+                    ConstraintsByOp[OpConstraints.first] = OpConstraints.second;
+                }
+            }
         }
 
         const ExpT& LabelledTS::GetInvariant() const
@@ -1119,6 +1132,11 @@ namespace ESMC {
             CheckExpr(ElimExp, SymTab, Mgr);
             InvariantExp = Mgr->MakeExpr(LTSOps::OpAND, InvariantExp, ElimExp);
             InvariantExp = Mgr->Simplify(InvariantExp);
+        }
+
+        const unordered_map<i64, set<ExpT>>& LabelledTS::GetConstraintsByOp() const
+        {
+            return ConstraintsByOp;
         }
 
     } /* end namespace LTS */
