@@ -393,9 +393,9 @@ int main()
     EnvEFSM->Freeze();
 
     auto CacheEFSM = 
-        TheLTS->MakeEFSM<IncompleteEFSM>("Cache", 
-                                         { CacheParam, DirParam, AddressParam }, 
-                                         TrueExp, LTSFairnessType::Strong);
+        TheLTS->MakeEFSM<GeneralEFSM>("Cache", 
+            { CacheParam, DirParam, AddressParam }, 
+            TrueExp, LTSFairnessType::Strong);
     
     CacheEFSM->AddState("C_I");
     CacheEFSM->AddState("C_I_LD");
@@ -825,9 +825,9 @@ int main()
     CacheEFSM->AddOutputTransition("C_II_SENDACK", "C_I", TrueExp, Updates, 
                                    "OutMsg", EVAckMsgType, CacheParams);
 
-    auto CacheAsInc = CacheEFSM->As<IncompleteEFSM>();
-    CacheAsInc->MarkAllStatesComplete();
-    CacheAsInc->MarkStateIncomplete("C_IM_FWD");
+    // auto CacheAsInc = CacheEFSM->As<IncompleteEFSM>();
+    // CacheAsInc->MarkAllStatesComplete();
+    // CacheAsInc->MarkStateIncomplete("C_IM_FWD");
     // CacheAsInc->IgnoreAllMsgsOnState("C_IM_FWD");
     // CacheAsInc->HandleMsgOnState(FwdGetXInMsgDecl, "C_IM_FWD");
 
@@ -1081,10 +1081,10 @@ int main()
     Updates.push_back(new LTSAssignSimple(DirOwnerExp,
                                           TheLTS->MakeVal("clear", CacheIDType)));
 
-    DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_M_WB", "D_I", 
-                                  Guard, Updates, "OutMsg", WBAckMsgType, 
-                                  CacheParams, LTSFairnessType::None, 
-                                  SplatFairnessType::None, "");
+    // DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_M_WB", "D_I", 
+    //                               Guard, Updates, "OutMsg", WBAckMsgType, 
+    //                               CacheParams, LTSFairnessType::None, 
+    //                               SplatFairnessType::None, "");
     Updates.clear();
 
     // Transitions from BUSY
@@ -1238,6 +1238,7 @@ int main()
 
     auto DirAsInc = DirEFSM->SAs<IncompleteEFSM>();
     DirAsInc->MarkAllStatesComplete();
+    DirAsInc->MarkStateIncomplete("D_M_WB");
 
     DirEFSM->Freeze();
 
@@ -1484,9 +1485,9 @@ int main()
     Monitor->Freeze();
 
     // Attempt synthesis
-    // auto TheSolver = new Solver(TheLTS, Checker->GetCompiler());
-    // TheSolver->Solve();
-    // return 0;
+    auto TheSolver = new Solver(Checker);
+    TheSolver->Solve();
+    return 0;
 
     delete Checker;
 }
