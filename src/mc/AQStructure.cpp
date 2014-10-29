@@ -321,6 +321,7 @@ namespace ESMC {
             FibHeapT PrioQ;
             unordered_map<const StateVec*, FibHeapT::handle_type> StateToHandle;
             unordered_map<const StateVec*, const StateVec*> Predecessors;
+            unordered_map<const StateVec*, u64> ScannedNodes;
 
             const StateVec* ActualTarget = nullptr;
 
@@ -337,7 +338,11 @@ namespace ESMC {
             while (PrioQ.size() > 0 && !ReachedTarget) {
                 auto CurStateData = PrioQ.top();
                 auto CurState = CurStateData.StateVector;
+                auto CurDist = CurStateData.DistanceFromOrigin;
+                
+                ScannedNodes[CurState] = CurDist;
                 PrioQ.pop();
+                StateToHandle.erase(CurState);
                 
                 auto const& Edges = 
                     StateHashSet.find(const_cast<StateVec*>(CurState))->second;
@@ -346,6 +351,10 @@ namespace ESMC {
                     u64 NewDist = CurStateData.DistanceFromOrigin + 
                         CostFunction(CurState, Edge);
                     auto NSVec = Edge->GetTarget();
+
+                    if (ScannedNodes.find(NSVec) != ScannedNodes.end()) {
+                        continue;
+                    }
 
                     auto nsit = StateToHandle.find(NSVec);
                     u64 OldDist;
@@ -909,6 +918,7 @@ namespace ESMC {
             FibHeapT PrioQ;
             unordered_map<const ProductState*, FibHeapT::handle_type> StateToHandle;
             unordered_map<const ProductState*, const ProductState*> Predecessors;
+            unordered_map<const ProductState*, u64> ScannedNodes;
 
             const ProductState* ActualTarget = nullptr;
 
@@ -926,7 +936,11 @@ namespace ESMC {
             while (PrioQ.size() > 0 && !ReachedTarget) {
                 auto CurStateData = PrioQ.top();
                 auto CurState = CurStateData.State;
+                auto CurDist = CurStateData.DistanceFromOrigin;
+
+                ScannedNodes[CurState] = CurDist;
                 PrioQ.pop();
+                StateToHandle.erase(CurState);
 
                 auto const& Edges = PSHashSet.find(const_cast<ProductState*>(CurState))->second;
                 
@@ -934,6 +948,10 @@ namespace ESMC {
                     u64 NewDist = CurStateData.DistanceFromOrigin + 
                         CostFunction(CurState, Edge);
                     auto NextState = Edge->GetTarget();
+
+                    if (ScannedNodes.find(NextState) != ScannedNodes.end()) {
+                        continue;
+                    }
 
                     auto NextStateIt = StateToHandle.find(NextState);
                     u64 OldDist;
