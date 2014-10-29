@@ -67,7 +67,7 @@ using namespace MC;
 using namespace Synth;
 using namespace Analyses;
 
-int TOPFLOOR = 3;
+int TOPFLOOR = 2;
 
 
 void InitializeAutomata(LabelledTS* TheLTS)
@@ -390,8 +390,11 @@ int main()
     Monitor->Freeze();
 
     auto TheSolver = new Solver(Checker);
+    
     TheSolver->Solve();
 
+    delete Checker;
+    delete TheSolver;
 }
 
 //

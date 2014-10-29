@@ -2182,11 +2182,11 @@ namespace ESMC {
                     QVarNames[i] = Z3_mk_string_symbol(*Ctx, ("DBVar_" + to_string(i)).c_str());
                 }
 
-                AndArgs = new Z3_ast[2];
-                AndArgs[0] = AssumptionLExp;
-                AndArgs[1] = LoweredQExpr;
+                Z3_ast AndArgs2[2];
+                AndArgs2[0] = AssumptionLExp;
+                AndArgs2[1] = LoweredQExpr;
 
-                auto ActualBody = Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs));
+                auto ActualBody = Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs2));
 
                 if (Exp->IsForAll()) {
                     auto ActualBody = Z3Expr(Ctx, 
@@ -2196,11 +2196,11 @@ namespace ESMC {
                                                                 NumQVars, QVarSorts,
                                                                 QVarNames, ActualBody)));
                 } else {
-                    Z3_ast AndArgs[2];
-                    AndArgs[0] = AssumptionLExp;
-                    AndArgs[1] = LoweredQExpr;
+                    Z3_ast AndArgs3[2];
+                    AndArgs3[0] = AssumptionLExp;
+                    AndArgs3[1] = LoweredQExpr;
                     auto ActualBody = Z3Expr(Ctx,
-                                             Z3_mk_and(*Ctx, 2, AndArgs));
+                                             Z3_mk_and(*Ctx, 2, AndArgs3));
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_exists(*Ctx, 0, 0, nullptr, 
                                                                 NumQVars, QVarSorts,
                                                                 QVarNames, ActualBody)));
