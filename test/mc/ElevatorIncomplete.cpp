@@ -164,7 +164,7 @@ void AddControllerAutomaton(LabelledTS* TheLTS, map<string, ExprTypeRef>& MsgTyp
     Controller->AddState("CheckRequest"); //, false, false, false, true);
     Controller->AddState("SentUp");
     Controller->AddState("SentDown");
-    Controller->AddState("Dummy");
+    // Controller->AddState("Dummy");
     Controller->FreezeStates();
     Controller->AddVariable("CurrentFloor", FloorType);
     Controller->AddVariable("TargetFloor", FloorType);
@@ -204,9 +204,9 @@ void AddControllerAutomaton(LabelledTS* TheLTS, map<string, ExprTypeRef>& MsgTyp
     Controller->AddOutputTransition("CheckRequest", "Initial", ArriveGuard, {}, "Arrive", ArriveMsgType, {}, EmptyFairnessSets);
     // Controller->AddOutputTransition("Dummy", "Dummy", TheLTS->MakeTrue(), {}, "Arrive", ArriveMsgType, {}, EmptyFairnessSets);
     // Controller->AddInternalTransition("CheckRequest", "CheckRequest", TheLTS->MakeTrue(), {});
-    Controller->AddInputTransition("Dummy", "Dummy", TheLTS->MakeTrue(), {}, "UpAck", MsgTypes["UpAck"], {});
+    // Controller->AddInputTransition("Dummy", "Dummy", TheLTS->MakeTrue(), {}, "UpAck", MsgTypes["UpAck"], {});
     Controller->AddOutputTransition("CheckRequest", "SentUp", GoUpGuard, {}, "Up", UpMsgType, {}, EmptyFairnessSets);
-    Controller->AddOutputTransition("CheckRequest", "SentDown", GoDownGuard, {}, "Down", DownMsgType, {}, EmptyFairnessSets);
+    // Controller->AddOutputTransition("CheckRequest", "SentDown", GoDownGuard, {}, "Down", DownMsgType, {}, EmptyFairnessSets);
     // Controller->AddInputTransition("SentUp", "CheckRequest", TheLTS->MakeTrue(), CurrentFloorPlusUpdates, "UpAck", UpAckMsgType, {});
     Controller->AddInputTransition("SentDown", "CheckRequest", TheLTS->MakeTrue(), CurrentFloorMinusUpdates, "DownAck", DownAckMsgType, {});
     Controller->SAs<IncompleteEFSM>()->MarkVariableReadOnly("TargetFloor");

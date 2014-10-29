@@ -99,14 +99,14 @@ namespace ESMC {
             virtual void Pop(u32 NumScopes) const;
 
             virtual void Assert(const ExpT& Assertion, 
-                                bool UnrollQuantifiers = false) const;
+                                bool UnrollQuantifiers) const;
             virtual void Assert(const vector<ExpT>& Assertions, 
-                                bool UnrollQuantifiers = false) const;
+                                bool UnrollQuantifiers) const;
             
             virtual TPResult CheckSat() const = 0;
             // Ignores all the assertions on the stack
             virtual TPResult CheckSat(const ExpT& Assertion,
-                                      bool UnrollQuantifiers = false) const = 0;
+                                      bool UnrollQuantifiers) const = 0;
 
             // Evaluates only scalar typed expressions
             virtual ExpT Evaluate(const ExpT& Exp) const = 0;

@@ -1488,51 +1488,6 @@ int main()
     // TheSolver->Solve();
     // return 0;
 
-    auto Status = Checker->BuildAQS();
-
-    if (!Status) {
-        cout << "Bug in AQS" << endl;
-        delete Checker;
-        exit(1);
-    }
-
-    cout << "Checking Liveness Property \"LDLiveness\"..." << endl;
-    auto LiveTrace = Checker->CheckLiveness("LDLiveness");
-
-    if (LiveTrace != nullptr) {
-        cout << LiveTrace->ToString() << endl << endl;
-        delete LiveTrace;
-    }
-
-    cout << "Checking Liveness Property \"STLiveness\"..." << endl;
-    LiveTrace = Checker->CheckLiveness("STLiveness");
-
-    if (LiveTrace != nullptr) {
-        cout << LiveTrace->ToString() << endl << endl;
-        delete LiveTrace;
-    }
-
-    // These lines below check a property that is false
-
-    // auto BugMon = Monitor = Checker->MakeStateBuchiMonitor("FGShared", CacheParams, TrueExp);
-    // BugMon->AddState("Initial", true, true);
-    // BugMon->AddState("OtherState", false, false);
-    // BugMon->FreezeStates();
-
-    // BugMon->AddTransition("Initial", "Initial", MonCacheDotStateNEQS);
-    // BugMon->AddTransition("Initial", "OtherState", MonCacheDotStateEQS);
-    // BugMon->AddTransition("OtherState", "OtherState", MonCacheDotStateEQS);
-    // BugMon->AddTransition("OtherState", "Initial", MonCacheDotStateNEQS);
-    
-    // BugMon->Freeze();
-
-    // cout << "Checking Liveness Property \"FGShared\"" << endl;
-    // auto&& BugTraces = Checker->CheckLiveness("FGShared");
-    
-    // for (auto const& Trace : BugTraces) {
-    //     cout << Trace->ToString() << endl << endl;
-    // }
-    
     delete Checker;
 }
 

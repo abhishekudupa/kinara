@@ -151,6 +151,18 @@ namespace ESMC {
                                                    vector<ExpT>& GuardExps,
                                                    const ExpT& CoveredPred);
 
+            inline void CompleteOutputTransitions(const string& InitStateName,
+                                                  const vector<LTSSymbTransRef>& Transitions,
+                                                  const ExpT& CoveredPredicate,
+                                                  const TPRef& TP);
+
+            inline void CompleteOneOutputTransition(const string& InitStateName,
+                                                    const SymmMsgDeclRef& MsgDecl,
+                                                    const map<string, ExprTypeRef>& DomainVars,
+                                                    vector<ExpT>& GuardExps,
+                                                    const ExpT& CoveredPred);
+
+                                                  
         public:
             IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
                            const vector<ExpT>& Params, const ExpT& Constraint,

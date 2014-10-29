@@ -202,7 +202,7 @@ namespace ESMC {
             } else {
                 UnrolledExp = Assertion;
             }
-            TheoremProver::Assert(Assertion);
+            TheoremProver::Assert(Assertion, UnrollQuantifiers);
 
             // cout << "[Z3TheoremProver] Original:" << endl;
             // cout << UnrolledExp->ToString() << endl;

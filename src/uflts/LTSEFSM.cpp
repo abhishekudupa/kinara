@@ -89,7 +89,7 @@ namespace ESMC {
 
             cout << "Checking for unsat:" << endl << Conjunction->ToString() 
                  << endl << endl;
-            auto Res = TP->CheckSat(Conjunction);
+            auto Res = TP->CheckSat(Conjunction, true);
             if (Res == TPResult::UNKNOWN) {
                 throw IncompleteTheoryException(Conjunction);
             } else if (Res == TPResult::SATISFIABLE) {
@@ -215,7 +215,7 @@ namespace ESMC {
                 auto VarExp = TheLTS->MakeVar(Var.first, Var.second);
                 ExpandExpression(VarExp, Retval);
             }
-             
+
             return Retval;
         }
         
@@ -295,7 +295,7 @@ namespace ESMC {
 
             auto NegCovered = TheLTS->MakeOp(LTSOps::OpNOT, CoveredGuard);
 
-            auto Res = TP->CheckSat(NegCovered);
+            auto Res = TP->CheckSat(NegCovered, true);
             if (Res == TPResult::SATISFIABLE) {
                 return CoveredGuard;
             } else if (Res == TPResult::UNSATISFIABLE) {
@@ -708,21 +708,11 @@ namespace ESMC {
                                                    const ExpT& CoveredPred)
         {
             auto LocalDomVars = DomainVars;
-            auto const& NewParams = MsgDecl->GetNewParams();
-            for (auto const& Param : NewParams) {
-                auto ParamAsVar = Param->As<VarExpression>();
-                auto const& ParamName = ParamAsVar->GetVarName();
-                LocalDomVars[ParamName] = ParamAsVar->GetVarType();
-            }
-
             CurrentConstraints.clear();
 
             // Get the domain terms
             auto&& DomainTerms = GetDomainTerms(LocalDomVars);
             FilterTerms(DomainTerms, TheLTS->MakeBoolType());
-
-            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, GuardExps);
-            GuardExps.push_back(GuardExp);
 
             // Add the input message for the updates
             auto const& MsgType = MsgDecl->GetMessageType();
@@ -733,12 +723,22 @@ namespace ESMC {
                 ActMsgType = MsgType;
             }
 
+            cout << "[" << Name << "]: "
+                 << "Completing Input Transition from state \"" << InitStateName
+                 << "\" on message type \"" << ActMsgType->SAs<ExprRecordType>()->GetName()
+                 << "\"" << endl;
+
+            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, GuardExps);
+            GuardExps.push_back(GuardExp);
+
             LocalDomVars["InMsg"] = MsgDecl->GetMessageType();
 
             DomainTerms = GetDomainTerms(LocalDomVars);
 
             // Make the updates
             auto&& Updates = MakeUpdates(DomainTerms);
+
+            auto const& NewParams = MsgDecl->GetNewParams();
 
             if (NewParams.size() == 0) {
                 AddInputTransition(InitStateName, GuardExp, 
@@ -775,14 +775,6 @@ namespace ESMC {
                     continue;
                 }
 
-                auto const& MType = MsgDecl->GetMessageType();
-                ExprTypeRef ActMType = ExprTypeRef::NullPtr;
-                if (MType->Is<ExprParametricType>()) {
-                    ActMType = MType->SAs<ExprParametricType>()->GetBaseType();
-                } else {
-                    ActMType = MType->SAs<ExprRecordType>();
-                }
-
                 // We need to add transitions
                 // find the predicate already covered
                 // for this state on this input message
@@ -790,15 +782,8 @@ namespace ESMC {
                                                              MsgDecl->GetMessageType(),
                                                              CoveredRegion);
                 if (CoveredMsgPred == TheLTS->MakeTrue()) {
-                    cout << "Nothing to complete on state " << StateName
-                         << " and message " << MsgDecl->ToString() << endl;
                     continue;
-                }
-
-                cout << "Completing transition on MessageType "
-                     << ActMType->SAs<ExprRecordType>()->GetName() 
-                     << " on state " << StateName << endl;
-                    
+                }                    
 
                 // We're okay to add one or more transitions
                 // Gather the list of expresions that could be 
@@ -831,6 +816,102 @@ namespace ESMC {
             }
         }
 
+        void IncompleteEFSM::CompleteOneOutputTransition(const string& InitStateName,
+                                                         const SymmMsgDeclRef& MsgDecl,
+                                                         const map<string, ExprTypeRef>& DomainVars,
+                                                         vector<ExpT>& GuardExps,
+                                                         const ExpT& CoveredPred)
+        {
+            CurrentConstraints.clear();
+
+            auto&& DomainTerms = GetDomainTerms(DomainVars);
+            FilterTerms(DomainTerms, TheLTS->MakeBoolType());
+
+            auto const& MsgType = MsgDecl->GetMessageType();
+            ExprTypeRef ActMsgType = ExprTypeRef::NullPtr;
+            if (MsgType->Is<ExprParametricType>()) {
+                ActMsgType = MsgType->SAs<ExprParametricType>()->GetBaseType();
+            } else {
+                ActMsgType = MsgType;
+            }
+            cout << "[" << Name << "]: "
+                 << "Completing Output Transition from state \"" << InitStateName
+                 << "\" on message type \"" << ActMsgType->SAs<ExprRecordType>()->GetName()
+                 << "\"" << endl;
+
+            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, GuardExps);
+            GuardExps.push_back(GuardExp);
+
+            UpdateableVariables["OutMsg"] = MsgType;
+
+            auto&& Updates = MakeUpdates(DomainTerms);
+
+            UpdateableVariables.erase("OutMsg");
+
+            auto const& NewParams = MsgDecl->GetNewParams();
+
+            if (NewParams.size() == 0) {
+                AddOutputTransition(InitStateName, GuardExp, 
+                                    Updates, "OutMsg", MsgDecl->GetMessageType(),
+                                    MsgDecl->GetMessageParams(), set<string>(),
+                                    true);
+            } else {
+                AddOutputTransitions(NewParams, MsgDecl->GetConstraint(), 
+                                     InitStateName, GuardExp, Updates, "OutMsg", 
+                                     MsgDecl->GetMessageType(), 
+                                     MsgDecl->GetMessageParams(),
+                                     LTSFairnessType::None, SplatFairnessType::None,
+                                     "", true);
+            }
+
+            auto GuardOp = GuardExp->SAs<OpExpression>()->GetOpCode();
+            ConstraintsByGuardOp[GuardOp] = CurrentConstraints;
+        }
+
+        void IncompleteEFSM::CompleteOutputTransitions(const string& StateName,
+                                                       const vector<LTSSymbTransRef>& Transitions,
+                                                       const ExpT& CoveredPredicate,
+                                                       const TPRef& TP)
+        {
+            if (CompleteStates.find(StateName) != CompleteStates.end()) {
+                return;
+            }
+
+            vector<ExpT> GuardExps;
+
+            for (auto const& MsgDecl : SymmetricMessages) {
+                if (!MsgDecl->IsOutput()) {
+                    continue;
+                }
+                
+                auto it = BlockedCompletions.find(StateName);
+                if (it != BlockedCompletions.end() &&
+                    it->second.find(MsgDecl) != it->second.end()) {
+                    continue;
+                }
+
+                map<string, ExprTypeRef> DomainVariables;
+                for (auto const& Var : AllVariables) {
+                    DomainVariables.insert(Var);
+                }
+
+                for (auto const& Param : Params) {
+                    auto const& ParamName = Param->As<VarExpression>()->GetVarName();
+                    DomainVariables[ParamName] = Param->GetType();
+                }
+
+                auto const& NewMsgParams = MsgDecl->GetNewParams();
+                for (auto const& NewMsgParam : NewMsgParams) {
+                    auto ParamAsVar = NewMsgParam->As<VarExpression>();
+                    assert(ParamAsVar != nullptr);
+                    DomainVariables[ParamAsVar->GetVarName()] = ParamAsVar->GetVarType();
+                }
+
+                CompleteOneOutputTransition(StateName, MsgDecl, DomainVariables,
+                                            GuardExps, CoveredPredicate);
+            }
+        }
+
         void IncompleteEFSM::Freeze()
         {
             if (EFSMFrozen) {
@@ -843,6 +924,7 @@ namespace ESMC {
 
             auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
             vector<ExpT> AddedGuards;
+            auto Mgr = TheLTS->GetMgr();
             
             // for each state
             for (auto const& NameState : States) {
@@ -861,6 +943,22 @@ namespace ESMC {
                 
                 // Add transitions
                 CompleteInputTransitions(StateName, TransFromState, CoveredPred, TP);
+            }
+
+            for (auto const& NameState : States) {
+                auto const& StateName = NameState.first;
+                auto&& TransFromState =
+                    GetSymbolicTransitions([&] (const LTSSymbTransRef& Trans) -> bool 
+                                           {
+                                               return (Trans->GetInitState().GetName() ==
+                                                       StateName);
+                                           });
+                auto CoveredPred = FindDisjunction(TransFromState, TP, Mgr->MakeFalse());
+                if (CoveredPred == Mgr->MakeTrue()) {
+                    continue;
+                }
+
+                CompleteOutputTransitions(StateName, TransFromState, CoveredPred, TP);
             }
             
             EFSMFrozen = true;

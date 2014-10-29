@@ -455,8 +455,8 @@ namespace ESMC {
 
 
         set<LTSFairObjRef>
-        TraceAnalyses::GetLoopFairnessObjects(LTS::LabelledTS* TheLTS,
-                                              MC::LivenessViolation* LivenessViolation)
+        TraceAnalyses::GetLoopFairnessObjects(LabelledTS* TheLTS,
+                                              const LivenessViolation* LivenessViolation)
         {
             set<LTSFairObjRef> Retval;
             for (auto TraceElement: LivenessViolation->GetLoop()) {
@@ -471,7 +471,8 @@ namespace ESMC {
 
         set<LTSFairObjRef>
         TraceAnalyses::TriviallySatisfiedFairnessObjectsInLoop(LabelledTS* TheLTS,
-                                                               LivenessViolation* LivenessViolation)
+                                                               const LivenessViolation* 
+                                                               LivenessViolation)
         {
             auto Retval = GetLTSFairnessObjects(TheLTS);
             auto LoopFairnessObjects = GetLoopFairnessObjects(TheLTS, LivenessViolation);
@@ -485,7 +486,7 @@ namespace ESMC {
         ExpT TraceAnalyses::WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
                                                            StateBuchiAutomaton* Monitor,
                                                            MgrT::SubstMapT InitialStateSubstMap,
-                                                           LivenessViolation* Trace,
+                                                           const LivenessViolation* Trace,
                                                            ExpT InitialCondition,
                                                            int StartIndexInLoop)
         {
@@ -561,9 +562,8 @@ namespace ESMC {
         TraceAnalyses::EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
                                                    StateBuchiAutomaton* Monitor,
                                                    MgrT::SubstMapT InitialStateSubstMap,
-                                                   LivenessViolation* LivenessViolation,
-                                                   set<LTSFairObjRef> FairnessObjects,
-                                                   set<GCmdRef>& AddedGuardedCmds)
+                                                   const LivenessViolation* LivenessViolation,
+                                                   set<LTSFairObjRef> FairnessObjects)
         {
             vector<ExpT> EnableConditions;
             auto Loop = LivenessViolation->GetLoop();
@@ -582,7 +582,6 @@ namespace ESMC {
                             if (Res == 0) {
                                 continue;
                             }
-                            AddedGuardedCmds.insert(Cmd);
                             auto Condition =
                                 WeakestPreconditionWithMonitor(TheLTS,
                                                                Monitor,
@@ -773,8 +772,7 @@ namespace ESMC {
 
         ExpT TraceAnalyses::WeakestPreconditionForLiveness(Solver* TheSolver,
                                                            StateBuchiAutomaton* Monitor,
-                                                           LivenessViolation* Trace,
-                                                           set<GCmdRef>& AddedGuardedCmds)
+                                                           const LivenessViolation* Trace)
         {
             auto TheLTS = TheSolver->TheLTS;
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
@@ -865,8 +863,7 @@ namespace ESMC {
             }
 
             auto TrivialFairObjs =
-                TriviallySatisfiedFairnessObjectsInLoop(TheLTS,
-                                                        Trace);
+                TriviallySatisfiedFairnessObjectsInLoop(TheLTS, Trace);
 
             vector<ExpT> Conjuncts;
             for (auto const& InitState : InitStateGenerators) {
@@ -886,11 +883,9 @@ namespace ESMC {
                 }
 
                 auto TPRes = TP->CheckSat(NewPhi, true);
-                if (TPRes == TPResult::SATISFIABLE) {
-                    // Retval.push_back(NewPhi);
-                } else if (TPRes == TPResult::UNKNOWN) {
+                if (TPRes == TPResult::UNKNOWN) {
                     throw IncompleteTheoryException(NewPhi);
-                } else {
+                } else if (TPRes == TPResult::UNSATISFIABLE) {
                     continue;
                 }
 
@@ -899,8 +894,7 @@ namespace ESMC {
                                                 Monitor,
                                                 InitStateSubstMap,
                                                 Trace,
-                                                TrivialFairObjs,
-                                                AddedGuardedCmds);
+                                                TrivialFairObjs);
                 Conjuncts.push_back(TheLTS->MakeOp(LTSOps::OpOR, NewPhi, FairnessCondition));
             }
             if (Conjuncts.size() == 0) {

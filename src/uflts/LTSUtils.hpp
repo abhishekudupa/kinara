@@ -474,8 +474,14 @@ namespace ESMC {
                 return;
             }
 
-            if (VarType->Is<Exprs::ExprRecordType>()) {
-                auto TypeAsRec = VarType->SAs<Exprs::ExprRecordType>();
+            if (VarType->Is<Exprs::ExprRecordType>() || 
+                VarType->Is<Exprs::ExprParametricType>()) {
+                
+                auto BaseType = (VarType->Is<ExprRecordType>() ? 
+                                 VarType : 
+                                 VarType->SAs<Exprs::ExprParametricType>()->GetBaseType());
+                
+                auto TypeAsRec = BaseType->SAs<Exprs::ExprRecordType>();
                 auto const& Fields = TypeAsRec->GetMemberVec();
                 auto FAType = Mgr->MakeType<ExprFieldAccessType>();
 

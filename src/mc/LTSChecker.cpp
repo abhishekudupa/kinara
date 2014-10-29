@@ -485,7 +485,9 @@ namespace ESMC {
                     auto BoundsConstraint = Mgr->MakeExpr(LTSOps::OpAND, LowConstraint,
                                                           HighConstraint);
                     BoundsConstraint = Mgr->MakeExpr(LTSOps::OpIMPLIES, Guard, BoundsConstraint);
-                    BoundsInvariants.insert(Mgr->Simplify(BoundsConstraint));
+                    auto Simplified = Mgr->Simplify(BoundsConstraint);
+                    Compiler->CompileExp(Simplified, TheLTS);
+                    BoundsInvariants.insert(Simplified);
                 }
             }
 

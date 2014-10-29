@@ -117,7 +117,8 @@ namespace ESMC {
             inline void HandleOneSafetyViolation(const StateVec* ErrorState,
                                                  const ExpT& BlownInvariant);
             inline void HandleOneDeadlockViolation(const StateVec* ErrorState);
-            inline void HandleLivenessViolation(const LivenessViolation* Trace);
+            inline void HandleLivenessViolation(const LivenessViolation* Trace,
+                                                StateBuchiAutomaton* Monitor);
 
         public:
             Solver(LTSChecker* Checker);

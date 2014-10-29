@@ -46,6 +46,7 @@
 #include "../uflts/LTSUtils.hpp"
 #include "../mc/LTSChecker.hpp"
 #include "../symexec/LTSAnalyses.hpp"
+#include "../mc/OmegaAutomaton.hpp"
 
 #include "Solver.hpp"
 
@@ -60,6 +61,7 @@ namespace ESMC {
         using LTS::ExpT;
 
         const u64 TentativeEdgeCost = ((u64)1 << 30);
+        const u32 LimitOnBound = 1024;
 
         const string Solver::BoundsVarPrefix = (string)"__SynthBound__";
 
@@ -74,7 +76,7 @@ namespace ESMC {
             // push a scope onto the theorem prover and assert
             // true
             TP->Push();
-            TP->Assert(TheLTS->MakeTrue());
+            TP->Assert(TheLTS->MakeTrue(), true);
             
             TPAsZ3 = const_cast<Z3TheoremProver*>(TP->As<Z3TheoremProver>());
             Ctx = TPAsZ3->GetCtx();
@@ -96,11 +98,9 @@ namespace ESMC {
             auto&& WPConditions = 
                 TraceAnalyses::WeakestPrecondition(this, Trace, BlownInvariant);
             for (auto const& Pred : WPConditions) {
-                auto&& SynthOps = GetSynthOps(Pred);
-                InterpretedOps.insert(SynthOps.begin(), SynthOps.end());
                 cout << "Asserting Safety Pre: " << endl
                      << Pred->ToString() << endl << endl;
-                TP->Assert(Mgr->Simplify(Pred));
+                MakeAssertion(Mgr->Simplify(Pred));
             }
 
             delete Trace;
@@ -109,7 +109,7 @@ namespace ESMC {
         inline void Solver::MakeAssertion(const ExpT& Pred)
         {
             auto Mgr = TheLTS->GetMgr();
-            TP->Assert(Pred);
+            TP->Assert(Pred, true);
             auto&& SynthOps = GetSynthOps(Pred);
 
             // Find the structural constraints that need to be added
@@ -138,9 +138,18 @@ namespace ESMC {
                     // Any synth ops in the predicate are also interpreted
                     auto&& PredOps = GetSynthOps(Pred);
                     for (auto const& PredOp : PredOps) {
+                        // This is a newly encountered guard op?
+                        if (InterpretedOps.find(PredOp) == InterpretedOps.end()) {
+                            auto it2 = ConstraintsByOp.find(PredOp);
+                            if (it2 != ConstraintsByOp.end()) {
+                                // Yes!
+                                NewGuardOps.insert(PredOp);
+                            }
+                        }
+
                         InterpretedOps.insert(PredOp);
                     }
-                    TP->Assert(Pred);
+                    TP->Assert(Pred, true);
                 }
             }
             
@@ -182,7 +191,9 @@ namespace ESMC {
                 auto Implies = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
                                              Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
                                                            Mgr->MakeVal("1", IndicatorType)));
-                TP->Assert(Implies);
+                cout << "Asserting Indicator Implication:" << endl
+                     << Implies->ToString() << endl << endl;
+                TP->Assert(Implies, true);
             }
         }
 
@@ -252,9 +263,15 @@ namespace ESMC {
             }
         }
 
-        inline void Solver::HandleLivenessViolation(const LivenessViolation* Trace)
+        inline void Solver::HandleLivenessViolation(const LivenessViolation* Trace,
+                                                    StateBuchiAutomaton* Monitor)
         {
-            return;
+            auto Predicate = 
+                TraceAnalyses::WeakestPreconditionForLiveness(this, Monitor, Trace);
+            cout << "Asserting predicate for liveness violation:" << endl
+                 << Predicate->ToString() << endl << endl;
+            MakeAssertion(Predicate);
+            delete Trace;
         }
 
         inline void Solver::AssertBoundsConstraint()
@@ -277,7 +294,9 @@ namespace ESMC {
             auto BoundExp = Mgr->MakeVal(to_string(Bound), 
                                          Mgr->MakeType<ExprRangeType>(0, Bound));
             auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundExp);
-            TP->Assert(EQExp);
+            cout << "Asserting Bounds Constraint:" << endl
+                 << EQExp->ToString() << endl << endl;
+            TP->Assert(EQExp, true);
         }
 
         // Algorithm:
@@ -301,7 +320,7 @@ namespace ESMC {
         //       continue
         void Solver::Solve()
         {
-            while (true) {
+            while (Bound <= LimitOnBound) {
 
                 TP->Push();
                 AssertBoundsConstraint();
@@ -333,9 +352,11 @@ namespace ESMC {
                 bool CompletionGood = true;
                 auto const& LivenessNames = Checker->GetBuchiMonitorNames();
                 for (auto const& Liveness : LivenessNames) {
+                    auto MonBase = Checker->AllBuchiAutomata[Liveness];
+                    auto Monitor = MonBase->As<StateBuchiAutomaton>();
                     auto LiveTrace = Checker->CheckLiveness(Liveness);
                     if (LiveTrace != nullptr) {
-                        HandleLivenessViolation(LiveTrace->As<LivenessViolation>());
+                        HandleLivenessViolation(LiveTrace->As<LivenessViolation>(), Monitor);
                         CompletionGood = false;
                         break;
                     }
@@ -345,10 +366,14 @@ namespace ESMC {
                     continue;
                 } else {
                     cout << "Found Correct Completion!" << endl;
+                    cout << "With Bound = " << Bound << ", Model: " << endl;
                     cout << Model.ToString() << endl;
                     return;
                 }
             }
+
+            cout << "[Solver]: Exceeded limit on number of transitions " 
+                 << "that were allowed to be added. Bailing..." << endl << endl;
         }
 
     } /* end namespace Synth */

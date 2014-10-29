@@ -89,17 +89,17 @@ namespace ESMC {
             static const StateVec* GetLastState(SafetyViolation* Trace);
             static set<LTSFairObjRef>
             GetLoopFairnessObjects(LabelledTS* TheLTS,
-                                   LivenessViolation* LivenessViolation);
+                                   const LivenessViolation* LivenessViolation);
 
             static set<LTSFairObjRef>
             TriviallySatisfiedFairnessObjectsInLoop(LabelledTS* TheLTS,
-                                                    LivenessViolation* LivenessViolation);
+                                                    const LivenessViolation* LivenessViolation);
 
             static ExpT
             WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
                                            StateBuchiAutomaton* Monitor,
                                            MgrT::SubstMapT InitialStateSubstMap,
-                                           LivenessViolation* Trace,
+                                           const LivenessViolation* Trace,
                                            ExpT InitialCondition,
                                            int StartIndexInLoop);
 
@@ -107,10 +107,8 @@ namespace ESMC {
             EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
                                         StateBuchiAutomaton* Monitor,
                                         MgrT::SubstMapT InitialStateSubstMap,
-                                        LivenessViolation* LivenessViolation,
-                                        set<LTSFairObjRef> FairnessObjects,
-                                        set<GCmdRef>& AddedGuardedCmds);
-
+                                        const LivenessViolation* LivenessViolation,
+                                        set<LTSFairObjRef> FairnessObjects);
 
             static vector<GCmdRef> TentativeGuardedCommandsInLTS(LabelledTS* TheLTS);
 
@@ -153,8 +151,7 @@ namespace ESMC {
             static ExpT
             WeakestPreconditionForLiveness(Solver* TheSolver,
                                            StateBuchiAutomaton* Monitor,
-                                           LivenessViolation* Trace,
-                                           set<GCmdRef>& AddedGuardedCmds);
+                                           const LivenessViolation* Trace);
 
             static ExpT
             SymbolicExecution(ExpT Phi,

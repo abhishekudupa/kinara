@@ -277,12 +277,16 @@ namespace ESMC {
                 auto TypeAsSym = Type->SAs<ExprSymmetricType>();
                 // Symmetric type. Permute
                 auto const& ConstVal = Exp->GetConstValue();
-                if (ConstVal == "clear") {
-                    // The undef value permutes to itself regardless
+                auto ConstIdx = TypeAsSym->GetMemberIdx(ConstVal);
+                if (ConstIdx == 0) {
+                    // the undef value permutes to itself
                     ExpStack.push_back(Exp);
                     return;
                 }
-                auto ConstIdx = TypeAsSym->GetMemberIdx(ConstVal);
+
+                // otherwise, decrease the index by 1
+                --ConstIdx;
+
                 auto it = TypeOffsets.find(Type);
                 
                 if (it == TypeOffsets.end()) {
@@ -291,7 +295,7 @@ namespace ESMC {
                                     "expression:\n" + Exp->ToString());
                 }
                 auto Offset = it->second;
-                auto PermutedIdx = PermVec[Offset + ConstIdx];
+                auto PermutedIdx = PermVec[Offset + ConstIdx] + 1;
                 auto const& PermutedVal = TypeAsSym->GetMember(PermutedIdx);
                 ExpStack.push_back(Mgr->MakeVal(PermutedVal, Type));
             }
