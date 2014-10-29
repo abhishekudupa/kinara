@@ -52,6 +52,7 @@ namespace ESMC {
         using namespace ESMC::LTS;
         using namespace ESMC::MC;
         using namespace ESMC::TP;
+        using namespace ESMC::Synth;
 
         extern const u64 TentativeEdgeCost;
 
@@ -90,6 +91,8 @@ namespace ESMC {
         
         class Solver : public RefCountable
         {
+            friend class ESMC::Analyses::TraceAnalyses;
+            
         private:
             static const string BoundsVarPrefix;
             TPRef TP;

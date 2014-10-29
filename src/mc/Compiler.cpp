@@ -465,7 +465,15 @@ namespace ESMC {
               NumArgInterps(ArgInterps.size()), Model(Z3Model::NullModel),
               Enabled(false), MyOpCode(Exp->As<OpExpression>()->GetOpCode())
         {
-            // Nothing here
+            auto const& ExpType = Exp->GetType();
+            if (ExpType->Is<ExprRangeType>()) {
+                auto ExpAsRange = ExpType->SAs<ExprRangeType>();
+                Low = ExpAsRange->GetLow();
+                High = ExpAsRange->GetHigh();
+            } else {
+                Low = 0;
+                High = ExpType->GetCardinality() - 1;
+            }
         }
 
         UFInterpreter::~UFInterpreter()
@@ -516,7 +524,7 @@ namespace ESMC {
         i64 UFInterpreter::Evaluate(const StateVec* StateVector) const
         {
             if (!Enabled) {
-                return 0;
+                return Low;
             }
 
             // We are guaranteed that range and domain are scalars
@@ -547,6 +555,8 @@ namespace ESMC {
                     }
                     if (ResAsConst->GetConstValue() != "0") {
                         Enabled = true;
+                        EvalMap.clear();
+                        this->Model = Model;
                     } else {
                         Enabled = false;
                     }

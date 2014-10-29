@@ -606,6 +606,7 @@ namespace ESMC {
                                                           Mgr->MakeType<ExprBoolType>());
             GuardUFIDs.insert(GuardOp);
             auto GuardExp = Mgr->MakeExpr(GuardOp, DomainTermVec);
+            cout << "Made Guard Exp: " << GuardExp->ToString() << endl << endl;
             // Make the constraints for symmetry on the guard expression
             auto&& SymmConstraints = GetSymmetryConstraints(GuardExp);
             cout << "Symmetry constraints:" << endl;
@@ -686,6 +687,8 @@ namespace ESMC {
                                                                DomainTypes,
                                                                LValue->GetType());
                 auto UpdateExp = Mgr->MakeExpr(UpdateOp, DomainTermVec);
+                cout << "Made update exp for term " << LValue->ToString()
+                     << ":" << endl << UpdateExp->ToString() << endl;
                 
                 auto&& SymmConstraints = GetSymmetryConstraints(UpdateExp);
                 cout << "Symmetry constraints for update of term " << LValue->ToString() 

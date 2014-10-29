@@ -344,7 +344,7 @@ int main()
     
     if (Trace != nullptr) {
         cout << Trace->ToString() << endl;
-        cout << TraceAnalyses::WeakestPreconditionForLiveness(TheLTS, Monitor, Trace->As<LivenessViolation>()) << endl;
+        // cout << TraceAnalyses::WeakestPreconditionForLiveness(TheLTS, Monitor, Trace->As<LivenessViolation>()) << endl;
         delete Trace;
     }
 

@@ -213,6 +213,8 @@ namespace ESMC {
             mutable Z3Model Model;
             mutable bool Enabled;
             i64 MyOpCode;
+            i64 Low;
+            i64 High;
 
             inline i64 DoEval() const;
             

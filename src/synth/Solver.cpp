@@ -64,8 +64,11 @@ namespace ESMC {
         const string Solver::BoundsVarPrefix = (string)"__SynthBound__";
 
         Solver::Solver(LTSChecker* Checker)
-            : TP(new Z3TheoremProver()), TheLTS(Checker->TheLTS), 
-              Compiler(Checker->Compiler), Bound(0), 
+            : TP(new Z3TheoremProver()),
+              TheLTS(Checker->TheLTS),
+              Compiler(Checker->Compiler),
+              Checker(Checker),
+              Bound(0),
               GuardedCommands(TheLTS->GetGuardedCmds())
         {
             // push a scope onto the theorem prover and assert
@@ -85,12 +88,21 @@ namespace ESMC {
         inline void Solver::HandleOneSafetyViolation(const StateVec *ErrorState, 
                                                      const ExpT& BlownInvariant)
         {
+            auto Mgr = TheLTS->GetMgr();
             Detail::SynthCostFunction CostFunc(EnabledCommands);
             auto AQS = Checker->AQS;
             auto PPath = AQS->FindShortestPath(ErrorState, CostFunc);
             auto Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
+            auto&& WPConditions = 
+                TraceAnalyses::WeakestPrecondition(this, Trace, BlownInvariant);
+            for (auto const& Pred : WPConditions) {
+                auto&& SynthOps = GetSynthOps(Pred);
+                InterpretedOps.insert(SynthOps.begin(), SynthOps.end());
+                cout << "Asserting Safety Pre: " << endl
+                     << Pred->ToString() << endl << endl;
+                TP->Assert(Mgr->Simplify(Pred));
+            }
 
-            // Palm off to the analyses engine
             delete Trace;
         }
 
@@ -159,7 +171,6 @@ namespace ESMC {
                 for (u32 i = 0; i < NumDomainTypes; ++i) {
                     auto BoundVar = Mgr->MakeBoundVar(DomainTypes[i], NumDomainTypes - i - 1);
                     BoundArgs.push_back(BoundVar);
-                    i++;
                 }
                 auto AppExp = Mgr->MakeExpr(NewOp, BoundArgs);
                 auto ExistsExp = Mgr->MakeExists(DomainTypes, AppExp);
@@ -201,21 +212,23 @@ namespace ESMC {
             }
 
             ExpT GoodExp = ExpT::NullPtr;
-            if (Disjuncts.size() == 0) {
-                throw InternalError((string)"Could not find any commands to enable to " + 
-                                    "fix deadlock!\nAt: " + __FILE__ + ":" + to_string(__LINE__));
-            } else if (Disjuncts.size() == 1) {
+            auto UnreachableExp = TraceAnalyses::AutomataStatesCondition(TheLTS, ErrorState);
+            UnreachableExp = Mgr->MakeExpr(LTSOps::OpNOT, UnreachableExp);
+            Disjuncts.push_back(UnreachableExp);
+
+            if (Disjuncts.size() == 1) {
                 GoodExp = Disjuncts[0];
             } else {
                 GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
             }
 
             auto&& WPConditions = 
-                TraceAnalyses::WeakestPrecondition(TheLTS, 
+                TraceAnalyses::WeakestPrecondition(this, 
                                                    Trace->As<SafetyViolation>(), 
                                                    GoodExp);
 
             for (auto const& Pred : WPConditions) {
+                cout << "Asserting Pre: " << endl << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
 
@@ -252,7 +265,15 @@ namespace ESMC {
                 Summands.push_back(IndexExp.second);
             }
 
-            auto SumExp = Mgr->MakeExpr(LTSOps::OpAND, Summands);
+            ExpT SumExp = ExpT::NullPtr;
+            if (Summands.size() == 0) {
+                return;
+            } else if (Summands.size() == 1) {
+                SumExp = Summands[0];
+            } else {
+                SumExp = Mgr->MakeExpr(LTSOps::OpADD, Summands);
+            }
+
             auto BoundExp = Mgr->MakeVal(to_string(Bound), 
                                          Mgr->MakeType<ExprRangeType>(0, Bound));
             auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundExp);
@@ -325,6 +346,7 @@ namespace ESMC {
                 } else {
                     cout << "Found Correct Completion!" << endl;
                     cout << Model.ToString() << endl;
+                    return;
                 }
             }
         }

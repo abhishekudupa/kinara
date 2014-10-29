@@ -50,11 +50,15 @@
 #include "../mc/Compiler.hpp"
 #include "../mc/OmegaAutomaton.hpp"
 #include "../mc/Trace.hpp"
+#include "../synth/Solver.hpp"
+#include "../tpinterface/TheoremProver.hpp"
 
 namespace ESMC {
     namespace Analyses {
         using namespace LTS;
         using namespace MC;
+        using namespace Synth;
+        using namespace TP;
 
         // SubstitutorForWP implementation
         SubstitutorForWP::SubstitutorForWP(MgrT* Mgr, const MgrT::SubstMapT& Subst)
@@ -689,11 +693,12 @@ namespace ESMC {
         }
 
         vector<ExpT>
-        TraceAnalyses::WeakestPrecondition(LabelledTS* TheLTS,
-                                           LTSCompiler* Compiler,
+        TraceAnalyses::WeakestPrecondition(Solver* TheSolver,
                                            SafetyViolation* Trace,
                                            ExpT InitialPredicate)
         {
+            auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
+            auto TheLTS = TheSolver->TheLTS;
             ExpT Phi = InitialPredicate;
             auto Mgr = Phi->GetMgr();
             const vector<TraceElemT>& TraceElements = Trace->GetTraceElems();
@@ -709,24 +714,29 @@ namespace ESMC {
             }
             vector<ExpT> Retval;
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
-            for (auto InitState: InitStateGenerators) {
+
+            for (auto const& InitState : InitStateGenerators) {
                 MgrT::SubstMapT InitStateSubstMap;
                 vector<ExpT> InitialStateConjuncts;
                 for (auto update: InitState) {
                     auto LHS = update->GetLHS();
                     auto RHS = update->GetRHS();
                     InitStateSubstMap[LHS] = RHS;
-                    auto EQPred = TheLTS->MakeOp(LTSOps::OpEQ, LHS, RHS);
-                    InitialStateConjuncts.push_back(EQPred);
                 }
-                auto InitialStateLocationPred = TheLTS->MakeOp(LTSOps::OpAND,
-                                                               InitialStateConjuncts);
-                Compiler->CompileExp(InitialStateLocationPred, TheLTS);
-                auto PredInterp = InitialStateLocationPred->ExtensionData.Interp;
-                if (PredInterp->Evaluate(Trace->GetInitialState())) {
-                    auto NewPhi = Mgr->ApplyTransform<SubstitutorForWP>(Phi,
-                                                                        InitStateSubstMap);
+                auto NewPhi = 
+                    Mgr->ApplyTransform<SubstitutorForWP>(Phi, InitStateSubstMap);
+                NewPhi = Mgr->Simplify(NewPhi);
+                if (NewPhi == Mgr->MakeFalse()) {
+                    continue;
+                }
+                
+                auto TPRes = TP->CheckSat(NewPhi, true);
+                if (TPRes == TPResult::SATISFIABLE) {
                     Retval.push_back(NewPhi);
+                } else if (TPRes == TPResult::UNKNOWN) {
+                    throw IncompleteTheoryException(NewPhi);
+                } else {
+                    continue;
                 }
             }
             return Retval;
@@ -757,12 +767,12 @@ namespace ESMC {
             return Phi;
         }
 
-        ExpT TraceAnalyses::WeakestPreconditionForLiveness(LabelledTS* TheLTS,
-                                                           LTSCompiler* Compiler,
+        ExpT TraceAnalyses::WeakestPreconditionForLiveness(Solver* TheSolver,
                                                            StateBuchiAutomaton* Monitor,
                                                            LivenessViolation* Trace,
                                                            set<GCmdRef>& AddedGuardedCmds)
         {
+            auto TheLTS = TheSolver->TheLTS;
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
             MgrT::SubstMapT LoopValues;
             for (auto StateVariable: TheLTS->GetStateVectorVars()) {
@@ -848,27 +858,27 @@ namespace ESMC {
                 Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
                 Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
             }
-            auto InitStateGenerators = TheLTS->GetInitStateGenerators();
-            for (auto InitState: InitStateGenerators) {
-                MgrT::SubstMapT InitStateSubstMap;
-                vector<ExpT> InitialStateConjuncts;
-                for (auto update: InitState) {
-                    auto LHS = update->GetLHS();
-                    auto RHS = update->GetRHS();
-                    InitStateSubstMap[LHS] = RHS;
-                    auto EQPred = TheLTS->MakeOp(LTSOps::OpEQ, LHS, RHS);
-                    InitialStateConjuncts.push_back(EQPred);
-                }
-                auto InitialStateLocationPred = TheLTS->MakeOp(LTSOps::OpAND,
-                                                               InitialStateConjuncts);
-                Compiler->CompileExp(InitialStateLocationPred, TheLTS);
-                auto PredInterp = InitialStateLocationPred->ExtensionData.Interp;
-                if (PredInterp->Evaluate(Trace->GetInitialState())) {
-                    auto NewPhi = Mgr->ApplyTransform<SubstitutorForWP>(Phi,
-                                                                        InitStateSubstMap);
-                    Retval.push_back(NewPhi);
-                }
-            }
+            // auto InitStateGenerators = TheLTS->GetInitStateGenerators();
+            // for (auto InitState: InitStateGenerators) {
+            //     MgrT::SubstMapT InitStateSubstMap;
+            //     vector<ExpT> InitialStateConjuncts;
+            //     for (auto update: InitState) {
+            //         auto LHS = update->GetLHS();
+            //         auto RHS = update->GetRHS();
+            //         InitStateSubstMap[LHS] = RHS;
+            //         auto EQPred = TheLTS->MakeOp(LTSOps::OpEQ, LHS, RHS);
+            //         InitialStateConjuncts.push_back(EQPred);
+            //     }
+            //     auto InitialStateLocationPred = TheLTS->MakeOp(LTSOps::OpAND,
+            //                                                    InitialStateConjuncts);
+            //     Compiler->CompileExp(InitialStateLocationPred, TheLTS);
+            //     auto PredInterp = InitialStateLocationPred->ExtensionData.Interp;
+            //     if (PredInterp->Evaluate(Trace->GetInitialState())) {
+            //         auto NewPhi = Mgr->ApplyTransform<SubstitutorForWP>(Phi,
+            //                                                             InitStateSubstMap);
+            //         Retval.push_back(NewPhi);
+            //     }
+            // }
 
             auto TrivialFairObjs =
                 TriviallySatisfiedFairnessObjectsInLoop(TheLTS,

@@ -930,7 +930,10 @@ namespace ESMC {
             if (AQS != nullptr) {
                 delete AQS;
                 AQS = nullptr;
-            } 
+                delete Factory;
+                Factory = new StateFactory(TheLTS->StateVectorSize);
+                ErrorStates.clear();
+            }
             if (ThePS != nullptr) {
                 delete ThePS;
                 ThePS = nullptr;

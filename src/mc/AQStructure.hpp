@@ -203,9 +203,9 @@ namespace ESMC {
             struct AQSFibDataT
             {
                 const StateVec* StateVector;
-                u32 DistanceFromOrigin;
+                u64 DistanceFromOrigin;
 
-                inline AQSFibDataT(const StateVec* SV, u32 DistanceFromOrigin)
+                inline AQSFibDataT(const StateVec* SV, u64 DistanceFromOrigin)
                     : StateVector(SV), DistanceFromOrigin(DistanceFromOrigin)
                 {
                     // Nothing here

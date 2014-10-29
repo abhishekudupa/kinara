@@ -133,7 +133,7 @@ void AddUserAutomaton(LabelledTS* TheLTS, map<string, ExprTypeRef>& MsgTypes, in
                                       TheLTS->MakeVar("Request", MsgTypes["Request"]),
                                       FloorAccFieldExp);
     User->FreezeVars();
-    for (auto i = 1; i <= TopFloor; ++i) {
+    for (auto i = 1; i <= TopFloor + 1; ++i) {
         auto FloorVal = TheLTS->MakeVal(to_string(i), FloorType);
         vector<LTSAssignRef> RequestUpdates;
         RequestUpdates.push_back(new LTSAssignSimple(FloorAccExp, FloorVal));
@@ -209,13 +209,14 @@ void AddControllerAutomaton(LabelledTS* TheLTS, map<string, ExprTypeRef>& MsgTyp
     Controller->AddOutputTransition("CheckRequest", "SentDown", GoDownGuard, {}, "Down", DownMsgType, {}, EmptyFairnessSets);
     // Controller->AddInputTransition("SentUp", "CheckRequest", TheLTS->MakeTrue(), CurrentFloorPlusUpdates, "UpAck", UpAckMsgType, {});
     Controller->AddInputTransition("SentDown", "CheckRequest", TheLTS->MakeTrue(), CurrentFloorMinusUpdates, "DownAck", DownAckMsgType, {});
+    Controller->SAs<IncompleteEFSM>()->MarkVariableReadOnly("TargetFloor");
 }
 
 void AddElevatorAutomaton(LabelledTS* TheLTS, map<string, ExprTypeRef>& MsgTypes, int TopFloor)
 {
     set<string> EmptyFairnessSets;
     auto FloorType = TheLTS->MakeRangeType(1, TopFloor + 1);
-    auto TopFloorExp = TheLTS->MakeVal(to_string(TopFloor), FloorType);
+    auto TopFloorExp = TheLTS->MakeVal(to_string(TopFloor + 1), FloorType);
     auto FloorOneExp = TheLTS->MakeVal("1", FloorType);
     auto FloorTwoExp = TheLTS->MakeVal("2", FloorType);
     vector<LTSAssignRef> {};

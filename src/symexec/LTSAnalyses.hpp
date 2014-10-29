@@ -52,6 +52,7 @@ namespace ESMC {
 
         using namespace LTS;
         using namespace MC;
+        using namespace Synth;
 
         class SubstitutorForWP : VisitorBaseT
         {
@@ -140,15 +141,15 @@ namespace ESMC {
             static ExpT
             AutomataStatesCondition(LabelledTS* TheLTS, const StateVec* StateVector);
 
-            static vector<ExpT> WeakestPrecondition(LabelledTS* TheLTS,
+            static vector<ExpT> WeakestPrecondition(Solver* TheSolver,
                                                     SafetyViolation* Trace,
                                                     ExpT InitialPredicate);
 
             static ExpT WeakestPrecondition(ExpT InitialPhi,
-                                                 TraceBase* Trace);
+                                            TraceBase* Trace);
 
             static ExpT
-            WeakestPreconditionForLiveness(LabelledTS* TheLTS,
+            WeakestPreconditionForLiveness(Solver* TheSolver,
                                            StateBuchiAutomaton* Monitor,
                                            LivenessViolation* Trace,
                                            set<GCmdRef>& AddedGuardedCmds);

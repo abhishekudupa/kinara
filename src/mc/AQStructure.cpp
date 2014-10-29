@@ -343,23 +343,23 @@ namespace ESMC {
                     StateHashSet.find(const_cast<StateVec*>(CurState))->second;
  
                 for (auto Edge : Edges) {
-                    u32 NewDist = CurStateData.DistanceFromOrigin + 
+                    u64 NewDist = CurStateData.DistanceFromOrigin + 
                         CostFunction(CurState, Edge);
                     auto NSVec = Edge->GetTarget();
 
                     auto nsit = StateToHandle.find(NSVec);
-                    u32 OldDist;
+                    u64 OldDist;
                     FibHeapT::handle_type NextStateHandle;
 
                     if (nsit == StateToHandle.end()) {
-                        OldDist = UINT32_MAX;
+                        OldDist = UINT64_MAX;
                     } else {
                         NextStateHandle = nsit->second;
                         OldDist = (*NextStateHandle).DistanceFromOrigin;
                     }
                     
                     if (NewDist < OldDist) {
-                        if (OldDist != UINT32_MAX) {
+                        if (OldDist != UINT64_MAX) {
                             // State was already present in prio queue
                             // just decrease the distance
                             (*NextStateHandle).DistanceFromOrigin = NewDist;
@@ -374,7 +374,7 @@ namespace ESMC {
                         Predecessors[NSVec] = CurState;
                     }
                     
-                    auto ActualTarget = TargetEdgePred(CurState, Edge);
+                    ActualTarget = TargetEdgePred(CurState, Edge);
                     if (ActualTarget != nullptr) {
                         ReachedTarget = true;
                         break;
@@ -931,23 +931,23 @@ namespace ESMC {
                 auto const& Edges = PSHashSet.find(const_cast<ProductState*>(CurState))->second;
                 
                 for (auto Edge : Edges) {
-                    u32 NewDist = CurStateData.DistanceFromOrigin + 
+                    u64 NewDist = CurStateData.DistanceFromOrigin + 
                         CostFunction(CurState, Edge);
                     auto NextState = Edge->GetTarget();
 
                     auto NextStateIt = StateToHandle.find(NextState);
-                    u32 OldDist;
+                    u64 OldDist;
                     FibHeapT::handle_type NextStateHandle;
 
                     if (NextStateIt == StateToHandle.end()) {
-                        OldDist = UINT32_MAX;
+                        OldDist = UINT64_MAX;
                     } else {
                         NextStateHandle = NextStateIt->second;
                         OldDist = (*NextStateHandle).DistanceFromOrigin;
                     }
 
                     if (NewDist < OldDist) {
-                        if (OldDist != UINT32_MAX) {
+                        if (OldDist != UINT64_MAX) {
                             (*NextStateHandle).DistanceFromOrigin = NewDist;
                             PrioQ.increase(NextStateHandle);
                         } else {

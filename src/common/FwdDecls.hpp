@@ -225,7 +225,11 @@ namespace ESMC {
 
     namespace Synth {
         class Solver;
-    } 
+    } /* end namespace Synth */
+
+    namespace Analyses {
+        class TraceAnalyses;
+    }
 
     // UID Generators
     class UIDGenerator;
