@@ -484,6 +484,7 @@ namespace ESMC {
 
         ExpT TraceAnalyses::WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
                                                            StateBuchiAutomaton* Monitor,
+                                                           MgrT::SubstMapT InitialStateSubstMap,
                                                            LivenessViolation* Trace,
                                                            ExpT InitialCondition,
                                                            int StartIndexInLoop)
@@ -552,12 +553,14 @@ namespace ESMC {
                 Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
                 Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
             }
-            return Phi;
+
+            return Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, InitialStateSubstMap);
         }
 
         ExpT
         TraceAnalyses::EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
                                                    StateBuchiAutomaton* Monitor,
+                                                   MgrT::SubstMapT InitialStateSubstMap,
                                                    LivenessViolation* LivenessViolation,
                                                    set<LTSFairObjRef> FairnessObjects,
                                                    set<GCmdRef>& AddedGuardedCmds)
@@ -583,6 +586,7 @@ namespace ESMC {
                             auto Condition =
                                 WeakestPreconditionWithMonitor(TheLTS,
                                                                Monitor,
+                                                               InitialStateSubstMap,
                                                                LivenessViolation,
                                                                Cmd->GetGuard(),
                                                                LoopIndex);
@@ -774,6 +778,7 @@ namespace ESMC {
         {
             auto TheLTS = TheSolver->TheLTS;
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
+            auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
             MgrT::SubstMapT LoopValues;
             for (auto StateVariable: TheLTS->GetStateVectorVars()) {
                 for (auto Exp: GetAllScalarLeaves(StateVariable)) {
@@ -858,38 +863,53 @@ namespace ESMC {
                 Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
                 Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
             }
-            // auto InitStateGenerators = TheLTS->GetInitStateGenerators();
-            // for (auto InitState: InitStateGenerators) {
-            //     MgrT::SubstMapT InitStateSubstMap;
-            //     vector<ExpT> InitialStateConjuncts;
-            //     for (auto update: InitState) {
-            //         auto LHS = update->GetLHS();
-            //         auto RHS = update->GetRHS();
-            //         InitStateSubstMap[LHS] = RHS;
-            //         auto EQPred = TheLTS->MakeOp(LTSOps::OpEQ, LHS, RHS);
-            //         InitialStateConjuncts.push_back(EQPred);
-            //     }
-            //     auto InitialStateLocationPred = TheLTS->MakeOp(LTSOps::OpAND,
-            //                                                    InitialStateConjuncts);
-            //     Compiler->CompileExp(InitialStateLocationPred, TheLTS);
-            //     auto PredInterp = InitialStateLocationPred->ExtensionData.Interp;
-            //     if (PredInterp->Evaluate(Trace->GetInitialState())) {
-            //         auto NewPhi = Mgr->ApplyTransform<SubstitutorForWP>(Phi,
-            //                                                             InitStateSubstMap);
-            //         Retval.push_back(NewPhi);
-            //     }
-            // }
 
             auto TrivialFairObjs =
                 TriviallySatisfiedFairnessObjectsInLoop(TheLTS,
                                                         Trace);
-            auto FairnessCondition =
-                EnableFairnessObjectsInLoop(TheLTS,
-                                            Monitor,
-                                            Trace,
-                                            TrivialFairObjs,
-                                            AddedGuardedCmds);
-            return TheLTS->MakeOp(LTSOps::OpOR, Phi, FairnessCondition);
+
+            vector<ExpT> Conjuncts;
+            for (auto const& InitState : InitStateGenerators) {
+                MgrT::SubstMapT InitStateSubstMap;
+                vector<ExpT> InitialStateConjuncts;
+                for (auto update: InitState) {
+                    auto LHS = update->GetLHS();
+                    auto RHS = update->GetRHS();
+                    InitStateSubstMap[LHS] = RHS;
+                }
+                auto Mgr = Phi->GetMgr();
+                auto NewPhi =
+                    Mgr->ApplyTransform<SubstitutorForWP>(Phi, InitStateSubstMap);
+                NewPhi = Mgr->Simplify(NewPhi);
+                if (NewPhi == Mgr->MakeFalse()) {
+                    continue;
+                }
+
+                auto TPRes = TP->CheckSat(NewPhi, true);
+                if (TPRes == TPResult::SATISFIABLE) {
+                    // Retval.push_back(NewPhi);
+                } else if (TPRes == TPResult::UNKNOWN) {
+                    throw IncompleteTheoryException(NewPhi);
+                } else {
+                    continue;
+                }
+
+                auto FairnessCondition =
+                    EnableFairnessObjectsInLoop(TheLTS,
+                                                Monitor,
+                                                InitStateSubstMap,
+                                                Trace,
+                                                TrivialFairObjs,
+                                                AddedGuardedCmds);
+                Conjuncts.push_back(TheLTS->MakeOp(LTSOps::OpOR, NewPhi, FairnessCondition));
+            }
+            if (Conjuncts.size() == 0) {
+                throw ESMCError((string) "No condition found for liveness!");
+            } else if (Conjuncts.size() == 1) {
+                return Conjuncts[0];
+            } else {
+                return TheLTS->MakeOp(LTSOps::OpAND, Conjuncts);
+            }
         }
 
         // TODO Need to deal with clear assignments:

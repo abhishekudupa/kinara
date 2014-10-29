@@ -98,6 +98,7 @@ namespace ESMC {
             static ExpT
             WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
                                            StateBuchiAutomaton* Monitor,
+                                           MgrT::SubstMapT InitialStateSubstMap,
                                            LivenessViolation* Trace,
                                            ExpT InitialCondition,
                                            int StartIndexInLoop);
@@ -105,6 +106,7 @@ namespace ESMC {
             static ExpT
             EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
                                         StateBuchiAutomaton* Monitor,
+                                        MgrT::SubstMapT InitialStateSubstMap,
                                         LivenessViolation* LivenessViolation,
                                         set<LTSFairObjRef> FairnessObjects,
                                         set<GCmdRef>& AddedGuardedCmds);

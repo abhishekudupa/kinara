@@ -42,6 +42,7 @@
 
 #include "../common/FwdDecls.hpp"
 
+#include <functional>
 #include <vector>
 #include <iterator>
 

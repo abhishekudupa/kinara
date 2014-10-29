@@ -6,10 +6,19 @@ BASE_BIN_DIR=$(PROJECT_ROOT)/bin
 BASE_GEN_DIR=$(PROJECT_ROOT)/gen
 BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
-CXX?=g++
+CXX=g++
 
-CXXFLAGS=-std=c++11 -Wall -pedantic -Wno-gnu-folding-constant -pipe
+CXXFLAGS=-std=c++11 -Wall -pipe
 CXXFLAGS+=-I/usr/local/Cellar/google-sparsehash/2.0.2/include/sparsehash/ -I/usr/local/include/
+
+ifeq "x$(CXX)" "xg++"
+CXXFLAGS+=-Wno-gnu-folding-constant
+endif
+
+ifeq "x$(CXX)" "xg++-4.9"
+CXXFLAGS+=-Wno-unused-local-typedefs
+endif
+
 
 PROJECT_MODULES= \
 	common \

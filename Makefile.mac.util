@@ -25,10 +25,10 @@
 # We'll recurse on this target with different variable values
 
 FEAT_FLAGS=-fPIC
-CXX ?= g++
-CC ?= $(CXX)
+CXX=g++
+CC=$(CXX)
 LD=$(CXX)
-AR ?= ar
+AR?=ar
 ARFLAGS=rcs
 YACC=bison -y
 BISON=bison
@@ -46,7 +46,7 @@ opt:
 
 debug:
 	@echo "Building debug flavor..."
-	@OPTFLAGS="-g -fno-inline -O0" BUILD_SUFFIX=debug $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
+	@OPTFLAGS="-ggdb3 -fno-inline -O0" BUILD_SUFFIX=debug $(MAKE) --no-print-directory -f $(firstword $(MAKEFILE_LIST)) toplevel
 
 prof:
 	@echo "Building prof flavor..."
