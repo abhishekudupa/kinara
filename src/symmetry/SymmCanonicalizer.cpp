@@ -426,7 +426,7 @@ namespace ESMC {
             return;
         }
 
-        const vector<u32> ChanBufferSorter::GetLastPermutation() const
+        const vector<u32>& ChanBufferSorter::GetLastPermutation() const
         {
             return LastPermutation;
         }

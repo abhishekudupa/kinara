@@ -59,10 +59,12 @@ namespace ESMC {
         private:
             MgrT* Mgr;
             MgrT::SubstMapT Subst;
+            const vector<LTSAssignRef>& Updates;
             vector<ExpT> SubstStack;
 
         public:
-            SubstitutorForWP(MgrT* Mgr, const MgrT::SubstMapT& Subst);
+            SubstitutorForWP(MgrT* Mgr, const MgrT::SubstMapT& Subst, 
+                             const vector<LTSAssignRef>& Updates);
             virtual ~SubstitutorForWP();
 
             virtual void VisitVarExpression(const VarExpT* Exp) override;
@@ -79,7 +81,8 @@ namespace ESMC {
 
             static ExpT Do(MgrT* Mgr,
                            const ExpT& Exp,
-                           const MgrT::SubstMapT& SubstMap);
+                           const MgrT::SubstMapT& SubstMap,
+                           const vector<LTSAssignRef>& Updates);
         };
 
         class TraceAnalyses
@@ -122,14 +125,14 @@ namespace ESMC {
 
             static bool HasUF(ExpT Exp);
 
-            static MgrT::SubstMapT
-            TransitionSubstitutionsGivenTransMsg(const vector<LTSAssignRef>& Updates,
-                                                 MgrT::SubstMapT SubstMapForTransMsg);
+            // static MgrT::SubstMapT
+            // TransitionSubstitutionsGivenTransMsg(const vector<LTSAssignRef>& Updates,
+            //                                      MgrT::SubstMapT SubstMapForTransMsg);
 
             static vector<GCmdRef> GuardedCommandsFromTrace(TraceBase* Trace);
 
-            static MgrT::SubstMapT 
-            GetSubstitutionsForTransMsg(const vector<LTSAssignRef>& updates);
+            // static MgrT::SubstMapT 
+            // GetSubstitutionsForTransMsg(const vector<LTSAssignRef>& updates);
 
             static bool IsGuardedCommandEnabled(LabelledTS* TheLTS, 
                                                 const StateVec* StateVector, 
@@ -155,15 +158,15 @@ namespace ESMC {
                                            StateBuchiAutomaton* Monitor,
                                            const LivenessViolation* Trace);
 
-            static ExpT
-            SymbolicExecution(ExpT Phi,
-                              TraceBase* Trace,
-                              vector<MgrT::SubstMapT>& symbolic_states);
+            // static ExpT
+            // SymbolicExecution(ExpT Phi,
+            //                   TraceBase* Trace,
+            //                   vector<MgrT::SubstMapT>& symbolic_states);
 
-            static vector<ExpT>
-            SymbolicExecution(LabelledTS* TheLTS,
-                              TraceBase* Trace,
-                              vector<vector<MgrT::SubstMapT>>& symbolic_states);
+            // static vector<ExpT>
+            // SymbolicExecution(LabelledTS* TheLTS,
+            //                   TraceBase* Trace,
+            //                   vector<vector<MgrT::SubstMapT>>& symbolic_states);
 
             static map<pair<EFSMBase*, vector<ExpT>>, string>
             GuardedCommandInitialStates(GCmdRef GuardedCommand);

@@ -62,9 +62,10 @@ namespace ESMC {
         using namespace TP;
 
         // SubstitutorForWP implementation
-        SubstitutorForWP::SubstitutorForWP(MgrT* Mgr, const MgrT::SubstMapT& Subst)
+        SubstitutorForWP::SubstitutorForWP(MgrT* Mgr, const MgrT::SubstMapT& Subst,
+                                           const vector<LTSAssignRef>& Updates)
             : VisitorBaseT("SubstitutorForWP"),
-              Mgr(Mgr), Subst(Subst)
+              Mgr(Mgr), Subst(Subst), Updates(Updates)
         {
             // Nothing here
         }
@@ -157,9 +158,10 @@ namespace ESMC {
                 if (OpCode == LTSOps::OpField && Exp->GetType()->Is<ExprScalarType>()) {
                     ExpT NewExp = Mgr->MakeExpr(Exp->GetOpCode(),
                                                 SubstChildren);
-                    for (auto Pair: Subst) {
-                        auto Lhs = Pair.first;
+                    for (auto const& Update : Updates) {
+                        auto Lhs = Update->GetLHS();
                         vector<ExpT> Conditions;
+                        auto ITEExp = NewExp;
                         bool Result = AreExpressionsUnifiable(NewExp, Lhs, Conditions);
                         if (Result) {
                             ExpT UnificationCondition;
@@ -168,10 +170,10 @@ namespace ESMC {
                             } else {
                                 UnificationCondition = Mgr->MakeExpr(LTSOps::OpAND, Conditions);
                             }
-                            NewExp = Mgr->MakeExpr(LTSOps::OpITE,
+                            ITEExp = Mgr->MakeExpr(LTSOps::OpITE,
                                                    UnificationCondition,
-                                                   Pair.second,
-                                                   NewExp);
+                                                   Update->GetRHS(),
+                                                   ITEExp);
                         }
                     }
                     SubstStack.push_back(NewExp);
@@ -205,9 +207,10 @@ namespace ESMC {
 
         ExpT
         SubstitutorForWP::Do(MgrT* Mgr,
-                             const ExpT& Exp, const MgrT::SubstMapT& Subst)
+                             const ExpT& Exp, const MgrT::SubstMapT& Subst,
+                             const vector<LTSAssignRef>& Updates)
         {
-            SubstitutorForWP TheSubstitutorForWP(Mgr, Subst);
+            SubstitutorForWP TheSubstitutorForWP(Mgr, Subst, Updates);
             Exp->Accept(&TheSubstitutorForWP);
             return TheSubstitutorForWP.SubstStack[0];
         }
@@ -246,49 +249,49 @@ namespace ESMC {
             return Retval;
         }
 
-        MgrT::SubstMapT
-        TraceAnalyses::TransitionSubstitutionsGivenTransMsg(const vector<LTSAssignRef>& Updates,
-                                                            MgrT::SubstMapT SubstMapForTransMsg)
-        {
-            MgrT::SubstMapT SubstMapForTransition;
-            for (LTSAssignRef Update: Updates) {
-                auto lhs = Update->GetLHS();
-                auto rhs = Update->GetRHS();
-                if (lhs->GetType()->Is<ExprArrayType>()) {
-                    throw InternalError((string) "lhs in memory has array type " + lhs->ToString());
-                }
-                if (lhs->GetType()->Is<ExprRecordType>()) {
-                    auto RecordType = lhs->GetType()->As<ExprRecordType>();
-                    for (auto MemberNameType: RecordType->GetMemberMap()) {
-                        auto MemberName = MemberNameType.first;
-                        auto MemberType = MemberNameType.second;
-                        auto Mgr = lhs->GetMgr();
-                        auto FAType = Mgr->MakeType<ExprFieldAccessType>();
-                        auto Field = Mgr->MakeVar(MemberName, FAType);
-                        auto LhsMemberAccessExpression = Mgr->MakeExpr(LTSOps::OpField, lhs, Field);
-                        Field = Mgr->MakeVar(MemberName, FAType);
-                        auto RhsMemberAccessExpression = Mgr->MakeExpr(LTSOps::OpField, rhs, Field);
-                        Mgr = rhs->GetMgr();
-                        auto NewLhs = Mgr->ApplyTransform<SubstitutorForWP>
-                            (RhsMemberAccessExpression, SubstMapForTransMsg);
-                        SubstMapForTransition[LhsMemberAccessExpression] = NewLhs;
-                    }
-                } else {
-                    auto Mgr = rhs->GetMgr();
-                    auto NewLhs = Mgr->ApplyTransform<SubstitutorForWP>(rhs, SubstMapForTransMsg);
-                    SubstMapForTransition[lhs] = NewLhs;
-                }
-            }
-            for (auto update: SubstMapForTransition) {
-                auto lhs = update.first;
-                auto rhs = update.second;
-                if (lhs->GetType()->Is<ExprRecordType>()) {
-                    throw InternalError((string) "In TransitionSubstitutionsGivenTransMsg:" +
-                                        "lhs in memory has a record type " + lhs->ToString());
-                }
-            }
-            return SubstMapForTransition;
-        }
+        // MgrT::SubstMapT
+        // TraceAnalyses::TransitionSubstitutionsGivenTransMsg(const vector<LTSAssignRef>& Updates,
+        //                                                     MgrT::SubstMapT SubstMapForTransMsg)
+        // {
+        //     MgrT::SubstMapT SubstMapForTransition;
+        //     for (LTSAssignRef Update: Updates) {
+        //         auto lhs = Update->GetLHS();
+        //         auto rhs = Update->GetRHS();
+        //         if (lhs->GetType()->Is<ExprArrayType>()) {
+        //             throw InternalError((string) "lhs in memory has array type " + lhs->ToString());
+        //         }
+        //         if (lhs->GetType()->Is<ExprRecordType>()) {
+        //             auto RecordType = lhs->GetType()->As<ExprRecordType>();
+        //             for (auto MemberNameType: RecordType->GetMemberMap()) {
+        //                 auto MemberName = MemberNameType.first;
+        //                 auto MemberType = MemberNameType.second;
+        //                 auto Mgr = lhs->GetMgr();
+        //                 auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+        //                 auto Field = Mgr->MakeVar(MemberName, FAType);
+        //                 auto LhsMemberAccessExpression = Mgr->MakeExpr(LTSOps::OpField, lhs, Field);
+        //                 Field = Mgr->MakeVar(MemberName, FAType);
+        //                 auto RhsMemberAccessExpression = Mgr->MakeExpr(LTSOps::OpField, rhs, Field);
+        //                 Mgr = rhs->GetMgr();
+        //                 auto NewLhs = Mgr->ApplyTransform<SubstitutorForWP>
+        //                     (RhsMemberAccessExpression, SubstMapForTransMsg);
+        //                 SubstMapForTransition[LhsMemberAccessExpression] = NewLhs;
+        //             }
+        //         } else {
+        //             auto Mgr = rhs->GetMgr();
+        //             auto NewLhs = Mgr->ApplyTransform<SubstitutorForWP>(rhs, SubstMapForTransMsg);
+        //             SubstMapForTransition[lhs] = NewLhs;
+        //         }
+        //     }
+        //     for (auto update: SubstMapForTransition) {
+        //         auto lhs = update.first;
+        //         auto rhs = update.second;
+        //         if (lhs->GetType()->Is<ExprRecordType>()) {
+        //             throw InternalError((string) "In TransitionSubstitutionsGivenTransMsg:" +
+        //                                 "lhs in memory has a record type " + lhs->ToString());
+        //         }
+        //     }
+        //     return SubstMapForTransition;
+        // }
 
         vector<GCmdRef> TraceAnalyses::GuardedCommandsFromTrace(TraceBase* Trace)
         {
@@ -314,35 +317,35 @@ namespace ESMC {
             return GuardedCommands;
         }
 
-        MgrT::SubstMapT 
-        TraceAnalyses::GetSubstitutionsForTransMsg(const vector<LTSAssignRef>& updates)
-        {
-            MgrT::SubstMapT SubstMapForTransMsg;
-            for (LTSAssignRef update: updates) {
-                const ExpT& lhs = update->GetLHS();
-                const ExpT& rhs = update->GetRHS();
-                if (lhs->GetType()->Is<ExprRecordType>()) {
-                    auto RecordType = lhs->GetType()->As<ExprRecordType>();
-                    for (auto MemberNameType: RecordType->GetMemberMap()) {
-                        auto MemberName = MemberNameType.first;
-                        if (MemberName != "__mtype__") {
-                            auto MemberType = MemberNameType.second;
-                            auto Mgr = lhs->GetMgr();
-                            auto FAType = Mgr->MakeType<ExprFieldAccessType>();
-                            auto Field = Mgr->MakeVar(MemberName, FAType);
-                            auto LhsMemberAccessExpression = Mgr->MakeExpr(LTSOps::OpField,
-                                                                           lhs, Field);
+        // MgrT::SubstMapT 
+        // TraceAnalyses::GetSubstitutionsForTransMsg(const vector<LTSAssignRef>& updates)
+        // {
+        //     MgrT::SubstMapT SubstMapForTransMsg;
+        //     for (LTSAssignRef update: updates) {
+        //         const ExpT& lhs = update->GetLHS();
+        //         const ExpT& rhs = update->GetRHS();
+        //         if (lhs->GetType()->Is<ExprRecordType>()) {
+        //             auto RecordType = lhs->GetType()->As<ExprRecordType>();
+        //             for (auto MemberNameType: RecordType->GetMemberMap()) {
+        //                 auto MemberName = MemberNameType.first;
+        //                 if (MemberName != "__mtype__") {
+        //                     auto MemberType = MemberNameType.second;
+        //                     auto Mgr = lhs->GetMgr();
+        //                     auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+        //                     auto Field = Mgr->MakeVar(MemberName, FAType);
+        //                     auto LhsMemberAccessExpression = Mgr->MakeExpr(LTSOps::OpField,
+        //                                                                    lhs, Field);
 
-                            auto RhsMemberAccessExpression = Mgr->MakeExpr(LTSOps::OpField,
-                                                                           rhs, Field);
-                            SubstMapForTransMsg[LhsMemberAccessExpression] =
-                                RhsMemberAccessExpression;
-                        }
-                    }
-                }
-            }
-            return SubstMapForTransMsg;
-        }
+        //                     auto RhsMemberAccessExpression = Mgr->MakeExpr(LTSOps::OpField,
+        //                                                                    rhs, Field);
+        //                     SubstMapForTransMsg[LhsMemberAccessExpression] =
+        //                         RhsMemberAccessExpression;
+        //                 }
+        //             }
+        //         }
+        //     }
+        //     return SubstMapForTransMsg;
+        // }
 
         set<LTSFairObjRef> TraceAnalyses::GetLTSFairnessObjects(LTS::LabelledTS* TheLTS)
         {
@@ -557,15 +560,19 @@ namespace ESMC {
                  --it) {
                 GCmdRef GuardedCommand = it->first;
                 const vector<LTSAssignRef>& updates = GuardedCommand->GetUpdates();
+
+                MgrT::SubstMapT SubstMapForTransition;
+                for (auto Update : updates) {
+                    cout << Update->ToString() << endl;
+                    SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
+                }
+
                 const ExpT& Guard = GuardedCommand->GetGuard();
                 ExpT ProductGuard = TheLTS->MakeOp(LTSOps::OpAND,
                                                    Guard,
                                                    it->second);
-                MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
-                MgrT::SubstMapT SubstMapForTransition =
-                    TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
 
-                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
+                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition, updates);
                 Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
             }
 
@@ -579,15 +586,20 @@ namespace ESMC {
                                                    Guard,
                                                    it->second);
 
-                MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
-                MgrT::SubstMapT SubstMapForTransition =
-                    TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
+                MgrT::SubstMapT SubstMapForTransition;
+                for (auto Update : updates) {
+                    cout << Update->ToString() << endl;
+                    SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
+                }
 
-                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
+                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition,
+                                                                      updates);
                 Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
             }
 
-            return Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, InitialStateSubstMap);
+            // TODO: FIXME
+            return Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, InitialStateSubstMap,
+                                                                   vector<LTSAssignRef>());
         }
 
         ExpT
@@ -742,15 +754,16 @@ namespace ESMC {
             for (auto it = TraceElements.rbegin(); it != TraceElements.rend(); ++it) {
                 GCmdRef guarded_command = it->first;
                 const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
+                MgrT::SubstMapT SubstMapForTransition;
                 for (auto Update : updates) {
                     cout << Update->ToString() << endl;
+                    SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
                 }
                 const ExpT& guard = guarded_command->GetGuard();
-                MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
-                MgrT::SubstMapT SubstMapForTransition =
-                    TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
-
-                Phi = Mgr->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
+                
+                Phi = Mgr->ApplyTransform<SubstitutorForWP>(Phi, 
+                                                            SubstMapForTransition,
+                                                            updates);
                 cout << Phi << endl << endl;
                 Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, guard, Phi);
                 // cout << Phi << endl << endl;
@@ -782,7 +795,7 @@ namespace ESMC {
                     InitStateSubstMap[LHS] = RHS;
                 }
                 auto NewPhi =
-                    Mgr->ApplyTransform<SubstitutorForWP>(Phi, InitStateSubstMap);
+                    Mgr->ApplyTransform<SubstitutorForWP>(Phi, InitStateSubstMap, InitState);
                 // cout << "simplified phi" << NewPhi << endl;
                 NewPhi = Mgr->Simplify(NewPhi);
                 if (NewPhi == Mgr->MakeFalse()) {
@@ -802,30 +815,30 @@ namespace ESMC {
             return Retval;
         }
 
-        ExpT TraceAnalyses::WeakestPrecondition(ExpT InitialPhi, TraceBase* Trace)
-        {
-            ExpT Phi = InitialPhi;
-            if (!Trace->Is<SafetyViolation>()) {
-                throw InternalError((string)"WeakestPrecondition called" +
-                                     "with a non safety violation. Call" +
-                                    "WeakestPreconditionForLiveness instead.");
+        // ExpT TraceAnalyses::WeakestPrecondition(ExpT InitialPhi, TraceBase* Trace)
+        // {
+        //     ExpT Phi = InitialPhi;
+        //     if (!Trace->Is<SafetyViolation>()) {
+        //         throw InternalError((string)"WeakestPrecondition called" +
+        //                              "with a non safety violation. Call" +
+        //                             "WeakestPreconditionForLiveness instead.");
 
-            }
-            const vector<TraceElemT>& TraceElements = Trace->As<SafetyViolation>()->GetTraceElems();
-            for (auto it = TraceElements.rbegin(); it != TraceElements.rend(); ++it) {
-                GCmdRef guarded_command = it->first;
-                const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
-                const ExpT& guard = guarded_command->GetGuard();
+        //     }
+        //     const vector<TraceElemT>& TraceElements = Trace->As<SafetyViolation>()->GetTraceElems();
+        //     for (auto it = TraceElements.rbegin(); it != TraceElements.rend(); ++it) {
+        //         GCmdRef guarded_command = it->first;
+        //         const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
+        //         const ExpT& guard = guarded_command->GetGuard();
 
-                MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
-                MgrT::SubstMapT SubstMapForTransition =
-                    TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
+        //         MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
+        //         MgrT::SubstMapT SubstMapForTransition =
+        //             TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
 
-                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
-                Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, guard, Phi);
-            }
-            return Phi;
-        }
+        //         Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
+        //         Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, guard, Phi);
+        //     }
+        //     return Phi;
+        // }
 
         ExpT TraceAnalyses::WeakestPreconditionForLiveness(Solver* TheSolver,
                                                            StateBuchiAutomaton* Monitor,
@@ -893,14 +906,20 @@ namespace ESMC {
                                                    Guard,
                                                    it->second);
 
-                MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
-                MgrT::SubstMapT SubstMapForTransition =
-                    TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
+                MgrT::SubstMapT SubstMapForTransition;
+                for (auto Update : updates) {
+                    cout << Update->ToString() << endl;
+                    SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
+                }
 
-                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
+                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition, 
+                                                                      updates);
                 Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
             }
-            Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, InvertLoopValues);
+            
+            // TODO: FIXME
+            Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, InvertLoopValues,
+                                                                  vector<LTSAssignRef>());
             for (auto it = StemGuardedCommandsAndMonitorGuards.rbegin();
                  it != StemGuardedCommandsAndMonitorGuards.rend();
                  ++it) {
@@ -911,11 +930,14 @@ namespace ESMC {
                                                    Guard,
                                                    it->second);
 
-                MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
-                MgrT::SubstMapT SubstMapForTransition =
-                    TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
+                MgrT::SubstMapT SubstMapForTransition;
+                for (auto Update : updates) {
+                    cout << Update->ToString() << endl;
+                    SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
+                }
 
-                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
+                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition,
+                                                                      updates);
                 Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
             }
 
@@ -933,7 +955,7 @@ namespace ESMC {
                 }
                 auto Mgr = Phi->GetMgr();
                 auto NewPhi =
-                    Mgr->ApplyTransform<SubstitutorForWP>(Phi, InitStateSubstMap);
+                    Mgr->ApplyTransform<SubstitutorForWP>(Phi, InitStateSubstMap, InitState);
                 NewPhi = Mgr->Simplify(NewPhi);
                 if (NewPhi == Mgr->MakeFalse()) {
                     continue;
@@ -966,92 +988,102 @@ namespace ESMC {
         // TODO Need to deal with clear assignments:
         //    Anything that's cleared has to be removed from memory.
         // Returns path condition and adds intermediate states in symbolic_states
-        ExpT TraceAnalyses::SymbolicExecution(ExpT InitialPredicate,
-                                              TraceBase* Trace,
-                                              vector<MgrT::SubstMapT>& SymbolicStates)
-        {
-            MgrT::SubstMapT Memory;
-            vector<LTS::GCmdRef> GuardedCommands = GuardedCommandsFromTrace(Trace);
-            ExpT PathCondition = InitialPredicate;
-            for (auto it = GuardedCommands.begin(); it != GuardedCommands.end(); ++it) {
-                auto guarded_command = *it;
-                const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
-                const ExpT& guard = guarded_command->GetGuard();
-                ExpT new_guard = guard->GetMgr()->ApplyTransform<SubstitutorForWP>(guard, Memory);
-                MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
-                MgrT::SubstMapT SubstMapForTransition =
-                    TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
-                MgrT::SubstMapT NewMemory;
-                for (auto update: SubstMapForTransition) {
-                    auto lhs = update.first;
-                    auto TempMemory = Memory;
-                    TempMemory.erase(lhs);
-                    lhs = lhs->GetMgr()->ApplyTransform<SubstitutorForWP>(lhs, TempMemory);
-                    auto Rhs = update.second;
-                    auto Mgr = Rhs->GetMgr();
-                    auto NewRhs = Mgr->ApplyTransform<SubstitutorForWP>(update.second, Memory);
-                    NewMemory[lhs] = NewRhs;
-                }
+        // ExpT TraceAnalyses::SymbolicExecution(ExpT InitialPredicate,
+        //                                       TraceBase* Trace,
+        //                                       vector<MgrT::SubstMapT>& SymbolicStates)
+        // {
+        //     MgrT::SubstMapT Memory;
+        //     vector<LTS::GCmdRef> GuardedCommands = GuardedCommandsFromTrace(Trace);
+        //     ExpT PathCondition = InitialPredicate;
+        //     for (auto it = GuardedCommands.begin(); it != GuardedCommands.end(); ++it) {
+        //         auto guarded_command = *it;
+        //         const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
+        //         const ExpT& guard = guarded_command->GetGuard();
+        //         ExpT new_guard = guard->GetMgr()->ApplyTransform<SubstitutorForWP>(guard, Memory);
 
-                NewMemory.insert(Memory.begin(), Memory.end());
-                Memory = NewMemory;
-                SymbolicStates.push_back(Memory);
+        //         MgrT::SubstMapT SubstMapForTransition;
+        //         for (auto Update : updates) {
+        //             cout << Update->ToString() << endl;
+        //             SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
+        //         }
 
-                auto Mgr = PathCondition->GetMgr();
-                PathCondition = Mgr->MakeExpr(LTSOps::OpAND, new_guard, PathCondition);
-            }
-            return PathCondition;
-        }
 
-        vector<ExpT> 
-        TraceAnalyses::SymbolicExecution(LabelledTS* TheLTS, TraceBase* Trace,
-                                         vector<vector<MgrT::SubstMapT>>& 
-                                         symbolic_states_per_initial)
-        {
-            vector<ExpT> PathConditions;
-            MgrT::SubstMapT Memory;
-            vector<LTS::GCmdRef> GuardedCommands = GuardedCommandsFromTrace(Trace);
-            auto InitStateGenerators = TheLTS->GetInitStateGenerators();
-            for (auto InitState: InitStateGenerators) {
-                vector<MgrT::SubstMapT> symbolic_states;
-                Memory.clear();
-                for (auto update: InitState) {
-                    auto Rhs = update->GetRHS();
-                    if (Rhs->SAs<Exprs::ConstExpression>()->GetConstValue() != "clear") {
-                        Memory[update->GetLHS()] = Rhs;
-                    }
-                }
-                ExpT path_condition = TheLTS->MakeTrue();
-                for (auto it = GuardedCommands.begin(); it != GuardedCommands.end(); ++it) {
-                    GCmdRef guarded_command = *it;
-                    const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
-                    const ExpT& guard = guarded_command->GetGuard();
-                    auto Mgr = guard->GetMgr();
-                    ExpT new_guard = Mgr->ApplyTransform<SubstitutorForWP>(guard, Memory);
-                    MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
-                    MgrT::SubstMapT SubstMapForTransition =
-                        TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
-                    MgrT::SubstMapT NewMemory;
-                    for (auto update: SubstMapForTransition) {
-                        auto lhs = update.first;
-                        auto TempMemory = Memory;
-                        TempMemory.erase(lhs);
-                        lhs = lhs->GetMgr()->ApplyTransform<SubstitutorForWP>(lhs, TempMemory);
-                        auto rhs = update.second;
-                        auto new_rhs = rhs->GetMgr()->ApplyTransform<SubstitutorForWP>(rhs, Memory);
-                        NewMemory[lhs] = new_rhs;
-                    }
-                    NewMemory.insert(Memory.begin(), Memory.end());
-                    Memory = NewMemory;
-                    symbolic_states.push_back(Memory);
-                    Mgr = path_condition->GetMgr();
-                    path_condition = Mgr->MakeExpr(LTSOps::OpAND, new_guard, path_condition);
-                }
-                symbolic_states_per_initial.push_back(symbolic_states);
-                PathConditions.push_back(path_condition);
-            }
-            return PathConditions;
-        }
+        //         MgrT::SubstMapT NewMemory;
+        //         for (auto update: SubstMapForTransition) {
+        //             auto lhs = update.first;
+        //             auto TempMemory = Memory;
+        //             TempMemory.erase(lhs);
+        //             lhs = lhs->GetMgr()->ApplyTransform<SubstitutorForWP>(lhs, TempMemory);
+        //             auto Rhs = update.second;
+        //             auto Mgr = Rhs->GetMgr();
+        //             auto NewRhs = Mgr->ApplyTransform<SubstitutorForWP>(update.second, Memory);
+        //             NewMemory[lhs] = NewRhs;
+        //         }
+
+        //         NewMemory.insert(Memory.begin(), Memory.end());
+        //         Memory = NewMemory;
+        //         SymbolicStates.push_back(Memory);
+
+        //         auto Mgr = PathCondition->GetMgr();
+        //         PathCondition = Mgr->MakeExpr(LTSOps::OpAND, new_guard, PathCondition);
+        //     }
+        //     return PathCondition;
+        // }
+
+        // vector<ExpT> 
+        // TraceAnalyses::SymbolicExecution(LabelledTS* TheLTS, TraceBase* Trace,
+        //                                  vector<vector<MgrT::SubstMapT>>& 
+        //                                  symbolic_states_per_initial)
+        // {
+        //     vector<ExpT> PathConditions;
+        //     MgrT::SubstMapT Memory;
+        //     vector<LTS::GCmdRef> GuardedCommands = GuardedCommandsFromTrace(Trace);
+        //     auto InitStateGenerators = TheLTS->GetInitStateGenerators();
+        //     for (auto InitState: InitStateGenerators) {
+        //         vector<MgrT::SubstMapT> symbolic_states;
+        //         Memory.clear();
+        //         for (auto update: InitState) {
+        //             auto Rhs = update->GetRHS();
+        //             if (Rhs->SAs<Exprs::ConstExpression>()->GetConstValue() != "clear") {
+        //                 Memory[update->GetLHS()] = Rhs;
+        //             }
+        //         }
+        //         ExpT path_condition = TheLTS->MakeTrue();
+        //         for (auto it = GuardedCommands.begin(); it != GuardedCommands.end(); ++it) {
+        //             GCmdRef guarded_command = *it;
+        //             const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
+        //             const ExpT& guard = guarded_command->GetGuard();
+        //             auto Mgr = guard->GetMgr();
+        //             ExpT new_guard = Mgr->ApplyTransform<SubstitutorForWP>(guard, Memory);
+
+        //             MgrT::SubstMapT SubstMapForTransition;
+        //             for (auto Update : updates) {
+        //                 cout << Update->ToString() << endl;
+        //                 SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
+        //             }
+
+        //             MgrT::SubstMapT NewMemory;
+        //             for (auto update: SubstMapForTransition) {
+        //                 auto lhs = update.first;
+        //                 auto TempMemory = Memory;
+        //                 TempMemory.erase(lhs);
+        //                 lhs = 
+        //                     lhs->GetMgr()->ApplyTransform<SubstitutorForWP>(lhs, TempMemory, updates);
+        //                 auto rhs = update.second;
+        //                 auto new_rhs = rhs->GetMgr()->ApplyTransform<SubstitutorForWP>(rhs, Memory, updates);
+        //                 NewMemory[lhs] = new_rhs;
+        //             }
+        //             NewMemory.insert(Memory.begin(), Memory.end());
+        //             Memory = NewMemory;
+        //             symbolic_states.push_back(Memory);
+        //             Mgr = path_condition->GetMgr();
+        //             path_condition = Mgr->MakeExpr(LTSOps::OpAND, new_guard, path_condition);
+        //         }
+        //         symbolic_states_per_initial.push_back(symbolic_states);
+        //         PathConditions.push_back(path_condition);
+        //     }
+        //     return PathConditions;
+        // }
     }
 }
 
