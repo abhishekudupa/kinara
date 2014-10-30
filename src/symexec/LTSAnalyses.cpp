@@ -130,8 +130,11 @@ namespace ESMC {
                     } else if (e1Index->Is<ConstExpression>() && e2Index->Is<ConstExpression>()) {
                         return false;
                     }
-                    Conditions.push_back(e1->GetMgr()->MakeExpr(LTSOps::OpEQ, e1Index, e2Index));
-                    return AreExpressionsUnifiable(e1Base, e2Base, Conditions);
+                    if (AreExpressionsUnifiable(e1Base, e2Base, Conditions)) {
+                        Conditions.push_back(e1->GetMgr()->MakeExpr(LTSOps::OpEQ, e1Index, e2Index));
+                        return true;
+                    }
+                    return false;
                 } else {
                     return false;
                 }
@@ -143,7 +146,16 @@ namespace ESMC {
         SubstitutorForWP::VisitOpExpression(const OpExpT* Exp)
         {
             auto it = Subst.find(Exp);
-            if (it != Subst.end()) {
+            int matches = 0;
+            for (auto const& Update : Updates) {
+                auto Lhs = Update->GetLHS();
+                vector<ExpT> Conditions;
+                bool Result = AreExpressionsUnifiable(Exp, Lhs, Conditions);
+                if (Result) {
+                    ++matches;
+                }
+            }
+            if ((it != Subst.end()) && (matches == 1)) {
                 SubstStack.push_back(it->second);
             } else {
                 VisitorBaseT::VisitOpExpression(Exp);
@@ -563,7 +575,7 @@ namespace ESMC {
 
                 MgrT::SubstMapT SubstMapForTransition;
                 for (auto Update : updates) {
-                    cout << Update->ToString() << endl;
+                    // cout << Update->ToString() << endl;
                     SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
                 }
 
@@ -588,7 +600,7 @@ namespace ESMC {
 
                 MgrT::SubstMapT SubstMapForTransition;
                 for (auto Update : updates) {
-                    cout << Update->ToString() << endl;
+                    // cout << Update->ToString() << endl;
                     SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
                 }
 
@@ -744,9 +756,9 @@ namespace ESMC {
                                            SafetyViolation* Trace,
                                            ExpT InitialPredicate)
         {
-            cout << "computing WP" << endl << endl;
+            // cout << "computing WP" << endl << endl;
 
-            cout << Trace->ToString() << endl;
+            // cout << Trace->ToString() << endl;
 
             
             auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
@@ -754,23 +766,47 @@ namespace ESMC {
             ExpT Phi = InitialPredicate;
             auto Mgr = Phi->GetMgr();
             const vector<TraceElemT>& TraceElements = Trace->GetTraceElems();
-            cout << Phi << endl << endl;
+            // cout << Phi << endl << endl;
             for (auto it = TraceElements.rbegin(); it != TraceElements.rend(); ++it) {
                 GCmdRef guarded_command = it->first;
                 const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
-                MgrT::SubstMapT SubstMapForTransition;
-                cout << guarded_command->ToString() << endl;
-                for (auto Update : updates) {
-                    SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
-                }
-                const ExpT& guard = guarded_command->GetGuard();
 
-                Phi = Mgr->ApplyTransform<SubstitutorForWP>(Phi,
-                                                            SubstMapForTransition,
-                                                            updates);
-                cout << Phi << endl << endl;
+                auto&& ExpandedUpdates = ExpandArrayUpdates(updates);
+                // cout << "Expanded Updates:" << endl;
+                // for (auto const& Update : ExpandedUpdates) {
+                //     cout << Update->ToString() << endl;
+                // }
+
+                MgrT::SubstMapT SubstMapForTransition;
+                // cout << guarded_command->ToString() << endl;
+
+                for (auto it = ExpandedUpdates.rbegin(); 
+                     it != ExpandedUpdates.rend(); ++it) {
+
+                    auto it2 = SubstMapForTransition.find((*it)->GetLHS());
+
+                    if (it2 != SubstMapForTransition.end()) {
+                        MgrT::SubstMapT LocalSubst;
+                        LocalSubst[(*it)->GetLHS()] = (*it)->GetRHS();
+                        auto NewSubst = Mgr->TermSubstitute(LocalSubst, it2->second);
+                        SubstMapForTransition[it2->first] = NewSubst;
+                    } else {
+                        SubstMapForTransition[(*it)->GetLHS()] = (*it)->GetRHS();
+                    }
+                }
+
+                const ExpT& guard = guarded_command->GetGuard();
+                // cout << "SubstMap:" << endl;
+                // for (auto const& SubstPair : SubstMapForTransition) {
+                //     cout << SubstPair.first << endl << 
+                //         "->" << endl << SubstPair.second << endl;
+                // }
+                // cout << endl << endl;
+
+                Phi = Mgr->TermSubstitute(SubstMapForTransition, Phi);
+                // cout << Phi << endl << endl;
                 Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, guard, Phi);
-                cout << Phi << endl << endl;
+                // cout << Phi << endl << endl;
             }
             vector<ExpT> Retval;
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
@@ -800,7 +836,7 @@ namespace ESMC {
                 }
                 auto NewPhi =
                     Mgr->ApplyTransform<SubstitutorForWP>(Phi, InitStateSubstMap, InitState);
-                cout << "simplified phi" << NewPhi << endl;
+                // cout << "simplified phi" << NewPhi << endl;
                 NewPhi = Mgr->Simplify(NewPhi);
                 if (NewPhi == Mgr->MakeFalse()) {
                     continue;
@@ -912,7 +948,7 @@ namespace ESMC {
 
                 MgrT::SubstMapT SubstMapForTransition;
                 for (auto Update : updates) {
-                    cout << Update->ToString() << endl;
+                    // cout << Update->ToString() << endl;
                     SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
                 }
 
@@ -936,7 +972,7 @@ namespace ESMC {
 
                 MgrT::SubstMapT SubstMapForTransition;
                 for (auto Update : updates) {
-                    cout << Update->ToString() << endl;
+                    // cout << Update->ToString() << endl;
                     SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
                 }
 

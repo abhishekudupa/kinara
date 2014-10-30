@@ -976,54 +976,54 @@ namespace ESMC {
             : ExpressionVisitorBase<E, S>("TermSubstitutor"),
               Mgr(Mgr), SubstMap(SubstMap)
         {
-            for (auto it1 = SubstMap.begin(); it1 != SubstMap.end(); ++it1) {
-                auto const& From1 = it1->first;
+            // for (auto it1 = SubstMap.begin(); it1 != SubstMap.end(); ++it1) {
+            //     auto const& From1 = it1->first;
 
-                for (auto it2 = next(it1); it2 != SubstMap.end(); ++it2) {
-                    auto const& From2 = it2->first;
-                    auto&& Terms1 = 
-                        Mgr->Gather(From2, 
-                                    [&] (const ExpressionBase<E, S>* Exp) -> bool
-                                    {
-                                        return (Exp == From1);
-                                    });
-                    if (Terms1.size() != 0) {
-                        throw ExprTypeError((string)"The term:\n" + From1->ToString() + 
-                                            "\nis a subterm of term\n:" + From2->ToString() + 
-                                            "\nin substitution. And both occur as " + 
-                                            "terms to be substituted for");
-                    }
-                    auto&& Terms2 = 
-                        Mgr->Gather(From1, 
-                                    [&] (const ExpressionBase<E, S>* Exp) -> bool
-                                    {
-                                        return (Exp == From2);
-                                    });
-                    if (Terms2.size() != 0) {
-                        throw ExprTypeError((string)"The term:\n" + From2->ToString() + 
-                                            "\nis a subterm of term\n:" + From1->ToString() + 
-                                            "\nin substitution. And both occur as " + 
-                                            "terms to be substituted for");
-                    }
-                }
+            //     for (auto it2 = next(it1); it2 != SubstMap.end(); ++it2) {
+            //         auto const& From2 = it2->first;
+            //         auto&& Terms1 = 
+            //             Mgr->Gather(From2, 
+            //                         [&] (const ExpressionBase<E, S>* Exp) -> bool
+            //                         {
+            //                             return (Exp == From1);
+            //                         });
+            //         if (Terms1.size() != 0) {
+            //             throw ExprTypeError((string)"The term:\n" + From1->ToString() + 
+            //                                 "\nis a subterm of term\n:" + From2->ToString() + 
+            //                                 "\nin substitution. And both occur as " + 
+            //                                 "terms to be substituted for");
+            //         }
+            //         auto&& Terms2 = 
+            //             Mgr->Gather(From1, 
+            //                         [&] (const ExpressionBase<E, S>* Exp) -> bool
+            //                         {
+            //                             return (Exp == From2);
+            //                         });
+            //         if (Terms2.size() != 0) {
+            //             throw ExprTypeError((string)"The term:\n" + From2->ToString() + 
+            //                                 "\nis a subterm of term\n:" + From1->ToString() + 
+            //                                 "\nin substitution. And both occur as " + 
+            //                                 "terms to be substituted for");
+            //         }
+            //     }
 
-                for (auto it2 = SubstMap.begin(); it2 != SubstMap.end(); ++it2) {
-                    auto const& To2 = it2->second;
-                    auto&& Terms1 =
-                        Mgr->Gather(To2, 
-                                    [&] (const ExpressionBase<E, S>* Exp) -> bool
-                                    {
-                                        return (Exp == From1);
-                                    });
+            //     for (auto it2 = SubstMap.begin(); it2 != SubstMap.end(); ++it2) {
+            //         auto const& To2 = it2->second;
+            //         auto&& Terms1 =
+            //             Mgr->Gather(To2, 
+            //                         [&] (const ExpressionBase<E, S>* Exp) -> bool
+            //                         {
+            //                             return (Exp == From1);
+            //                         });
 
-                    if (Terms1.size() != 0) {
-                        throw ExprTypeError((string)"The term:\n" + From1->ToString() + 
-                                            "\nis a subterm of term\n:" + To2->ToString() + 
-                                            "\nin substitution. The first is an LHS term " + 
-                                            "and the second is an RHS term!");
-                    }
-                }
-            }
+            //         if (Terms1.size() != 0) {
+            //             throw ExprTypeError((string)"The term:\n" + From1->ToString() + 
+            //                                 "\nis a subterm of term\n:" + To2->ToString() + 
+            //                                 "\nin substitution. The first is an LHS term " + 
+            //                                 "and the second is an RHS term!");
+            //         }
+            //     }
+            // }
         }
 
         template <typename E, template <typename> class S>

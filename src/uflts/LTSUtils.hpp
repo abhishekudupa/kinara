@@ -547,6 +547,179 @@ namespace ESMC {
             return Retval;
         }
 
+        static ExpT GetTopmostIndexExp(const ExpT& Exp)
+        {
+            if (Exp->Is<VarExpression>() ||
+                Exp->Is<ConstExpression>() ||
+                Exp->Is<BoundVarExpression>()) {
+                return ExpT::NullPtr;
+            }
+
+            if (Exp->Is<QuantifiedExpressionBase>()) {
+                throw ESMCError((string)"Expected quantifiers to be unrolled before " + 
+                                "call to GetTopmostIndexExp()");
+            }
+
+            auto ExpAsOp = Exp->As<OpExpression>();
+            auto const& Children = ExpAsOp->GetChildren();
+            const u32 NumChildren = Children.size();
+
+            if (ExpAsOp->GetOpCode() == LTSOps::OpIndex) {
+                if (!Children[1]->Is<ConstExpression>()) {
+                    return Exp;
+                }
+            }
+
+            for (u32 i = 0; i < NumChildren; ++i) {
+                auto Res = GetTopmostIndexExp(Children[i]);
+                if (Res != ExpT::NullPtr) {
+                    return Res;
+                }
+            }
+
+            return ExpT::NullPtr;
+        }
+
+        static ExpT TransformArrayRValue(const ExpT Exp)
+        {
+            auto Mgr = Exp->GetMgr();
+            auto IndexExp = GetTopmostIndexExp(Exp);
+            if (IndexExp == ExpT::NullPtr) {
+                return Exp;
+            }
+
+            auto IndexExpAsOp = IndexExp->SAs<OpExpression>();
+            IndexExp = IndexExpAsOp->GetChildren()[1];
+            auto ArrayExp = IndexExpAsOp->GetChildren()[0];
+            auto ArrayType = ArrayExp->GetType()->SAs<ExprArrayType>();
+            auto IndexType = ArrayType->GetIndexType();
+            auto const& IndexElems = IndexType->GetElementsNoUndef();
+            const u32 NumElems = IndexElems.size();
+            IndexType = IndexExp->GetType();
+
+            ExpT ResExp = ExpT::NullPtr;
+
+            if (NumElems == 1) {
+                MgrT::SubstMapT SubstMap;
+                SubstMap[IndexExp] = Mgr->MakeVal(IndexElems[0], IndexType);
+                ResExp = Mgr->TermSubstitute(SubstMap, Exp);
+            } else {
+                MgrT::SubstMapT SubstMap;
+                SubstMap[IndexExp] = Mgr->MakeVal(IndexElems.back(), IndexType);
+                auto AccExp = Mgr->TermSubstitute(SubstMap, Exp);
+                for (u32 i = 0; i < NumElems - 1; ++i) {
+                    SubstMap.clear();
+                    auto CurVal = Mgr->MakeVal(IndexElems[NumElems - i - 2], IndexType);
+                    SubstMap[IndexExp] = CurVal;
+                    AccExp = Mgr->MakeExpr(LTSOps::OpITE,
+                                           Mgr->MakeExpr(LTSOps::OpEQ, IndexExp, CurVal),
+                                           Mgr->TermSubstitute(SubstMap, Exp),
+                                           AccExp);
+                }
+                ResExp = AccExp;
+            }
+
+            return TransformArrayRValue(ResExp);
+        }
+
+        static inline void GetTopLevelIndexExps(const ExpT& Exp,
+                                                set<ExpT>& Indices)
+        {
+            if (Exp->Is<VarExpression>() ||
+                Exp->Is<ConstExpression>() ||
+                Exp->Is<BoundVarExpression>()) {
+                return;
+            }
+            
+            if (Exp->Is<QuantifiedExpressionBase>()) {
+                throw ESMCError((string)"Expected quantifiers to be unrolled before " + 
+                                "call to GetTopmostIndexExp()");
+            }
+            
+            auto ExpAsOp = Exp->As<OpExpression>();
+            auto const& Children = ExpAsOp->GetChildren();
+            if (ExpAsOp->GetOpCode() == LTSOps::OpIndex) {
+                if (!Children[1]->Is<ConstExpression>()) {
+                    Indices.insert(Exp);
+                }
+                GetTopLevelIndexExps(Children[0], Indices);
+            } else {
+                for (auto const& Child : Children) {
+                    GetTopLevelIndexExps(Child, Indices);
+                }
+            }
+        }
+
+        static inline vector<LTSAssignRef>
+        ExpandOneArrayUpdate(const LTSAssignRef& Update)
+        {
+            set<ExpT> TopLevelIndices;
+            vector<LTSAssignRef> Retval;
+            auto Mgr = Update->GetLHS()->GetMgr();
+
+            GetTopLevelIndexExps(Update->GetLHS(), TopLevelIndices);
+            
+            if (TopLevelIndices.size() == 0) {
+                Retval.push_back(Update);
+                return Retval;
+            }
+
+            vector<vector<string>> CPTuples;
+            for (auto const& Exp : TopLevelIndices) {
+                auto ExpAsOp = Exp->SAs<OpExpression>();
+                auto ArrayExp = ExpAsOp->GetChildren()[0];
+                auto ArrayType = ArrayExp->GetType()->As<ExprArrayType>();
+                auto Type = ArrayType->GetIndexType();
+                CPTuples.push_back(Type->GetElementsNoUndef());
+            }
+
+            auto&& CPElems = CrossProduct<string>(CPTuples.begin(), CPTuples.end());
+            for (auto const& ProdTuple : CPElems) {
+                MgrT::SubstMapT SubstMap;
+                vector<ExpT> Conjuncts;
+                u32 i = 0;
+                for (auto const& Exp : TopLevelIndices) {
+                    auto ExpAsOp = Exp->SAs<OpExpression>();
+                    auto ArrayExp = ExpAsOp->GetChildren()[0];
+                    auto ArrayType = ArrayExp->GetType()->As<ExprArrayType>();
+                    auto IndexType = ArrayType->GetIndexType();
+                    auto Idx = ExpAsOp->GetChildren()[1];
+                    auto CurVal = Mgr->MakeVal(ProdTuple[i], IndexType);
+                    auto Constraint = Mgr->MakeExpr(LTSOps::OpEQ, Idx, CurVal);
+                    Conjuncts.push_back(Constraint);
+                    SubstMap[Idx] = CurVal;
+                    ++i;
+                }
+
+                ExpT Guard = ExpT::NullPtr;
+                if (Conjuncts.size() == 1) {
+                    Guard = Conjuncts[0];
+                } else {
+                    Guard = Mgr->MakeExpr(LTSOps::OpAND, Conjuncts);
+                }
+
+                auto NewLHS = Mgr->TermSubstitute(SubstMap, Update->GetLHS());
+                auto NewRHS = Mgr->MakeExpr(LTSOps::OpITE, 
+                                            Guard, Update->GetRHS(),
+                                            NewLHS);
+                auto NewNewRHS = TransformArrayRValue(NewRHS);
+                Retval.push_back(new LTSAssignSimple(NewLHS, NewNewRHS));
+            }
+
+            return Retval;
+        }
+
+        static inline vector<LTSAssignRef> 
+        ExpandArrayUpdates(const vector<LTSAssignRef>& Updates)
+        {
+            vector<LTSAssignRef> Retval;
+            for (auto const& Update : Updates) {
+                auto&& CurExpansions = ExpandOneArrayUpdate(Update);
+                Retval.insert(Retval.end(), CurExpansions.begin(), CurExpansions.end());
+            }
+            return Retval;
+        }
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
