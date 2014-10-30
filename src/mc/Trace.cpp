@@ -134,6 +134,8 @@ namespace ESMC {
                         SortedCandidateState->Recycle();
                         PathElems.push_back(TraceElemT(Cmd, NextUnwoundState));
                         break;
+                    } else {
+                        SortedCandidateState->Recycle();
                     }
                 }
                 if (!FoundCmd) {
@@ -198,6 +200,8 @@ namespace ESMC {
                         SortedCandidateSV->Recycle();
                         PathElems.push_back(PSTraceElemT(Cmd, NextUnwoundPS));
                         break;
+                    } else {
+                        SortedCandidateSV->Recycle();
                     }
                 }
 
@@ -340,6 +344,8 @@ namespace ESMC {
                                 TargetPSPerm = NextPair;
                             }
                             break;
+                        } else {
+                            SortedCandidateSV->Recycle();
                         }
                     }
 
