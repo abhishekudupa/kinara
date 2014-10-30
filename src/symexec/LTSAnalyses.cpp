@@ -46,6 +46,7 @@
 #include "../uflts/LTSEFSMBase.hpp"
 #include "../uflts/LTSTypes.hpp"
 #include "../uflts/LTSTransitions.hpp"
+#include "../uflts/LTSUtils.hpp"
 #include "../mc/AQStructure.hpp"
 #include "../mc/Compiler.hpp"
 #include "../mc/OmegaAutomaton.hpp"
@@ -101,6 +102,42 @@ namespace ESMC {
             }
         }
 
+        bool SubstitutorForWP::AreExpressionsUnifiable(ExpT e1, ExpT e2, vector<ExpT>& Conditions)
+        {
+            if (e1->Is<OpExpression>() && e2->Is<OpExpression>()) {
+                auto e1AsOp = e1->As<OpExpression>();
+                auto e2AsOp = e2->As<OpExpression>();
+                auto e1OpCode = e1AsOp->GetOpCode();
+                auto e2OpCode = e2AsOp->GetOpCode();
+                if (e1OpCode == LTSOps::OpField && e2OpCode == LTSOps::OpField) {
+                    auto e1Field = e1AsOp->GetChildren()[1];
+                    auto e2Field = e2AsOp->GetChildren()[1];
+                    if (e1Field == e2Field) {
+                        auto e1Base = e1AsOp->GetChildren()[0];
+                        auto e2Base = e2AsOp->GetChildren()[0];
+                        return AreExpressionsUnifiable(e1Base, e2Base, Conditions);
+                    } else {
+                        return false;
+                    }
+                } else if (e1OpCode == LTSOps::OpIndex && e2OpCode == LTSOps::OpIndex) {
+                    auto e1Index = e1AsOp->GetChildren()[1];
+                    auto e2Index = e2AsOp->GetChildren()[1];
+                    auto e1Base = e1AsOp->GetChildren()[0];
+                    auto e2Base = e2AsOp->GetChildren()[0];
+                    if (e1Index == e2Index) {
+                        return AreExpressionsUnifiable(e1Base, e2Base, Conditions);
+                    } else if (e1Index->Is<ConstExpression>() && e2Index->Is<ConstExpression>()) {
+                        return false;
+                    }
+                    Conditions.push_back(e1->GetMgr()->MakeExpr(LTSOps::OpEQ, e1Index, e2Index));
+                    return AreExpressionsUnifiable(e1Base, e2Base, Conditions);
+                } else {
+                    return false;
+                }
+            }
+            return (e1 == e2);
+        }
+
         void
         SubstitutorForWP::VisitOpExpression(const OpExpT* Exp)
         {
@@ -116,9 +153,29 @@ namespace ESMC {
                     SubstStack.pop_back();
                 }
                 auto OpCode = Exp->GetOpCode();
+
                 if (OpCode != LTSOps::OpIndex) {
-                    SubstStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(),
-                                                       SubstChildren));
+                    ExpT NewExp = Mgr->MakeExpr(Exp->GetOpCode(),
+                                                SubstChildren);
+                    for (auto Pair: Subst) {
+                        auto Lhs = Pair.first;
+                        vector<ExpT> Conditions;
+                        bool Result = AreExpressionsUnifiable(NewExp, Lhs, Conditions);
+                        if (Result) {
+                            ExpT UnificationCondition;
+                            if (Conditions.size() == 1) {
+                                UnificationCondition = Conditions[0];
+                            } else {
+                                UnificationCondition = Mgr->MakeExpr(LTSOps::OpAND, Conditions);
+                            }
+                            NewExp = Mgr->MakeExpr(LTSOps::OpITE,
+                                                   UnificationCondition,
+                                                   Pair.second,
+                                                   NewExp);
+                        }
+                    }
+                    SubstStack.push_back(NewExp);
+
                 } else {
                     // Look if an index expression of the same array
                     // is in the substitution map
@@ -700,39 +757,64 @@ namespace ESMC {
                                            SafetyViolation* Trace,
                                            ExpT InitialPredicate)
         {
+            // cout << "computing WP" << endl;
             auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
             auto TheLTS = TheSolver->TheLTS;
             ExpT Phi = InitialPredicate;
             auto Mgr = Phi->GetMgr();
             const vector<TraceElemT>& TraceElements = Trace->GetTraceElems();
+            // cout << Phi << endl << endl;
             for (auto it = TraceElements.rbegin(); it != TraceElements.rend(); ++it) {
                 GCmdRef guarded_command = it->first;
                 const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
+                // for (auto Update : updates) {
+                //     cout << Update->ToString() << endl;
+                // }
                 const ExpT& guard = guarded_command->GetGuard();
                 MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
                 MgrT::SubstMapT SubstMapForTransition =
                     TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
+
                 Phi = Mgr->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
+                // cout << Phi << endl << endl;
                 Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, guard, Phi);
+                // cout << Phi << endl << endl;
             }
             vector<ExpT> Retval;
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
 
+            // auto InitialState = Trace->GetInitialState();
+            // MgrT::SubstMapT InitialMap;
+            // for (auto StateVar : TheLTS->GetStateVectorVars()) {
+            //     for (auto Exp : GetScalarTerms(StateVar)) {
+            //         // cout << Exp << endl;
+            //         auto Value = Exp->ExtensionData.Interp->Evaluate(InitialState);
+            //         // cout << Value << endl;
+            //         auto InitialValue = TheLTS->MakeVal(Exp->GetType()->As<ExprScalarType>()->ValToConst(Value), Exp->GetType());
+            //         // cout << InitialValue << endl;
+            //         InitialMap[Exp] = InitialValue;
+            //     }
+            // }
+
+            // Retval.push_back(Mgr->ApplyTransform<SubstitutorForWP>(Phi, InitialMap));
+
             for (auto const& InitState : InitStateGenerators) {
                 MgrT::SubstMapT InitStateSubstMap;
-                vector<ExpT> InitialStateConjuncts;
                 for (auto update: InitState) {
                     auto LHS = update->GetLHS();
                     auto RHS = update->GetRHS();
+                    // cout << LHS << " = " << RHS << endl;
                     InitStateSubstMap[LHS] = RHS;
                 }
-                auto NewPhi = 
+                auto NewPhi =
                     Mgr->ApplyTransform<SubstitutorForWP>(Phi, InitStateSubstMap);
+                // cout << "simplified phi" << NewPhi << endl;
                 NewPhi = Mgr->Simplify(NewPhi);
                 if (NewPhi == Mgr->MakeFalse()) {
                     continue;
                 }
-                
+
+                // cout << "simplified phi" << NewPhi << endl;
                 auto TPRes = TP->CheckSat(NewPhi, true);
                 if (TPRes == TPResult::SATISFIABLE) {
                     Retval.push_back(NewPhi);

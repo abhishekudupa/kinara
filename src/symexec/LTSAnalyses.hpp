@@ -75,6 +75,8 @@ namespace ESMC {
             virtual void VisitAQuantifiedExpression(const AQExpT* Exp)
                 override;
 
+            static bool AreExpressionsUnifiable(ExpT e1, ExpT e2, vector<ExpT>& Conditions);
+
             static ExpT Do(MgrT* Mgr,
                            const ExpT& Exp,
                            const MgrT::SubstMapT& SubstMap);
