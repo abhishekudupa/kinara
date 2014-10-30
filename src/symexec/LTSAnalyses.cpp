@@ -154,7 +154,7 @@ namespace ESMC {
                 }
                 auto OpCode = Exp->GetOpCode();
 
-                if (OpCode != LTSOps::OpIndex) {
+                if (OpCode == LTSOps::OpField && Exp->GetType()->Is<ExprScalarType>()) {
                     ExpT NewExp = Mgr->MakeExpr(Exp->GetOpCode(),
                                                 SubstChildren);
                     for (auto Pair: Subst) {
@@ -175,35 +175,10 @@ namespace ESMC {
                         }
                     }
                     SubstStack.push_back(NewExp);
-
                 } else {
-                    // Look if an index expression of the same array
-                    // is in the substitution map
-                    ExpT LhsArrayAssignmentInMap;
-                    ExpT RhsArrayAssignmentInMap;
-                    auto NewExp = Mgr->MakeExpr(Exp->GetOpCode(),
+                    ExpT NewExp = Mgr->MakeExpr(Exp->GetOpCode(),
                                                 SubstChildren);
-                    auto ITEExp = NewExp;
-                    for (auto Pair: Subst) {
-                        auto Lhs = Pair.first;
-                        if (Lhs->Is<OpExpression>()) {
-                            auto LhsOpExp = Lhs->As<OpExpression>();
-                            if (LhsOpExp->GetOpCode() == LTSOps::OpIndex) {
-                                auto Base = LhsOpExp->GetChildren()[0];
-                                if (Base == Exp->GetChildren()[0]) {
-                                    auto NewExpIndex = NewExp->As<OpExpression>()->GetChildren()[1];
-                                    auto LhsIndex = LhsOpExp->GetChildren()[1];
-                                    auto IndicesEqual = Mgr->MakeExpr(LTSOps::OpEQ,
-                                                                      NewExpIndex, LhsIndex);
-                                    ITEExp = Mgr->MakeExpr(LTSOps::OpITE,
-                                                           IndicesEqual,
-                                                           Pair.second,
-                                                           ITEExp);
-                                }
-                            }
-                        }
-                    }
-                    SubstStack.push_back(ITEExp);
+                    SubstStack.push_back(NewExp);
                 }
             }
         }
@@ -763,20 +738,20 @@ namespace ESMC {
             ExpT Phi = InitialPredicate;
             auto Mgr = Phi->GetMgr();
             const vector<TraceElemT>& TraceElements = Trace->GetTraceElems();
-            // cout << Phi << endl << endl;
+            cout << Phi << endl << endl;
             for (auto it = TraceElements.rbegin(); it != TraceElements.rend(); ++it) {
                 GCmdRef guarded_command = it->first;
                 const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
-                // for (auto Update : updates) {
-                //     cout << Update->ToString() << endl;
-                // }
+                for (auto Update : updates) {
+                    cout << Update->ToString() << endl;
+                }
                 const ExpT& guard = guarded_command->GetGuard();
                 MgrT::SubstMapT SubstMapForTransMsg = GetSubstitutionsForTransMsg(updates);
                 MgrT::SubstMapT SubstMapForTransition =
                     TransitionSubstitutionsGivenTransMsg(updates, SubstMapForTransMsg);
 
                 Phi = Mgr->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition);
-                // cout << Phi << endl << endl;
+                cout << Phi << endl << endl;
                 Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, guard, Phi);
                 // cout << Phi << endl << endl;
             }
