@@ -174,13 +174,17 @@ namespace ESMC {
             u32 Offset;
             u32 ElemSize;
             ExpT CountExp;
+            u32 BufferSize;
+            vector<u32> LastPermutation;
+            vector<u32> IdentityPermutation;
 
         public:
             ChanBufferSorter(u32 Offset, const ExprTypeRef& ChanBufferType,
                              const ExpT& CountExp);
             ~ChanBufferSorter();
 
-            void Sort(StateVec* OutStateVector);
+            void Sort(StateVec* OutStateVector, bool RememberPerm = false);
+            const vector<u32>& GetLastPermutation() const;
         };
 
         class Canonicalizer

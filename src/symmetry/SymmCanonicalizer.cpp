@@ -369,6 +369,13 @@ namespace ESMC {
             auto ValueType = TypeAsArray->GetValueType();
             ElemSize = ValueType->GetByteSize();
             ElemSize = Align(ElemSize, ElemSize);
+
+            // Index type cannot be symmetric here
+            BufferSize = IndexType->GetCardinality();
+            for (u32 i = 0; i < BufferSize; ++i) {
+                LastPermutation.push_back(i);
+            }
+            IdentityPermutation = LastPermutation;
         }
 
         ChanBufferSorter::~ChanBufferSorter()
@@ -376,8 +383,13 @@ namespace ESMC {
             // Nothing here
         }
 
-        void ChanBufferSorter::Sort(StateVec* OutStateVector)
+        void ChanBufferSorter::Sort(StateVec* OutStateVector, 
+                                    bool RememberPerm)
         {
+            if (RememberPerm) {
+                LastPermutation = IdentityPermutation;
+            }
+
             // O(n^2) sorting, I know, but we don't expect these 
             // channels to have more than 10 or so elements
             u08* BasePtr = OutStateVector->GetStateBuffer();
@@ -403,11 +415,20 @@ namespace ESMC {
                     memcpy(WorkBasePtr + IOffset, BasePtr + IOffset, ElemSize);
                     memcpy(BasePtr + IOffset, BasePtr + MinOffset, ElemSize);
                     memcpy(BasePtr + MinOffset, WorkBasePtr + IOffset, ElemSize);
+
+                    if (RememberPerm) {
+                        swap(LastPermutation[i], LastPermutation[MinIndex]);
+                    }
                 }
             }
 
             WorkingVec->Recycle();
             return;
+        }
+
+        const vector<u32> ChanBufferSorter::GetLastPermutation() const
+        {
+            return LastPermutation;
         }
 
         Canonicalizer::Canonicalizer(const LabelledTS* TheLTS,
