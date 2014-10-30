@@ -158,10 +158,10 @@ namespace ESMC {
                 if (OpCode == LTSOps::OpField && Exp->GetType()->Is<ExprScalarType>()) {
                     ExpT NewExp = Mgr->MakeExpr(Exp->GetOpCode(),
                                                 SubstChildren);
+                    auto ITEExp = NewExp;
                     for (auto const& Update : Updates) {
                         auto Lhs = Update->GetLHS();
                         vector<ExpT> Conditions;
-                        auto ITEExp = NewExp;
                         bool Result = AreExpressionsUnifiable(NewExp, Lhs, Conditions);
                         if (Result) {
                             ExpT UnificationCondition;
@@ -176,7 +176,7 @@ namespace ESMC {
                                                    ITEExp);
                         }
                     }
-                    SubstStack.push_back(NewExp);
+                    SubstStack.push_back(ITEExp);
                 } else {
                     ExpT NewExp = Mgr->MakeExpr(Exp->GetOpCode(),
                                                 SubstChildren);
@@ -744,7 +744,11 @@ namespace ESMC {
                                            SafetyViolation* Trace,
                                            ExpT InitialPredicate)
         {
-            // cout << "computing WP" << endl;
+            cout << "computing WP" << endl << endl;
+
+            cout << Trace->ToString() << endl;
+
+            
             auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
             auto TheLTS = TheSolver->TheLTS;
             ExpT Phi = InitialPredicate;
@@ -755,18 +759,18 @@ namespace ESMC {
                 GCmdRef guarded_command = it->first;
                 const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
                 MgrT::SubstMapT SubstMapForTransition;
+                cout << guarded_command->ToString() << endl;
                 for (auto Update : updates) {
-                    cout << Update->ToString() << endl;
                     SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
                 }
                 const ExpT& guard = guarded_command->GetGuard();
-                
-                Phi = Mgr->ApplyTransform<SubstitutorForWP>(Phi, 
+
+                Phi = Mgr->ApplyTransform<SubstitutorForWP>(Phi,
                                                             SubstMapForTransition,
                                                             updates);
                 cout << Phi << endl << endl;
                 Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, guard, Phi);
-                // cout << Phi << endl << endl;
+                cout << Phi << endl << endl;
             }
             vector<ExpT> Retval;
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
@@ -796,7 +800,7 @@ namespace ESMC {
                 }
                 auto NewPhi =
                     Mgr->ApplyTransform<SubstitutorForWP>(Phi, InitStateSubstMap, InitState);
-                // cout << "simplified phi" << NewPhi << endl;
+                cout << "simplified phi" << NewPhi << endl;
                 NewPhi = Mgr->Simplify(NewPhi);
                 if (NewPhi == Mgr->MakeFalse()) {
                     continue;
