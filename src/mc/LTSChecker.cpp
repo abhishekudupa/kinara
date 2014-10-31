@@ -495,6 +495,12 @@ namespace ESMC {
             // on ANY state, without exception
             auto&& IndexTerms = GatherTermsInIndex(TheLTS->InvariantExp);
             MakeIndexTermInvariants(Mgr->MakeTrue(), IndexTerms);
+            set<ExpT> SimplifiedBoundsInvars;
+
+            for (auto const& Invar : BoundsInvariants) {
+                SimplifiedBoundsInvars.insert(Mgr->Simplify(Invar));
+            }
+            BoundsInvariants = SimplifiedBoundsInvars;
         }
 
         inline void LTSChecker::RecordErrorState(const StateVec* ErrorState)
@@ -589,6 +595,8 @@ namespace ESMC {
             } else {
                 DeadlockFreeInvariant = Mgr->MakeExpr(LTSOps::OpOR, DLFDisjunctions);
             }
+            
+            DeadlockFreeInvariant = Mgr->Simplify(DeadlockFreeInvariant);
             
             // Make the invariant on undef and bounds
             MakeBoundsInvariants();
