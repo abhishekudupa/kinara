@@ -2305,16 +2305,22 @@ namespace ESMC {
             }
             auto ExpAsOp = Exp->template As<OpExpression>();
             if (ExpAsOp != nullptr) {
-                auto const& Children = ExpAsOp->GetChildren();
-                const u32 NumChildren = Children.size();
-                vector<ExpT> IntChildren(NumChildren);
-                for (u32 i = 0; i < NumChildren; ++i) {
-                    IntChildren[i] = Internalize(Children[i]);
+                // First check if I already have an entry in the cache
+                auto Existing = ExpCache.Find(Exp);
+                if (Existing != ExpT::NullPtr) {
+                    return Existing;
+                } else {
+                    auto const& Children = ExpAsOp->GetChildren();
+                    const u32 NumChildren = Children.size();
+                    vector<ExpT> IntChildren(NumChildren);
+                    for (u32 i = 0; i < NumChildren; ++i) {
+                        IntChildren[i] = Internalize(Children[i]);
+                    }
+                    return ExpCache.template Put<OpExpression<E, S>>(this,
+                                                                     ExpAsOp->GetOpCode(),
+                                                                     IntChildren,
+                                                                     Exp->ExtensionData);
                 }
-                return ExpCache.template Get<OpExpression<E, S>>(this,
-                                                                 ExpAsOp->GetOpCode(),
-                                                                 IntChildren,
-                                                                 Exp->ExtensionData);
             }
             auto ExpAsQuantified = Exp->template As<QuantifiedExpressionBase>();
             if (ExpAsQuantified != nullptr) {

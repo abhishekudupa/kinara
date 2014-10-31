@@ -1226,7 +1226,13 @@ namespace ESMC {
                 auto const& Updates = Cmd->GetUpdates();
                 auto&& LoweredUpdates = ExpandArrayUpdates(Updates);
                 Cmd->SetLoweredUpdates(LoweredUpdates);
+
+                // unroll the guard as well
+                auto const& Guard = Cmd->GetGuard();
+                auto LoweredGuard = TransformArrayRValue(Guard);
+                Cmd->SetLoweredGuard(LoweredGuard);
             }
+
 
             return Retval;
         }

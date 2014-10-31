@@ -94,9 +94,24 @@ namespace ESMC {
             auto Mgr = TheLTS->GetMgr();
             Detail::SynthCostFunction CostFunc(EnabledCommands);
             auto AQS = Checker->AQS;
+
+            cout << "Handling one safety violation, computing shortest path... ";
+            flush(cout);
+
             auto PPath = AQS->FindShortestPath(ErrorState, CostFunc);
+
+            cout << "Done!" << endl << "Unwinding trace... ";
+            flush(cout);
+
             auto Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
+
+            cout << "Done!" << endl
+                 << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
+                 << "Finding invariant that was blown... ";
+            flush(cout);
+
             auto LastState = Trace->GetTraceElems().back().second;
+
 
             auto ActualBlownInvariant = BlownInvariant;
             // Find out the invariant blown on the last state of trace now
@@ -127,6 +142,10 @@ namespace ESMC {
                                         "At: " + __FILE__ + ":" + to_string(__LINE__));
                 }
             }
+
+            cout << "Done!" << endl << "Blown Invariant: " << endl
+                 << ActualBlownInvariant->ToString() << endl << "Computing weakest pre... ";
+            flush(cout);
 
             auto&& WPConditions = 
                 TraceAnalyses::WeakestPrecondition(this, Trace, ActualBlownInvariant);
@@ -235,8 +254,21 @@ namespace ESMC {
             auto Mgr = TheLTS->GetMgr();
             Detail::SynthCostFunction CostFunc(EnabledCommands);
             auto AQS = Checker->AQS;
+
+            cout << "Handling one deadlock violation, computing shortest path... ";
+            flush(cout);
+
             auto PPath = AQS->FindShortestPath(ErrorState, CostFunc);
+            
+            cout << "Done!" << endl << "Unwinding trace... ";
+            flush(cout);
+            
             auto Trace = TraceBase::MakeDeadlockViolation(PPath, Checker);
+
+            cout << "Done!" << endl
+                 << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
+                 << "Computing Disjuncts... ";
+            flush(cout);
 
             // cout << "The Deadlock Trace:" << endl << Trace->ToString() << endl << endl
             //      << "The Error State:" << endl;
@@ -276,6 +308,9 @@ namespace ESMC {
                 GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
             }
 
+            cout << "Done!" << endl << "Computing weakest pre... ";
+            flush(cout);
+
             auto&& WPConditions = 
                 TraceAnalyses::WeakestPrecondition(this, 
                                                    Trace->As<SafetyViolation>(), 
@@ -285,6 +320,9 @@ namespace ESMC {
                 cout << "Asserting Pre: " << endl << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
+            
+            cout << "Done!" << endl;
+            flush(cout);
 
             delete Trace;
         }

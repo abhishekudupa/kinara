@@ -787,7 +787,7 @@ namespace ESMC {
                     }
                 }
 
-                const ExpT& guard = guarded_command->GetGuard();
+                const ExpT& guard = guarded_command->GetLoweredGuard();
                 // cout << "SubstMap:" << endl;
                 // for (auto const& SubstPair : SubstMapForTransition) {
                 //     cout << SubstPair.first << endl << 
@@ -799,6 +799,7 @@ namespace ESMC {
                 // cout << Phi << endl << endl;
                 Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, guard, Phi);
                 // cout << Phi << endl << endl;
+                Phi = Mgr->Simplify(Phi);
             }
             vector<ExpT> Retval;
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
@@ -810,7 +811,8 @@ namespace ESMC {
             //         // cout << Exp << endl;
             //         auto Value = Exp->ExtensionData.Interp->Evaluate(InitialState);
             //         // cout << Value << endl;
-            //         auto InitialValue = TheLTS->MakeVal(Exp->GetType()->As<ExprScalarType>()->ValToConst(Value), Exp->GetType());
+            //         auto InitialValue = 
+            // TheLTS->MakeVal(Exp->GetType()->As<ExprScalarType>()->ValToConst(Value), Exp->GetType());
             //         // cout << InitialValue << endl;
             //         InitialMap[Exp] = InitialValue;
             //     }
@@ -819,6 +821,7 @@ namespace ESMC {
             // Retval.push_back(Mgr->ApplyTransform<SubstitutorForWP>(Phi, InitialMap));
 
             for (auto const& InitState : InitStateGenerators) {
+
                 MgrT::SubstMapT InitStateSubstMap;
                 for (auto update: InitState) {
                     auto LHS = update->GetLHS();

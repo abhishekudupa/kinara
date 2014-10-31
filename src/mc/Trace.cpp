@@ -96,7 +96,7 @@ namespace ESMC {
             u32 InvPermAlongPath = 0;
 
             auto PermSet = TheCanonicalizer->GetPermSet();
-            
+
             for (auto Edge : PPathElems) {
                 auto CurInvPermIt = PermSet->GetIteratorForInv(Edge->GetPermutation());
                 auto InvPermAlongPathIt = PermSet->Compose(InvPermAlongPath, 
@@ -139,8 +139,60 @@ namespace ESMC {
                     }
                 }
                 if (!FoundCmd) {
-                    throw InternalError((string)"Unable to find a command to compute next " +
-                                        "unwound state.\nAt: " + __FILE__ + ":" + 
+                    ostringstream sstr;
+                    sstr << "Unable to find a command to compute next unwound state" << endl;
+                    sstr << "Origin:" << endl;
+                    sstr << "------------------------------------------------" << endl;
+                    Checker->Printer->PrintState(UnwoundOrigin, sstr);
+                    sstr << "------------------------------------------------" << endl;
+                    const StateVec* CurState = UnwoundOrigin;
+
+                    for (auto const& PathElem : PathElems) {
+                        auto NextState = PathElem.second;
+                        sstr << "Fired Command:" << endl << PathElem.first->ToString()
+                             << endl << "to get next state:" << endl;
+                        sstr << "------------------------------------------------" << endl;
+                        Checker->Printer->PrintState(NextState, CurState, sstr);
+                        sstr << "------------------------------------------------" << endl;
+                        CurState = NextState;
+                    }
+
+                    sstr << "Could not find a command that takes me from state:" << endl;
+                    sstr << "------------------------------------------------" << endl;
+                    Checker->Printer->PrintState(CurUnwoundState, sstr);
+                    sstr << "------------------------------------------------" << endl;
+                    
+                    sstr << "to the next unwound state:" << endl;
+                    sstr << "------------------------------------------------" << endl;
+                    Checker->Printer->PrintState(NextUnwoundState, sstr);
+                    sstr << "------------------------------------------------" << endl;
+
+                    sstr << "The permuted path up until (including) the failure state:" << endl;
+                    sstr << "Permuted Origin:" << endl;
+                    sstr << "------------------------------------------------" << endl;
+                    Checker->Printer->PrintState(PermPath->GetOrigin(), sstr);
+                    sstr << "------------------------------------------------" << endl;
+                    auto CurPermState = PermPath->GetOrigin();
+                    auto const& PPathElems = PermPath->GetPathElems();
+                    for (auto const& PPathElem : PPathElems) {
+                        auto State = PPathElem->GetTarget();
+                        auto CmdIdx = PPathElem->GetGCmdIndex();
+                        auto const& Cmd = GuardedCommands[CmdIdx];
+                        
+                        sstr << "Fired Command:" << endl << Cmd->ToString()
+                             << endl << "with permutation " << PPathElem->GetPermutation() 
+                             << " to get next permuted state:" << endl;
+                        sstr << "------------------------------------------------" << endl;
+                        Checker->Printer->PrintState(State, CurPermState, sstr);
+                        sstr << "------------------------------------------------" << endl;
+                        CurPermState = State;
+                        if (State == NextUnwoundState) {
+                            break;
+                        }
+                    }
+                    
+                    
+                    throw InternalError(sstr.str() + "\nAt: " + __FILE__ + ":" + 
                                         to_string(__LINE__));
                 }
 

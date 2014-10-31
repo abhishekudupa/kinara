@@ -853,10 +853,13 @@ namespace ESMC {
 
             // Gather the commands that are relevant
             InterpretedCommands.clear();
-            
+
+            cout << "Interpreted Commands:" << endl;
+
             for (auto const& Cmd : GuardedCommands) {
                 if (Cmd->IsFullyInterpreted()) {
                     InterpretedCommands.insert(Cmd->GetCmdID());
+                    cout << Cmd->ToString() << endl << endl;
                 }
             }
 

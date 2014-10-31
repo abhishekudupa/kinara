@@ -362,6 +362,16 @@ namespace ESMC {
             this->LoweredUpdates = LoweredUpdates;
         }
 
+        const ExpT& LTSGuardedCommand::GetLoweredGuard() const
+        {
+            return LoweredGuard;
+        }
+
+        void LTSGuardedCommand::SetLoweredGuard(const ExpT& LoweredGuard) const
+        {
+            this->LoweredGuard = LoweredGuard;
+        }
+
         u32 LTSGuardedCommand::GetCmdID() const
         {
             return CmdID;
