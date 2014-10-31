@@ -301,13 +301,13 @@ namespace ESMC {
             for (auto const& ErrorState : ErrorStates) {
                 auto SVPtr = ErrorState.first;
                 auto const& BlownInvariant = ErrorState.second;
-
-                if (BlownInvariant == DeadlockFreeInvar &&
+                bool IsDeadlock = (BlownInvariant == DeadlockFreeInvar);
+                if (IsDeadlock &&
                     NumDeadlocks++ < 8) {
                     HandleOneDeadlockViolation(SVPtr);
                     ++i;
-                } else {
-                    if (BlownInvariantsCovered.find(BlownInvariant) != 
+                } else if (!IsDeadlock) {
+                    if (BlownInvariantsCovered.find(BlownInvariant) !=
                         BlownInvariantsCovered.end()) {
                         continue;
                     }
