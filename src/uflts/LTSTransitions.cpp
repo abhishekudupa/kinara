@@ -351,6 +351,17 @@ namespace ESMC {
             return FixedInterpretation;
         }
 
+        const vector<LTSAssignRef>& LTSGuardedCommand::GetLoweredUpdates() const
+        {
+            return LoweredUpdates;
+        }
+
+        void 
+        LTSGuardedCommand::SetLoweredUpdates(const vector<LTSAssignRef>& LoweredUpdates) const
+        {
+            this->LoweredUpdates = LoweredUpdates;
+        }
+
         u32 LTSGuardedCommand::GetCmdID() const
         {
             return CmdID;

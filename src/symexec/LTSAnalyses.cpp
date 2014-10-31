@@ -757,9 +757,7 @@ namespace ESMC {
                                            ExpT InitialPredicate)
         {
             // cout << "computing WP" << endl << endl;
-
             // cout << Trace->ToString() << endl;
-
             
             auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
             auto TheLTS = TheSolver->TheLTS;
@@ -769,19 +767,13 @@ namespace ESMC {
             // cout << Phi << endl << endl;
             for (auto it = TraceElements.rbegin(); it != TraceElements.rend(); ++it) {
                 GCmdRef guarded_command = it->first;
-                const vector<LTSAssignRef>& updates = guarded_command->GetUpdates();
-
-                auto&& ExpandedUpdates = ExpandArrayUpdates(updates);
-                // cout << "Expanded Updates:" << endl;
-                // for (auto const& Update : ExpandedUpdates) {
-                //     cout << Update->ToString() << endl;
-                // }
+                const vector<LTSAssignRef>& updates = guarded_command->GetLoweredUpdates();
 
                 MgrT::SubstMapT SubstMapForTransition;
                 // cout << guarded_command->ToString() << endl;
 
-                for (auto it = ExpandedUpdates.rbegin(); 
-                     it != ExpandedUpdates.rend(); ++it) {
+                for (auto it = updates.rbegin(); 
+                     it != updates.rend(); ++it) {
 
                     auto it2 = SubstMapForTransition.find((*it)->GetLHS());
 

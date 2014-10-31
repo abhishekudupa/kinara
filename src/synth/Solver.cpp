@@ -88,7 +88,7 @@ namespace ESMC {
             // Nothing here
         }
 
-        inline void Solver::HandleOneSafetyViolation(const StateVec *ErrorState, 
+        inline void Solver::HandleOneSafetyViolation(const StateVec* ErrorState, 
                                                      const ExpT& BlownInvariant)
         {
             auto Mgr = TheLTS->GetMgr();
