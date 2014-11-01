@@ -97,10 +97,10 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
     Proc[i]->AddInputMsg(WriteMsgs[i - 1], {});
     auto Rim1Exp = TheLTS->MakeVar("R" + to_string(i - 1), WriteMsgs[i - 1]);
     auto Dim1Exp = TheLTS->MakeVar(string("Data") + to_string(i - 1), TheLTS->MakeBoolType());
-    auto Rim1PayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+    auto Dim1PayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
     auto Rim1DataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
                                            Rim1Exp,
-                                           Rim1PayloadAccField);
+                                           Dim1PayloadAccField);
     vector<LTSAssignRef> Rim1Updates { new LTSAssignSimple(Dim1Exp, Rim1DataFieldExp) };
     Proc[i]->AddInputTransition("TheState", "TheState", TheLTS->MakeTrue(),
                                 Rim1Updates,
@@ -108,17 +108,42 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
                                 WriteMsgs[i - 1], {});
 
     Proc[i]->AddOutputMsg(WriteMsgs[i], {});
-    auto RiExp = TheLTS->MakeVar("R" + to_string(i), WriteMsgs[i - 1]);
+    auto RiExp = TheLTS->MakeVar("R" + to_string(i), WriteMsgs[i]);
     auto DiExp = TheLTS->MakeVar(string("Data") + to_string(i), TheLTS->MakeBoolType());
-    auto RiPayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+    auto UiExp = TheLTS->MakeVar(string("Data") + to_string(i), TheLTS->MakeBoolType());
+    auto DiPayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
     auto RiDataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
                                          RiExp,
-                                         RiPayloadAccField);
-    vector<LTSAssignRef> RiUpdates { new LTSAssignSimple(RiDataFieldExp, DiExp) };
+                                         DiPayloadAccField);
+    auto UiPayloadAccField = TheLTS->MakeVar("Up", TheLTS->MakeFieldAccessType());
+    auto RiUpFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                       RiExp,
+                                       UiPayloadAccField);
+    vector<LTSAssignRef> RiUpdates { new LTSAssignSimple(RiDataFieldExp, DiExp),
+                                     new LTSAssignSimple(RiUpFieldExp, UiExp) };
     Proc[i]->AddOutputTransition("TheState", "TheState", TheLTS->MakeTrue(),
                                  RiUpdates,
                                  "R" + to_string(i),
                                  WriteMsgs[i], {});
+
+    Proc[i]->AddInputMsg(WriteMsgs[i + 1], {});
+    auto Rip1Exp = TheLTS->MakeVar("R" + to_string(i + 1), WriteMsgs[i + 1]);
+    auto Dip1Exp = TheLTS->MakeVar(string("Data") + to_string(i + 1), TheLTS->MakeBoolType());
+    auto Dip1PayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+    auto Rip1DataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                           Rip1Exp,
+                                           Dip1PayloadAccField);
+    auto Uip1Exp = TheLTS->MakeVar(string("Up") + to_string(i + 1), TheLTS->MakeBoolType());
+    auto Uip1PayloadAccField = TheLTS->MakeVar("Up", TheLTS->MakeFieldAccessType());
+    auto Rip1UpFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                         Rip1Exp,
+                                         Uip1PayloadAccField);
+    vector<LTSAssignRef> Rip1Updates { new LTSAssignSimple(Dip1Exp, Rip1DataFieldExp),
+                                       new LTSAssignSimple(Uip1Exp, Rip1UpFieldExp) };
+    Proc[i]->AddInputTransition("TheState", "TheState", TheLTS->MakeTrue(),
+                                Rip1Updates,
+                                "R" + to_string(i + 1),
+                                WriteMsgs[i + 1], {});
 
     cout << __LOGSTR__ << "Declaring process " << i << " done." << endl;
 }
@@ -126,7 +151,25 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
 void DeclareProcN(LabelledTS* TheLTS)
 {
     assert(TheLTS != nullptr && Proc.size() + 1 == NumProcesses);
+    size_t i = Proc.size();
+    cout << __LOGSTR__ << "Declaring process " << i << "." << endl;
+    string ProcName = string("Proc") + to_string(i);
+
+    Proc.push_back(TheLTS->MakeGenEFSM(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
+    Proc[i]->AddState("TheState");
+    Proc[i]->FreezeStates();
+
+    cout << __LOGSTR__ << "Declaring variables." << endl;
+    Proc[i]->AddVariable(string("Data") + to_string(i - 1), TheLTS->MakeBoolType());
+    Proc[i]->AddVariable(string("Data") + to_string(i), TheLTS->MakeBoolType());
+    Proc[i]->AddVariable(string("Up") + to_string(i - 1), TheLTS->MakeBoolType());
+    Proc[i]->AddVariable(string("Up") + to_string(i), TheLTS->MakeBoolType());
+    Proc[i]->FreezeVars();
+
+    cout << __LOGSTR__ << "Adding transitions." << endl;
     // TODO.
+
+    cout << __LOGSTR__ << "Declaring process " << i << " done." << endl;
 }
 
 void DeclareShadowMonitor(LabelledTS* TheLTS)
