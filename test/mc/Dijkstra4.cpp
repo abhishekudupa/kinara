@@ -21,7 +21,7 @@ using namespace LTS;
 using namespace Exprs;
 using namespace MC;
 
-#define __LOGSTR__ string(__FILE__) + ", " + lexical_cast<string>(__LINE__) + ": "
+#define __LOGSTR__ string(__FILE__) + ", " + to_string(__LINE__) + ": "
 
 const size_t NumProcesses = 3;
 
@@ -43,41 +43,41 @@ void DeclareMsgs(LabelledTS* TheLTS)
 	
 	if (i > 0) {
 	    string readDataByLeftName = string("ReadData_") +
-		lexical_cast<string>(i) + "_" +
-		lexical_cast<string>(i - 1);
+		to_string(i) + "_" +
+		to_string(i - 1);
 	    DataReadByProc[i][i - 1] = TheLTS->MakeMsgType(readDataByLeftName, dataFields);
 	    
 	    string readUpByLeftName = string("ReadUp_") +
-		lexical_cast<string>(i) + "_" +
-		lexical_cast<string>(i - 1);
+		to_string(i) + "_" +
+		to_string(i - 1);
 	    UpReadByProc[i][i - 1] = TheLTS->MakeMsgType(readUpByLeftName, upFields);
 	}
 	
 	string readDataBySelfName = string("ReadData_") +
-	    lexical_cast<string>(i) + "_" +
-	    lexical_cast<string>(i);
+	    to_string(i) + "_" +
+	    to_string(i);
 	DataReadByProc[i][i] = TheLTS->MakeMsgType(readDataBySelfName, dataFields);
 
-	string writeDataName = string("WriteData_") + lexical_cast<string>(i);
+	string writeDataName = string("WriteData_") + to_string(i);
 	DataWriteByProc[i] = TheLTS->MakeMsgType(writeDataName, dataFields);
 
 	string readUpBySelfName = string("ReadUp_") +
-	    lexical_cast<string>(i) + "_" +
-	    lexical_cast<string>(i);
+	    to_string(i) + "_" +
+	    to_string(i);
 	UpReadByProc[i][i] = TheLTS->MakeMsgType(readUpBySelfName, upFields);
 
-	string writeUpName = string("WriteUp_") + lexical_cast<string>(i);
+	string writeUpName = string("WriteUp_") + to_string(i);
 	UpWriteByProc[i] = TheLTS->MakeMsgType(writeUpName, upFields);
 	
 	if (i + 1 < NumProcesses) {
 	    string readDataByRightName = string("ReadData_") +
-		lexical_cast<string>(i) + "_" +
-		lexical_cast<string>(i + 1);
+		to_string(i) + "_" +
+		to_string(i + 1);
 	    DataReadByProc[i][i + 1] = TheLTS->MakeMsgType(readDataByRightName, dataFields);
 
 	    string readUpByRightName = string("ReadUp_") +
-		lexical_cast<string>(i) + "_" +
-		lexical_cast<string>(i + 1);
+		to_string(i) + "_" +
+		to_string(i + 1);
 	    UpReadByProc[i][i + 1] = TheLTS->MakeMsgType(readUpByRightName, upFields);
 	}
     }
@@ -123,7 +123,7 @@ void DeclareRegs(LabelledTS* TheLTS)
     auto TrueVal = TheLTS->MakeTrue();
     
     for (size_t i = 0; i < NumProcesses; i++) {
-	string dataRegName = string("DataReg") + lexical_cast<string>(i);
+	string dataRegName = string("DataReg") + to_string(i);
 	cout << __LOGSTR__ << "Declaring data register " << dataRegName << "." << endl;
 	DataRegs.push_back(TheLTS->MakeGenEFSM(dataRegName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
 	cout << __LOGSTR__ << "Declaring states for data register " << dataRegName << "." << endl;
@@ -133,8 +133,6 @@ void DeclareRegs(LabelledTS* TheLTS)
         DataRegs[i]->AddVariable("TheVal", BoolType);
 	DataRegs[i]->FreezeVars();
 	cout << __LOGSTR__ << "Declaring transitions for data register " << dataRegName << "." << endl;
-        DataRegs[i]->AddInputMsg(DataWriteByProc[i], {});
-        // TODO: Add other output messages
         if (i > 0) {
             AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i - 1],
                 string("ReadData_") + to_string(i) + "_" + to_string(i - 1));
@@ -148,15 +146,28 @@ void DeclareRegs(LabelledTS* TheLTS)
         AddRegWriteMsg(TheLTS, DataRegs[i], DataWriteByProc[i],
             string("WriteData_") + to_string(i));
 	
-	string upRegName = string("UpReg") + lexical_cast<string>(i);
+	string upRegName = string("UpReg") + to_string(i);
 	cout << __LOGSTR__ << "Declaring up register " << upRegName << "." << endl;
 	UpRegs.push_back(TheLTS->MakeGenEFSM(upRegName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
 	cout << __LOGSTR__ << "Declaring states for up register " << upRegName << "." << endl;
+	UpRegs[i]->AddState("TheState");
 	UpRegs[i]->FreezeStates();
 	cout << __LOGSTR__ << "Declaring variables for up register " << upRegName << "." << endl;
+        UpRegs[i]->AddVariable("TheVal", BoolType);
 	UpRegs[i]->FreezeVars();
 	cout << __LOGSTR__ << "Declaring transitions for up register " << upRegName << "." << endl;
-	// TODO.
+        if (i > 0) {
+            AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i - 1],
+                string("ReadUp_") + to_string(i) + "_" + to_string(i - 1));
+        }
+        AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i],
+            string("ReadUp_") + to_string(i) + "_" + to_string(i));
+        if (i + 1 < NumProcesses) {
+            AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i + 1],
+                string("ReadUp_") + to_string(i) + "_" + to_string(i + 1));
+        }
+        AddRegWriteMsg(TheLTS, DataRegs[i], DataWriteByProc[i],
+            string("WriteUp_") + to_string(i));
     }
 
     cout << __LOGSTR__ << "Declaring registers done." << endl;
@@ -169,7 +180,7 @@ void DeclareProcs(LabelledTS* TheLTS)
     auto BoolType = TheLTS->MakeBoolType();
 
     for (size_t i = 0; i < NumProcesses; i++) {
-	string procName = string("Proc") + lexical_cast<string>(i);
+	string procName = string("Proc") + to_string(i);
 
 	cout << __LOGSTR__ << "Declaring process " << procName << "." << endl;
 	Proc.push_back(TheLTS->MakeGenEFSM(procName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
