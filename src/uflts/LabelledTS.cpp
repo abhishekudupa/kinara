@@ -176,14 +176,14 @@ namespace ESMC {
 
                 ostringstream sstr;
                 sstr << "The LTS is not closed." << endl;
-                vector<ExprTypeRef> InputsMinusOutputs(max(Inputs.size(), Outputs.size()));
-                vector<ExprTypeRef> OutputsMinusInputs(max(Inputs.size(), Outputs.size()));
+                vector<ExprTypeRef> InputsMinusOutputs;
+                vector<ExprTypeRef> OutputsMinusInputs;
                 set_difference(Inputs.begin(), Inputs.end(), 
                                Outputs.begin(), Outputs.end(), 
-                               InputsMinusOutputs.begin());
+                               back_inserter(InputsMinusOutputs));
                 set_difference(Outputs.begin(), Outputs.end(),
                                Inputs.begin(), Inputs.end(),
-                               OutputsMinusInputs.begin());
+                               back_inserter(OutputsMinusInputs));
                 if (InputsMinusOutputs.size() > 0) {
                     sstr << "The following types are the output of no EFSM:" << endl;
                     for (auto const& Type : InputsMinusOutputs) {
