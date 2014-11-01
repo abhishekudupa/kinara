@@ -5,6 +5,8 @@
 // We model and verify the 4-state self-stabilizing protocol presented in Dijkstra's
 // original paper on the topic.
 
+// TODO. Specify initial states of the system.
+
 #include <boost/lexical_cast.hpp>
 
 #include "../../src/uflts/LabelledTS.hpp"
@@ -26,10 +28,7 @@ using namespace MC;
 const size_t NumProcesses = 3;
 
 // Messages
-map<size_t, map<size_t, ExprTypeRef>> DataReadByProc;
-map<size_t, ExprTypeRef> DataWriteByProc;
-map<size_t, map<size_t, ExprTypeRef>> UpReadByProc;
-map<size_t, ExprTypeRef> UpWriteByProc;
+vector<ExprTypeRef> WriteMsgs;
 
 void DeclareMsgs(LabelledTS* TheLTS)
 {
@@ -38,48 +37,10 @@ void DeclareMsgs(LabelledTS* TheLTS)
     
     auto BoolType = TheLTS->MakeBoolType();
     for (size_t i = 0; i < NumProcesses; i++) {
-	vector<pair<string, ExprTypeRef>> dataFields { make_pair(string("Data"), BoolType) };
-	vector<pair<string, ExprTypeRef>> upFields { make_pair(string("Up"), BoolType) };
-	
-	if (i > 0) {
-	    string readDataByLeftName = string("ReadData_") +
-		to_string(i) + "_" +
-		to_string(i - 1);
-	    DataReadByProc[i][i - 1] = TheLTS->MakeMsgType(readDataByLeftName, dataFields);
-	    
-	    string readUpByLeftName = string("ReadUp_") +
-		to_string(i) + "_" +
-		to_string(i - 1);
-	    UpReadByProc[i][i - 1] = TheLTS->MakeMsgType(readUpByLeftName, upFields);
-	}
-	
-	string readDataBySelfName = string("ReadData_") +
-	    to_string(i) + "_" +
-	    to_string(i);
-	DataReadByProc[i][i] = TheLTS->MakeMsgType(readDataBySelfName, dataFields);
-
-	string writeDataName = string("WriteData_") + to_string(i);
-	DataWriteByProc[i] = TheLTS->MakeMsgType(writeDataName, dataFields);
-
-	string readUpBySelfName = string("ReadUp_") +
-	    to_string(i) + "_" +
-	    to_string(i);
-	UpReadByProc[i][i] = TheLTS->MakeMsgType(readUpBySelfName, upFields);
-
-	string writeUpName = string("WriteUp_") + to_string(i);
-	UpWriteByProc[i] = TheLTS->MakeMsgType(writeUpName, upFields);
-	
-	if (i + 1 < NumProcesses) {
-	    string readDataByRightName = string("ReadData_") +
-		to_string(i) + "_" +
-		to_string(i + 1);
-	    DataReadByProc[i][i + 1] = TheLTS->MakeMsgType(readDataByRightName, dataFields);
-
-	    string readUpByRightName = string("ReadUp_") +
-		to_string(i) + "_" +
-		to_string(i + 1);
-	    UpReadByProc[i][i + 1] = TheLTS->MakeMsgType(readUpByRightName, upFields);
-	}
+        vector<pair<string, ExprTypeRef>> fields { make_pair(string("Data"), BoolType),
+                                                   make_pair(string("Up"), BoolType) };
+        string MsgName = string("Write") + to_string(i);
+        WriteMsgs.push_back(TheLTS->MakeMsgType(MsgName, fields));
     }
     
     TheLTS->FreezeMsgs();
@@ -87,128 +48,103 @@ void DeclareMsgs(LabelledTS* TheLTS)
 }
 
 // Processes
-vector<GeneralEFSM*> DataRegs;
-vector<GeneralEFSM*> UpRegs;
 vector<GeneralEFSM*> Proc;
+GeneralEFSM* ShadowMonitor;
 
-void AddRegReadMsg(LabelledTS* TheLTS, GeneralEFSM* TheReg, ExprTypeRef MsgType, string MsgName)
+void DeclareProc0(LabelledTS* TheLTS)
 {
-    TheReg->AddOutputMsg(MsgType, {});
-    auto RegReadExp = TheLTS->MakeVar(MsgName, MsgType);
-    auto TheValExp = TheLTS->MakeVar("TheVal", TheLTS->MakeBoolType());
-    auto PayloadAccFieldExp = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
-    auto DataAccExp = TheLTS->MakeOp(LTSOps::OpField, RegReadExp, PayloadAccFieldExp);
-    vector<LTSAssignRef> DataReadUpdates { new LTSAssignSimple(DataAccExp, TheValExp) };
-    TheReg->AddOutputTransition("TheState", "TheState", TheLTS->MakeTrue(),
-        DataReadUpdates, MsgName, MsgType, {}, set<string>());
+    assert(TheLTS != nullptr && Proc.size() == 0);
+    cout << __LOGSTR__ << "Declaring process 0." << endl;
+    string ProcName = string("Proc0");
+
+    Proc.push_back(TheLTS->MakeGenEFSM(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
+    Proc[0]->AddState("TheState");
+    Proc[0]->FreezeStates();
+
+    cout << __LOGSTR__ << "Declaring variables." << endl;
+    Proc[0]->AddVariable(string("Data0"), TheLTS->MakeBoolType());
+    Proc[0]->AddVariable(string("Data1"), TheLTS->MakeBoolType());
+    Proc[0]->AddVariable(string("Up0"), TheLTS->MakeBoolType());
+    Proc[0]->AddVariable(string("Up1"), TheLTS->MakeBoolType());
+    Proc[0]->FreezeVars();
+
+    cout << __LOGSTR__ << "Adding transitions." << endl;
+    // TODO.
+
+    cout << __LOGSTR__ << "Declaring process 0 done." << endl;
 }
 
-void AddRegWriteMsg(LabelledTS* TheLTS, GeneralEFSM* TheReg, ExprTypeRef MsgType, string MsgName)
+void DeclareProcMid(LabelledTS* TheLTS, size_t i)
 {
-    TheReg->AddInputMsg(MsgType, {});
-    auto RegWriteExp = TheLTS->MakeVar(MsgName, MsgType);
-    auto TheValExp = TheLTS->MakeVar("TheVal", TheLTS->MakeBoolType());
-    auto PayloadAccFieldExp = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
-    auto DataAccExp = TheLTS->MakeOp(LTSOps::OpField, RegWriteExp, PayloadAccFieldExp);
-    vector<LTSAssignRef> DataWriteUpdates { new LTSAssignSimple(TheValExp, DataAccExp) };
-    TheReg->AddInputTransition("TheState", "TheState", TheLTS->MakeTrue(),
-        DataWriteUpdates, MsgName, MsgType, {});
-}
+    assert(TheLTS != nullptr && i > 0 && Proc.size() == i && i + 1 < NumProcesses);
+    cout << __LOGSTR__ << "Declaring process " << i << "." << endl;
+    string ProcName = string("Proc") + to_string(i);
 
-void DeclareRegs(LabelledTS* TheLTS)
-{
-    assert(TheLTS != nullptr);
-    cout << __LOGSTR__ << "Declaring registers." << endl;
-    auto BoolType = TheLTS->MakeBoolType();
-    auto TrueVal = TheLTS->MakeTrue();
+    Proc.push_back(TheLTS->MakeGenEFSM(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
+    Proc[i]->AddState("TheState");
+    Proc[i]->FreezeStates();
+
+    cout << __LOGSTR__ << "Declaring variables." << endl;
+    Proc[i]->AddVariable(string("Data") + to_string(i - 1), TheLTS->MakeBoolType());
+    Proc[i]->AddVariable(string("Data") + to_string(i), TheLTS->MakeBoolType());
+    Proc[i]->AddVariable(string("Data") + to_string(i + 1), TheLTS->MakeBoolType());
+    Proc[i]->AddVariable(string("Up") + to_string(i), TheLTS->MakeBoolType());
+    Proc[i]->AddVariable(string("Up") + to_string(i + 1), TheLTS->MakeBoolType());
+    Proc[i]->FreezeVars();
+
+    cout << __LOGSTR__ << "Adding transitions." << endl;
     
-    for (size_t i = 0; i < NumProcesses; i++) {
-	string dataRegName = string("DataReg") + to_string(i);
-	cout << __LOGSTR__ << "Declaring data register " << dataRegName << "." << endl;
-	DataRegs.push_back(TheLTS->MakeGenEFSM(dataRegName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
-	cout << __LOGSTR__ << "Declaring states for data register " << dataRegName << "." << endl;
-	DataRegs[i]->AddState("TheState");
-	DataRegs[i]->FreezeStates();
-	cout << __LOGSTR__ << "Declaring variables for data register " << dataRegName << "." << endl;
-        DataRegs[i]->AddVariable("TheVal", BoolType);
-	DataRegs[i]->FreezeVars();
-	cout << __LOGSTR__ << "Declaring transitions for data register " << dataRegName << "." << endl;
-        if (i > 0) {
-            AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i - 1],
-                string("ReadData_") + to_string(i) + "_" + to_string(i - 1));
-        }
-        AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i],
-            string("ReadData_") + to_string(i) + "_" + to_string(i));
-        if (i + 1 < NumProcesses) {
-            AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i + 1],
-                string("ReadData_") + to_string(i) + "_" + to_string(i + 1));
-        }
-        AddRegWriteMsg(TheLTS, DataRegs[i], DataWriteByProc[i],
-            string("WriteData_") + to_string(i));
-	
-	string upRegName = string("UpReg") + to_string(i);
-	cout << __LOGSTR__ << "Declaring up register " << upRegName << "." << endl;
-	UpRegs.push_back(TheLTS->MakeGenEFSM(upRegName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
-	cout << __LOGSTR__ << "Declaring states for up register " << upRegName << "." << endl;
-	UpRegs[i]->AddState("TheState");
-	UpRegs[i]->FreezeStates();
-	cout << __LOGSTR__ << "Declaring variables for up register " << upRegName << "." << endl;
-        UpRegs[i]->AddVariable("TheVal", BoolType);
-	UpRegs[i]->FreezeVars();
-	cout << __LOGSTR__ << "Declaring transitions for up register " << upRegName << "." << endl;
-        if (i > 0) {
-            AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i - 1],
-                string("ReadUp_") + to_string(i) + "_" + to_string(i - 1));
-        }
-        AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i],
-            string("ReadUp_") + to_string(i) + "_" + to_string(i));
-        if (i + 1 < NumProcesses) {
-            AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i + 1],
-                string("ReadUp_") + to_string(i) + "_" + to_string(i + 1));
-        }
-        AddRegWriteMsg(TheLTS, DataRegs[i], DataWriteByProc[i],
-            string("WriteUp_") + to_string(i));
-    }
+    Proc[i]->AddInputMsg(WriteMsgs[i - 1], {});
+    auto Rim1Exp = TheLTS->MakeVar("R" + to_string(i - 1), WriteMsgs[i - 1]);
+    auto Dim1Exp = TheLTS->MakeVar(string("Data") + to_string(i - 1), TheLTS->MakeBoolType());
+    auto Rim1PayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+    auto Rim1DataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                           Rim1Exp,
+                                           Rim1PayloadAccField);
+    vector<LTSAssignRef> Rim1Updates { new LTSAssignSimple(Dim1Exp, Rim1DataFieldExp) };
+    Proc[i]->AddInputTransition("TheState", "TheState", TheLTS->MakeTrue(),
+                                Rim1Updates,
+                                "R" + to_string(i - 1),
+                                WriteMsgs[i - 1], {});
 
-    cout << __LOGSTR__ << "Declaring registers done." << endl;
+    Proc[i]->AddOutputMsg(WriteMsgs[i], {});
+    auto RiExp = TheLTS->MakeVar("R" + to_string(i), WriteMsgs[i - 1]);
+    auto DiExp = TheLTS->MakeVar(string("Data") + to_string(i), TheLTS->MakeBoolType());
+    auto RiPayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+    auto RiDataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                         RiExp,
+                                         RiPayloadAccField);
+    vector<LTSAssignRef> RiUpdates { new LTSAssignSimple(RiDataFieldExp, DiExp) };
+    Proc[i]->AddOutputTransition("TheState", "TheState", TheLTS->MakeTrue(),
+                                 RiUpdates,
+                                 "R" + to_string(i),
+                                 WriteMsgs[i], {});
+
+    cout << __LOGSTR__ << "Declaring process " << i << " done." << endl;
 }
 
-void DeclareProcs(LabelledTS* TheLTS)
+void DeclareProcN(LabelledTS* TheLTS)
 {
-    assert(TheLTS != nullptr);
-    cout << __LOGSTR__ << "Declaring processes." << endl;
-    auto BoolType = TheLTS->MakeBoolType();
+    assert(TheLTS != nullptr && Proc.size() + 1 == NumProcesses);
+    // TODO.
+}
 
-    for (size_t i = 0; i < NumProcesses; i++) {
-	string procName = string("Proc") + to_string(i);
-
-	cout << __LOGSTR__ << "Declaring process " << procName << "." << endl;
-	Proc.push_back(TheLTS->MakeGenEFSM(procName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
-
-	cout << __LOGSTR__ << "Declaring states for process " << procName << "." << endl;
-	Proc[i]->FreezeStates();
-
-	cout << __LOGSTR__ << "Declaring variables for process " << procName << "." << endl;
-	Proc[i]->AddVariable("DataLeft", BoolType);
-	Proc[i]->AddVariable("DataSelf", BoolType);
-	Proc[i]->AddVariable("DataRight", BoolType);
-	Proc[i]->AddVariable("UpSelf", BoolType);
-	Proc[i]->AddVariable("UpRight", BoolType);
-	Proc[i]->FreezeVars();
-
-	cout << __LOGSTR__ << "Declaring transitions for process " << procName << "." << endl;
-	// TODO.
-    }
-
-    cout << __LOGSTR__ << "Declaring processes done." << endl;
+void DeclareShadowMonitor(LabelledTS* TheLTS)
+{
+    assert(TheLTS != nullptr && ShadowMonitor == nullptr);
+    // TODO.
 }
 
 void DeclareAutomata(LabelledTS* TheLTS)
 {
     assert(TheLTS != nullptr);
     cout << __LOGSTR__ << "Declaring automata." << endl;
-    DeclareRegs(TheLTS);
-    DeclareProcs(TheLTS);
+    DeclareProc0(TheLTS);
+    for (size_t i = 1; i + 1 < NumProcesses; i++) {
+        DeclareProcMid(TheLTS, i);
+    }
+    DeclareProcN(TheLTS);
+    DeclareShadowMonitor(TheLTS);
     TheLTS->FreezeAutomata();
     cout << __LOGSTR__ << "Freezing automata done." << endl;
 }
