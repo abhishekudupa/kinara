@@ -26,9 +26,9 @@ using namespace MC;
 const size_t NumProcesses = 3;
 
 // Messages
-map<pair<size_t, size_t>, ExprTypeRef> DataReadByProc;
+map<size_t, map<size_t, ExprTypeRef>> DataReadByProc;
 map<size_t, ExprTypeRef> DataWriteByProc;
-map<pair<size_t, size_t>, ExprTypeRef> UpReadByProc;
+map<size_t, map<size_t, ExprTypeRef>> UpReadByProc;
 map<size_t, ExprTypeRef> UpWriteByProc;
 
 void DeclareMsgs(LabelledTS* TheLTS)
@@ -45,18 +45,18 @@ void DeclareMsgs(LabelledTS* TheLTS)
 	    string readDataByLeftName = string("ReadData_") +
 		lexical_cast<string>(i) + "_" +
 		lexical_cast<string>(i - 1);
-	    DataReadByProc[make_pair(i, i - 1)] = TheLTS->MakeMsgType(readDataByLeftName, dataFields);
+	    DataReadByProc[i][i - 1] = TheLTS->MakeMsgType(readDataByLeftName, dataFields);
 	    
 	    string readUpByLeftName = string("ReadUp_") +
 		lexical_cast<string>(i) + "_" +
 		lexical_cast<string>(i - 1);
-	    UpReadByProc[make_pair(i, i - 1)] = TheLTS->MakeMsgType(readUpByLeftName, upFields);
+	    UpReadByProc[i][i - 1] = TheLTS->MakeMsgType(readUpByLeftName, upFields);
 	}
 	
 	string readDataBySelfName = string("ReadData_") +
 	    lexical_cast<string>(i) + "_" +
 	    lexical_cast<string>(i);
-	DataReadByProc[make_pair(i, i)] = TheLTS->MakeMsgType(readDataBySelfName, dataFields);
+	DataReadByProc[i][i] = TheLTS->MakeMsgType(readDataBySelfName, dataFields);
 
 	string writeDataName = string("WriteData_") + lexical_cast<string>(i);
 	DataWriteByProc[i] = TheLTS->MakeMsgType(writeDataName, dataFields);
@@ -64,7 +64,7 @@ void DeclareMsgs(LabelledTS* TheLTS)
 	string readUpBySelfName = string("ReadUp_") +
 	    lexical_cast<string>(i) + "_" +
 	    lexical_cast<string>(i);
-	UpReadByProc[make_pair(i, i)] = TheLTS->MakeMsgType(readUpBySelfName, upFields);
+	UpReadByProc[i][i] = TheLTS->MakeMsgType(readUpBySelfName, upFields);
 
 	string writeUpName = string("WriteUp_") + lexical_cast<string>(i);
 	UpWriteByProc[i] = TheLTS->MakeMsgType(writeUpName, upFields);
@@ -73,12 +73,12 @@ void DeclareMsgs(LabelledTS* TheLTS)
 	    string readDataByRightName = string("ReadData_") +
 		lexical_cast<string>(i) + "_" +
 		lexical_cast<string>(i + 1);
-	    DataReadByProc[make_pair(i, i + 1)] = TheLTS->MakeMsgType(readDataByRightName, dataFields);
+	    DataReadByProc[i][i + 1] = TheLTS->MakeMsgType(readDataByRightName, dataFields);
 
 	    string readUpByRightName = string("ReadUp_") +
 		lexical_cast<string>(i) + "_" +
 		lexical_cast<string>(i + 1);
-	    UpReadByProc[make_pair(i, i + 1)] = TheLTS->MakeMsgType(readUpByRightName, upFields);
+	    UpReadByProc[i][i + 1] = TheLTS->MakeMsgType(readUpByRightName, upFields);
 	}
     }
     
@@ -91,11 +91,36 @@ vector<GeneralEFSM*> DataRegs;
 vector<GeneralEFSM*> UpRegs;
 vector<GeneralEFSM*> Proc;
 
+void AddRegReadMsg(LabelledTS* TheLTS, GeneralEFSM* TheReg, ExprTypeRef MsgType, string MsgName)
+{
+    TheReg->AddOutputMsg(MsgType, {});
+    auto RegReadExp = TheLTS->MakeVar(MsgName, MsgType);
+    auto TheValExp = TheLTS->MakeVar("TheVal", TheLTS->MakeBoolType());
+    auto PayloadAccFieldExp = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+    auto DataAccExp = TheLTS->MakeOp(LTSOps::OpField, RegReadExp, PayloadAccFieldExp);
+    vector<LTSAssignRef> DataReadUpdates { new LTSAssignSimple(DataAccExp, TheValExp) };
+    TheReg->AddOutputTransition("TheState", "TheState", TheLTS->MakeTrue(),
+        DataReadUpdates, MsgName, MsgType, {}, set<string>());
+}
+
+void AddRegWriteMsg(LabelledTS* TheLTS, GeneralEFSM* TheReg, ExprTypeRef MsgType, string MsgName)
+{
+    TheReg->AddInputMsg(MsgType, {});
+    auto RegWriteExp = TheLTS->MakeVar(MsgName, MsgType);
+    auto TheValExp = TheLTS->MakeVar("TheVal", TheLTS->MakeBoolType());
+    auto PayloadAccFieldExp = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+    auto DataAccExp = TheLTS->MakeOp(LTSOps::OpField, RegWriteExp, PayloadAccFieldExp);
+    vector<LTSAssignRef> DataWriteUpdates { new LTSAssignSimple(TheValExp, DataAccExp) };
+    TheReg->AddInputTransition("TheState", "TheState", TheLTS->MakeTrue(),
+        DataWriteUpdates, MsgName, MsgType, {});
+}
+
 void DeclareRegs(LabelledTS* TheLTS)
 {
     assert(TheLTS != nullptr);
     cout << __LOGSTR__ << "Declaring registers." << endl;
     auto BoolType = TheLTS->MakeBoolType();
+    auto TrueVal = TheLTS->MakeTrue();
     
     for (size_t i = 0; i < NumProcesses; i++) {
 	string dataRegName = string("DataReg") + lexical_cast<string>(i);
@@ -105,9 +130,23 @@ void DeclareRegs(LabelledTS* TheLTS)
 	DataRegs[i]->AddState("TheState");
 	DataRegs[i]->FreezeStates();
 	cout << __LOGSTR__ << "Declaring variables for data register " << dataRegName << "." << endl;
+        DataRegs[i]->AddVariable("TheVal", BoolType);
 	DataRegs[i]->FreezeVars();
 	cout << __LOGSTR__ << "Declaring transitions for data register " << dataRegName << "." << endl;
-	// TODO.
+        DataRegs[i]->AddInputMsg(DataWriteByProc[i], {});
+        // TODO: Add other output messages
+        if (i > 0) {
+            AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i - 1],
+                string("ReadData_") + to_string(i) + "_" + to_string(i - 1));
+        }
+        AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i],
+            string("ReadData_") + to_string(i) + "_" + to_string(i));
+        if (i + 1 < NumProcesses) {
+            AddRegReadMsg(TheLTS, DataRegs[i], DataReadByProc[i][i + 1],
+                string("ReadData_") + to_string(i) + "_" + to_string(i + 1));
+        }
+        AddRegWriteMsg(TheLTS, DataRegs[i], DataWriteByProc[i],
+            string("WriteData_") + to_string(i));
 	
 	string upRegName = string("UpReg") + lexical_cast<string>(i);
 	cout << __LOGSTR__ << "Declaring up register " << upRegName << "." << endl;
