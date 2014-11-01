@@ -102,6 +102,32 @@ namespace ESMC {
             }
         }
 
+        inline PtrType Find(const PtrType& Obj)
+        {
+            auto it = Cache.find(Obj);
+            if (it == Cache.end()) {
+                return PtrType::NullPtr;
+            } else {
+                return (*it);
+            }
+        }
+
+        // assumes the value is not already 
+        // in the cache
+        inline PtrType Put(const PtrType& Obj)
+        {
+            Cache.insert(Obj);
+            return Obj;
+        }
+
+        template <typename T, typename... ArgTypes>
+        inline PtrType Put(ArgTypes&&... Args)
+        {
+            PtrType NewObj = new T(forward<ArgTypes>(Args)...);
+            Cache.insert(NewObj);
+            return NewObj;
+        }
+
         inline void GC()
         {
             if (NUMWEAKREFS < 0) {

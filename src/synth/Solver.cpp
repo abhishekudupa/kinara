@@ -47,6 +47,7 @@
 #include "../mc/LTSChecker.hpp"
 #include "../symexec/LTSAnalyses.hpp"
 #include "../mc/OmegaAutomaton.hpp"
+#include "../mc/StateVecPrinter.hpp"
 
 #include "Solver.hpp"
 
@@ -87,16 +88,67 @@ namespace ESMC {
             // Nothing here
         }
 
-        inline void Solver::HandleOneSafetyViolation(const StateVec *ErrorState, 
+        inline void Solver::HandleOneSafetyViolation(const StateVec* ErrorState, 
                                                      const ExpT& BlownInvariant)
         {
             auto Mgr = TheLTS->GetMgr();
             Detail::SynthCostFunction CostFunc(EnabledCommands);
             auto AQS = Checker->AQS;
+
+            cout << "Handling one safety violation, computing shortest path... ";
+            flush(cout);
+
             auto PPath = AQS->FindShortestPath(ErrorState, CostFunc);
+
+            cout << "Done!" << endl << "Unwinding trace... ";
+            flush(cout);
+
             auto Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
+
+            cout << "Done!" << endl
+                 << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
+                 << "Finding invariant that was blown... ";
+            flush(cout);
+
+            auto LastState = Trace->GetTraceElems().back().second;
+
+
+            auto ActualBlownInvariant = BlownInvariant;
+            // Find out the invariant blown on the last state of trace now
+            if (BlownInvariant != Checker->TheLTS->InvariantExp) {
+                auto const& BoundsInvariants = Checker->BoundsInvariants;
+                
+                bool FoundBlown = false;
+                for (auto const& Invar : BoundsInvariants) {
+                    cout << "Evaluating invariant: " << Invar->ToString() << endl;
+
+                    auto Interp = Invar->ExtensionData.Interp;
+                    auto Res = Interp->Evaluate(LastState);
+                    if (Res == UndefValue) {
+                        continue;
+                    } else if (Res == 0) {
+                        FoundBlown = true;
+                        ActualBlownInvariant = Invar;
+                    }
+                }
+
+                if (!FoundBlown) {
+                    ostringstream sstr;
+                    Checker->Printer->PrintState(LastState, sstr);
+                    throw InternalError((string)"Could not find the bounds invariant that was " + 
+                                        "blown in call to Solver::HandleOneSafetyViolation()\n" + 
+                                        "The State:\n" + sstr.str() + "\nCould not find bounds " + 
+                                        "invariant that was blown for the state listed above.\n" + 
+                                        "At: " + __FILE__ + ":" + to_string(__LINE__));
+                }
+            }
+
+            cout << "Done!" << endl << "Blown Invariant: " << endl
+                 << ActualBlownInvariant->ToString() << endl << "Computing weakest pre... ";
+            flush(cout);
+
             auto&& WPConditions = 
-                TraceAnalyses::WeakestPrecondition(this, Trace, BlownInvariant);
+                TraceAnalyses::WeakestPrecondition(this, Trace, ActualBlownInvariant);
             for (auto const& Pred : WPConditions) {
                 cout << "Asserting Safety Pre: " << endl
                      << Pred->ToString() << endl << endl;
@@ -202,8 +254,28 @@ namespace ESMC {
             auto Mgr = TheLTS->GetMgr();
             Detail::SynthCostFunction CostFunc(EnabledCommands);
             auto AQS = Checker->AQS;
+
+            cout << "Handling one deadlock violation, computing shortest path... ";
+            flush(cout);
+
             auto PPath = AQS->FindShortestPath(ErrorState, CostFunc);
+            
+            cout << "Done!" << endl << "Unwinding trace... ";
+            flush(cout);
+            
             auto Trace = TraceBase::MakeDeadlockViolation(PPath, Checker);
+
+            cout << "Done!" << endl
+                 << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
+                 << "Computing Disjuncts... ";
+            flush(cout);
+
+            // cout << "The Deadlock Trace:" << endl << Trace->ToString() << endl << endl
+            //      << "The Error State:" << endl;
+            // Checker->Printer->PrintState(ErrorState, cout);
+            // cout << endl << endl;
+
+            auto LastState = Trace->GetTraceElems().back().second;
 
             // Gather the guards of guarded commands that could
             // possibly solve this deadlock
@@ -215,7 +287,7 @@ namespace ESMC {
 
                 auto const& FixedInterp = Cmd->GetFixedInterpretation();
                 auto Interp = FixedInterp->ExtensionData.Interp;
-                auto Res = Interp->Evaluate(ErrorState);
+                auto Res = Interp->Evaluate(LastState);
                 if (Res == 0) {
                     continue;
                 }
@@ -223,8 +295,11 @@ namespace ESMC {
             }
 
             ExpT GoodExp = ExpT::NullPtr;
-            auto UnreachableExp = TraceAnalyses::AutomataStatesCondition(TheLTS, ErrorState);
+            auto UnreachableExp = TraceAnalyses::AutomataStatesCondition(TheLTS, LastState);
             UnreachableExp = Mgr->MakeExpr(LTSOps::OpNOT, UnreachableExp);
+
+            // cout << "Unreachable Exp: " << endl << UnreachableExp->ToString() << endl << endl;
+
             Disjuncts.push_back(UnreachableExp);
 
             if (Disjuncts.size() == 1) {
@@ -232,6 +307,9 @@ namespace ESMC {
             } else {
                 GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
             }
+
+            cout << "Done!" << endl << "Computing weakest pre... ";
+            flush(cout);
 
             auto&& WPConditions = 
                 TraceAnalyses::WeakestPrecondition(this, 
@@ -242,6 +320,9 @@ namespace ESMC {
                 cout << "Asserting Pre: " << endl << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
+            
+            cout << "Done!" << endl;
+            flush(cout);
 
             delete Trace;
         }
@@ -251,14 +332,29 @@ namespace ESMC {
             auto const& ErrorStates = Checker->GetAllErrorStates();
             auto const& DeadlockFreeInvar = Checker->DeadlockFreeInvariant;
             
+            u32 NumDeadlocks = 0;
+            u32 i = 0;
+            set<ExpT> BlownInvariantsCovered;
+            cout << "Found " << ErrorStates.size() << " error states in all!" << endl;
             for (auto const& ErrorState : ErrorStates) {
                 auto SVPtr = ErrorState.first;
                 auto const& BlownInvariant = ErrorState.second;
-
-                if (BlownInvariant == DeadlockFreeInvar) {
+                bool IsDeadlock = (BlownInvariant == DeadlockFreeInvar);
+                if (IsDeadlock &&
+                    NumDeadlocks++ < 8) {
                     HandleOneDeadlockViolation(SVPtr);
-                } else {
+                    ++i;
+                } else if (!IsDeadlock) {
+                    if (BlownInvariantsCovered.find(BlownInvariant) !=
+                        BlownInvariantsCovered.end()) {
+                        continue;
+                    }
+                    ++i;
+                    BlownInvariantsCovered.insert(BlownInvariant);
                     HandleOneSafetyViolation(SVPtr, BlownInvariant);
+                }
+                if (i > 16) {
+                    break;
                 }
             }
         }
@@ -335,8 +431,12 @@ namespace ESMC {
                     throw ESMCError((string)"Could not solve constraints!");
                 }
 
+
                 // all good. extract a model
                 auto const& Model = TPAsZ3->GetModel();
+
+                cout << "Model checking with model:" << endl
+                     << Model.ToString() << endl << endl;
 
                 Compiler->UpdateModel(Model, InterpretedOps, IndicatorExps);
 

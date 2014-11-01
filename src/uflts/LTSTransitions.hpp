@@ -327,7 +327,9 @@ namespace ESMC {
             MgrT* Mgr;
             ExpT Guard;
             vector<ExpT> GuardComps;
+            mutable ExpT LoweredGuard;
             vector<LTSAssignRef> Updates;
+            mutable vector<LTSAssignRef> LoweredUpdates;
             ExprTypeRef MsgType;
             i32 MsgTypeID;
             vector<LTSFairObjRef> FairnessObjs;
@@ -363,6 +365,10 @@ namespace ESMC {
             bool IsFullyInterpreted() const;
             void SetFullyInterpreted(bool NewValue) const;
             const ExpT& GetFixedInterpretation() const;
+            const vector<LTSAssignRef>& GetLoweredUpdates() const;
+            void SetLoweredUpdates(const vector<LTSAssignRef>& LoweredUpdates) const;
+            const ExpT& GetLoweredGuard() const;
+            void SetLoweredGuard(const ExpT& LoweredGuard) const;
         };
 
         class LTSInitState : public RefCountable

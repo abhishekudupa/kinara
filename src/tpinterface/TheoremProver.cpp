@@ -273,8 +273,8 @@ namespace ESMC {
             }
             auto LoweredAssertion = Mgr->LowerExpr(Assertion, LTSCtx);
 
-            cout << "Checking Lowered Assertion For SAT:" << endl
-                 << LoweredAssertion.ToString() << endl;
+            // cout << "Checking Lowered Assertion For SAT:" << endl
+            //      << LoweredAssertion.ToString() << endl;
 
             Z3_solver_assert(*Ctx, FlashSolver, LoweredAssertion);
             

@@ -46,6 +46,7 @@
 #include "../uflts/LTSAssign.hpp"
 #include "../tpinterface/TheoremProver.hpp"
 #include "../uflts/LTSFairnessSet.hpp"
+#include "../uflts/LTSUtils.hpp"
 
 #include "Compiler.hpp"
 #include "StateVec.hpp"
@@ -1180,6 +1181,9 @@ namespace ESMC {
         }
 
         // Removes the dependence on the __trans_msg__ variable
+        // also populates the "lowered" updates. The lowering 
+        // essentially unrolls array terms as required for the 
+        // weakest precondition and other symbolic analyses.
         vector<GCmdRef> LTSCompiler::CompileCommands(const vector<GCmdRef>& Commands,
                                                      LabelledTS* TheLTS)
         {
@@ -1216,6 +1220,20 @@ namespace ESMC {
                                                        Cmd->GetProductTransition()));
                 Retval.back()->SetCmdID(Cmd->GetCmdID());
             }
+
+            // now we unroll array terms
+            for (auto const& Cmd : Retval) {
+                auto const& Updates = Cmd->GetUpdates();
+                auto&& LoweredUpdates = ExpandArrayUpdates(Updates);
+                Cmd->SetLoweredUpdates(LoweredUpdates);
+
+                // unroll the guard as well
+                auto const& Guard = Cmd->GetGuard();
+                auto LoweredGuard = TransformArrayRValue(Guard);
+                Cmd->SetLoweredGuard(LoweredGuard);
+            }
+
+
             return Retval;
         }
 
