@@ -69,7 +69,51 @@ void DeclareProc0(LabelledTS* TheLTS)
     Proc[0]->FreezeVars();
 
     cout << __LOGSTR__ << "Adding transitions." << endl;
-    // TODO.
+
+    Proc[0]->AddInputMsg(WriteMsgs[1], {});
+    auto D0Exp = TheLTS->MakeVar("Data0", TheLTS->MakeBoolType());
+    auto D1Exp = TheLTS->MakeVar("Data1", TheLTS->MakeBoolType());
+    auto U0Exp = TheLTS->MakeVar("Up0", TheLTS->MakeBoolType());
+    auto U1Exp = TheLTS->MakeVar("Up1", TheLTS->MakeBoolType());
+    auto R1Exp = TheLTS->MakeVar("R1", WriteMsgs[1]);
+    auto D1PayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+    auto R1DataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                         R1Exp,
+                                         D1PayloadAccField);
+    auto U1PayloadAccField = TheLTS->MakeVar("Up", TheLTS->MakeFieldAccessType());
+    auto R1UpFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                       R1Exp,
+                                       U1PayloadAccField);
+    vector<LTSAssignRef> R1Updates { new LTSAssignSimple(D1Exp, R1DataFieldExp),
+                                     new LTSAssignSimple(U1Exp, R1UpFieldExp) };
+    Proc[0]->AddInputTransition("TheState", "TheState", TheLTS->MakeTrue(),
+                                R1Updates,
+                                "R1",
+                                WriteMsgs[1], {});
+
+    Proc[0]->AddOutputMsg(WriteMsgs[0], {});
+    // If DataS = DataR and !UpR, then DataS := !DataS.
+    auto W0Exp = TheLTS->MakeVar("W0", WriteMsgs[0]);
+    auto NotD0Exp = TheLTS->MakeOp(LTSOps::OpNOT, D0Exp);
+    auto Data0EqData1 = TheLTS->MakeOp(LTSOps::OpEQ, D0Exp, D1Exp);
+    auto NotU1Exp = TheLTS->MakeOp(LTSOps::OpNOT, U1Exp);
+    auto Guard = TheLTS->MakeOp(LTSOps::OpAND, Data0EqData1, NotU1Exp);
+    auto D0PayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+    auto U0PayloadAccField = TheLTS->MakeVar("Up", TheLTS->MakeFieldAccessType());
+    auto W0DataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                         W0Exp,
+                                         D0PayloadAccField);
+    auto W0UpFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                       W0Exp,
+                                       U0PayloadAccField);
+    vector<LTSAssignRef> W0Updates { new LTSAssignSimple(D0Exp, NotD0Exp),
+                                     new LTSAssignSimple(U0Exp, U0Exp),
+                                     new LTSAssignSimple(W0DataFieldExp, NotD0Exp),
+                                     new LTSAssignSimple(W0UpFieldExp, U0Exp) };
+    Proc[0]->AddOutputTransition("TheState", "TheState", Guard,
+                                 W0Updates,
+                                 "W0",
+                                 WriteMsgs[0], {});
 
     cout << __LOGSTR__ << "Declaring process 0 done." << endl;
 }
@@ -108,32 +152,51 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
                                 WriteMsgs[i - 1], {});
 
     Proc[i]->AddOutputMsg(WriteMsgs[i], {});
-    auto RiExp = TheLTS->MakeVar("R" + to_string(i), WriteMsgs[i]);
+
+    // If DataS != DataL, then DataS := !DataS, UpS := true.
+    auto WiExp = TheLTS->MakeVar("W" + to_string(i), WriteMsgs[i]);
     auto DiExp = TheLTS->MakeVar(string("Data") + to_string(i), TheLTS->MakeBoolType());
-    auto UiExp = TheLTS->MakeVar(string("Data") + to_string(i), TheLTS->MakeBoolType());
+    auto UiExp = TheLTS->MakeVar(string("Up") + to_string(i), TheLTS->MakeBoolType());
+    auto DataiEqDataim1 = TheLTS->MakeOp(LTSOps::OpEQ, DiExp, Dim1Exp);
+    auto DataiNeqDataim1 = TheLTS->MakeOp(LTSOps::OpNOT, DataiEqDataim1);
     auto DiPayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
-    auto RiDataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
-                                         RiExp,
-                                         DiPayloadAccField);
     auto UiPayloadAccField = TheLTS->MakeVar("Up", TheLTS->MakeFieldAccessType());
-    auto RiUpFieldExp = TheLTS->MakeOp(LTSOps::OpField,
-                                       RiExp,
+    auto WiDataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                         WiExp,
+                                         DiPayloadAccField);
+    auto WiUpFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                       WiExp,
                                        UiPayloadAccField);
-    vector<LTSAssignRef> RiUpdates { new LTSAssignSimple(RiDataFieldExp, DiExp),
-                                     new LTSAssignSimple(RiUpFieldExp, UiExp) };
-    Proc[i]->AddOutputTransition("TheState", "TheState", TheLTS->MakeTrue(),
-                                 RiUpdates,
-                                 "R" + to_string(i),
+    vector<LTSAssignRef> W1iUpdates { new LTSAssignSimple(DiExp, TheLTS->MakeOp(LTSOps::OpNOT, DiExp)),
+                                      new LTSAssignSimple(UiExp, TheLTS->MakeTrue()),
+                                      new LTSAssignSimple(WiDataFieldExp, TheLTS->MakeOp(LTSOps::OpNOT, DiExp)),
+                                      new LTSAssignSimple(WiUpFieldExp, TheLTS->MakeTrue()) };
+    Proc[i]->AddOutputTransition("TheState", "TheState", DataiNeqDataim1,
+                                 W1iUpdates,
+                                 "W" + to_string(i),
+                                 WriteMsgs[i], {});
+
+    // If DataS = DataR and UpS and !UpR, then UpS := false.
+    auto Dip1Exp = TheLTS->MakeVar(string("Data") + to_string(i + 1), TheLTS->MakeBoolType());
+    auto DataiEqDataip1 = TheLTS->MakeOp(LTSOps::OpEQ, DiExp, Dip1Exp);
+    auto Uip1Exp = TheLTS->MakeVar(string("Up") + to_string(i + 1), TheLTS->MakeBoolType());
+    auto NotUip1Exp = TheLTS->MakeOp(LTSOps::OpNOT, Uip1Exp);
+    auto Guard = TheLTS->MakeOp(LTSOps::OpAND, { DataiEqDataip1, UiExp, NotUip1Exp });
+    vector<LTSAssignRef> W2iUpdates { new LTSAssignSimple(DiExp, DiExp),
+                                      new LTSAssignSimple(UiExp, TheLTS->MakeFalse()),
+                                      new LTSAssignSimple(WiDataFieldExp, DiExp),
+                                      new LTSAssignSimple(WiUpFieldExp, TheLTS->MakeFalse()) };
+    Proc[i]->AddOutputTransition("TheState", "TheState", Guard,
+                                 W2iUpdates,
+                                 "W" + to_string(i),
                                  WriteMsgs[i], {});
 
     Proc[i]->AddInputMsg(WriteMsgs[i + 1], {});
     auto Rip1Exp = TheLTS->MakeVar("R" + to_string(i + 1), WriteMsgs[i + 1]);
-    auto Dip1Exp = TheLTS->MakeVar(string("Data") + to_string(i + 1), TheLTS->MakeBoolType());
     auto Dip1PayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
     auto Rip1DataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
                                            Rip1Exp,
                                            Dip1PayloadAccField);
-    auto Uip1Exp = TheLTS->MakeVar(string("Up") + to_string(i + 1), TheLTS->MakeBoolType());
     auto Uip1PayloadAccField = TheLTS->MakeVar("Up", TheLTS->MakeFieldAccessType());
     auto Rip1UpFieldExp = TheLTS->MakeOp(LTSOps::OpField,
                                          Rip1Exp,
@@ -167,7 +230,51 @@ void DeclareProcN(LabelledTS* TheLTS)
     Proc[i]->FreezeVars();
 
     cout << __LOGSTR__ << "Adding transitions." << endl;
-    // TODO.
+
+    Proc[i]->AddInputMsg(WriteMsgs[i - 1], {});
+
+    auto DiExp = TheLTS->MakeVar(string("Data") + to_string(i), TheLTS->MakeBoolType());
+    auto Dim1Exp = TheLTS->MakeVar("Data" + to_string(i - 1), TheLTS->MakeBoolType());
+    auto UiExp = TheLTS->MakeVar(string("Up") + to_string(i), TheLTS->MakeBoolType());
+    auto Uim1Exp = TheLTS->MakeVar("Up" + to_string(i - 1), TheLTS->MakeBoolType());
+    auto Rim1Exp = TheLTS->MakeVar("R" + to_string(i - 1), WriteMsgs[i - 1]);
+    auto Dim1PayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+    auto Rim1DataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                           Rim1Exp,
+                                           Dim1PayloadAccField);
+    auto Uim1PayloadAccField = TheLTS->MakeVar("Up", TheLTS->MakeFieldAccessType());
+    auto Rim1UpFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                         Rim1Exp,
+                                         Uim1PayloadAccField);
+    vector<LTSAssignRef> Rim1Updates { new LTSAssignSimple(Dim1Exp, Rim1DataFieldExp),
+                                       new LTSAssignSimple(Uim1Exp, Rim1UpFieldExp) };
+    Proc[i]->AddInputTransition("TheState", "TheState", TheLTS->MakeTrue(),
+                                Rim1Updates,
+                                "R" + to_string(i - 1),
+                                WriteMsgs[i - 1], {});
+
+    Proc[i]->AddOutputMsg(WriteMsgs[i], {});
+
+    // If DataS != DataL, then DataS := !DataS.
+    auto WiExp = TheLTS->MakeVar("W" + to_string(i), WriteMsgs[i]);
+    auto DataiEqDataim1 = TheLTS->MakeOp(LTSOps::OpEQ, DiExp, Dim1Exp);
+    auto DataiNeqDataim1 = TheLTS->MakeOp(LTSOps::OpNOT, DataiEqDataim1);
+    auto DiPayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+    auto UiPayloadAccField = TheLTS->MakeVar("Up", TheLTS->MakeFieldAccessType());
+    auto WiDataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                         WiExp,
+                                         DiPayloadAccField);
+    auto WiUpFieldExp = TheLTS->MakeOp(LTSOps::OpField,
+                                       WiExp,
+                                       UiPayloadAccField);
+    vector<LTSAssignRef> WiUpdates { new LTSAssignSimple(DiExp, TheLTS->MakeOp(LTSOps::OpNOT, DiExp)),
+                                     new LTSAssignSimple(UiExp, UiExp),
+                                     new LTSAssignSimple(WiDataFieldExp, TheLTS->MakeOp(LTSOps::OpNOT, DiExp)),
+                                     new LTSAssignSimple(WiUpFieldExp, UiExp) };
+    Proc[i]->AddOutputTransition("TheState", "TheState", DataiNeqDataim1,
+                                 WiUpdates,
+                                 "W" + to_string(i),
+                                 WriteMsgs[i], {});
 
     cout << __LOGSTR__ << "Declaring process " << i << " done." << endl;
 }
