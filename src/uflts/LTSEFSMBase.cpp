@@ -736,20 +736,12 @@ namespace ESMC {
                                                           FinalConditionOne));
             }
 
-            if (ErrorConditions.size() == 0) {
-                ErrorCondition = Mgr->MakeFalse();
-            } else if (ErrorConditions.size() == 1) {
-                ErrorCondition = ErrorConditions[0];
-            } else {
-                ErrorCondition = Mgr->MakeExpr(LTSOps::OpOR, ErrorConditions);
-            }
+            ErrorCondition = MakeDisjunction(ErrorConditions, Mgr);
 
             if (FinalConditions.size() == 0) {
                 FinalCondition = Mgr->MakeFalse();
-            } else if (FinalConditions.size() == 1) {
-                FinalCondition = FinalConditions[0];
             } else {
-                FinalCondition = Mgr->MakeExpr(LTSOps::OpAND, FinalConditions);
+                FinalCondition = MakeConjunction(FinalConditions, Mgr);
             }
         }
 

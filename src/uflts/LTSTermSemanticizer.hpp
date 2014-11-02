@@ -971,7 +971,7 @@ namespace ESMC {
                         ExpString += " ";
                     }
                     First = false;
-                    ExpString += "(" + TypeToString(QVarType) + ")";
+                    ExpString += TypeToString(QVarType);
                 }
                 ExpString += ") ";
                 Exp->GetQExpression()->Accept(this);

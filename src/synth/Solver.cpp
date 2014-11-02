@@ -435,8 +435,8 @@ namespace ESMC {
                 // all good. extract a model
                 auto const& Model = TPAsZ3->GetModel();
 
-                cout << "Model checking with model:" << endl
-                     << Model.ToString() << endl << endl;
+                // cout << "Model checking with model:" << endl
+                //      << Model.ToString() << endl << endl;
 
                 Compiler->UpdateModel(Model, InterpretedOps, IndicatorExps);
 

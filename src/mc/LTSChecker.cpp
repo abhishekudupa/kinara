@@ -46,6 +46,7 @@
 #include "../uflts/LTSTransitions.hpp"
 #include "../uflts/LTSFairnessSet.hpp"
 #include "../uflts/LTSEFSMBase.hpp"
+#include "../uflts/LTSUtils.hpp"
 
 #include "LTSChecker.hpp"
 #include "Compiler.hpp"
@@ -588,14 +589,8 @@ namespace ESMC {
             for (auto const& Cmd : GuardedCommands) {
                 DLFDisjunctions.push_back(Cmd->GetGuard());
             }
-            if (DLFDisjunctions.size() == 0) {
-                DeadlockFreeInvariant = Mgr->MakeFalse();
-            } else if (DLFDisjunctions.size() == 1) {
-                DeadlockFreeInvariant = DLFDisjunctions[0];
-            } else {
-                DeadlockFreeInvariant = Mgr->MakeExpr(LTSOps::OpOR, DLFDisjunctions);
-            }
-            
+
+            DeadlockFreeInvariant = MakeDisjunction(DLFDisjunctions, Mgr);            
             DeadlockFreeInvariant = Mgr->Simplify(DeadlockFreeInvariant);
             
             // Make the invariant on undef and bounds
@@ -854,12 +849,12 @@ namespace ESMC {
             // Gather the commands that are relevant
             InterpretedCommands.clear();
 
-            cout << "Interpreted Commands:" << endl;
+            // cout << "Interpreted Commands:" << endl;
 
             for (auto const& Cmd : GuardedCommands) {
                 if (Cmd->IsFullyInterpreted()) {
                     InterpretedCommands.insert(Cmd->GetCmdID());
-                    cout << Cmd->ToString() << endl << endl;
+                    // cout << Cmd->ToString() << endl << endl;
                 }
             }
 
@@ -872,10 +867,10 @@ namespace ESMC {
                 auto CurState = Factory->MakeState();
                 ApplyUpdates(ISGen, ZeroState, CurState);
 
-                cout << "Initial State:" << endl;
-                cout << "--------------------------------------------------------" << endl;
-                Printer->PrintState(CurState, cout);
-                cout << "--------------------------------------------------------" << endl;
+                // cout << "Initial State:" << endl;
+                // cout << "--------------------------------------------------------" << endl;
+                // Printer->PrintState(CurState, cout);
+                // cout << "--------------------------------------------------------" << endl;
 
                 u32 CanonPerm = 0;
                 auto CanonState = TheCanonicalizer->Canonicalize(CurState, CanonPerm);

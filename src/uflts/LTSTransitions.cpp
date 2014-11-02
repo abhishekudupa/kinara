@@ -292,14 +292,7 @@ namespace ESMC {
 
             FairnessSets.insert(FairnessSets.begin(), FairSets.begin(), FairSets.end());
             // Make the guard
-            if (GuardComps.size() == 0) {
-                Guard = Mgr->MakeTrue();
-            } else if (GuardComps.size() == 1) {
-                Guard = GuardComps[0];
-            } else {
-                Guard = Mgr->MakeExpr(LTSOps::OpAND, GuardComps);
-            }
-
+            Guard = MakeConjunction(GuardComps, Mgr);
             Guard = Mgr->Simplify(Guard);
 
             // Set up the fixed interpretation
@@ -315,14 +308,7 @@ namespace ESMC {
                 FixedComps.push_back(Mgr->Substitute(RebaseSubstMap, EQExp));
             }
 
-            if (FixedComps.size() == 0) {
-                FixedInterpretation = Mgr->MakeTrue();
-            } else if (FixedComps.size() == 1) {
-                FixedInterpretation = FixedComps[0];
-            } else {
-                FixedInterpretation = Mgr->MakeExpr(LTSOps::OpAND, FixedComps);
-            }
-
+            FixedInterpretation = MakeConjunction(FixedComps, Mgr);
             FixedInterpretation = Mgr->Simplify(FixedInterpretation);
         }
 

@@ -164,8 +164,28 @@ namespace ESMC {
                     
                     sstr << "to the next unwound state:" << endl;
                     sstr << "------------------------------------------------" << endl;
-                    Checker->Printer->PrintState(NextUnwoundState, sstr);
+                    Checker->Printer->PrintState(NextUnwoundState, CurUnwoundState, sstr);
                     sstr << "------------------------------------------------" << endl;
+                    
+                    for (auto const& Cmd : GuardedCommands) {
+                        bool Exception;
+                        auto CandNext = TryExecuteCommand(Cmd, CurUnwoundState, Exception);
+                        if (CandNext == nullptr) {
+                            continue;
+                        }
+                        auto SortedCand = TheCanonicalizer->SortChans(CandNext);
+                        CandNext->Recycle();
+                        sstr << "Firing command:" << endl << Cmd->ToString() << endl
+                             << "yields diff (from desired state):" << endl;
+                        sstr << "------------------------------------------------" << endl;
+                        Checker->Printer->PrintState(SortedCand, NextUnwoundState, sstr);
+                        sstr << "------------------------------------------------" << endl;
+                        sstr << "and yields diff (from current unwound state):" << endl;
+                        sstr << "------------------------------------------------" << endl;
+                        Checker->Printer->PrintState(SortedCand, CurUnwoundState, sstr);
+                        sstr << "------------------------------------------------" << endl;
+                        SortedCand->Recycle();
+                    }
 
                     sstr << "The permuted path up until (including) the failure state:" << endl;
                     sstr << "Permuted Origin:" << endl;
@@ -186,7 +206,7 @@ namespace ESMC {
                         Checker->Printer->PrintState(State, CurPermState, sstr);
                         sstr << "------------------------------------------------" << endl;
                         CurPermState = State;
-                        if (State == NextUnwoundState) {
+                        if (State == NextPermState) {
                             break;
                         }
                     }

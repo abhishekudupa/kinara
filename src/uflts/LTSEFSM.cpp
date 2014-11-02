@@ -52,6 +52,7 @@ namespace ESMC {
     namespace LTS {
 
         using namespace ESMC::TP;
+        using namespace Symm;
 
         GeneralEFSM::GeneralEFSM(LabelledTS* TheLTS, const string& Name,
                                  const vector<ExpT>& Params, 
@@ -427,8 +428,6 @@ namespace ESMC {
                                          const vector<ExpT>& SymmArgs,
                                          const vector<ExpT>& NonSymmArgs)
         {
-            using namespace Symm;
-
             map<ExprTypeRef, u32> TypeOffsets;
             vector<u32> DomainSizes;
             auto const IsRangeSymmetric = Exp->GetType()->Is<ExprSymmetricType>();
@@ -466,6 +465,7 @@ namespace ESMC {
                     }
                 }
             }
+
             auto&& ValueTuples = CrossProduct<string>(SymmArgValues.begin(), 
                                                       SymmArgValues.end());
             
@@ -625,15 +625,8 @@ namespace ESMC {
                 DetConstraints.push_back(Mgr->MakeExpr(LTSOps::OpNOT, Conjunction));
             }
 
-            ExpT FinalDetConstraint = ExpT::NullPtr;
-            if (DetConstraints.size() == 0) {
-                FinalDetConstraint = Mgr->MakeTrue();
-            } else if (DetConstraints.size() == 1) {
-                FinalDetConstraint = DetConstraints[0];
-            } else {
-                FinalDetConstraint = Mgr->MakeExpr(LTSOps::OpAND, DetConstraints);
-            }
-
+            ExpT FinalDetConstraint = MakeConjunction(DetConstraints, Mgr);
+            
             // Quantify on all the domain terms
             MgrT::SubstMapT SubstMap;
             const u32 NumDomainTerms = DomainTermVec.size();
@@ -651,6 +644,184 @@ namespace ESMC {
             return GuardExp;
         }
 
+        inline set<set<ExpT>>
+        IncompleteEFSM::GetArrayLValueGroups(const set<ExpT>& LValues)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            // get the symmetric types
+            set<ExprTypeRef> SymmTypeSet;
+            for (auto const& LValueTerm : LValues) {
+                auto&& CurSymmTypes = GetSymmTypesInExpr(LValueTerm);
+                SymmTypeSet.insert(CurSymmTypes.begin(), CurSymmTypes.end());
+            }
+
+            vector<ExprTypeRef> SymmTypes(SymmTypeSet.begin(), SymmTypeSet.end());
+
+            u32 RunningOffset = 0;
+            vector<u32> DomainSizes;
+            map<ExprTypeRef, u32> TypeOffsets;
+
+            for (auto const& SymmType : SymmTypes) {
+                auto const CurSize = SymmType->GetCardinalityNoUndef();
+                DomainSizes.push_back(CurSize);
+                TypeOffsets[SymmType] = RunningOffset;
+                RunningOffset += CurSize;
+            }
+            
+            PermutationSet PermSet(DomainSizes, false);
+            const u32 NumPerms = PermSet.GetSize();
+
+            // for each uncovered term, get all the other lvalues
+            // which can be obtained by permuting and put them in
+            // the same group
+            set<set<ExpT>> Retval;
+            set<ExpT> CoveredTerms;
+            
+            for (auto const& LValue : LValues) {
+                if (CoveredTerms.find(LValue) != CoveredTerms.end()) {
+                    continue;
+                }
+
+                set<ExpT> CurSet;
+                CurSet.insert(LValue);
+                for (u32 i = 0; i < NumPerms; ++i) {
+                    auto const& CurPerm = PermSet.GetIterator(i).GetPerm();
+                    auto PermExp = Mgr->ApplyTransform<ExpressionPermuter>(LValue, CurPerm,
+                                                                           TypeOffsets);
+                    if ((PermExp != LValue) && (LValues.find(PermExp) != LValues.end())) {
+                        CurSet.insert(PermExp);
+                        CoveredTerms.insert(PermExp);
+                    }
+                }
+
+                if (CurSet.size() > 1) {
+                    Retval.insert(CurSet);
+                }
+            }
+            return Retval;
+        }
+
+        inline vector<ExpT>
+        IncompleteEFSM::GetSymmetryConstraints(const set<ExpT>& UpdateGroup,
+                                               const map<ExpT, ExpT>& UpdateMap)
+        {
+            // Get all the symmetric types (again)
+            auto Mgr = TheLTS->GetMgr();
+            vector<ExpT> Retval;
+
+            set<ExprTypeRef> SymmTypeSet;
+            for (auto const& UpdateTerm : UpdateMap) {
+                auto&& CurSymmTypes1 = GetSymmTypesInExpr(UpdateTerm.first);
+                SymmTypeSet.insert(CurSymmTypes1.begin(), CurSymmTypes1.end());
+                auto&& CurSymmTypes2 = GetSymmTypesInExpr(UpdateTerm.second);
+                SymmTypeSet.insert(CurSymmTypes2.begin(), CurSymmTypes2.end());
+            }
+            vector<ExprTypeRef> SymmTypes(SymmTypeSet.begin(), SymmTypeSet.end());
+            
+            vector<ExpT> LHSTerms(UpdateGroup.begin(), UpdateGroup.end());
+            vector<ExpT> RHSTerms;
+
+            transform(LHSTerms.begin(), LHSTerms.end(), back_inserter(RHSTerms),
+                      [&] (const ExpT& Exp) -> ExpT
+                      {
+                          auto it = UpdateMap.find(Exp);
+                          if (it == UpdateMap.end()) {
+                              throw InternalError((string)"Could not find update for term:\n" + 
+                                                  Exp->ToString() + "\nAt: " + __FILE__ + ":" + 
+                                                  to_string(__LINE__));
+                          }
+                          return it->second;
+                      });
+
+            // Get the args of the application
+            auto CandidateApp = *(RHSTerms.begin());
+            auto CandidateAppAsOp = CandidateApp->As<OpExpression>();
+            if (CandidateAppAsOp == nullptr) {
+                throw InternalError((string)"Expected an uninterpreted function " + 
+                                    "application as expression argument in " + 
+                                    "IncompleteEFSM::GetSymmetryConstraints()\n" + 
+                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
+            }
+            auto const& AllArgs = CandidateAppAsOp->GetChildren();
+            vector<ExpT> SymmArgs;
+            vector<ExpT> NonSymmArgs;
+            PartitionDomain(AllArgs, SymmArgs, NonSymmArgs);
+
+            const u32 NumNonSymmArgs = NonSymmArgs.size();
+
+
+            vector<ExprTypeRef> LHSTypes;
+            transform(LHSTerms.begin(), LHSTerms.end(), back_inserter(LHSTypes),
+                      [&] (const ExpT& Exp) -> ExprTypeRef
+                      {
+                          return Exp->GetType();
+                      });
+
+            const u32 NumLHSTerms = LHSTerms.size();
+            
+            vector<vector<string>> LHSCPValues;
+            transform(LHSTypes.begin(), LHSTypes.end(), back_inserter(LHSCPValues),
+                      [&] (const ExprTypeRef& Type) -> const vector<string>
+                      {
+                          return Type->GetElements();
+                      });
+            
+            auto&& LHSCP = CrossProduct<string>(LHSCPValues.begin(),
+                                                LHSCPValues.end());
+            
+            set<set<ExpT>> AllEquivalences;
+            for (auto const& CPTuple : LHSCP) {
+                MgrT::SubstMapT PostSubstMap;
+                vector<ExpT> Conjuncts;
+                for (u32 i = 0; i < NumLHSTerms; ++i) {
+                    auto CurVal = Mgr->MakeVal(CPTuple[i], LHSTypes[i]);
+                    auto CurConstraint = MakeEquivalence(RHSTerms[i], LHSTerms[i], Mgr);
+                    PostSubstMap[LHSTerms[i]] = CurVal;
+                    Conjuncts.push_back(CurConstraint);
+                }
+                
+                auto Antecedent = MakeConjunction(Conjuncts, Mgr);
+                auto&& CurEquivalences = FindEquivalences(Antecedent, SymmTypes, 
+                                                          SymmArgs, NonSymmArgs);
+                // Subst out the LHS terms
+                set<set<ExpT>> SubstEquivalences;
+                for (auto const& Equivalence : CurEquivalences) {
+                    set<ExpT> SubstEquivalence;
+                    for (auto const& Exp : Equivalence) {
+                        SubstEquivalence.insert(Mgr->TermSubstitute(PostSubstMap, Exp));
+                    }
+                    SubstEquivalences.insert(SubstEquivalence);
+                }
+
+                for (auto const& NewEquivalence : SubstEquivalences) {
+                    MergeEquivalences(NewEquivalence, AllEquivalences);
+                }
+            }
+
+            // Make the constraints and return
+            for (auto const& EqClass : AllEquivalences) {
+                auto const& Representative = *(EqClass.begin());
+                for (auto it = next(EqClass.begin()); it != EqClass.end(); ++it) {
+                    auto CurConstraint = MakeEquivalence(Representative, *it, Mgr);
+                    
+                    MgrT::SubstMapT SubstMap;
+                    vector<ExprTypeRef> QVarTypes(NumNonSymmArgs);
+                    
+                    for (u32 i = 0; i < NumNonSymmArgs; ++i) {
+                        auto const& ArgType = NonSymmArgs[i]->GetType();
+                        SubstMap[NonSymmArgs[i]] = 
+                            Mgr->MakeBoundVar(ArgType, i);
+                        QVarTypes[NumNonSymmArgs - i - 1] = ArgType;
+                    }
+
+                    auto QBody = Mgr->BoundSubstitute(SubstMap, CurConstraint);
+                    Retval.push_back(Mgr->MakeForAll(QVarTypes, QBody));
+                }
+            }
+
+            return Retval;
+        }
+
         inline vector<LTSAssignRef> 
         IncompleteEFSM::MakeUpdates(const set<ExpT>& DomainTerms)
         {
@@ -663,6 +834,20 @@ namespace ESMC {
             }
 
             auto&& LValueTerms = GetDomainTerms(LValues);
+            auto&& ArrayLValueGroups = GetArrayLValueGroups(LValueTerms);
+            map<ExpT, set<ExpT>> GroupedLValues;
+            map<ExpT, ExpT> GroupedLValueToUpdateExp;
+
+            cout << "Array LValue Groups:" << endl;
+            for (auto const& Group : ArrayLValueGroups) {
+                cout << "Group {" << endl;
+                for (auto const& LVal : Group) {
+                    cout << "    " << LVal->ToString() << endl;
+                    GroupedLValues[LVal] = Group;
+                }
+                cout << "}" << endl << endl;
+            }
+
             // Add the state lvalue
             LValueTerms.insert(TheLTS->MakeVar("state", StateType));
 
@@ -689,14 +874,28 @@ namespace ESMC {
                 auto UpdateExp = Mgr->MakeExpr(UpdateOp, DomainTermVec);
                 cout << "Made update exp for term " << LValue->ToString()
                      << ":" << endl << UpdateExp->ToString() << endl;
-                
-                auto&& SymmConstraints = GetSymmetryConstraints(UpdateExp);
-                cout << "Symmetry constraints for update of term " << LValue->ToString() 
-                     << ":" << endl;
-                AddConstraint(SymmConstraints);
 
+                if (GroupedLValues.find(LValue) == GroupedLValues.end()) {
+                    auto&& SymmConstraints = GetSymmetryConstraints(UpdateExp);
+                    cout << "Symmetry constraints for update of term " << LValue->ToString() 
+                         << ":" << endl;
+                    AddConstraint(SymmConstraints);
+                } else {
+                    // Group symmetry constraints are applied later
+                    GroupedLValueToUpdateExp[LValue] = UpdateExp;
+                }
+                    
                 Retval.push_back(new LTSAssignSimple(LValue, UpdateExp));
             }
+
+            // TODO: Assert grouped lvalue symmetry constraints
+            for (auto const& ArrayLValueGroup : ArrayLValueGroups) {
+                auto&& SymmConstraints = GetSymmetryConstraints(ArrayLValueGroup,
+                                                                GroupedLValueToUpdateExp);
+                cout << "Symmetry constraints for symmetric updates:" << endl;
+                AddConstraint(SymmConstraints);
+            }
+
             return Retval;
         }
 

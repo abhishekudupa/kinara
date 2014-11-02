@@ -49,6 +49,8 @@
 
 namespace ESMC {
     namespace LTS {
+
+        using namespace Symm;
         
         class GeneralEFSM : public EFSMBase
         {
@@ -107,6 +109,8 @@ namespace ESMC {
             inline void FilterTerms(set<ExpT>& DomainTerms, const ExprTypeRef& RangeType);
             set<ExpT> GetDomainTerms(const map<string, ExprTypeRef>& DomainVars);
 
+            inline set<set<ExpT>> GetArrayLValueGroups(const set<ExpT>& LValues);
+
             inline vector<ExprTypeRef> GetSymmTypesInExpr(const ExpT& Exp);
             inline void PartitionDomain(const vector<ExpT>& Args,
                                         vector<ExpT>& SymmArgs,
@@ -121,6 +125,10 @@ namespace ESMC {
                                                    const vector<ExpT>& NonSymmArgs);
 
             inline vector<ExpT> GetSymmetryConstraints(const ExpT& Exp);
+
+            // Make symmetry constraints for a group
+            inline vector<ExpT> GetSymmetryConstraints(const set<ExpT>& UpdateGroup,
+                                                       const map<ExpT, ExpT>& UpdateMap);
 
             inline ExpT FindDisjunction(const vector<LTSSymbTransRef>& Transitions,
                                         const TPRef& TP,

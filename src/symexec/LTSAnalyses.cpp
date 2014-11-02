@@ -651,13 +651,8 @@ namespace ESMC {
                     LoopIndex++;
                 }
             }
-            if (EnableConditions.size() == 0) {
-                return TheLTS->MakeFalse();
-            } else if (EnableConditions.size() == 1) {
-                return EnableConditions[0];
-            } else {
-                return TheLTS->MakeOp(LTSOps::OpOR, EnableConditions);
-            }
+
+            return MakeDisjunction(EnableConditions, TheLTS->GetMgr());
         }
 
         map<pair<EFSMBase*, vector<ExpT> >, string>
@@ -1011,13 +1006,12 @@ namespace ESMC {
                                                 TrivialFairObjs);
                 Conjuncts.push_back(TheLTS->MakeOp(LTSOps::OpOR, NewPhi, FairnessCondition));
             }
+
             if (Conjuncts.size() == 0) {
                 throw ESMCError((string) "No condition found for liveness!");
-            } else if (Conjuncts.size() == 1) {
-                return Conjuncts[0];
-            } else {
-                return TheLTS->MakeOp(LTSOps::OpAND, Conjuncts);
-            }
+            } 
+            
+            return MakeConjunction(Conjuncts, TheLTS->GetMgr());
         }
 
         // TODO Need to deal with clear assignments:

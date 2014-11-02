@@ -720,6 +720,30 @@ namespace ESMC {
             return Retval;
         }
 
+        static inline ExpT MakeConjunction(const vector<ExpT>& Conjuncts,
+                                           MgrT* Mgr)
+        {
+            if (Conjuncts.size() == 0) {
+                return Mgr->MakeTrue();
+            } else if (Conjuncts.size() == 1) {
+                return Conjuncts[0];
+            } else {
+                return Mgr->MakeExpr(LTSOps::OpAND, Conjuncts);
+            }
+        }
+
+        static inline ExpT MakeDisjunction(const vector<ExpT>& Disjuncts,
+                                           MgrT* Mgr)
+        {
+            if (Disjuncts.size() == 0) {
+                return Mgr->MakeFalse(); 
+            } else if (Disjuncts.size() == 1) {
+                return Disjuncts[0];
+            } else {
+                return Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
+            }
+        }
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
@@ -727,3 +751,13 @@ namespace ESMC {
 
 // 
 // LTSUtils.hpp ends here
+
+
+
+
+
+
+
+
+
+
