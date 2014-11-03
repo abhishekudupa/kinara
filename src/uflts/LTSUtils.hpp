@@ -744,6 +744,29 @@ namespace ESMC {
             }
         }
 
+        static ExpT GetBaseLValue(const ExpT& Exp)
+        {
+            auto ExpAsVar = Exp->As<VarExpression>();
+            if (ExpAsVar != nullptr) {
+                return Exp;
+            }
+            
+            auto ExpAsOp = Exp->As<OpExpression>();
+            if (ExpAsOp == nullptr) {
+                throw InternalError((string)"GetBaseLValue() called on an expression " + 
+                                    "that doesn't look like an LValue:\n" + Exp->ToString() + 
+                                    "\nAt: " + __FILE__ + ":" + to_string(__LINE__));
+            }
+            auto OpCode = ExpAsOp->GetOpCode();
+            if (OpCode == LTSOps::OpField || OpCode == LTSOps::OpIndex) {
+                return GetBaseLValue(ExpAsOp->GetChildren()[0]);
+            } else {
+                throw InternalError((string)"GetBaseLValue() called on an expression " + 
+                                    "that doesn't look like an LValue:\n" + Exp->ToString() + 
+                                    "\nAt: " + __FILE__ + ":" + to_string(__LINE__));
+            }
+        }
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

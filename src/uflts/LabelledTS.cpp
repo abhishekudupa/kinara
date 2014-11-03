@@ -903,6 +903,10 @@ namespace ESMC {
 
         ExpT LabelledTS::MakeVar(const string& Name, const ExprTypeRef& Type)
         {
+            if (boost::algorithm::starts_with(Name, "_")) {
+                throw ESMCError((string)"Variable names beginning with an underscore " + 
+                                "are reserved for use by the ESMC system");
+            }
             return Mgr->MakeVar(Name, Type);
         }
 

@@ -768,15 +768,28 @@ namespace ESMC {
             
             auto&& LHSCP = CrossProduct<string>(LHSCPValues.begin(),
                                                 LHSCPValues.end());
+
+            const string TempVarName = (string)"__temp_var__";
             
             set<set<ExpT>> AllEquivalences;
+
             for (auto const& CPTuple : LHSCP) {
                 MgrT::SubstMapT PostSubstMap;
                 vector<ExpT> Conjuncts;
+
                 for (u32 i = 0; i < NumLHSTerms; ++i) {
                     auto CurVal = Mgr->MakeVal(CPTuple[i], LHSTypes[i]);
-                    auto CurConstraint = MakeEquivalence(RHSTerms[i], LHSTerms[i], Mgr);
-                    PostSubstMap[LHSTerms[i]] = CurVal;
+                    
+                    // create a new temp var that's isomorphic to the 
+                    // base LHS var in terms of symmetry
+                    auto BaseLHSVar = GetBaseLValue(LHSTerms[i]);
+                    MgrT::SubstMapT TempSubstMap;
+                    TempSubstMap[BaseLHSVar] = Mgr->MakeVar(TempVarName, 
+                                                            BaseLHSVar->GetType());
+                    auto NewLHSTerm = Mgr->Substitute(TempSubstMap, LHSTerms[i]);
+
+                    auto CurConstraint = MakeEquivalence(RHSTerms[i], NewLHSTerm, Mgr);
+                    PostSubstMap[NewLHSTerm] = CurVal;
                     Conjuncts.push_back(CurConstraint);
                 }
                 
@@ -788,7 +801,10 @@ namespace ESMC {
                 for (auto const& Equivalence : CurEquivalences) {
                     set<ExpT> SubstEquivalence;
                     for (auto const& Exp : Equivalence) {
-                        SubstEquivalence.insert(Mgr->TermSubstitute(PostSubstMap, Exp));
+                        // cout << "Pre Sub: " << Exp->ToString() << endl;
+                        auto SubstExp = Mgr->TermSubstitute(PostSubstMap, Exp);
+                        // cout << "Post Sub: " << SubstExp->ToString() << endl;
+                        SubstEquivalence.insert(SubstExp);
                     }
                     SubstEquivalences.insert(SubstEquivalence);
                 }

@@ -120,8 +120,7 @@ namespace ESMC {
                 
                 bool FoundBlown = false;
                 for (auto const& Invar : BoundsInvariants) {
-                    cout << "Evaluating invariant: " << Invar->ToString() << endl;
-
+                    // cout << "Evaluating invariant: " << Invar->ToString() << endl;
                     auto Interp = Invar->ExtensionData.Interp;
                     auto Res = Interp->Evaluate(LastState);
                     if (Res == UndefValue) {
