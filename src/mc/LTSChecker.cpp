@@ -1164,7 +1164,8 @@ namespace ESMC {
             u32 CurSCCID = 0;
 
             for (auto InitState : ThePS->GetInitialStates()) {
-                if (InitState->IsDeleted()) {
+                if (InitState->DFSNum != -1 || InitState->IsDeleted()) {
+                    // already explored this initial state
                     continue;
                 }
 
@@ -1269,6 +1270,8 @@ namespace ESMC {
                             // }
 
                             Retval.push_back(CurState);
+                            cout << "[Checker:] Found SCC with " << NumStatesInSCC
+                                 << " states" << endl;
                             ++CurSCCID;
                         }
                     }
