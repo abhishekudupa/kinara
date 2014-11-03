@@ -234,7 +234,7 @@ namespace ESMC {
 
                         InterpretedOps.insert(PredOp);
                     }
-                    TP->Assert(Pred, true);
+                    MakeAssertion(Pred);
                 }
             }
 
@@ -601,7 +601,7 @@ namespace ESMC {
             auto&& CPRes = CrossProduct<string>(CPElems.begin(), CPElems.end());
             for (auto ArgVector : CPRes) {
                 vector<ExpT> Args;
-                for (int i = 0; i < ArgVector.size(); ++i) {
+                for (u32 i = 0; i < ArgVector.size(); ++i) {
                     auto StringArg = ArgVector[i];
                     auto ArgType = ArgTypes[i];
                     auto Arg = TheLTS->MakeVal(StringArg, ArgType);
@@ -635,14 +635,16 @@ namespace ESMC {
             for (auto IncompleteEFSM : IncompleteEFSMs) {
                 auto OutputMsgs = IncompleteEFSM->GetOutputs();
                 for (auto OutputMsg : OutputMsgs) {
-                    auto OutputTransitions = IncompleteEFSM->GetOutputTransitionsOnMsg(OutputMsg);
+                    auto OutputTransitions =
+                        IncompleteEFSM->GetOutputTransitionsOnMsg(OutputMsg);
                     for (auto OutputTransition : OutputTransitions) {
                         AllTransitions.push_back(OutputTransition);
                     }
                 }
                 auto InputMsgs = IncompleteEFSM->GetInputs();
                 for (auto InputMsg : InputMsgs) {
-                    auto InputTransitionsPerParam = IncompleteEFSM->GetInputTransitionsOnMsg(InputMsg);
+                    auto InputTransitionsPerParam =
+                        IncompleteEFSM->GetInputTransitionsOnMsg(InputMsg);
                     auto InputTransitions = InputTransitionsPerParam[0];
                     for (auto InputTransition : InputTransitions) {
                         AllTransitions.push_back(InputTransition);
@@ -686,6 +688,7 @@ namespace ESMC {
                 }
             }
         }
+
     } /* end namespace Synth */
 } /* end namespace ESMC */
 
