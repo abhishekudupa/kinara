@@ -586,7 +586,8 @@ namespace ESMC {
 
         inline ExpT IncompleteEFSM::MakeGuard(const set<ExpT>& DomainTerms,
                                               const ExpT& CoveredPred,
-                                              const vector<ExpT>& GuardExps)
+                                              const vector<ExpT>& GuardExps,
+                                              const string& NameSuffix)
         {
             auto Mgr = TheLTS->GetMgr();
             vector<ExpT> DomainTermVec(DomainTerms.begin(), DomainTerms.end());
@@ -600,7 +601,7 @@ namespace ESMC {
 
             // Register a new uninterpreted function
             string GuardUFName =
-                (string)"SynGuard_" + this->Name + "_" + to_string(GuardUFUIDGen.GetUID());
+                (string)"SynGuard_" + this->Name + "_" + to_string(GuardUFUIDGen.GetUID()) + "_" + NameSuffix;
             auto GuardOp = Mgr->MakeUninterpretedFunction(GuardUFName,
                                                           DomainTypes,
                                                           Mgr->MakeType<ExprBoolType>());
@@ -839,7 +840,8 @@ namespace ESMC {
         }
 
         inline vector<LTSAssignRef>
-        IncompleteEFSM::MakeUpdates(const set<ExpT>& DomainTerms)
+        IncompleteEFSM::MakeUpdates(const set<ExpT>& DomainTerms,
+                                    const string& NameSuffix)
         {
             auto Mgr = TheLTS->GetMgr();
             vector<LTSAssignRef> Retval;
@@ -899,7 +901,7 @@ namespace ESMC {
                 // Register a new uninterpreted function
                 // for the update of each domain term
                 string UpdateUFName =
-                    (string)"Update_" + this->Name + "_" + to_string(UpdateUFUIDGen.GetUID());
+                    (string)"Update_" + this->Name + "_" + to_string(UpdateUFUIDGen.GetUID()) + "_" + NameSuffix + "_" + LValue->ToString();
                 auto UpdateOp = Mgr->MakeUninterpretedFunction(UpdateUFName,
                                                                DomainTypes,
                                                                LValue->GetType());
@@ -962,7 +964,9 @@ namespace ESMC {
                  << "\" on message type \"" << ActMsgType->SAs<ExprRecordType>()->GetName()
                  << "\"" << endl;
 
-            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, GuardExps);
+            auto MsgTypeAsRecord = MsgType->As<ExprRecordType>();
+            auto NameSuffix = InitStateName + "_" + MsgTypeAsRecord->GetName();
+            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, GuardExps, NameSuffix);
             GuardExps.push_back(GuardExp);
 
             LocalDomVars["InMsg"] = MsgDecl->GetMessageType();
@@ -970,7 +974,7 @@ namespace ESMC {
             DomainTerms = GetDomainTerms(LocalDomVars);
 
             // Make the updates
-            auto&& Updates = MakeUpdates(DomainTerms);
+            auto&& Updates = MakeUpdates(DomainTerms, NameSuffix);
 
             auto const& NewParams = MsgDecl->GetNewParams();
 
@@ -1073,12 +1077,14 @@ namespace ESMC {
                  << "\" on message type \"" << ActMsgType->SAs<ExprRecordType>()->GetName()
                  << "\"" << endl;
 
-            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, GuardExps);
+            auto MsgTypeAsRecord = MsgType->As<ExprRecordType>();
+            auto NameSuffix = InitStateName + "_" + MsgTypeAsRecord->GetName();
+            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, GuardExps, NameSuffix);
             GuardExps.push_back(GuardExp);
 
             UpdateableVariables["OutMsg"] = MsgType;
 
-            auto&& Updates = MakeUpdates(DomainTerms);
+            auto&& Updates = MakeUpdates(DomainTerms, NameSuffix);
 
             UpdateableVariables.erase("OutMsg");
 

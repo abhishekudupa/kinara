@@ -589,6 +589,103 @@ namespace ESMC {
                  << "that were allowed to be added. Bailing..." << endl << endl;
         }
 
+        void Solver::PrintUFModel(i64 UFCode) {
+            auto Mgr = TheLTS->GetMgr();
+            vector<vector<string>> CPElems;
+            auto UFType = Mgr->LookupUninterpretedFunction(UFCode);
+            auto UFTypeAsFunc = UFType->As<ExprFuncType>();
+            auto ArgTypes = UFTypeAsFunc->GetArgTypes();
+            for (auto ArgType : ArgTypes) {
+                CPElems.push_back(ArgType->GetElementsNoUndef());
+            }
+            auto&& CPRes = CrossProduct<string>(CPElems.begin(), CPElems.end());
+            for (auto ArgVector : CPRes) {
+                vector<ExpT> Args;
+                for (int i = 0; i < ArgVector.size(); ++i) {
+                    auto StringArg = ArgVector[i];
+                    auto ArgType = ArgTypes[i];
+                    auto Arg = TheLTS->MakeVal(StringArg, ArgType);
+                    cout << Arg << " ";
+                    Args.push_back(Arg);
+                }
+                auto AppExp = TheLTS->MakeOp(UFCode, Args);
+                auto ModelValue = TPAsZ3->Evaluate(AppExp);
+                cout << "-> " << ModelValue << endl;
+            }
+        }
+
+        void Solver::PrintSolution()
+        {
+            auto HasUF = [&] (const ExpBaseT* Exp) -> bool
+                {
+                    auto ExpAsOpExp = Exp->As<OpExpression>();
+                    if (ExpAsOpExp != nullptr) {
+                        auto Code = ExpAsOpExp->GetOpCode();
+                        return (Code >= LTSOps::UFOffset);
+                    }
+                    return false;
+                };
+            auto IsIncomplete = [&](const EFSMBase* EFSM)
+                {
+                    return EFSM->Is<IncompleteEFSM>();
+                };
+            auto Model = TPAsZ3->GetModel();
+            vector<LTSTransRef> AllTransitions;
+            auto IncompleteEFSMs = TheLTS->GetEFSMs(IsIncomplete);
+            for (auto IncompleteEFSM : IncompleteEFSMs) {
+                auto OutputMsgs = IncompleteEFSM->GetOutputs();
+                for (auto OutputMsg : OutputMsgs) {
+                    auto OutputTransitions = IncompleteEFSM->GetOutputTransitionsOnMsg(OutputMsg);
+                    for (auto OutputTransition : OutputTransitions) {
+                        AllTransitions.push_back(OutputTransition);
+                    }
+                }
+                auto InputMsgs = IncompleteEFSM->GetInputs();
+                for (auto InputMsg : InputMsgs) {
+                    auto InputTransitionsPerParam = IncompleteEFSM->GetInputTransitionsOnMsg(InputMsg);
+                    auto InputTransitions = InputTransitionsPerParam[0];
+                    for (auto InputTransition : InputTransitions) {
+                        AllTransitions.push_back(InputTransition);
+                    }
+                }
+                auto InternalTransitions = IncompleteEFSM->GetInternalTransitions();
+                for (auto InternalTransition : InternalTransitions) {
+                    AllTransitions.push_back(InternalTransition);
+                }
+            }
+            cout << "The solution is the following" << endl;
+            for (auto NewOpIndicatorVar : IndicatorExps) {
+                auto NewOp = NewOpIndicatorVar.first;
+                auto IndicatorVar = NewOpIndicatorVar.second;
+                auto IndicatorValue = TPAsZ3->Evaluate(IndicatorVar);
+                if (IndicatorValue->ToString() == "1") {
+                    for (auto Transition : AllTransitions) {
+                        auto Guard = Transition->GetGuard();
+                        auto UFFunctionsInGuard = Guard->GetMgr()->Gather(Guard, HasUF);
+                        bool PrintTransition = false;
+                        for (auto UFFunction : UFFunctionsInGuard) {
+                            auto OpCode = UFFunction->As<OpExpression>()->GetOpCode();
+                            if (OpCode == NewOp) {
+                                PrintTransition = true;
+                            }
+                        }
+                        if (PrintTransition) {
+                            cout << Transition->ToString() << endl;
+                            cout << Guard << endl;
+                            PrintUFModel(NewOp);
+                            for (auto Update : Transition->GetUpdates()) {
+                                auto RHS = Update->GetRHS();
+                                if (RHS->Is<OpExpression>()) {
+                                    auto OpCode = RHS->As<OpExpression>()->GetOpCode();
+                                    cout << Update->ToString() << endl;
+                                    PrintUFModel(OpCode);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
     } /* end namespace Synth */
 } /* end namespace ESMC */
 

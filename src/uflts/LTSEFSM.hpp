@@ -152,9 +152,11 @@ namespace ESMC {
 
             inline ExpT MakeGuard(const set<ExpT>& DomainTerms,
                                   const ExpT& CoveredPredicate,
-                                  const vector<ExpT>& GuardExps);
+                                  const vector<ExpT>& GuardExps,
+                                  const string& NameSuffix);
 
-            inline vector<LTSAssignRef> MakeUpdates(const set<ExpT>& DomainTerms);
+            inline vector<LTSAssignRef> MakeUpdates(const set<ExpT>& DomainTerms,
+                                                    const string& string);
 
             inline void CompleteOneInputTransition(const string& InitStateName,
                                                    const SymmMsgDeclRef& MsgDecl,
