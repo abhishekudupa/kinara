@@ -784,6 +784,7 @@ namespace ESMC {
                     
                     NextState = TryExecuteCommand(Cmd, CurState, Exception);
                     if (Exception) {
+                        Deadlocked = false;
                         RecordErrorState(CurState);
                         // Already an error. Don't try any more commands
                         break;
