@@ -627,19 +627,22 @@ int main()
     auto ShadowMonitorIllegitimateState = TheLTS->MakeVal("Illegitimate", ShadowMonitorState->GetType());
     auto ShadowMonitorLegitimateState = TheLTS->MakeVal("Legitimate", ShadowMonitorState->GetType());
 
+
+    auto HasUF = [&] (const ExpBaseT* Exp) -> bool
+        {
+            auto ExpAsOpExp = Exp->As<OpExpression>();
+            if (ExpAsOpExp != nullptr) {
+                auto Code = ExpAsOpExp->GetOpCode();
+                return (Code >= LTSOps::UFOffset);
+            }
+            return false;
+        };
+
+
+
     for (auto Transition : ShadowMonitor->GetOutputTransitionsOnMsg(LegitimateAnnouncement)) {
         cout << Transition->ToString() << endl;
         /// assert length of Updates is 1
-
-        auto HasUF = [&] (const ExpBaseT* Exp) -> bool
-            {
-                auto ExpAsOpExp = Exp->As<OpExpression>();
-                if (ExpAsOpExp != nullptr) {
-                    auto Code = ExpAsOpExp->GetOpCode();
-                    return (Code >= LTSOps::UFOffset);
-                }
-                return false;
-            };
 
         // auto Guard = Transition->GetGuard();
         // auto UFFunctionsInGuard = Guard->GetMgr()->Gather(Guard, HasUF);
@@ -675,6 +678,18 @@ int main()
     for (auto Transition : ShadowMonitor->GetOutputTransitionsOnMsg(IllegitimateAnnouncement)) {
         cout << Transition->ToString() << endl;
         /// assert length of Updates is 1
+
+        auto Guard = Transition->GetGuard();
+        auto UFFunctionsInGuard = Guard->GetMgr()->Gather(Guard, HasUF);
+        cout << "UF in Guard" << endl;
+        for (auto UFFunctionInGuard : UFFunctionsInGuard) {
+            cout << UFFunctionInGuard << endl;
+        }
+        auto UFGuard = *(UFFunctionsInGuard.begin());
+        auto UFGuardOpCode = UFGuard->As<OpExpression>()->GetOpCode();
+        // Setting UF guard to be true everywhere
+
+
         auto StateUpdate = Transition->GetUpdates()[0];
         auto StateUpdateExpression = StateUpdate->GetRHS();
         auto UFOpCode = StateUpdateExpression->As<OpExpression>()->GetOpCode();
@@ -690,6 +705,11 @@ int main()
             auto StateUpdateExpEQIllegitimateState = TheLTS->MakeOp(LTSOps::OpEQ, StateUpdateExp, ShadowMonitorIllegitimateState);
             // cout << StateUpdateExpEQIllegitimateState << endl;
             TheSolver->MakeAssertion(StateUpdateExpEQIllegitimateState);
+
+            auto GuardIsTrue = TheLTS->MakeOp(UFGuardOpCode, DataVal);
+            cout << GuardIsTrue << endl;
+            TheSolver->MakeAssertion(GuardIsTrue);
+
         }
     }
 
