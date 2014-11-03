@@ -231,8 +231,6 @@ namespace ESMC {
                                 NewUpdateOps.insert(PredOp);
                             }
                         }
-
-                        InterpretedOps.insert(PredOp);
                     }
                     MakeAssertion(Pred);
                 }
