@@ -866,7 +866,7 @@ namespace ESMC {
             }
         }
 
-        bool LTSChecker::BuildAQS(const Z3Model& Model, AQSConstructionMethod Method,
+        bool LTSChecker::BuildAQS(AQSConstructionMethod Method,
                                   u32 NumErrors)
         {
             vector<TraceBase*> Retval;
@@ -910,13 +910,13 @@ namespace ESMC {
                 for (auto InitState : InitStates) {
                     auto ExistingState = AQS->Find(InitState);
                     if (ExistingState == nullptr) {
-                        DoDFS(InitState);
+                        DoDFS(InitState, NumErrors);
                     } else if (ExistingState != InitState) {
                         InitState->Recycle();
                     }
                 }
             } else {
-                DoBFS(InitStates);
+                DoBFS(InitStates, NumErrors);
             }
 
             // TODO: Handle any violations found during model checking

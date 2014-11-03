@@ -395,11 +395,12 @@ namespace ESMC {
 
                 vector<ExpT> ExpStack;
                 MgrT* Mgr;
+                bool IncludeUndef;
 
                 inline vector<ExpT> UnrollQuantifier(const QuantifiedExpressionBase<E, S>* Exp);
 
             public:
-                inline QuantifierUnroller(MgrT* Mgr);
+                inline QuantifierUnroller(MgrT* Mgr, bool IncludeUndef);
                 inline virtual ~QuantifierUnroller();
 
                 inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
@@ -412,7 +413,7 @@ namespace ESMC {
                 inline virtual void
                 VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override;
 
-                static ExpT Do(MgrT* Mgr, const ExpT& Exp);
+                static ExpT Do(MgrT* Mgr, const ExpT& Exp, bool IncludeUndef);
             };
 
             // Implementation of type checker
@@ -2538,8 +2539,9 @@ namespace ESMC {
 
             // implementation of quantifier unroller
             template <typename E, template <typename> class S>
-            inline QuantifierUnroller<E, S>::QuantifierUnroller(MgrT* Mgr)
-                : ExpressionVisitorBase<E, S>("QuantifierUnroller"), Mgr(Mgr)
+            inline QuantifierUnroller<E, S>::QuantifierUnroller(MgrT* Mgr, bool IncludeUndef)
+                : ExpressionVisitorBase<E, S>("QuantifierUnroller"), Mgr(Mgr),
+                  IncludeUndef(IncludeUndef)
             {
                 // Nothing here
             }
@@ -2597,7 +2599,11 @@ namespace ESMC {
 
                 vector<vector<string>> QVarElems;
                 for (auto const& QVarType : QVarTypes) {
-                    QVarElems.push_back(QVarType->GetElements());
+                    if (IncludeUndef) {
+                        QVarElems.push_back(QVarType->GetElements());
+                    } else {
+                        QVarElems.push_back(QVarType->GetElementsNoUndef());
+                    }
                 }
                 auto&& CP = CrossProduct<string>(QVarElems.begin(),
                                                   QVarElems.end());
@@ -2656,9 +2662,9 @@ namespace ESMC {
 
             template <typename E, template <typename> class S>
             inline typename QuantifierUnroller<E, S>::ExpT
-            QuantifierUnroller<E, S>::Do(MgrT* Mgr, const ExpT& Exp)
+            QuantifierUnroller<E, S>::Do(MgrT* Mgr, const ExpT& Exp, bool IncludeUndef)
             {
-                QuantifierUnroller Unroller(Mgr);
+                QuantifierUnroller Unroller(Mgr, IncludeUndef);
                 Exp->Accept(&Unroller);
                 return Unroller.ExpStack[0];
             }
@@ -2703,7 +2709,7 @@ namespace ESMC {
             inline ExpT RaiseExpr(MgrType* Mgr, const LExpT& LExp, const LTSLCRef& LTSCtx);
             inline LExpT LowerExpr(const ExpT& Exp, const LTSLCRef& ExpCtx);
             inline ExpT ElimQuantifiers(MgrType* Mgr, const ExpT& Exp);
-            inline ExpT UnrollQuantifiers(MgrType* Mgr, const ExpT& Exp);
+            inline ExpT UnrollQuantifiers(MgrType* Mgr, const ExpT& Exp, bool IncludeUndef);
         };
 
 
@@ -2873,9 +2879,11 @@ namespace ESMC {
 
         template <typename E>
         inline typename LTSTermSemanticizer<E>::ExpT
-        LTSTermSemanticizer<E>::UnrollQuantifiers(MgrType* Mgr, const ExpT& Exp)
+        LTSTermSemanticizer<E>::UnrollQuantifiers(MgrType* Mgr, const ExpT& Exp,
+                                                  bool IncludeUndef)
         {
-            return Detail::QuantifierUnroller<E, ESMC::LTS::LTSTermSemanticizer>::Do(Mgr, Exp);
+            return Detail::QuantifierUnroller<E, ESMC::LTS::LTSTermSemanticizer>::Do(Mgr, Exp,
+                                                                                     IncludeUndef);
         }
 
         template<typename E>

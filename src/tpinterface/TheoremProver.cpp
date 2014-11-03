@@ -198,7 +198,7 @@ namespace ESMC {
             ExpT UnrolledExp = ExpT::NullPtr;
 
             if (UnrollQuantifiers) {
-                UnrolledExp = Mgr->UnrollQuantifiers(Assertion);
+                UnrolledExp = Mgr->UnrollQuantifiers(Assertion, true);
             } else {
                 UnrolledExp = Assertion;
             }
@@ -267,7 +267,7 @@ namespace ESMC {
 
             ExpT UnrolledAssertion = ExpT::NullPtr;
             if (UnrollQuantifiers) {
-                UnrolledAssertion = Mgr->UnrollQuantifiers(Assertion);
+                UnrolledAssertion = Mgr->UnrollQuantifiers(Assertion, true);
             } else {
                 UnrolledAssertion = Assertion;
             }

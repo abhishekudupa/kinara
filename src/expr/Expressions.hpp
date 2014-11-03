@@ -633,7 +633,8 @@ namespace ESMC {
             template <typename... ArgTypes>
             inline ExpT RaiseExpr(const LExpT& Exp, ArgTypes&&... Args);
             inline ExpT ElimQuantifiers(const ExpT& Exp);
-            inline ExpT UnrollQuantifiers(const ExpT& Exp);
+            template <typename... ArgTypes>
+            inline ExpT UnrollQuantifiers(const ExpT& Exp, ArgTypes&&... Args);
             inline ExpT Simplify(const ExpT& Exp);
             inline ExpT Substitute(const SubstMapT& Subst, const ExpT& Exp);
             inline ExpT TermSubstitute(const SubstMapT& Subst, const ExpT& Exp);
@@ -2550,10 +2551,11 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
+        template <typename... ArgTypes>
         inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::UnrollQuantifiers(const ExpT& Exp)
+        ExprMgr<E, S>::UnrollQuantifiers(const ExpT& Exp, ArgTypes&&... Args)
         {
-            auto Retval = Sem->UnrollQuantifiers(this, Exp);
+            auto Retval = Sem->UnrollQuantifiers(this, Exp, forward<ArgTypes>(Args)...);
             return Retval;
         }
 

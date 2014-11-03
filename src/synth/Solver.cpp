@@ -555,7 +555,7 @@ namespace ESMC {
 
                 // Okay, we're good to model check now
                 Checker->ClearAQS();
-                auto Safe = Checker->BuildAQS(1);
+                auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, 1);
                 if (!Safe) {
                     HandleSafetyViolations();
                     continue;

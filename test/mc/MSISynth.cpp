@@ -404,7 +404,7 @@ int main()
     EnvEFSM->Freeze();
 
     auto CacheEFSM =
-        TheLTS->MakeEFSM<GeneralEFSM>("Cache",
+        TheLTS->MakeEFSM<IncompleteEFSM>("Cache",
             { CacheParam, DirParam, AddressParam },
             TrueExp, LTSFairnessType::Strong);
 
@@ -487,7 +487,7 @@ int main()
     CacheEFSM->AddOutputMsg(UnblockSMsgType, CacheParams);
     CacheEFSM->AddOutputMsg(UnblockXMsgType, CacheParams);
 
-    CacheEFSM->AddOutputMsg(GetXMsgType, CacheParams);
+    auto GetXMsgDecl = CacheEFSM->AddOutputMsg(GetXMsgType, CacheParams);
     CacheEFSM->AddOutputMsg(GetSMsgType, CacheParams);
     CacheEFSM->AddOutputMsg(WBMsgType, CacheParams);
 
@@ -553,8 +553,8 @@ int main()
     CacheEFSM->AddInputTransition("C_S", "C_S_ST", TrueExp, Updates, "InMsg", STMsgType,
                                   CacheParams);
     Updates.clear();
-    CacheEFSM->AddOutputTransition("C_S_ST", "C_SM", TrueExp, Updates,
-                                   "OutMsg", GetXMsgType, CacheParams);
+    // CacheEFSM->AddOutputTransition("C_S_ST", "C_SM", TrueExp, Updates,
+    //                                "OutMsg", GetXMsgType, CacheParams);
 
     // S on EV
     CacheEFSM->AddInputTransition("C_S", "C_S_EV", TrueExp, Updates, "InMsg", EVMsgType, CacheParams);
@@ -836,11 +836,11 @@ int main()
     CacheEFSM->AddOutputTransition("C_II_SENDACK", "C_I", TrueExp, Updates,
                                    "OutMsg", EVAckMsgType, CacheParams);
 
-    // auto CacheAsInc = CacheEFSM->As<IncompleteEFSM>();
-    // CacheAsInc->MarkAllStatesComplete();
-    // CacheAsInc->MarkStateIncomplete("C_IM_FWD");
-    // CacheAsInc->IgnoreAllMsgsOnState("C_IM_FWD");
-    // CacheAsInc->HandleMsgOnState(FwdGetXInMsgDecl, "C_IM_FWD");
+    auto CacheAsInc = CacheEFSM->SAs<IncompleteEFSM>();
+    CacheAsInc->MarkAllStatesComplete();
+    CacheAsInc->MarkStateIncomplete("C_S_ST");
+    CacheAsInc->IgnoreAllMsgsOnState("C_S_ST");
+    CacheAsInc->HandleMsgOnState(GetXMsgDecl, "C_S_ST");
 
     // Done!
     CacheEFSM->Freeze();
@@ -1092,10 +1092,10 @@ int main()
     Updates.push_back(new LTSAssignSimple(DirOwnerExp,
                                           TheLTS->MakeVal("clear", CacheIDType)));
 
-    // DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_M_WB", "D_I",
-    //                               Guard, Updates, "OutMsg", WBAckMsgType,
-    //                               CacheParams, LTSFairnessType::None,
-    //                               SplatFairnessType::None, "");
+    DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_M_WB", "D_I",
+                                  Guard, Updates, "OutMsg", WBAckMsgType,
+                                  CacheParams, LTSFairnessType::None,
+                                  SplatFairnessType::None, "");
     Updates.clear();
 
     // Transitions from BUSY
@@ -1249,9 +1249,6 @@ int main()
 
     auto DirAsInc = DirEFSM->SAs<IncompleteEFSM>();
     DirAsInc->MarkAllStatesComplete();
-    DirAsInc->MarkStateIncomplete("D_M_WB");
-    DirAsInc->IgnoreAllMsgsOnState("D_M_WB");
-    DirAsInc->HandleMsgOnState(WBAckMsgDecl, "D_M_WB");
 
     DirEFSM->Freeze();
 

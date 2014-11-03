@@ -1139,7 +1139,7 @@ namespace ESMC {
         {
             AssertAutomataFrozen();
             AssertNotFrozen();
-            auto ElimExp = Mgr->UnrollQuantifiers(Invariant);
+            auto ElimExp = Mgr->UnrollQuantifiers(Invariant, false);
             CheckExpr(ElimExp, SymTab, Mgr);
             InvariantExp = Mgr->MakeExpr(LTSOps::OpAND, InvariantExp, ElimExp);
             InvariantExp = Mgr->Simplify(InvariantExp);
