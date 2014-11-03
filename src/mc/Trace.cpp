@@ -657,18 +657,28 @@ namespace ESMC {
                 }
             }
 
-            // audupa: DEBUG
-
-            // auto TempLV = new LivenessViolation(InitState, StemPath, PathSoFar,
-            //                                     Checker->Printer, ThePS);
-            // cout << TempLV->ToString() << endl << endl;
-
-            // audupa: DEBUG END
-
             // Self loop??
             if (CurEndOfPath->Equals(StartOfLoop)) {
-                return (new LivenessViolation(InitState, StemPath, PathSoFar,
-                                              Checker->Printer, ThePS));
+                // Do we actually have a path?
+                if (PathSoFar.size() > 0) {
+                    return (new LivenessViolation(InitState, StemPath, PathSoFar,
+                                                  Checker->Printer, ThePS));
+                } else {
+                    // Or did we just fall through because of no fairness?
+                    // Just do an unwound bfs and match on the first successor
+                    // out of this state
+                    vector<PSTraceElemT> CurElems;
+                    auto CurPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
+                                                [&] (u32 CmdID, const ProductState* State) -> bool
+                                                {
+                                                    return true;
+                                                },
+                                                CurElems, SCCNodes);
+                    CurPair.first->GetSVPtr()->Recycle();
+                    delete CurPair.first;
+                    CurEndOfPath = CurPair.second;
+                    PathSoFar.insert(PathSoFar.end(), CurElems.begin(), CurElems.end());
+                }
             }
 
             // Now connect this path back to the original state
