@@ -59,8 +59,8 @@ namespace ESMC {
 
         const i64 UndefValue = INT64_MAX;
 
-        OffsetCompiler::OffsetCompiler(const LabelledTS* TheLTS)
-            : VisitorBaseT("OffsetCompiler"), TheLTS(TheLTS)
+        OffsetCompiler::OffsetCompiler()
+            : VisitorBaseT("OffsetCompiler")
         {
             // Nothing here
         }
@@ -165,9 +165,9 @@ namespace ESMC {
             }
         }
 
-        void OffsetCompiler::Do(const ExpT& Exp, const LabelledTS* TheLTS)
+        void OffsetCompiler::Do(const ExpT& Exp)
         {
-            OffsetCompiler TheCompiler(TheLTS);
+            OffsetCompiler TheCompiler;
             Exp->Accept(&TheCompiler);
         }
 
@@ -1131,7 +1131,7 @@ namespace ESMC {
 
         void LTSCompiler::CompileExp(const ExpT& Exp, LabelledTS* TheLTS)
         {
-            OffsetCompiler::Do(Exp, TheLTS);
+            OffsetCompiler::Do(Exp);
             RValueInterpreter::MakeInterpreter(Exp, this);
         }
 

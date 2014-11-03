@@ -15,6 +15,8 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/sparsehash
 
 ifeq "x$(CXX)" "xg++"
 CXXFLAGS+=-Wno-unused-local-typedefs
+else
+CXXFLAGS+=-Wno-gnu-folding-constant
 endif
 
 PROJECT_MODULES= \
@@ -89,4 +91,3 @@ libesmc_EXT_LIBS= \
 
 
 include $(PROJECT_ROOT)/Makefile.util
-

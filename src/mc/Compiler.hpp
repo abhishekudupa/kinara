@@ -55,10 +55,8 @@ namespace ESMC {
 
         class OffsetCompiler : public VisitorBaseT
         {
-        private:
-            const LabelledTS* TheLTS;
         public:
-            OffsetCompiler(const LabelledTS* TheLTS);
+            OffsetCompiler();
             virtual ~OffsetCompiler();
 
             virtual void VisitVarExpression(const VarExpT* Exp) override;
@@ -68,7 +66,7 @@ namespace ESMC {
             virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
             virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
 
-            static void Do(const ExpT& Exp, const LabelledTS* TheLTS);
+            static void Do(const ExpT& Exp);
         };
 
         class LTSCompiler;
@@ -158,7 +156,6 @@ namespace ESMC {
         {
         private:
             i64 Value;
-            u08* Ptr;
 
         public:
             CompiledConstInterpreter(i64 Value, ExpPtrT Exp);

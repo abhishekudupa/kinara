@@ -743,7 +743,7 @@ namespace ESMC {
             }
         }
 
-        static ExpT GetBaseLValue(const ExpT& Exp)
+        static inline ExpT GetBaseLValue(const ExpT& Exp)
         {
             auto ExpAsVar = Exp->As<VarExpression>();
             if (ExpAsVar != nullptr) {
