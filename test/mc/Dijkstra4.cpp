@@ -5,8 +5,6 @@
 // We model and verify the 4-state self-stabilizing protocol presented in Dijkstra's
 // original paper on the topic.
 
-// TODO. Specify initial states of the system.
-
 #include <boost/lexical_cast.hpp>
 
 #include "../../src/uflts/LabelledTS.hpp"
@@ -14,6 +12,7 @@
 #include "../../src/uflts/LTSChannelEFSM.hpp"
 #include "../../src/uflts/LTSAssign.hpp"
 #include "../../src/uflts/LTSTransitions.hpp"
+#include "../../src/uflts/LTSUtils.hpp"
 #include "../../src/mc/LTSChecker.hpp"
 #include "../../src/mc/OmegaAutomaton.hpp"
 
@@ -30,6 +29,9 @@ const size_t NumProcesses = 3;
 // Messages
 vector<ExprTypeRef> WriteMsgs;
 
+ExprTypeRef LegitimateAnnouncement;
+ExprTypeRef IllegitimateAnnouncement;
+
 void DeclareMsgs(LabelledTS* TheLTS)
 {
     assert(TheLTS != nullptr);
@@ -42,7 +44,10 @@ void DeclareMsgs(LabelledTS* TheLTS)
         string MsgName = string("Write") + to_string(i);
         WriteMsgs.push_back(TheLTS->MakeMsgType(MsgName, fields));
     }
-    
+
+    LegitimateAnnouncement = TheLTS->MakeMsgType("LegitimateAnnouncement", {});
+    IllegitimateAnnouncement = TheLTS->MakeMsgType("IllegitimateAnnouncement", {});
+
     TheLTS->FreezeMsgs();
     cout << __LOGSTR__ << "Declaring messages done." << endl;
 }
@@ -225,7 +230,6 @@ void DeclareProcN(LabelledTS* TheLTS)
     cout << __LOGSTR__ << "Declaring variables." << endl;
     Proc[i]->AddVariable(string("Data") + to_string(i - 1), TheLTS->MakeBoolType());
     Proc[i]->AddVariable(string("Data") + to_string(i), TheLTS->MakeBoolType());
-    Proc[i]->AddVariable(string("Up") + to_string(i - 1), TheLTS->MakeBoolType());
     Proc[i]->AddVariable(string("Up") + to_string(i), TheLTS->MakeBoolType());
     Proc[i]->FreezeVars();
 
@@ -236,18 +240,12 @@ void DeclareProcN(LabelledTS* TheLTS)
     auto DiExp = TheLTS->MakeVar(string("Data") + to_string(i), TheLTS->MakeBoolType());
     auto Dim1Exp = TheLTS->MakeVar("Data" + to_string(i - 1), TheLTS->MakeBoolType());
     auto UiExp = TheLTS->MakeVar(string("Up") + to_string(i), TheLTS->MakeBoolType());
-    auto Uim1Exp = TheLTS->MakeVar("Up" + to_string(i - 1), TheLTS->MakeBoolType());
     auto Rim1Exp = TheLTS->MakeVar("R" + to_string(i - 1), WriteMsgs[i - 1]);
     auto Dim1PayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
     auto Rim1DataFieldExp = TheLTS->MakeOp(LTSOps::OpField,
                                            Rim1Exp,
                                            Dim1PayloadAccField);
-    auto Uim1PayloadAccField = TheLTS->MakeVar("Up", TheLTS->MakeFieldAccessType());
-    auto Rim1UpFieldExp = TheLTS->MakeOp(LTSOps::OpField,
-                                         Rim1Exp,
-                                         Uim1PayloadAccField);
-    vector<LTSAssignRef> Rim1Updates { new LTSAssignSimple(Dim1Exp, Rim1DataFieldExp),
-                                       new LTSAssignSimple(Uim1Exp, Rim1UpFieldExp) };
+    vector<LTSAssignRef> Rim1Updates { new LTSAssignSimple(Dim1Exp, Rim1DataFieldExp) };
     Proc[i]->AddInputTransition("TheState", "TheState", TheLTS->MakeTrue(),
                                 Rim1Updates,
                                 "R" + to_string(i - 1),
@@ -283,6 +281,106 @@ void DeclareShadowMonitor(LabelledTS* TheLTS)
 {
     assert(TheLTS != nullptr && ShadowMonitor == nullptr);
     // TODO.
+
+    auto ShadowMonitor = TheLTS->MakeGenEFSM("ShadowMonitor", {},
+                                             TheLTS->MakeTrue(), LTSFairnessType::None);
+    ShadowMonitor->AddState("Legitimate");
+    ShadowMonitor->AddState("Illegitimate");
+    ShadowMonitor->AddState("Transient");
+    ShadowMonitor->FreezeStates();
+    for (size_t i = 0; i < NumProcesses; ++i) {
+        ShadowMonitor->AddInputMsg(WriteMsgs[i], {});
+        ShadowMonitor->AddVariable("Data" + to_string(i), TheLTS->MakeBoolType());
+        ShadowMonitor->AddVariable("Up" + to_string(i), TheLTS->MakeBoolType());
+    }
+    ShadowMonitor->AddOutputMsg(LegitimateAnnouncement, {});
+    ShadowMonitor->AddOutputMsg(IllegitimateAnnouncement, {});
+    ShadowMonitor->FreezeVars();
+
+    for (size_t i = 0; i < NumProcesses; ++i) {
+        auto Datai = TheLTS->MakeVar("Data" + to_string(i), TheLTS->MakeBoolType());
+        auto Write = TheLTS->MakeVar("Write", WriteMsgs[i]);
+        auto DataAccess = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+        auto WriteData = TheLTS->MakeOp(LTSOps::OpField, Write, DataAccess);
+        auto Upi = TheLTS->MakeVar("Up" + to_string(i), TheLTS->MakeBoolType());
+        auto UpAccess = TheLTS->MakeVar("Up", TheLTS->MakeFieldAccessType());
+        auto WriteUp = TheLTS->MakeOp(LTSOps::OpField, Write, UpAccess);
+        vector<LTSAssignRef> Updates { new LTSAssignSimple(Datai, WriteData),
+                                       new LTSAssignSimple(Upi, WriteUp) };
+        ShadowMonitor->AddInputTransition("Legitimate", "Transient",
+                                          TheLTS->MakeTrue(), Updates,
+                                          "Write", WriteMsgs[i], {});
+        ShadowMonitor->AddInputTransition("Illegitimate", "Transient",
+                                          TheLTS->MakeTrue(), Updates,
+                                          "Write", WriteMsgs[i], {});
+    }
+
+    // TODO : Make the following general
+    vector<ExpT> Guards;
+    // D0 = D1 and not Up1
+    auto Data0 = TheLTS->MakeVar("Data0", TheLTS->MakeBoolType());
+    auto Data1 = TheLTS->MakeVar("Data1", TheLTS->MakeBoolType());
+    auto Up1 = TheLTS->MakeVar("Up1", TheLTS->MakeBoolType());
+    auto Data0EqData1 = TheLTS->MakeOp(LTSOps::OpEQ, Data0, Data1);
+    auto NotUp1 = TheLTS->MakeOp(LTSOps::OpNOT, Up1);
+    auto Guard0 = TheLTS->MakeOp(LTSOps::OpAND, Data0EqData1, NotUp1);
+    Guards.push_back(Guard0);
+
+    for (size_t i = 1; i + 1 < NumProcesses - 1; ++i) {
+        // 1: Datai != Dataim1
+        // 2: Datai = Dataip1 and Upi and not Upip1
+        auto Dataim1 = TheLTS->MakeVar("Data" + to_string(i - 1), TheLTS->MakeBoolType());
+        auto Datai = TheLTS->MakeVar("Data" + to_string(i), TheLTS->MakeBoolType());
+        auto Dataip1 = TheLTS->MakeVar("Data" + to_string(i + 1), TheLTS->MakeBoolType());
+        auto Upi = TheLTS->MakeVar("Up" + to_string(i), TheLTS->MakeBoolType());
+        auto Upip1 = TheLTS->MakeVar("Up" + to_string(i + 1), TheLTS->MakeBoolType());
+        auto DataiEqDataim1 = TheLTS->MakeOp(LTSOps::OpEQ, Datai, Dataim1);
+        auto Guardi1 = TheLTS->MakeOp(LTSOps::OpNOT, DataiEqDataim1);
+
+        auto DataiEqDataip1 = TheLTS->MakeOp(LTSOps::OpEQ, Datai, Dataip1);
+        auto NotUpip1 = TheLTS->MakeOp(LTSOps::OpNOT, Upip1);
+        auto Guardi2 = TheLTS->MakeOp(LTSOps::OpAND, {DataiEqDataip1, Upi, NotUpip1});
+
+        Guards.push_back(Guardi1);
+        Guards.push_back(Guardi2);
+    }
+
+    auto DataN = TheLTS->MakeVar("Data" + to_string(NumProcesses - 1), TheLTS->MakeBoolType());
+    auto DataNm1 = TheLTS->MakeVar("Data" + to_string(NumProcesses - 2), TheLTS->MakeBoolType());
+    auto DataNEqDataNm1 = TheLTS->MakeOp(LTSOps::OpEQ, DataN, DataNm1);
+    auto GuardN = TheLTS->MakeOp(LTSOps::OpNOT, DataNEqDataNm1);
+    Guards.push_back(GuardN);
+
+    auto Phi = TheLTS->MakeFalse();
+    for (size_t i = 0; i < Guards.size(); ++i) {
+        // Create conjunction of the following:
+        // i th Guard true, all others false
+        auto Conjunction = TheLTS->MakeTrue();
+        for (size_t j = 0; j < Guards.size(); ++j) {
+            if (j != i) {
+                auto NegGuardj = TheLTS->MakeOp(LTSOps::OpNOT, Guards[j]);
+                Conjunction = TheLTS->MakeOp(LTSOps::OpAND, Conjunction, NegGuardj);
+            } else {
+                Conjunction = TheLTS->MakeOp(LTSOps::OpAND, Conjunction, Guards[i]);
+            }
+        }
+        Phi = TheLTS->MakeOp(LTSOps::OpOR, Phi, Conjunction);
+    }
+
+    ShadowMonitor->AddOutputTransition("Transient", "Legitimate",
+                                       Phi, {},
+                                       "Legitimate", LegitimateAnnouncement,
+                                       {}, set<string>());
+    auto NotPhi = TheLTS->MakeOp(LTSOps::OpNOT, Phi);
+    ShadowMonitor->AddOutputTransition("Transient", "Illegitimate",
+                                       NotPhi, {},
+                                       "Illegitimate", IllegitimateAnnouncement,
+                                       {}, set<string>());
+}
+
+void DeclareSafetyConcreteMonitor(LabelledTS* TheLTS)
+{
+    
 }
 
 void DeclareAutomata(LabelledTS* TheLTS)
@@ -297,24 +395,124 @@ void DeclareAutomata(LabelledTS* TheLTS)
     DeclareShadowMonitor(TheLTS);
     TheLTS->FreezeAutomata();
     cout << __LOGSTR__ << "Freezing automata done." << endl;
+
+    // Initial Data and Up variables for all processes
+
+    vector<InitStateRef> InitStates;
+
+    vector<vector<ExpT>> DataElems;
+    for (size_t i = 0; i < NumProcesses; ++i) {
+        DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
+    }
+    auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
+    for (auto DataVal : DataCombinations) {
+        vector<vector<ExpT>> UpElems;
+        for (size_t i = 1; i + 1 < NumProcesses; ++i) {
+            UpElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
+        }
+        auto&& UpCombinations = CrossProduct<ExpT>(UpElems.begin(), UpElems.end());
+        for (auto UpVal : UpCombinations) {
+            for (auto D : DataVal) {
+                cout << D << " ";
+            }
+            for (auto U : UpVal) {
+                cout << U << " ";
+            }
+            cout << endl;
+            UpVal.insert(UpVal.begin(), TheLTS->MakeTrue());
+            UpVal.push_back(TheLTS->MakeFalse());
+
+            vector<LTSAssignRef> InitUpdates;
+
+            auto FAType = TheLTS->MakeFieldAccessType();
+
+            // All Process start at the TheState location
+            for (size_t i = 0; i < NumProcesses; ++i) {
+                auto ProciType = TheLTS->GetEFSMType("Proc" + to_string(i));
+                auto ProciStateVar = TheLTS->MakeVar("Proc" + to_string(i), ProciType);
+                auto ProciState = TheLTS->MakeOp(LTSOps::OpField,
+                                                 ProciStateVar,
+                                                 TheLTS->MakeVar("state", FAType));
+                auto ProciInitialState = TheLTS->MakeVal("TheState", ProciState->GetType());
+                InitUpdates.push_back(new LTSAssignSimple(ProciState, ProciInitialState));
+            }
+
+
+            for (size_t i = 0; i < NumProcesses; i++) {
+                auto ProciType = TheLTS->GetEFSMType("Proc" + to_string(i));
+                auto ProciStateVar = TheLTS->MakeVar("Proc" + to_string(i), ProciType);
+                if (i > 0) {
+                    auto ProciDataim1 = TheLTS->MakeOp(LTSOps::OpField,
+                                                       ProciStateVar,
+                                                       TheLTS->MakeVar("Data" + to_string(i - 1), FAType));
+                    InitUpdates.push_back(new LTSAssignSimple(ProciDataim1, DataVal[i - 1]));
+                }
+                auto ProciDatai = TheLTS->MakeOp(LTSOps::OpField,
+                                                 ProciStateVar,
+                                                 TheLTS->MakeVar("Data" + to_string(i), FAType));
+                InitUpdates.push_back(new LTSAssignSimple(ProciDatai, DataVal[i]));
+
+                if (i + 1 < NumProcesses) {
+                    auto ProciDataip1 = TheLTS->MakeOp(LTSOps::OpField,
+                                                       ProciStateVar,
+                                                       TheLTS->MakeVar("Data" + to_string(i + 1), FAType));
+                    InitUpdates.push_back(new LTSAssignSimple(ProciDataip1, DataVal[i + 1]));
+                }
+                auto ProciUpi = TheLTS->MakeOp(LTSOps::OpField,
+                                               ProciStateVar,
+                                               TheLTS->MakeVar("Up" + to_string(i), FAType));
+                InitUpdates.push_back(new LTSAssignSimple(ProciUpi, UpVal[i]));
+
+                if (i + 1 < NumProcesses) {
+                    auto ProciUpip1 = TheLTS->MakeOp(LTSOps::OpField,
+                                                     ProciStateVar,
+                                                     TheLTS->MakeVar("Up" + to_string(i + 1), FAType));
+                    InitUpdates.push_back(new LTSAssignSimple(ProciUpip1, UpVal[i + 1]));
+                }
+            }
+
+            // Initialize Shadow Monitor
+            auto ShadowMonitorType = TheLTS->GetEFSMType("ShadowMonitor");
+            auto ShadowMonitorStateVar = TheLTS->MakeVar("ShadowMonitor", ShadowMonitorType);
+            auto ShadowMonitorState = TheLTS->MakeOp(LTSOps::OpField, ShadowMonitorStateVar, TheLTS->MakeVar("state", TheLTS->MakeFieldAccessType()));
+            auto ShadowMonitorInitialState = TheLTS->MakeVal("Transient", ShadowMonitorState->GetType());
+            InitUpdates.push_back(new LTSAssignSimple(ShadowMonitorState, ShadowMonitorInitialState));
+            for (size_t i = 0; i < NumProcesses; ++i) {
+                auto ShadowDatai = TheLTS->MakeOp(LTSOps::OpField,
+                                                  ShadowMonitorStateVar,
+                                                  TheLTS->MakeVar("Data" + to_string(i), FAType));
+                auto ShadowUpi = TheLTS->MakeOp(LTSOps::OpField,
+                                                ShadowMonitorStateVar,
+                                                TheLTS->MakeVar("Up" + to_string(i), FAType));
+                InitUpdates.push_back(new LTSAssignSimple(ShadowDatai, DataVal[i]));
+                InitUpdates.push_back(new LTSAssignSimple(ShadowUpi, UpVal[i]));
+            }
+
+            InitStates.push_back(new LTSInitState({}, TheLTS->MakeTrue(), InitUpdates));
+        }
+    }
+    cout << __LOGSTR__ << "Init states size " << InitStates.size() << endl;
+    TheLTS->AddInitStates(InitStates);
 }
 
 int main()
 {
     cout << __LOGSTR__ << "" << "Compiled on " << __DATE__ << " at " << __TIME__ << "." << endl;
     auto TheLTS = new LabelledTS();
-    
+
     DeclareMsgs(TheLTS);
     DeclareAutomata(TheLTS);
+
+
     TheLTS->Freeze();
     cout << __LOGSTR__ << "Freezing LTS done." << endl;
-    
+
     auto Checker = new LTSChecker(TheLTS);
     cout << __LOGSTR__ << "Build LTS Checker done." << endl;
     Checker->BuildAQS();
     cout << __LOGSTR__ << "Build AQS done." << endl;
     delete Checker;
-    
+
     cout << __LOGSTR__ << "Return." << endl;
     return 0;
 }
