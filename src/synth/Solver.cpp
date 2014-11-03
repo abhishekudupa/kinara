@@ -183,7 +183,7 @@ namespace ESMC {
             delete Trace;
         }
 
-        inline void Solver::MakeAssertion(const ExpT& Pred)
+        void Solver::MakeAssertion(const ExpT& Pred)
         {
             auto Mgr = TheLTS->GetMgr();
             TP->Assert(Pred, true);
@@ -300,7 +300,13 @@ namespace ESMC {
             // Checker->Printer->PrintState(ErrorState, cout);
             // cout << endl << endl;
 
-            auto LastState = Trace->GetTraceElems().back().second;
+            const StateVec* LastState;
+            auto TraceElems = Trace->GetTraceElems();
+            if (TraceElems.size() > 0) {
+                LastState = TraceElems.back().second;
+            } else {
+                LastState = Trace->GetInitialState();
+            }
 
             // Gather the guards of guarded commands that could
             // possibly solve this deadlock

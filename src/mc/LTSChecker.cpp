@@ -1212,6 +1212,7 @@ namespace ESMC {
                             for (auto const& Edge : Edges) {
                                 if (Edge->GetTarget() == SCCState) {
                                     SelfLoop = true;
+                                    // TODO Maybe put a break
                                 }
                             }
                             if (!SelfLoop) {

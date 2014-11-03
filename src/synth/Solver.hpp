@@ -111,10 +111,6 @@ namespace ESMC {
             u32 UpdateBoundsMultiplier;
             u32 UpdateBound;
 
-            // makes an assertion. Also fixes up interpretations
-            // and marks the appropriate set of commands as having a
-            // fixed interpretation.
-            inline void MakeAssertion(const ExpT& Pred);
             inline void AssertBoundsConstraint();
             inline void HandleSafetyViolations();
             inline void HandleOneSafetyViolation(const StateVec* ErrorState,
@@ -126,6 +122,11 @@ namespace ESMC {
         public:
             Solver(LTSChecker* Checker);
             virtual ~Solver();
+
+            // makes an assertion. Also fixes up interpretations
+            // and marks the appropriate set of commands as having a
+            // fixed interpretation.
+            void MakeAssertion(const ExpT& Pred);
 
             void Solve();
         };
