@@ -686,7 +686,7 @@ namespace ESMC {
                 auto TempPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
                                              [&] (u32 CmdID, const ProductState* State) -> bool
                                              {
-                                                 return true;
+                                                 return (!State->Equals(StartOfLoop));
                                              }, TempPath, SCCNodes);
 
                 TempPair.first->GetSVPtr()->Recycle();
