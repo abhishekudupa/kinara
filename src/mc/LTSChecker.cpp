@@ -649,7 +649,7 @@ namespace ESMC {
             return GCmdRef::NullPtr;
         }
 
-        inline void LTSChecker::DoDFS(StateVec *Root)
+        inline void LTSChecker::DoDFS(StateVec *Root, u32 NumErrors)
         {
             stack<DFSStackEntry> DFSStack;
             AQS->InsertInitState(Root);
@@ -674,9 +674,15 @@ namespace ESMC {
 
                 if (Exception) {
                     RecordErrorState(State);
+                    if (ErrorStates.size() >= NumErrors) {
+                        return;
+                    }
                 } else if (Cmd == GCmdRef::NullPtr) {
                     if (Deadlocked) {
                         ErrorStates[State] = DeadlockFreeInvariant;
+                    }
+                    if (ErrorStates.size() >= NumErrors) {
+                        return;
                     }
                     // cout << "No more successors, popping from stack!" << endl;
                     // Done exploring this state
@@ -693,6 +699,9 @@ namespace ESMC {
                     // stack, since only one error is remembered
                     // per state
                     RecordErrorState(State);
+                    if (ErrorStates.size() >= NumErrors) {
+                        return;
+                    }
                     DFSStack.pop();
                     continue;
                 }
@@ -739,9 +748,15 @@ namespace ESMC {
                     auto InvarRes = Interp->Evaluate(CanonState);
                     if (InvarRes == UndefValue) {
                         RecordErrorState(CanonState);
+                        if (ErrorStates.size() >= NumErrors) {
+                            return;
+                        }
                         DFSStack.pop();
                     } else if (InvarRes == 0) {
                         ErrorStates[CanonState] = Invar;
+                        if (ErrorStates.size() >= NumErrors) {
+                            return;
+                        }
                         DFSStack.pop();
                     }
                     continue;
@@ -760,7 +775,7 @@ namespace ESMC {
             }
         }
 
-        inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots)
+        inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots, u32 NumErrors)
         {
             deque<StateVec*> BFSQueue(Roots.begin(), Roots.end());
             for (auto State : BFSQueue) {
@@ -786,6 +801,9 @@ namespace ESMC {
                     if (Exception) {
                         Deadlocked = false;
                         RecordErrorState(CurState);
+                        if (ErrorStates.size() >= NumErrors) {
+                            return;
+                        }
                         // Already an error. Don't try any more commands
                         break;
                     }
@@ -818,6 +836,9 @@ namespace ESMC {
                             auto InvarRes = Interp->Evaluate(CanonNextState);
                             if (InvarRes == UndefValue) {
                                 RecordErrorState(CanonNextState);
+                                if (ErrorStates.size() >= NumErrors) {
+                                    return;
+                                }
                                 // Remove it from the queue
                                 BFSQueue.pop_back();
 
@@ -827,6 +848,9 @@ namespace ESMC {
                                 // We only want the first one to be stored
                                 // so use itercount
                                 ErrorStates[CanonNextState] = Invar;
+                                if (ErrorStates.size() >= NumErrors) {
+                                    return;
+                                }
                                 BFSQueue.pop_back();
                             }
                         }
@@ -835,11 +859,15 @@ namespace ESMC {
 
                 if (Deadlocked) {
                     ErrorStates[CurState] = DeadlockFreeInvariant;
+                    if (ErrorStates.size() >= NumErrors) {
+                        return;
+                    }
                 }
             }
         }
 
-        bool LTSChecker::BuildAQS(const Z3Model& Model, AQSConstructionMethod Method)
+        bool LTSChecker::BuildAQS(const Z3Model& Model, AQSConstructionMethod Method,
+                                  u32 NumErrors)
         {
             vector<TraceBase*> Retval;
 

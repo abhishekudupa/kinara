@@ -104,6 +104,7 @@ namespace ESMC {
             unordered_set<u32> EnabledCommands;
             unordered_set<i64> InterpretedOps;
             unordered_map<i64, ExpT> IndicatorExps;
+            unordered_map<i64, ExpT> UpdateIndicatorExps;
             Z3TheoremProver* TPAsZ3;
             Z3Ctx Ctx;
             UIDGenerator IndicatorUIDGenerator;

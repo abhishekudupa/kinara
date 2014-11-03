@@ -208,8 +208,8 @@ namespace ESMC {
 
             inline void RecordErrorState(const StateVec* ErrorState);
 
-            inline void DoDFS(StateVec* Root);
-            inline void DoBFS(const vector<StateVec*>& Roots);
+            inline void DoDFS(StateVec* Root, u32 NumErrors);
+            inline void DoBFS(const vector<StateVec*>& Roots, u32 NumErrors);
 
             inline void ConstructProduct(StateBuchiAutomaton* Monitor);
             inline vector<const ProductState*> GetAcceptingSCCs();
@@ -238,9 +238,9 @@ namespace ESMC {
 
             // Returns true if no errors encountered
             // false otherwise
-            bool BuildAQS(const Z3Model& Model = Z3Model::NullModel,
-                          AQSConstructionMethod Method =
-                          AQSConstructionMethod::BreadthFirst);
+            bool BuildAQS(AQSConstructionMethod Method =
+                          AQSConstructionMethod::BreadthFirst,
+                          u32 NumErrors = UINT32_MAX);
 
             void ClearAQS();
 

@@ -871,6 +871,22 @@ namespace ESMC {
                 auto LocalDomTerms = DomainTerms;
                 FilterTerms(LocalDomTerms, LValue->GetType());
 
+                if (LValue->GetType()->Is<ExprSymmetricType>()) {
+                    bool FoundOne = false;
+                    for (auto const& DomTerm : LocalDomTerms) {
+                        if (DomTerm->GetType() == LValue->GetType()) {
+                            FoundOne = true;
+                            break;
+                        }
+                    }
+
+                    // Symmetric type that doesn't have
+                    // an argument of its type, continue
+                    if (!FoundOne) {
+                        continue;
+                    }
+                }
+
                 vector<ExprTypeRef> DomainTypes;
                 vector<ExpT> DomainTermVec(LocalDomTerms.begin(),
                                            LocalDomTerms.end());
@@ -902,7 +918,10 @@ namespace ESMC {
                 }
 
                 Retval.push_back(new LTSAssignSimple(LValue, UpdateExp));
-                UpdateOpToUpdateLValue[UpdateOp] = make_pair(UpdateExp, LValue);
+
+                if (LValue != TheLTS->MakeVar("state", StateType)) {
+                    UpdateOpToUpdateLValue[UpdateOp] = make_pair(UpdateExp, LValue);
+                }
             }
 
             for (auto const& ArrayLValueGroup : ArrayLValueGroups) {

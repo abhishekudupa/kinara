@@ -2597,7 +2597,7 @@ namespace ESMC {
 
                 vector<vector<string>> QVarElems;
                 for (auto const& QVarType : QVarTypes) {
-                    QVarElems.push_back(QVarType->GetElementsNoUndef());
+                    QVarElems.push_back(QVarType->GetElements());
                 }
                 auto&& CP = CrossProduct<string>(QVarElems.begin(),
                                                   QVarElems.end());

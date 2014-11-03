@@ -72,7 +72,9 @@ namespace ESMC {
               Compiler(Checker->Compiler),
               Checker(Checker),
               Bound(0),
-              GuardedCommands(TheLTS->GetGuardedCmds())
+              GuardedCommands(TheLTS->GetGuardedCmds()),
+              UpdateBoundsMultiplier(0),
+              UpdateBound(0)
         {
             auto Mgr = TheLTS->GetMgr();
             // push a scope onto the theorem prover and assert
@@ -125,7 +127,8 @@ namespace ESMC {
             cout << "Handling one safety violation, computing shortest path... ";
             flush(cout);
 
-            auto PPath = AQS->FindShortestPath(ErrorState, CostFunc);
+            // auto PPath = AQS->FindShortestPath(ErrorState, CostFunc);
+            auto PPath = AQS->FindPath(ErrorState);
 
             cout << "Done!" << endl << "Unwinding trace... ";
             flush(cout);
@@ -175,7 +178,7 @@ namespace ESMC {
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this, Trace, ActualBlownInvariant);
             for (auto const& Pred : WPConditions) {
-                cout << "Asserting Safety Pre: " << endl
+                cout << "Asserting Safety Pre:" << endl
                      << Pred->ToString() << endl << endl;
                 MakeAssertion(Mgr->Simplify(Pred));
             }
@@ -281,30 +284,23 @@ namespace ESMC {
             // Create indicator variables for new update ops
             auto const& UpdateOpToLValue = TheLTS->GetUpdateOpToUpdateLValue();
             for (auto const& NewOp : NewUpdateOps) {
-                auto IndicatorUID = IndicatorUIDGenerator.GetUID();
-                string IndicatorVarName =
-                    (string)"__update_indicator_" + to_string(IndicatorUID);
                 auto it = UpdateOpToLValue.find(NewOp);
                 if (it == UpdateOpToLValue.end()) {
-                    throw InternalError((string)"Could not find LValue associated with " +
-                                        "update opcode " + to_string(NewOp) + ".\nAt: " +
-                                        __FILE__ + ":" + to_string(__LINE__));
+                    // This must be an exempt lvalue
+                    continue;
                 }
+
+                auto IndicatorUID = UpdateIndicatorUIDGenerator.GetUID();
+                string IndicatorVarName =
+                    (string)"__update_indicator_" + to_string(IndicatorUID);
+
                 auto const& UpdateExp = it->second.first;
                 auto const& LValue = it->second.second;
 
                 auto const& OpArgs = GetOpArgs(UpdateExp);
                 // remove the lvalue itself from the op args
-                vector<ExpT> FilteredArgs;
-                for (auto const& Arg : OpArgs) {
-                    if (Arg == LValue) {
-                        continue;
-                    }
-                    FilteredArgs.push_back(Arg);
-                }
-
                 vector<ExprTypeRef> ArgTypes;
-                transform(FilteredArgs.begin(), FilteredArgs.end(), back_inserter(ArgTypes),
+                transform(OpArgs.begin(), OpArgs.end(), back_inserter(ArgTypes),
                           [&] (const ExpT& Exp) -> ExprTypeRef
                           {
                               return Exp->GetType();
@@ -315,7 +311,7 @@ namespace ESMC {
                 const u32 NumArgs = ArgTypes.size();
                 for (u32 i = 0; i < NumArgs; ++i) {
                     auto BoundVar = Mgr->MakeBoundVar(ArgTypes[i], NumArgs - i - 1);
-                    SubstMap[FilteredArgs[i]] = BoundVar;
+                    SubstMap[OpArgs[i]] = BoundVar;
                 }
 
                 // Substitute the bound vars
@@ -325,6 +321,7 @@ namespace ESMC {
                 auto ExistsExp = Mgr->MakeExists(ArgTypes, QBodyExp);
                 auto IndicatorType = Mgr->MakeType<ExprRangeType>(0, 1);
                 auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
+                UpdateIndicatorExps[NewOp] = IndicatorVar;
 
                 auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
                                                 Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
@@ -409,7 +406,7 @@ namespace ESMC {
                                                    GoodExp);
 
             for (auto const& Pred : WPConditions) {
-                cout << "Asserting Pre: " << endl << Pred->ToString() << endl << endl;
+                cout << "Asserting Pre:" << endl << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
 
@@ -485,6 +482,26 @@ namespace ESMC {
             cout << "Asserting Bounds Constraint:" << endl
                  << EQExp->ToString() << endl << endl;
             TP->Assert(EQExp, true);
+
+            // Now make the bounds constraint for the update
+            Summands.clear();
+            for (auto const& IndexExp : UpdateIndicatorExps) {
+                Summands.push_back(IndexExp.second);
+            }
+            SumExp = ExpT::NullPtr;
+            if (Summands.size() == 0) {
+                return;
+            } else if (Summands.size() == 1) {
+                SumExp = Summands[0];
+            } else {
+                SumExp = Mgr->MakeExpr(LTSOps::OpADD, Summands);
+            }
+            BoundExp = Mgr->MakeVal(to_string(UpdateBound),
+                                    Mgr->MakeType<ExprRangeType>(0, UpdateBound));
+            auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, SumExp, BoundExp);
+            cout << "Asserting Update Bounds Constraint:" << endl
+                 << LEExp->ToString() << endl << endl;
+            TP->Assert(LEExp, true);
         }
 
         // Algorithm:
@@ -516,8 +533,12 @@ namespace ESMC {
                 TP->Pop();
 
                 if (TPRes == TPResult::UNSATISFIABLE) {
-                    // TODO: Bound the bound
-                    ++Bound;
+                    if (UpdateBound < Bound * UpdateBoundsMultiplier) {
+                        ++UpdateBound;
+                    } else {
+                        UpdateBound = 0;
+                        ++Bound;
+                    }
                     continue;
                 } else if (TPRes == TPResult::UNKNOWN) {
                     throw ESMCError((string)"Could not solve constraints!");
@@ -527,14 +548,14 @@ namespace ESMC {
                 // all good. extract a model
                 auto const& Model = TPAsZ3->GetModel();
 
-                // cout << "Model checking with model:" << endl
-                //      << Model.ToString() << endl << endl;
+                cout << "Model checking with model:" << endl
+                     << Model.ToString() << endl << endl;
 
                 Compiler->UpdateModel(Model, InterpretedOps, IndicatorExps);
 
                 // Okay, we're good to model check now
                 Checker->ClearAQS();
-                auto Safe = Checker->BuildAQS();
+                auto Safe = Checker->BuildAQS(1);
                 if (!Safe) {
                     HandleSafetyViolations();
                     continue;
