@@ -131,6 +131,10 @@ namespace ESMC {
             void MakeAssertion(const ExpT& Pred);
 
             void Solve();
+
+            void PrintUFModel(i64 UFCode);
+
+            void PrintSolution();
         };
 
     } /* end namespace Synth */
