@@ -1270,8 +1270,8 @@ namespace ESMC {
                             // }
 
                             Retval.push_back(CurState);
-                            cout << "[Checker:] Found SCC with " << NumStatesInSCC
-                                 << " states" << endl;
+                            // cout << "[Checker:] Found SCC with " << NumStatesInSCC
+                            //      << " states" << endl;
                             ++CurSCCID;
                         }
                     }

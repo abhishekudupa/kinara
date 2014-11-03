@@ -572,8 +572,8 @@ namespace ESMC {
             auto const& GuardedCmds = Checker->GuardedCommands;
 
             auto&& SCCNodes = ExpandSCC(SCCRoot, Checker);
-            cout << "[Trace:]" << "ExpandedSCC contains " << SCCNodes.size()
-                 << " states" << endl << endl;
+            // cout << "[Trace:]" << "ExpandedSCC contains " << SCCNodes.size()
+            //      << " states" << endl << endl;
             u32 InvPermAlongPath = 0;
 
             // Find a path from the initial state to one of the SCC nodes
