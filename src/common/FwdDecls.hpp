@@ -234,11 +234,11 @@ namespace ESMC {
     // UID Generators
     class UIDGenerator;
 
-    template <typename T>
-    constexpr bool TruePred(const T& Obj) { return true; }
+    template <typename... ArgTypes>
+    constexpr bool TruePred(ArgTypes&&... Args) { return true; }
 
-    template <typename T>
-    constexpr bool FalsePred(const T& Obj) { return false; }
+    template <typename... ArgTypes>
+    constexpr bool FalsePred(ArgTypes&&... Args) { return false; }
 
 } /* end namespace */
 

@@ -679,6 +679,21 @@ namespace ESMC {
                 }
                 throw InternalError((string)"Could not complete cycle in single node SCC.\n" +
                                     "At: " + __FILE__ + ":" + to_string(__LINE__));
+            } else if (PathSoFar.size() == 0) {
+                // Transition to some other state first and then call
+                // do unwound bfs
+                vector<PSTraceElemT> TempPath;
+                auto TempPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
+                                             [&] (u32 CmdID, const ProductState* State) -> bool
+                                             {
+                                                 return true;
+                                             }, TempPath, SCCNodes);
+
+                TempPair.first->GetSVPtr()->Recycle();
+                delete TempPair.first;
+                CurEndOfPath = TempPair.second;
+                PathSoFar.insert(PathSoFar.end(), TempPath.begin(), TempPath.end());
+                // fall through and be a man! Do the right thing!
             }
 
             // That handles all the special cases!
