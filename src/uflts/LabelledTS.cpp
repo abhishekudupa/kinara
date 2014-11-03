@@ -382,9 +382,16 @@ namespace ESMC {
                     continue;
                 }
 
-                auto CurConstraints = EFSM->SAs<IncompleteEFSM>()->GetConstraintsByGuardOp();
+                auto const& CurConstraints =
+                    EFSM->SAs<IncompleteEFSM>()->GetConstraintsByGuardOp();
                 for (auto const& OpConstraints : CurConstraints) {
                     ConstraintsByOp[OpConstraints.first] = OpConstraints.second;
+                }
+
+                auto const& CurUpdateOpToLValue =
+                    EFSM->SAs<IncompleteEFSM>()->GetUpdateOpToUpdateLValue();
+                for (auto const& OpLValPair : CurUpdateOpToLValue) {
+                    UpdateOpToUpdateLValue[OpLValPair.first] = OpLValPair.second;
                 }
             }
         }
@@ -1141,6 +1148,12 @@ namespace ESMC {
         const unordered_map<i64, set<ExpT>>& LabelledTS::GetConstraintsByOp() const
         {
             return ConstraintsByOp;
+        }
+
+        const unordered_map<i64, pair<ExpT, ExpT>>&
+        LabelledTS::GetUpdateOpToUpdateLValue() const
+        {
+            return UpdateOpToUpdateLValue;
         }
 
     } /* end namespace LTS */

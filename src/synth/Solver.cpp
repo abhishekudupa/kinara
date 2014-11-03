@@ -191,7 +191,9 @@ namespace ESMC {
 
             // Find the structural constraints that need to be added
             // for the newly exposed operations
-            set<i64> NewGuardOps;
+            unordered_set<i64> NewGuardOps;
+            unordered_set<i64> NewUpdateOps;
+
             auto const& ConstraintsByOp = TheLTS->GetConstraintsByOp();
             for (auto const& SynthOp : SynthOps) {
                 if (InterpretedOps.find(SynthOp) != InterpretedOps.end()) {
@@ -221,6 +223,9 @@ namespace ESMC {
                             if (it2 != ConstraintsByOp.end()) {
                                 // Yes!
                                 NewGuardOps.insert(PredOp);
+                            } else {
+                                // This is a newly encountered update op
+                                NewUpdateOps.insert(PredOp);
                             }
                         }
 
@@ -271,6 +276,62 @@ namespace ESMC {
                 cout << "Asserting Indicator Implication:" << endl
                      << Implies->ToString() << endl << endl;
                 TP->Assert(Implies, true);
+            }
+
+            // Create indicator variables for new update ops
+            auto const& UpdateOpToLValue = TheLTS->GetUpdateOpToUpdateLValue();
+            for (auto const& NewOp : NewUpdateOps) {
+                auto IndicatorUID = IndicatorUIDGenerator.GetUID();
+                string IndicatorVarName =
+                    (string)"__update_indicator_" + to_string(IndicatorUID);
+                auto it = UpdateOpToLValue.find(NewOp);
+                if (it == UpdateOpToLValue.end()) {
+                    throw InternalError((string)"Could not find LValue associated with " +
+                                        "update opcode " + to_string(NewOp) + ".\nAt: " +
+                                        __FILE__ + ":" + to_string(__LINE__));
+                }
+                auto const& UpdateExp = it->second.first;
+                auto const& LValue = it->second.second;
+
+                auto const& OpArgs = GetOpArgs(UpdateExp);
+                // remove the lvalue itself from the op args
+                vector<ExpT> FilteredArgs;
+                for (auto const& Arg : OpArgs) {
+                    if (Arg == LValue) {
+                        continue;
+                    }
+                    FilteredArgs.push_back(Arg);
+                }
+
+                vector<ExprTypeRef> ArgTypes;
+                transform(FilteredArgs.begin(), FilteredArgs.end(), back_inserter(ArgTypes),
+                          [&] (const ExpT& Exp) -> ExprTypeRef
+                          {
+                              return Exp->GetType();
+                          });
+
+                // replace each of the arg types by a bound var
+                MgrT::SubstMapT SubstMap;
+                const u32 NumArgs = ArgTypes.size();
+                for (u32 i = 0; i < NumArgs; ++i) {
+                    auto BoundVar = Mgr->MakeBoundVar(ArgTypes[i], NumArgs - i - 1);
+                    SubstMap[FilteredArgs[i]] = BoundVar;
+                }
+
+                // Substitute the bound vars
+                auto QBodyExp = Mgr->MakeExpr(LTSOps::OpEQ, LValue, UpdateExp);
+                QBodyExp = Mgr->MakeExpr(LTSOps::OpNOT, QBodyExp);
+                QBodyExp = Mgr->BoundSubstitute(SubstMap, QBodyExp);
+                auto ExistsExp = Mgr->MakeExists(ArgTypes, QBodyExp);
+                auto IndicatorType = Mgr->MakeType<ExprRangeType>(0, 1);
+                auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
+
+                auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
+                                                Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
+                                                              Mgr->MakeVal("1", IndicatorType)));
+                cout << "Asserting Update Indicator Implication:" << endl
+                     << ImpliesExp->ToString() << endl << endl;
+                TP->Assert(ImpliesExp, true);
             }
         }
 

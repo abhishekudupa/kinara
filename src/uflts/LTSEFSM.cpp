@@ -902,7 +902,7 @@ namespace ESMC {
                 }
 
                 Retval.push_back(new LTSAssignSimple(LValue, UpdateExp));
-                UpdateOpToLValue[UpdateOp] = LValue;
+                UpdateOpToUpdateLValue[UpdateOp] = make_pair(UpdateExp, LValue);
             }
 
             for (auto const& ArrayLValueGroup : ArrayLValueGroups) {
@@ -1278,10 +1278,10 @@ namespace ESMC {
             return ConstraintsByGuardOp;
         }
 
-        const unordered_map<i64, ExpT>&
-        IncompleteEFSM::GetUpdateOpToLValue() const
+        const unordered_map<i64, pair<ExpT, ExpT>>&
+        IncompleteEFSM::GetUpdateOpToUpdateLValue() const
         {
-            return UpdateOpToLValue;
+            return UpdateOpToUpdateLValue;
         }
 
     } /* end namespace LTS */

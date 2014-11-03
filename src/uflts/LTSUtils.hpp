@@ -766,7 +766,17 @@ namespace ESMC {
             }
         }
 
-
+        static inline const vector<ExpT>& GetOpArgs(const ExpT& Exp)
+        {
+            vector<ExpT> Retval;
+            auto ExpAsOp = Exp->As<OpExpression>();
+            if (ExpAsOp == nullptr) {
+                throw InternalError((string)"GetAppArgs() called on what " +
+                                    "does not look like an OpExpression.\n" +
+                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
+            }
+            return ExpAsOp->GetChildren();
+        }
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

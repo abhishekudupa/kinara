@@ -125,6 +125,7 @@ namespace ESMC {
             ExpT FinalCondExp;
 
             unordered_map<i64, set<ExpT>> ConstraintsByOp;
+            unordered_map<i64, pair<ExpT, ExpT>> UpdateOpToUpdateLValue;
 
             // Interface only for friends
             MgrT* GetMgr() const;
@@ -242,6 +243,7 @@ namespace ESMC {
 
             const vector<pair<ExpT, ExpT>>& GetChanBuffersToSort() const;
             const unordered_map<i64, set<ExpT>>& GetConstraintsByOp() const;
+            const unordered_map<i64, pair<ExpT, ExpT>>& GetUpdateOpToUpdateLValue() const;
         };
 
     } /* end namespace LTS */

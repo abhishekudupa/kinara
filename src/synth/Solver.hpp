@@ -107,6 +107,7 @@ namespace ESMC {
             Z3TheoremProver* TPAsZ3;
             Z3Ctx Ctx;
             UIDGenerator IndicatorUIDGenerator;
+            UIDGenerator UpdateIndicatorUIDGenerator;
             // How many updates per allowed transition?
             u32 UpdateBoundsMultiplier;
             u32 UpdateBound;

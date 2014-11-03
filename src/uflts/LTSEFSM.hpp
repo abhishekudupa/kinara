@@ -94,7 +94,7 @@ namespace ESMC {
             unordered_map<i64, set<ExpT>> ConstraintsByGuardOp;
             // Map from update op code to the LValue term
             // that it updates
-            unordered_map<i64, ExpT> UpdateOpToLValue;
+            unordered_map<i64, pair<ExpT, ExpT>> UpdateOpToUpdateLValue;
 
             set<i64> GuardUFIDs;
             map<string, set<SymmMsgDeclRef>> BlockedCompletions;
@@ -206,7 +206,7 @@ namespace ESMC {
 
             const set<i64>& GetGuardUFIDs() const;
             const unordered_map<i64, set<ExpT>>& GetConstraintsByGuardOp() const;
-            const unordered_map<i64, ExpT>& GetUpdateOpToLValue() const;
+            const unordered_map<i64, pair<ExpT, ExpT>>& GetUpdateOpToUpdateLValue() const;
 
             // override freeze to add additional transitions
             // and such
