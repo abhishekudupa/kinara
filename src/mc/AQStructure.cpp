@@ -284,23 +284,143 @@ namespace ESMC {
                                     CostFunction);
         }
 
+        ////////////////////////////////////////////////////////////
+        // Old function, trying to hardcode Heap shorest path for this
+        // use case,
+        // TODO revert
+        ////////////////////////////////////////////////////////////
+        // AQSPermPath*
+        // AQStructure::FindShortestPath(const set<const StateVec*>& Origins,
+        //                               const function<bool(const StateVec*)>& TargetPred,
+        //                               const function<u64(const StateVec*, const AQSEdge*)>&
+        //                               CostFunction) const
+        // {
+        //     return FindShortestPath(Origins,
+        //                             [=] (const StateVec* State,
+        //                                  const AQSEdge* Edge) -> const StateVec*
+        //                             {
+        //                                 auto Target = Edge->GetTarget();
+        //                                 if (TargetPred(Target)) {
+        //                                     return Target;
+        //                                 } else {
+        //                                     return nullptr;
+        //                                 }
+        //                             }, CostFunction);
+        // }
+
         AQSPermPath*
         AQStructure::FindShortestPath(const set<const StateVec*>& Origins,
                                       const function<bool(const StateVec*)>& TargetPred,
                                       const function<u64(const StateVec*, const AQSEdge*)>&
                                       CostFunction) const
         {
-            return FindShortestPath(Origins,
-                                    [=] (const StateVec* State,
-                                         const AQSEdge* Edge) -> const StateVec*
-                                    {
-                                        auto Target = Edge->GetTarget();
-                                        if (TargetPred(Target)) {
-                                            return Target;
-                                        } else {
-                                            return nullptr;
-                                        }
-                                    }, CostFunction);
+            using boost::heap::fibonacci_heap;
+            using Detail::AQSFibDataT;
+            using Detail::AQSFibDataCompare;
+
+            typedef boost::heap::compare<AQSFibDataCompare> FibHeapCompareT;
+            typedef fibonacci_heap<AQSFibDataT, FibHeapCompareT> FibHeapT;
+
+            FibHeapT PrioQ;
+            unordered_map<const StateVec*, FibHeapT::handle_type> StateToHandle;
+            unordered_map<const StateVec*, const StateVec*> Predecessors;
+            unordered_map<const StateVec*, u64> ScannedNodes;
+
+            const StateVec* ActualTarget = nullptr;
+
+            for (auto Origin : Origins) {
+                if (StateHashSet.find(const_cast<StateVec*>(Origin)) == StateHashSet.end()) {
+                    throw ESMCError((string)"Origin not in AQS in call to " +
+                                    "AQStructure::FindShortestPath()");
+                }
+                auto Handle = PrioQ.push(AQSFibDataT(Origin, 0));
+                StateToHandle[Origin] = Handle;
+            }
+
+            bool ReachedTarget = false;
+            while (PrioQ.size() > 0 && !ReachedTarget) {
+                auto CurStateData = PrioQ.top();
+                auto CurState = CurStateData.StateVector;
+                auto CurDist = CurStateData.DistanceFromOrigin;
+
+                ScannedNodes[CurState] = CurDist;
+                PrioQ.pop();
+
+                if (TargetPred(CurState)) {
+                    ActualTarget = CurState;
+                    ReachedTarget = true;
+                    break;
+                }
+
+                StateToHandle.erase(CurState);
+
+                auto const& Edges =
+                    StateHashSet.find(const_cast<StateVec*>(CurState))->second;
+
+                for (auto Edge : Edges) {
+                    u64 NewDist = CurStateData.DistanceFromOrigin +
+                        CostFunction(CurState, Edge);
+                    auto NSVec = Edge->GetTarget();
+
+                    if (ScannedNodes.find(NSVec) != ScannedNodes.end()) {
+                        continue;
+                    }
+
+                    auto nsit = StateToHandle.find(NSVec);
+                    u64 OldDist;
+                    FibHeapT::handle_type NextStateHandle;
+
+                    if (nsit == StateToHandle.end()) {
+                        OldDist = UINT64_MAX;
+                    } else {
+                        NextStateHandle = nsit->second;
+                        OldDist = (*NextStateHandle).DistanceFromOrigin;
+                    }
+
+                    if (NewDist < OldDist) {
+                        if (OldDist != UINT64_MAX) {
+                            // State was already present in prio queue
+                            // just decrease the distance
+                            (*NextStateHandle).DistanceFromOrigin = NewDist;
+                            PrioQ.increase(NextStateHandle);
+                        } else {
+                            // State wasn't present in the prio queue
+                            // insert it
+                            auto Handle = PrioQ.push(AQSFibDataT(NSVec, NewDist));
+                            StateToHandle[NSVec] = Handle;
+                        }
+                        // Mark predecessor
+                        Predecessors[NSVec] = CurState;
+                    }
+
+                }
+            }
+
+            if (!ReachedTarget) {
+                // WTF? The target is not reachable?
+                // Too bad then I guess.
+                return nullptr;
+            }
+
+            // assemble the path
+            deque<AQSPermPath::PathElemType> ThePath;
+            auto CurTarget = ActualTarget;
+            while (Origins.find(const_cast<StateVec*>(CurTarget)) == Origins.end()) {
+                auto Predecessor = Predecessors[CurTarget];
+                auto const& PredEdges =
+                    StateHashSet.find(const_cast<StateVec*>(Predecessor))->second;
+                for (auto Edge : PredEdges) {
+                    if (Edge->GetTarget() == CurTarget) {
+                        ThePath.push_front(Edge);
+                        break;
+                    }
+                }
+                CurTarget = Predecessor;
+            }
+            vector<AQSPermPath::PathElemType> PathVec(ThePath.begin(), ThePath.end());
+            auto Retval = new AQSPermPath(CurTarget, PathVec);
+            return Retval;
+
         }
 
         AQSPermPath*

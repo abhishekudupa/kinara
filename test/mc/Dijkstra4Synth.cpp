@@ -16,6 +16,9 @@
 #include "../../src/mc/LTSChecker.hpp"
 #include "../../src/mc/OmegaAutomaton.hpp"
 #include "../../src/mc/Trace.hpp"
+#include "../../src/synth/Solver.hpp"
+#include "../../src/tpinterface/TheoremProver.hpp"
+
 
 
 using boost::lexical_cast;
@@ -23,6 +26,8 @@ using namespace ESMC;
 using namespace LTS;
 using namespace Exprs;
 using namespace MC;
+using namespace Synth;
+
 
 #define __LOGSTR__ string(__FILE__) + ", " + to_string(__LINE__) + ": "
 
@@ -40,7 +45,7 @@ void DeclareMsgs(LabelledTS* TheLTS)
 {
     assert(TheLTS != nullptr);
     cout << __LOGSTR__ << "Declaring messages." << endl;
-
+    
     auto BoolType = TheLTS->MakeBoolType();
     for (size_t i = 0; i < NumProcesses; i++) {
         vector<pair<string, ExprTypeRef>> fields { make_pair(string("Data"), BoolType),
@@ -58,7 +63,7 @@ void DeclareMsgs(LabelledTS* TheLTS)
 
 // Processes
 vector<GeneralEFSM*> Proc;
-GeneralEFSM* ShadowMonitor;
+IncompleteEFSM* ShadowMonitor;
 
 void DeclareProc0(LabelledTS* TheLTS)
 {
@@ -147,7 +152,7 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
     Proc[i]->FreezeVars();
 
     cout << __LOGSTR__ << "Adding transitions." << endl;
-
+    
     Proc[i]->AddInputMsg(WriteMsgs[i - 1], {});
     auto Rim1Exp = TheLTS->MakeVar("R" + to_string(i - 1), WriteMsgs[i - 1]);
     auto Dim1Exp = TheLTS->MakeVar(string("Data") + to_string(i - 1), TheLTS->MakeBoolType());
@@ -295,8 +300,8 @@ void DeclareShadowMonitor(LabelledTS* TheLTS)
     assert(TheLTS != nullptr && ShadowMonitor == nullptr);
     // TODO.
 
-    auto ShadowMonitor = TheLTS->MakeGenEFSM("ShadowMonitor", {},
-                                             TheLTS->MakeTrue(), LTSFairnessType::None);
+    ShadowMonitor = TheLTS->MakeEFSM<IncompleteEFSM>("ShadowMonitor", {},
+                                                     TheLTS->MakeTrue(), LTSFairnessType::None);
     ShadowMonitor->AddState("Legitimate");
     ShadowMonitor->AddState("Illegitimate");
     ShadowMonitor->AddState("Transient");
@@ -306,8 +311,8 @@ void DeclareShadowMonitor(LabelledTS* TheLTS)
         ShadowMonitor->AddVariable("Data" + to_string(i), TheLTS->MakeBoolType());
         ShadowMonitor->AddVariable("Up" + to_string(i), TheLTS->MakeBoolType());
     }
-    ShadowMonitor->AddOutputMsg(LegitimateAnnouncement, {});
-    ShadowMonitor->AddOutputMsg(IllegitimateAnnouncement, {});
+    auto LegitimateAnnouncementDeclaration = ShadowMonitor->AddOutputMsg(LegitimateAnnouncement, {});
+    auto IllegitimateAnnouncementDeclaration = ShadowMonitor->AddOutputMsg(IllegitimateAnnouncement, {});
     ShadowMonitor->FreezeVars();
 
     for (size_t i = 0; i < NumProcesses; ++i) {
@@ -381,15 +386,25 @@ void DeclareShadowMonitor(LabelledTS* TheLTS)
     cout << "Legitimacy formula : " << endl
          << Phi << endl;
 
-    ShadowMonitor->AddOutputTransition("Transient", "Legitimate",
-                                       Phi, {},
-                                       "Legitimate", LegitimateAnnouncement,
-                                       {}, set<string>());
+    // ShadowMonitor->AddOutputTransition("Transient", "Legitimate",
+    //                                    Phi, {},
+    //                                    "Legitimate", LegitimateAnnouncement,
+    //                                    {}, set<string>());
     auto NotPhi = TheLTS->MakeOp(LTSOps::OpNOT, Phi);
-    ShadowMonitor->AddOutputTransition("Transient", "Illegitimate",
-                                       NotPhi, {},
-                                       "Illegitimate", IllegitimateAnnouncement,
-                                       {}, set<string>());
+    // ShadowMonitor->AddOutputTransition("Transient", "Illegitimate",
+    //                                    NotPhi, {},
+    //                                    "Illegitimate", IllegitimateAnnouncement,
+    //                                    {}, set<string>());
+
+    ShadowMonitor->MarkAllStatesComplete();
+    ShadowMonitor->MarkStateIncomplete("Transient");
+    ShadowMonitor->IgnoreAllMsgsOnState("Transient");
+    ShadowMonitor->HandleMsgOnState(LegitimateAnnouncementDeclaration, "Transient");
+    ShadowMonitor->HandleMsgOnState(IllegitimateAnnouncementDeclaration, "Transient");
+    for (size_t i = 0; i < NumProcesses; ++i) {
+        ShadowMonitor->MarkVariableReadOnly("Data" + to_string(i));
+        ShadowMonitor->MarkVariableReadOnly("Up" + to_string(i));
+    }
 }
 
 void DeclareSafetyConcreteMonitor(LabelledTS* TheLTS)
@@ -448,13 +463,6 @@ void DeclareAutomata(LabelledTS* TheLTS)
         }
         auto&& UpCombinations = CrossProduct<ExpT>(UpElems.begin(), UpElems.end());
         for (auto UpVal : UpCombinations) {
-            for (auto D : DataVal) {
-                cout << D << " ";
-            }
-            for (auto U : UpVal) {
-                cout << U << " ";
-            }
-            cout << endl;
             UpVal.insert(UpVal.begin(), TheLTS->MakeTrue());
             UpVal.push_back(TheLTS->MakeFalse());
 
@@ -576,7 +584,6 @@ int main()
     DeclareMsgs(TheLTS);
     DeclareAutomata(TheLTS);
 
-
     TheLTS->Freeze();
     cout << __LOGSTR__ << "Freezing LTS done." << endl;
 
@@ -588,28 +595,123 @@ int main()
     auto Safe = Checker->BuildAQS();
     cout << __LOGSTR__ << "Build AQS done." << endl;
 
-    if (!Safe) {
-        auto const& ErrorStates = Checker->GetAllErrorStates();
-        for (auto const& ErrorState : ErrorStates) {
-            auto StateVector = ErrorState.first;
-            auto Invariant = ErrorState.second;
-            cout << "Invariant blown: " << endl
-                 << Invariant << endl;
-            auto Trace = Checker->MakeTraceToError(StateVector);
-            cout << "The trace is : " << endl
-                 << Trace->ToString() << endl;
+    // if (!Safe) {
+    //     auto const& ErrorStates = Checker->GetAllErrorStates();
+    //     for (auto const& ErrorState : ErrorStates) {
+    //         auto StateVector = ErrorState.first;
+    //         auto Invariant = ErrorState.second;
+    //         cout << "Invariant blown: " << endl
+    //              << Invariant << endl;
+    //         auto Trace = Checker->MakeTraceToError(StateVector);
+    //         cout << "The trace is : " << endl
+    //              << Trace->ToString() << endl;
+    //     }
+    // }
+
+    // if (Safe) {
+    //     auto LiveTrace = Checker->CheckLiveness("InfinitelyIllegitimate");
+    //     if (LiveTrace != nullptr) {
+    //         cout << "Liveness Violation found!" << endl
+    //              << LiveTrace->ToString() << endl;
+    //     }
+    // }
+
+    auto TheSolver = new Solver(Checker);
+
+
+    auto ShadowMonitorType = TheLTS->GetEFSMType("ShadowMonitor");
+    auto ShadowMonitorStateVar = TheLTS->MakeVar("ShadowMonitor", ShadowMonitorType);
+    auto ShadowMonitorState = TheLTS->MakeOp(LTSOps::OpField, ShadowMonitorStateVar, TheLTS->MakeVar("state", TheLTS->MakeFieldAccessType()));
+    // auto ShadowMonitorTransientState = TheLTS->MakeVal("Transient", ShadowMonitorState->GetType());
+    // auto ShadowMonitorLegitimateState = TheLTS->MakeVal("Legitimate", ShadowMonitorState->GetType());
+    auto ShadowMonitorIllegitimateState = TheLTS->MakeVal("Illegitimate", ShadowMonitorState->GetType());
+    auto ShadowMonitorLegitimateState = TheLTS->MakeVal("Legitimate", ShadowMonitorState->GetType());
+
+    for (auto Transition : ShadowMonitor->GetOutputTransitionsOnMsg(LegitimateAnnouncement)) {
+        cout << Transition->ToString() << endl;
+        /// assert length of Updates is 1
+
+        auto HasUF = [&] (const ExpBaseT* Exp) -> bool
+            {
+                auto ExpAsOpExp = Exp->As<OpExpression>();
+                if (ExpAsOpExp != nullptr) {
+                    auto Code = ExpAsOpExp->GetOpCode();
+                    return (Code >= LTSOps::UFOffset);
+                }
+                return false;
+            };
+
+        // auto Guard = Transition->GetGuard();
+        // auto UFFunctionsInGuard = Guard->GetMgr()->Gather(Guard, HasUF);
+        // cout << "UF in Guard" << endl;
+        // for (auto UFFunctionInGuard : UFFunctionsInGuard) {
+        //     cout << UFFunctionInGuard << endl;
+        // }
+        // auto UFGuard = *(UFFunctionsInGuard.begin());
+        // auto UFGuardOpCode = UFGuard->As<OpExpression>()->GetOpCode();
+        // // Setting UF guard to be true everywhere
+
+        auto StateUpdate = Transition->GetUpdates()[0];
+        auto StateUpdateExpression = StateUpdate->GetRHS();
+        auto UFOpCode = StateUpdateExpression->As<OpExpression>()->GetOpCode();
+        cout << "UF op code is " << UFOpCode << endl;
+
+        vector<vector<ExpT>> DataElems;
+        for (size_t i = 0; i < 6; ++i) {
+            DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
+        }
+        auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
+        for (auto DataVal : DataCombinations) {
+            auto StateUpdateExp = TheLTS->MakeOp(UFOpCode, DataVal);
+            auto StateUpdateExpEQLegitimateState = TheLTS->MakeOp(LTSOps::OpEQ, StateUpdateExp, ShadowMonitorLegitimateState);
+            // cout << StateUpdateExpEQLegitimateState << endl;
+            TheSolver->MakeAssertion(StateUpdateExpEQLegitimateState);
+            // auto GuardIsTrue = TheLTS->MakeOp(UFGuardOpCode, DataVal);
+            // cout << GuardIsTrue << endl;
+            // TheSolver->MakeAssertion(GuardIsTrue);
         }
     }
 
-    if (Safe) {
-        auto LiveTrace = Checker->CheckLiveness("InfinitelyIllegitimate");
-        if (LiveTrace != nullptr) {
-            cout << "Liveness Violation found!" << endl
-                 << LiveTrace->ToString() << endl;
+    for (auto Transition : ShadowMonitor->GetOutputTransitionsOnMsg(IllegitimateAnnouncement)) {
+        cout << Transition->ToString() << endl;
+        /// assert length of Updates is 1
+        auto StateUpdate = Transition->GetUpdates()[0];
+        auto StateUpdateExpression = StateUpdate->GetRHS();
+        auto UFOpCode = StateUpdateExpression->As<OpExpression>()->GetOpCode();
+        cout << "UF op code is " << UFOpCode << endl;
+
+        vector<vector<ExpT>> DataElems;
+        for (size_t i = 0; i < 6; ++i) {
+            DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
+        }
+        auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
+        for (auto DataVal : DataCombinations) {
+            auto StateUpdateExp = TheLTS->MakeOp(UFOpCode, DataVal);
+            auto StateUpdateExpEQIllegitimateState = TheLTS->MakeOp(LTSOps::OpEQ, StateUpdateExp, ShadowMonitorIllegitimateState);
+            // cout << StateUpdateExpEQIllegitimateState << endl;
+            TheSolver->MakeAssertion(StateUpdateExpEQIllegitimateState);
         }
     }
+
+    //     cout << OutputMsg->ToString() << endl;
+    //     for (auto Transition : ShadowMonitor->GetOutputTransitionsOnMsg(OutputMsg)) {
+    //         cout << Transition->ToString() << endl;
+    //     }
+
+    // for (auto InputMsg : ShadowMonitor->GetInputs()) {
+    //     cout << InputMsg->ToString() << endl;
+    //     for (auto Transitions : ShadowMonitor->GetInputTransitionsOnMsg(InputMsg)) {
+    //         for (auto Transition : Transitions) {
+    //             cout << Transition->ToString() << endl;
+    //         }
+    //     }
+    // }
+
+
+    TheSolver->Solve();
 
     delete Checker;
+
 
     cout << __LOGSTR__ << "Return." << endl;
     return 0;
@@ -617,12 +719,3 @@ int main()
 
 //
 // Dijkstra4.cpp ends here
-
-
-
-
-
-
-
-
-

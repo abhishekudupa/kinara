@@ -19,7 +19,7 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/sparsehash
 
 PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP \
 	ABP_generated MSI Fischer LeaderElection Dijkstra4 MSI_no_busy_data_no_pending_unblock_e \
-	MSIC2D PingPongChanSynth MSISynth ElevatorIncomplete
+	MSIC2D PingPongChanSynth MSISynth ElevatorIncomplete Dijkstra4Synth
 #	WeakestPreconditionTest
 #	WeakestPreconditionArrayTest
 #   ElevatorBug
