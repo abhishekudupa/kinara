@@ -417,7 +417,7 @@ namespace ESMC {
             } else {
                 sstr << "    label: none (internal transition)" << endl;
             }
-            sstr << "    " << Guard->ToString() << " -> " << endl;
+            sstr << "    " << Guard->ToString() << " ->" << endl;
             for (auto const& Update : Updates) {
                 sstr << "        " << Update->ToString() << endl;
             }
@@ -573,7 +573,7 @@ namespace ESMC {
                 sstr << "[" << MParam->ToString() << "]";
             }
             sstr << endl << "    " << "from " << InitState.GetName();
-            sstr << endl << "    " << Guard->ToString() << " -> " << endl;
+            sstr << endl << "    " << Guard->ToString() << " ->" << endl;
             for (auto const& Update : Updates) {
                 sstr << "    " << Update->ToString() << endl;
             }
@@ -595,7 +595,7 @@ namespace ESMC {
                 sstr << "[" << MParam->ToString() << "]";
             }
             sstr << endl << "    " << "from " << InitState.GetName();
-            sstr << endl << "    " << Guard->ToString() << " -> " << endl;
+            sstr << endl << "    " << Guard->ToString() << " ->" << endl;
             for (auto const& Update : Updates) {
                 sstr << "    " << Update->ToString() << endl;
             }
@@ -613,7 +613,7 @@ namespace ESMC {
             ostringstream sstr;
             sstr << "Symbolic Internal Transition {" << endl;
             sstr << endl << "    " << "from " << InitState.GetName();
-            sstr << endl << "    " << Guard->ToString() << " -> " << endl;
+            sstr << endl << "    " << Guard->ToString() << " ->" << endl;
             for (auto const& Update : Updates) {
                 sstr << "    " << Update->ToString() << endl;
             }

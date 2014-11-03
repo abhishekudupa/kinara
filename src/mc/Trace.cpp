@@ -657,30 +657,31 @@ namespace ESMC {
                 }
             }
 
-            // Self loop??
-            if (CurEndOfPath->Equals(StartOfLoop)) {
-                // Do we actually have a path?
-                if (PathSoFar.size() > 0) {
-                    return (new LivenessViolation(InitState, StemPath, PathSoFar,
-                                                  Checker->Printer, ThePS));
-                } else {
-                    // Or did we just fall through because of no fairness?
-                    // Just do an unwound bfs and match on the first successor
-                    // out of this state
-                    vector<PSTraceElemT> CurElems;
-                    auto CurPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
-                                                [&] (u32 CmdID, const ProductState* State) -> bool
-                                                {
-                                                    return true;
-                                                },
-                                                CurElems, SCCNodes);
-                    CurPair.first->GetSVPtr()->Recycle();
-                    delete CurPair.first;
-                    CurEndOfPath = CurPair.second;
-                    PathSoFar.insert(PathSoFar.end(), CurElems.begin(), CurElems.end());
+            // are we done?
+            if (PathSoFar.size() > 0 &&
+                PathSoFar.back().second->Equals(StartOfLoop)) {
+                return (new LivenessViolation(InitState, StemPath, PathSoFar,
+                                              Checker->Printer, ThePS));
+            } else if (PathSoFar.size() == 0 && SCCNodes.size() == 1) {
+                // Single node SCC with self loop
+                // Find the command
+                auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurEndOfPath));
+                for (auto const& Edge : Edges) {
+                    if (Edge->GetTarget()->Equals(CurEndOfPath)) {
+                        PSTraceElemT CurElem(GuardedCmds[Edge->GetGCmdIndex()],
+                                             new ProductState(Edge->GetTarget()->GetSVPtr()->Clone(),
+                                                              Edge->GetTarget()->GetMonitorState(),
+                                                              Edge->GetTarget()->GetIndexID(), 1));
+                        PathSoFar.push_back(CurElem);
+                        return new LivenessViolation(InitState, StemPath, PathSoFar,
+                                                     Checker->Printer, ThePS);
+                    }
                 }
+                throw InternalError((string)"Could not complete cycle in single node SCC.\n" +
+                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
             }
 
+            // That handles all the special cases!
             // Now connect this path back to the original state
             vector<PSTraceElemT> LoopBack;
             auto FinalPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
