@@ -1,13 +1,13 @@
-// SmartPtr.hpp --- 
-// 
+// SmartPtr.hpp ---
+//
 // Filename: SmartPtr.hpp
 // Author: Abhishek Udupa
 // Created: Sun Jun 29 14:10:50 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -50,9 +50,9 @@ namespace ESMC {
     template <typename T> class CSmartPtr;
 
     // Typedef for a normal ptr
-    template <typename T> 
+    template <typename T>
     using RawPtr = T*;
-    
+
     template <typename T>
     using RawCPtr = const T*;
 
@@ -121,7 +121,7 @@ namespace ESMC {
     {
     private:
         const T* Ptr_;
-        
+
         template<typename U>
         inline i64 Compare_(const U& Other) const;
         inline i64 Compare_(const T* OtherPtr) const;
@@ -140,12 +140,12 @@ namespace ESMC {
         CSmartPtr& operator = (CSmartPtr Other);
         CSmartPtr& operator = (SmartPtr<T> Other);
         CSmartPtr& operator = (const T* OtherPtr);
-        
+
         inline const T* GetPtr_() const;
 
         // casting, use at your own risk!
         inline operator const T* () const;
-        
+
         inline const T* operator -> () const;
         inline const T& operator * () const;
 
@@ -168,7 +168,7 @@ namespace ESMC {
         inline bool operator <= (const T* OtherPtr) const;
         inline bool operator > (const T* OtherPtr) const;
         inline bool operator >= (const T* OtherPtr) const;
-        
+
         inline bool operator ! () const;
         inline bool IsNull_() const;
     };
@@ -438,7 +438,7 @@ namespace ESMC {
         }
         Ptr_ = nullptr;
     }
-    
+
     template <typename T>
     inline CSmartPtr<T>& CSmartPtr<T>::operator = (CSmartPtr<T> Other)
     {
@@ -601,5 +601,5 @@ namespace ESMC {
 
 #endif /* ESMC_SMART_PTR_HPP_ */
 
-// 
+//
 // SmartPtr.hpp ends here

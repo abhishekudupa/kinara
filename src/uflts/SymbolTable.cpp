@@ -1,13 +1,13 @@
-// SymbolTable.cpp --- 
-// 
+// SymbolTable.cpp ---
+//
 // Filename: SymbolTable.cpp
 // Author: Abhishek Udupa
 // Created: Sun Jul 27 19:20:38 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -52,7 +52,7 @@ namespace ESMC {
         {
             // Nothing here
         }
-        
+
         DeclBase::~DeclBase()
         {
             // Nothing here
@@ -63,7 +63,7 @@ namespace ESMC {
             return DeclName;
         }
 
-        u64 DeclBase::Hash() const 
+        u64 DeclBase::Hash() const
         {
             if (!HashValid) {
                 ComputeHashValue();
@@ -117,7 +117,7 @@ namespace ESMC {
             }
         }
 
-        MsgDeclBase::~MsgDeclBase() 
+        MsgDeclBase::~MsgDeclBase()
         {
             // Nothing here
         }
@@ -154,7 +154,7 @@ namespace ESMC {
         {
             // Nothing here
         }
-        
+
         bool InMsgDecl::IsInput() const
         {
             return true;
@@ -169,7 +169,7 @@ namespace ESMC {
         {
             // Nothing here
         }
-        
+
         bool OutMsgDecl::IsInput() const
         {
             return false;
@@ -179,7 +179,7 @@ namespace ESMC {
         {
             return true;
         }
-        
+
         VarDecl::VarDecl(const string& Name, const Exprs::ExprTypeRef& Type)
             : DeclBase(Name), VarType(Type)
         {
@@ -221,7 +221,7 @@ namespace ESMC {
                 throw ESMCError((string)"State variable must be of enumerated type");
             }
         }
-        
+
         StateDecl::~StateDecl()
         {
             // Nothing here
@@ -239,7 +239,7 @@ namespace ESMC {
             if (!Other.Is<StateDecl>()) {
                 return false;
             }
-            
+
             auto OtherPtr = Other.As<StateDecl>();
             return (OtherPtr->Type == Type);
         }
@@ -279,7 +279,7 @@ namespace ESMC {
             if (it == DeclMap.end()) {
                 return DeclRef::NullPtr;
             } else {
-                return it->second; 
+                return it->second;
             }
         }
 
@@ -355,9 +355,9 @@ namespace ESMC {
             ScopeStack = Other.ScopeStack;
             return *this;
         }
-        
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-// 
+//
 // SymbolTable.cpp ends here

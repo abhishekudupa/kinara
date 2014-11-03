@@ -1,13 +1,13 @@
-// LTSUtils.cpp --- 
-// 
+// LTSUtils.cpp ---
+//
 // Filename: LTSUtils.cpp
 // Author: Abhishek Udupa
 // Created: Fri Aug 15 12:14:12 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -44,7 +44,7 @@ namespace ESMC {
         namespace Detail {
 
             MsgTransformer::MsgTransformer(MgrT* Mgr, const string& MsgVarName,
-                                           const ExprTypeRef& MsgRecType, 
+                                           const ExprTypeRef& MsgRecType,
                                            const ExprTypeRef& UnifiedMType)
                 : VisitorBaseT("MessageTransformer"),
                   Mgr(Mgr), MsgVarName(MsgVarName), MsgRecType(MsgRecType),
@@ -91,26 +91,26 @@ namespace ESMC {
                 }
 
                 auto OpCode = Exp->GetOpCode();
-                if (OpCode == LTSOps::OpField && 
+                if (OpCode == LTSOps::OpField &&
                     OldChildren[0]->Is<Exprs::VarExpression>() &&
                     OldChildren[0]->As<Exprs::VarExpression>()->GetVarName() == MsgVarName &&
                     OldChildren[0]->As<Exprs::VarExpression>()->GetVarType() == MsgRecType) {
-                    
+
                     ExprTypeRef ActMsgRecType = nullptr;
                     if (MsgRecType->Is<ExprRecordType>()) {
                         ActMsgRecType = MsgRecType;
                     } else if (MsgRecType->Is<ExprParametricType>()) {
                         ActMsgRecType = MsgRecType->SAs<ExprParametricType>()->GetBaseType();
                     } else {
-                        throw ESMCError((string)"MsgTransformer: Message type \"" + 
-                                        MsgRecType->ToString() + "\" is not a parametric " + 
+                        throw ESMCError((string)"MsgTransformer: Message type \"" +
+                                        MsgRecType->ToString() + "\" is not a parametric " +
                                         "type or a record type");
                     }
 
                     auto MTypeAsUnion = UnifiedMType->As<ExprUnionType>();
                     auto FieldVarExp = OldChildren[1]->As<VarExpression>();
                     auto const& OldFieldName = FieldVarExp->GetVarName();
-                    auto const& NewFieldName = MTypeAsUnion->MapFromMemberField(ActMsgRecType, 
+                    auto const& NewFieldName = MTypeAsUnion->MapFromMemberField(ActMsgRecType,
                                                                                 OldFieldName);
                     auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
                     auto NewFieldVar = Mgr->MakeVar(NewFieldName, FAType);
@@ -136,7 +136,7 @@ namespace ESMC {
                 ExpStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
             }
 
-            ExpT MsgTransformer::Do(MgrT* Mgr, 
+            ExpT MsgTransformer::Do(MgrT* Mgr,
                                     const ExpT& Exp,
                                     const string& MsgVarName,
                                     const ExprTypeRef& MsgRecType,
@@ -179,7 +179,7 @@ namespace ESMC {
 
                 auto OpCode = Exp->GetOpCode();
                 auto const& Children = Exp->GetChildren();
-                
+
                 const u32 NumChildren = Exp->GetChildren().size();
                 vector<ExpT> NewChildren(NumChildren);
                 for (u32 i = 0; i < NumChildren; ++i) {
@@ -288,10 +288,10 @@ namespace ESMC {
                 --ConstIdx;
 
                 auto it = TypeOffsets.find(Type);
-                
+
                 if (it == TypeOffsets.end()) {
-                    throw ESMCError((string)"Could not find offset for type: " + 
-                                    Type->ToString() + "\nIn Expression Permuter, on " + 
+                    throw ESMCError((string)"Could not find offset for type: " +
+                                    Type->ToString() + "\nIn Expression Permuter, on " +
                                     "expression:\n" + Exp->ToString());
                 }
                 auto Offset = it->second;
@@ -329,7 +329,7 @@ namespace ESMC {
                 auto const& QExpr = Exp->GetQExpression();
 
                 QExpr->Accept(this);
-                
+
                 auto NewExp = ExpStack.back();
                 ExpStack.pop_back();
                 ExpStack.push_back(Mgr->MakeExists(QVarTypes, NewExp));
@@ -341,7 +341,7 @@ namespace ESMC {
                 auto const& QExpr = Exp->GetQExpression();
 
                 QExpr->Accept(this);
-                
+
                 auto NewExp = ExpStack.back();
                 ExpStack.pop_back();
                 ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewExp));
@@ -360,5 +360,5 @@ namespace ESMC {
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-// 
+//
 // LTSUtils.cpp ends here

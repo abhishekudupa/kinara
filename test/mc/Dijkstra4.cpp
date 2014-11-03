@@ -36,7 +36,7 @@ void DeclareMsgs(LabelledTS* TheLTS)
 {
     assert(TheLTS != nullptr);
     cout << __LOGSTR__ << "Declaring messages." << endl;
-    
+
     auto BoolType = TheLTS->MakeBoolType();
     for (size_t i = 0; i < NumProcesses; i++) {
         vector<pair<string, ExprTypeRef>> fields { make_pair(string("Data"), BoolType),
@@ -142,7 +142,7 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
     Proc[i]->FreezeVars();
 
     cout << __LOGSTR__ << "Adding transitions." << endl;
-    
+
     Proc[i]->AddInputMsg(WriteMsgs[i - 1], {});
     auto Rim1Exp = TheLTS->MakeVar("R" + to_string(i - 1), WriteMsgs[i - 1]);
     auto Dim1Exp = TheLTS->MakeVar(string("Data") + to_string(i - 1), TheLTS->MakeBoolType());
@@ -380,7 +380,7 @@ void DeclareShadowMonitor(LabelledTS* TheLTS)
 
 void DeclareSafetyConcreteMonitor(LabelledTS* TheLTS)
 {
-    
+
 }
 
 void DeclareAutomata(LabelledTS* TheLTS)

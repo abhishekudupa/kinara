@@ -1,13 +1,13 @@
-// Trace.cpp --- 
-// 
+// Trace.cpp ---
+//
 // Filename: Trace.cpp
 // Author: Abhishek Udupa
 // Created: Tue Sep  9 13:34:49 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -79,8 +79,8 @@ namespace ESMC {
             return Printer;
         }
 
-        inline const StateVec* 
-        TraceBase::UnwindPermPath(AQSPermPath* PermPath, 
+        inline const StateVec*
+        TraceBase::UnwindPermPath(AQSPermPath* PermPath,
                                   LTSChecker* Checker,
                                   vector<TraceElemT>& PathElems)
         {
@@ -99,7 +99,7 @@ namespace ESMC {
 
             for (auto Edge : PPathElems) {
                 auto CurInvPermIt = PermSet->GetIteratorForInv(Edge->GetPermutation());
-                auto InvPermAlongPathIt = PermSet->Compose(InvPermAlongPath, 
+                auto InvPermAlongPathIt = PermSet->Compose(InvPermAlongPath,
                                                            CurInvPermIt.GetIndex());
                 InvPermAlongPath = InvPermAlongPathIt.GetIndex();
                 auto NextPermState = Edge->GetTarget();
@@ -109,7 +109,7 @@ namespace ESMC {
                 // Printer->PrintState(NextPermState, cout);
                 // cout << "-------------------------------------------" << endl;
 
-                auto NextUnwoundState = TheCanonicalizer->ApplyPermutation(NextPermState, 
+                auto NextUnwoundState = TheCanonicalizer->ApplyPermutation(NextPermState,
                                                                            InvPermAlongPath);
                 // cout << "Unwound State:" << endl;
                 // cout << "-------------------------------------------" << endl;
@@ -161,12 +161,12 @@ namespace ESMC {
                     sstr << "------------------------------------------------" << endl;
                     Checker->Printer->PrintState(CurUnwoundState, sstr);
                     sstr << "------------------------------------------------" << endl;
-                    
+
                     sstr << "to the next unwound state:" << endl;
                     sstr << "------------------------------------------------" << endl;
                     Checker->Printer->PrintState(NextUnwoundState, CurUnwoundState, sstr);
                     sstr << "------------------------------------------------" << endl;
-                    
+
                     for (auto const& Cmd : GuardedCommands) {
                         bool Exception;
                         auto CandNext = TryExecuteCommand(Cmd, CurUnwoundState, Exception);
@@ -198,9 +198,9 @@ namespace ESMC {
                         auto State = PPathElem->GetTarget();
                         auto CmdIdx = PPathElem->GetGCmdIndex();
                         auto const& Cmd = GuardedCommands[CmdIdx];
-                        
+
                         sstr << "Fired Command:" << endl << Cmd->ToString()
-                             << endl << "with permutation " << PPathElem->GetPermutation() 
+                             << endl << "with permutation " << PPathElem->GetPermutation()
                              << " to get next permuted state:" << endl;
                         sstr << "------------------------------------------------" << endl;
                         Checker->Printer->PrintState(State, CurPermState, sstr);
@@ -210,9 +210,9 @@ namespace ESMC {
                             break;
                         }
                     }
-                    
-                    
-                    throw InternalError(sstr.str() + "\nAt: " + __FILE__ + ":" + 
+
+
+                    throw InternalError(sstr.str() + "\nAt: " + __FILE__ + ":" +
                                         to_string(__LINE__));
                 }
 
@@ -224,7 +224,7 @@ namespace ESMC {
         }
 
         inline const ProductState*
-        TraceBase::UnwindPermPath(PSPermPath* PermPath, LTSChecker* Checker, 
+        TraceBase::UnwindPermPath(PSPermPath* PermPath, LTSChecker* Checker,
                                   vector<PSTraceElemT>& PathElems,
                                   u32& InvPermAlongPathOut)
         {
@@ -235,8 +235,8 @@ namespace ESMC {
             auto Monitor = ThePS->GetMonitor();
             auto ProcIdxSet = Monitor->GetIndexSet();
 
-            auto CurUnwoundState = TheCanonicalizer->ApplyPermutation(Origin, 
-                                                                      InvPermAlongPathOut, 
+            auto CurUnwoundState = TheCanonicalizer->ApplyPermutation(Origin,
+                                                                      InvPermAlongPathOut,
                                                                       ProcIdxSet);
             auto UnwoundOrigin = CurUnwoundState;
             auto const& PPathElems = PermPath->GetPathElems();
@@ -245,7 +245,7 @@ namespace ESMC {
 
             for (auto Edge : PPathElems) {
                 auto CurInvPermIt = PermSet->GetIteratorForInv(Edge->GetPermutation());
-                auto InvPermAlongPathIt = PermSet->Compose(InvPermAlongPath, 
+                auto InvPermAlongPathIt = PermSet->Compose(InvPermAlongPath,
                                                            CurInvPermIt.GetIndex());
                 InvPermAlongPath = InvPermAlongPathIt.GetIndex();
                 auto NextPermPS = Edge->GetTarget();
@@ -258,12 +258,12 @@ namespace ESMC {
                 for (auto const& Cmd : GuardedCommands) {
                     // we ignore the exception here
                     bool Exception = false;
-                    auto CandidateSV = TryExecuteCommand(Cmd, CurUnwoundState->GetSVPtr(), 
+                    auto CandidateSV = TryExecuteCommand(Cmd, CurUnwoundState->GetSVPtr(),
                                                          Exception);
                     if (CandidateSV == nullptr) {
                         continue;
                     }
-                    
+
                     auto SortedCandidateSV = TheCanonicalizer->SortChans(CandidateSV);
                     CandidateSV->Recycle();
 
@@ -279,7 +279,7 @@ namespace ESMC {
 
                 if (!FoundCmd) {
                     throw InternalError((string)"Unable to find a command to compute next " +
-                                        "unwound product state.\nAt: " + __FILE__ + ":" + 
+                                        "unwound product state.\nAt: " + __FILE__ + ":" +
                                         to_string(__LINE__));
                 }
 
@@ -324,10 +324,10 @@ namespace ESMC {
         }
 
         inline pair<const ProductState*, const ProductState*>
-        TraceBase::DoUnwoundBFS(const ProductState* Root, const LTSChecker* Checker, 
+        TraceBase::DoUnwoundBFS(const ProductState* Root, const LTSChecker* Checker,
                                 u32& InvPermAlongPathOut,
                                 const function<bool(u32, const ProductState*)>& MatchPred,
-                                vector<PSTraceElemT>& PathElems, 
+                                vector<PSTraceElemT>& PathElems,
                                 const unordered_set<const ProductState*>& Bounds)
         {
             auto ThePS = Checker->ThePS;
@@ -357,24 +357,24 @@ namespace ESMC {
                 auto CurPermPS = CurPair.first;
                 auto CurPermIndex = CurPair.second;
 
-                auto CurUnwoundPS = TheCanonicalizer->ApplyPermutation(CurPermPS, 
-                                                                       CurPermIndex, 
+                auto CurUnwoundPS = TheCanonicalizer->ApplyPermutation(CurPermPS,
+                                                                       CurPermIndex,
                                                                        ProcIdxSet);
                 auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurPermPS));
-                
+
                 for (auto Edge : Edges) {
                     auto NextPermPS = Edge->GetTarget();
-                    
+
                     if (Bounds.find(NextPermPS) == Bounds.end()) {
                         // Not part of the scc, ignore
                         continue;
                     }
-                    
+
                     auto EdgePermIndex = Edge->GetPermutation();
                     auto EdgeInvPermIt = PermSet->GetIteratorForInv(EdgePermIndex);
                     auto NextPermIt = PermSet->Compose(CurPermIndex, EdgeInvPermIt.GetIndex());
                     auto NextPermIndex = NextPermIt.GetIndex();
-                    
+
                     auto NextPair = make_pair(NextPermPS, NextPermIndex);
                     if (VisitedStates.find(NextPair) != VisitedStates.end()) {
                         // Already visited
@@ -388,8 +388,8 @@ namespace ESMC {
                                                                             NextPermIndex,
                                                                             ProcIdxSet);
 
-                    // Find out which command takes us from the current 
-                    // unwound product state to the next unwound product 
+                    // Find out which command takes us from the current
+                    // unwound product state to the next unwound product
                     // state
                     bool FoundCmd = false;
                     for (u32 i = 0; i < NumGuardedCmds; ++i) {
@@ -421,14 +421,14 @@ namespace ESMC {
                         }
                     }
 
-                    // Delete the unwound product state, we'll recreate it 
+                    // Delete the unwound product state, we'll recreate it
                     // later anyway
                     NextUnwoundPS->GetSVPtr()->Recycle();
                     delete NextUnwoundPS;
 
                     if (!FoundCmd) {
                         throw InternalError((string)"Unable to find a command to compute next " +
-                                            "unwound product state.\nAt: " + __FILE__ + ":" + 
+                                            "unwound product state.\nAt: " + __FILE__ + ":" +
                                             to_string(__LINE__));
                     }
 
@@ -472,8 +472,8 @@ namespace ESMC {
             return (make_pair(CurUnwoundPS, TargetPSPerm.first));
         }
 
-        inline bool 
-        TraceBase::CheckFairnessSat(const vector<PSTraceElemT>& PathSoFar, 
+        inline bool
+        TraceBase::CheckFairnessSat(const vector<PSTraceElemT>& PathSoFar,
                                     const Detail::FairnessChecker* FChecker,
                                     const vector<GCmdRef>& GuardedCmds,
                                     u32 InstanceID)
@@ -498,7 +498,7 @@ namespace ESMC {
                             return true;
                         }
                     }
-                    return false;                    
+                    return false;
                 } else {
                     auto const& SatCmds = FChecker->GetCmdIDsToRespondTo(InstanceID);
                     for (auto const& TraceElem : PathSoFar) {
@@ -508,7 +508,7 @@ namespace ESMC {
 
                             // We ignore the exception here
                             bool Exception = false;
-                            auto NS = TryExecuteCommand(GuardedCmds[SatCmd], 
+                            auto NS = TryExecuteCommand(GuardedCmds[SatCmd],
                                                         PS->GetSVPtr(), Exception);
                             if (NS != nullptr) {
                                 NS->Recycle();
@@ -525,8 +525,8 @@ namespace ESMC {
                 }
             }
         }
-        
-        SafetyViolation* TraceBase::MakeSafetyViolation(const StateVec* ErrorState, 
+
+        SafetyViolation* TraceBase::MakeSafetyViolation(const StateVec* ErrorState,
                                                         LTSChecker* Checker,
                                                         const ExpT& BlownInvariant)
         {
@@ -535,7 +535,7 @@ namespace ESMC {
             return MakeSafetyViolation(PPath, Checker, BlownInvariant);
         }
 
-        DeadlockViolation* TraceBase::MakeDeadlockViolation(const StateVec* ErrorState, 
+        DeadlockViolation* TraceBase::MakeDeadlockViolation(const StateVec* ErrorState,
                                                             LTSChecker* Checker)
         {
             auto TheAQS = Checker->AQS;
@@ -543,8 +543,8 @@ namespace ESMC {
             return MakeDeadlockViolation(PPath, Checker);
         }
 
-        SafetyViolation* TraceBase::MakeSafetyViolation(AQSPermPath* PermPath, 
-                                                        LTSChecker* Checker, 
+        SafetyViolation* TraceBase::MakeSafetyViolation(AQSPermPath* PermPath,
+                                                        LTSChecker* Checker,
                                                         const ExpT& BlownInvariant)
         {
             vector<TraceElemT> PathElems;
@@ -554,18 +554,18 @@ namespace ESMC {
                                        Checker->Printer, BlownInvariant);
         }
 
-        DeadlockViolation* TraceBase::MakeDeadlockViolation(AQSPermPath* PermPath, 
+        DeadlockViolation* TraceBase::MakeDeadlockViolation(AQSPermPath* PermPath,
                                                             LTSChecker* Checker)
         {
             vector<TraceElemT> PathElems;
             auto UnwoundInitState = UnwindPermPath(PermPath, Checker, PathElems);
             delete PermPath;
             return new DeadlockViolation(UnwoundInitState, PathElems,
-                                         Checker->Printer, 
+                                         Checker->Printer,
                                          Checker->DeadlockFreeInvariant);
         }
 
-        LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot, 
+        LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot,
                                                             LTSChecker* Checker)
         {
             auto ThePS = Checker->ThePS;
@@ -573,11 +573,11 @@ namespace ESMC {
 
             auto&& SCCNodes = ExpandSCC(SCCRoot, Checker);
             u32 InvPermAlongPath = 0;
-            
+
             // Find a path from the initial state to one of the SCC nodes
             auto StemPPath = ThePS->FindPath([&] (const ProductState* State) -> bool
                                              {
-                                                 return (SCCNodes.find(State) != 
+                                                 return (SCCNodes.find(State) !=
                                                          SCCNodes.end());
                                              });
             vector<PSTraceElemT> StemPath;
@@ -594,11 +594,11 @@ namespace ESMC {
             for (auto const& FCheckers : AllFCheckers) {
                 for (auto FChecker : FCheckers) {
                     const u32 NumInstances = FChecker->NumInstances;
-                    
+
                     for (u32 InstanceID = 0; InstanceID < NumInstances; ++InstanceID) {
 
                         // Check if this fairness is already satisfied
-                        auto AlreadySat = CheckFairnessSat(PathSoFar, FChecker, 
+                        auto AlreadySat = CheckFairnessSat(PathSoFar, FChecker,
                                                            GuardedCmds, InstanceID);
                         if (AlreadySat) {
                             continue;
@@ -610,7 +610,7 @@ namespace ESMC {
                         // extend this path
                         if (FChecker->IsStrongFairness()) {
                             if (FChecker->IsEnabled(InstanceID)) {
-                                MatchPred = 
+                                MatchPred =
                                     [&] (u32 CmdID, const ProductState* State) -> bool
                                     {
                                         return (SatCmds.find(CmdID) != SatCmds.end());
@@ -619,7 +619,7 @@ namespace ESMC {
                             // if not then, we're trivially satisfied
                         } else {
                             if (!FChecker->IsDisabled(InstanceID)) {
-                                MatchPred = 
+                                MatchPred =
                                     [&] (u32 CmdID, const ProductState* State) -> bool
                                     {
                                         return (SatCmds.find(CmdID) != SatCmds.end());
@@ -632,7 +632,7 @@ namespace ESMC {
                                         for (auto SatCmdID : SatCmds) {
                                             // we ignore exceptions here
                                             bool Exception = false;
-                                            auto NS = TryExecuteCommand(GuardedCmds[SatCmdID], 
+                                            auto NS = TryExecuteCommand(GuardedCmds[SatCmdID],
                                                                         State->GetSVPtr(),
                                                                         Exception);
                                             if (NS != nullptr) {
@@ -645,7 +645,7 @@ namespace ESMC {
                             }
                         }
 
-                        auto CurPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath, 
+                        auto CurPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
                                                     MatchPred, CurElems, SCCNodes);
 
                         CurPair.first->GetSVPtr()->Recycle();
@@ -658,7 +658,7 @@ namespace ESMC {
             }
 
             // audupa: DEBUG
-            
+
             // auto TempLV = new LivenessViolation(InitState, StemPath, PathSoFar,
             //                                     Checker->Printer, ThePS);
             // cout << TempLV->ToString() << endl << endl;
@@ -684,7 +684,7 @@ namespace ESMC {
             delete FinalPair.first;
 
             PathSoFar.insert(PathSoFar.end(), LoopBack.begin(), LoopBack.end());
-            
+
             return (new LivenessViolation(InitState, StemPath, PathSoFar,
                                           Checker->Printer, ThePS));
         }
@@ -695,7 +695,7 @@ namespace ESMC {
                                          const vector<TraceElemT>& TraceElems,
                                          StateVecPrinter* Printer,
                                          const ExpT& BlownInvariant)
-            : TraceBase(Printer), InitialState(InitialState), 
+            : TraceBase(Printer), InitialState(InitialState),
               TraceElems(TraceElems), BlownInvariant(BlownInvariant)
         {
             // Nothing here
@@ -723,11 +723,11 @@ namespace ESMC {
         {
             ostringstream sstr;
             if (this->Is<DeadlockViolation>()) {
-                sstr << "Trace to deadlock with " << TraceElems.size() 
+                sstr << "Trace to deadlock with " << TraceElems.size()
                      << " steps:" << endl << endl;
             } else {
-                sstr << "Trace to safety violation with " << TraceElems.size() 
-                     << " steps:" << endl << endl;                
+                sstr << "Trace to safety violation with " << TraceElems.size()
+                     << " steps:" << endl << endl;
             }
             sstr << "Initial State (in full)" << endl;
             sstr << "-----------------------------------------------------" << endl;
@@ -739,8 +739,8 @@ namespace ESMC {
                 auto const& MsgType = TraceElem.first->GetMsgType();
                 auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
                 if (Verbosity < 1) {
-                    sstr << "Fired Guarded Command with label: " 
-                         << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() : 
+                    sstr << "Fired Guarded Command with label: "
+                         << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() :
                              "(internal transition)") << endl;
                 } else {
                     sstr << "Fired Guarded Command:" << endl;
@@ -785,7 +785,7 @@ namespace ESMC {
         {
             // Nothing here
         }
-        
+
         // We assume that all statevectors are cloned
         // and the product states are free to be deleted
         LivenessViolation::~LivenessViolation()
@@ -823,20 +823,20 @@ namespace ESMC {
         {
             ostringstream sstr;
             sstr << "Trace to liveness violation with " << StemPath.size()
-                 << " steps in the stem and " << LoopPath.size() 
+                 << " steps in the stem and " << LoopPath.size()
                  << " steps in the loop:" << endl;
             sstr << "Initial State (in full)" << endl;
             sstr << "-----------------------------------------------------" << endl;
             Printer->PrintState(InitialState, ThePS, sstr);
             sstr << "-----------------------------------------------------" << endl << endl;
-            
+
             auto PrevState = InitialState;
             for (auto const& TraceElem : StemPath) {
                 auto const& MsgType = TraceElem.first->GetMsgType();
                 auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
                 if (Verbosity < 1) {
-                    sstr << "Fired Guarded Command with label: " 
-                         << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() : 
+                    sstr << "Fired Guarded Command with label: "
+                         << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() :
                              "(internal transition)") << endl;
                 } else {
                     sstr << "Fired Guarded Command:" << endl;
@@ -846,21 +846,21 @@ namespace ESMC {
                 sstr << "-----------------------------------------------------" << endl;
                 Printer->PrintState(TraceElem.second, PrevState, ThePS, sstr);
                 sstr << "-----------------------------------------------------" << endl << endl;
-                PrevState = TraceElem.second;                
+                PrevState = TraceElem.second;
             }
 
-            sstr << "First state of the loop (in full), which is same as last state of " 
+            sstr << "First state of the loop (in full), which is same as last state of "
                  << "the stem printed above:" << endl;
             sstr << "-----------------------------------------------------" << endl;
             Printer->PrintState(PrevState, ThePS, sstr);
             sstr << "-----------------------------------------------------" << endl << endl;
-            
+
             for (auto const& TraceElem : LoopPath) {
                 auto const& MsgType = TraceElem.first->GetMsgType();
                 auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
                 if (Verbosity < 1) {
-                    sstr << "Fired Guarded Command with label: " 
-                         << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() : 
+                    sstr << "Fired Guarded Command with label: "
+                         << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() :
                              "(internal transition)") << endl;
                 } else {
                     sstr << "Fired Guarded Command:" << endl;
@@ -884,5 +884,5 @@ namespace ESMC {
     } /* end namespace MC */
 } /* end namespace ESMC */
 
-// 
+//
 // Trace.cpp ends here

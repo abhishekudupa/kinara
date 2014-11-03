@@ -240,9 +240,9 @@ namespace ESMC {
                     auto ExpTypeAsArrayType = ExpType->As<ExprArrayType>();
                     auto IndexType = ExpTypeAsArrayType->GetIndexType();
                     for (auto Element: IndexType->GetElementsNoUndef()) {
-                        auto ArrayElement = 
-                            Exp->GetMgr()->MakeExpr(LTSOps::OpIndex, 
-                                                    Exp, 
+                        auto ArrayElement =
+                            Exp->GetMgr()->MakeExpr(LTSOps::OpIndex,
+                                                    Exp,
                                                     Exp->GetMgr()->MakeVal(Element, IndexType));
                         ExpressionsToCheck.push_back(ArrayElement);
                     }
@@ -329,7 +329,7 @@ namespace ESMC {
             return GuardedCommands;
         }
 
-        // MgrT::SubstMapT 
+        // MgrT::SubstMapT
         // TraceAnalyses::GetSubstitutionsForTransMsg(const vector<LTSAssignRef>& updates)
         // {
         //     MgrT::SubstMapT SubstMapForTransMsg;
@@ -518,7 +518,7 @@ namespace ESMC {
 
         set<LTSFairObjRef>
         TraceAnalyses::TriviallySatisfiedFairnessObjectsInLoop(LabelledTS* TheLTS,
-                                                               const LivenessViolation* 
+                                                               const LivenessViolation*
                                                                LivenessViolation)
         {
             auto Retval = GetLTSFairnessObjects(TheLTS);
@@ -753,7 +753,7 @@ namespace ESMC {
         {
             // cout << "computing WP" << endl << endl;
             // cout << Trace->ToString() << endl;
-            
+
             auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
             auto TheLTS = TheSolver->TheLTS;
             ExpT Phi = InitialPredicate;
@@ -767,7 +767,7 @@ namespace ESMC {
                 MgrT::SubstMapT SubstMapForTransition;
                 // cout << guarded_command->ToString() << endl;
 
-                for (auto it = updates.rbegin(); 
+                for (auto it = updates.rbegin();
                      it != updates.rend(); ++it) {
 
                     auto it2 = SubstMapForTransition.find((*it)->GetLHS());
@@ -785,7 +785,7 @@ namespace ESMC {
                 const ExpT& guard = guarded_command->GetLoweredGuard();
                 // cout << "SubstMap:" << endl;
                 // for (auto const& SubstPair : SubstMapForTransition) {
-                //     cout << SubstPair.first << endl << 
+                //     cout << SubstPair.first << endl <<
                 //         "->" << endl << SubstPair.second << endl;
                 // }
                 // cout << endl << endl;
@@ -806,7 +806,7 @@ namespace ESMC {
             //         // cout << Exp << endl;
             //         auto Value = Exp->ExtensionData.Interp->Evaluate(InitialState);
             //         // cout << Value << endl;
-            //         auto InitialValue = 
+            //         auto InitialValue =
             // TheLTS->MakeVal(Exp->GetType()->As<ExprScalarType>()->ValToConst(Value), Exp->GetType());
             //         // cout << InitialValue << endl;
             //         InitialMap[Exp] = InitialValue;
@@ -942,11 +942,11 @@ namespace ESMC {
                     SubstMapForTransition[Update->GetLHS()] = Update->GetRHS();
                 }
 
-                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition, 
+                Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, SubstMapForTransition,
                                                                       updates);
                 Phi = Phi->GetMgr()->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
             }
-            
+
             // TODO: FIXME
             Phi = Phi->GetMgr()->ApplyTransform<SubstitutorForWP>(Phi, InvertLoopValues,
                                                                   vector<LTSAssignRef>());
@@ -1009,8 +1009,8 @@ namespace ESMC {
 
             if (Conjuncts.size() == 0) {
                 throw ESMCError((string) "No condition found for liveness!");
-            } 
-            
+            }
+
             return MakeConjunction(Conjuncts, TheLTS->GetMgr());
         }
 
@@ -1059,9 +1059,9 @@ namespace ESMC {
         //     return PathCondition;
         // }
 
-        // vector<ExpT> 
+        // vector<ExpT>
         // TraceAnalyses::SymbolicExecution(LabelledTS* TheLTS, TraceBase* Trace,
-        //                                  vector<vector<MgrT::SubstMapT>>& 
+        //                                  vector<vector<MgrT::SubstMapT>>&
         //                                  symbolic_states_per_initial)
         // {
         //     vector<ExpT> PathConditions;
@@ -1096,7 +1096,7 @@ namespace ESMC {
         //                 auto lhs = update.first;
         //                 auto TempMemory = Memory;
         //                 TempMemory.erase(lhs);
-        //                 lhs = 
+        //                 lhs =
         //                     lhs->GetMgr()->ApplyTransform<SubstitutorForWP>(lhs, TempMemory, updates);
         //                 auto rhs = update.second;
         //                 auto new_rhs = rhs->GetMgr()->ApplyTransform<SubstitutorForWP>(rhs, Memory, updates);

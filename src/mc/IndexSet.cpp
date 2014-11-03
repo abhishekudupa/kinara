@@ -1,13 +1,13 @@
-// IndexSet.cpp --- 
-// 
+// IndexSet.cpp ---
+//
 // Filename: IndexSet.cpp
 // Author: Abhishek Udupa
 // Created: Fri Aug 29 01:45:29 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -155,7 +155,7 @@ namespace ESMC {
                     auto CurExp = ParamInst[i]->As<Exprs::ConstExpression>();
                     auto const& CurVal = CurExp->GetConstValue();
                     auto const& CurType = CurExp->GetConstType()->As<Exprs::ExprScalarType>();
-                    
+
                     auto IndexVal = CurType->ConstToVal(CurVal) - 1;
                     CurIV[i] = (u08)IndexVal;
                 }
@@ -191,7 +191,7 @@ namespace ESMC {
             }
             auto it = IndexVecToID.find(WorkingIV);
             if (it == IndexVecToID.end()) {
-                throw InternalError((string)"Could not resolve index vector.\nAt: " + 
+                throw InternalError((string)"Could not resolve index vector.\nAt: " +
                                     __FILE__ + ":" + to_string(__LINE__));
             }
             return it->second;
@@ -213,7 +213,7 @@ namespace ESMC {
             return it->second;
         }
 
-        
+
         SystemIndexSet::SystemIndexSet(const vector<vector<vector<ExpT>>>& ProcessParamInsts)
             : NumTrackedIndices(0)
         {
@@ -226,7 +226,7 @@ namespace ESMC {
                 for (u32 i = 0; i < CurSize; ++i) {
                     IndexToPIdx.push_back(make_pair(CurPIdxSet, NumTrackedIndices));
                 }
-                ClassIDBounds.push_back(make_pair(NumTrackedIndices, 
+                ClassIDBounds.push_back(make_pair(NumTrackedIndices,
                                                   NumTrackedIndices + CurSize - 1));
                 ++ClassID;
                 NumTrackedIndices += CurSize;
@@ -274,5 +274,5 @@ namespace ESMC {
     } /* end namespace MC */
 } /* end namespace ESMC */
 
-// 
+//
 // IndexSet.cpp ends here

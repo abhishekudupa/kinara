@@ -1,13 +1,13 @@
-// LTSTransitions.cpp --- 
-// 
+// LTSTransitions.cpp ---
+//
 // Filename: LTSTransitions.cpp
 // Author: Abhishek Udupa
 // Created: Fri Aug  8 16:26:58 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -115,7 +115,7 @@ namespace ESMC {
 
         bool LTSTransitionBase::IsTentative() const
         {
-            return (SymbolicTransition != LTSSymbTransRef::NullPtr && 
+            return (SymbolicTransition != LTSSymbTransRef::NullPtr &&
                     SymbolicTransition->IsTentative());
         }
 
@@ -174,7 +174,7 @@ namespace ESMC {
 
             sstr << IndentString << "transition {" << endl;
             sstr << IndentString << "    on state " << InitState.GetName() << endl;
-            sstr << IndentString << "    on input message \"" << MessageName 
+            sstr << IndentString << "    on input message \"" << MessageName
                  << "\" of type " << MessageType->ToString() << endl;
             sstr << IndentString << "    Guard: " << Guard->ToString() << endl;
             sstr << IndentString << "    Updates:" << endl;
@@ -195,7 +195,7 @@ namespace ESMC {
                                                  const set<string>& CompOfFairnessSets,
                                                  const LTSSymbTransRef& SymbolicTransition)
             : LTSTransitionIOBase(TheEFSM, ParamInst, InitState, Guard, Updates,
-                                  MessageName, MessageType, SymbolicTransition),  
+                                  MessageName, MessageType, SymbolicTransition),
               CompOfFairnessSets(CompOfFairnessSets)
         {
             // Nothing here
@@ -218,7 +218,7 @@ namespace ESMC {
 
             sstr << IndentString << "transition {" << endl;
             sstr << IndentString << "    on state " << InitState.GetName() << endl;
-            sstr << IndentString << "    with output message \"" << MessageName 
+            sstr << IndentString << "    with output message \"" << MessageName
                  << "\" of type " << MessageType->ToString() << endl;
             sstr << IndentString << "    Guard: " << Guard->ToString() << endl;
             sstr << IndentString << "    Updates:" << endl;
@@ -275,10 +275,10 @@ namespace ESMC {
                                              const ExprTypeRef& MsgType, i32 MsgTypeID,
                                              const set<LTSFairObjRef>& Fairnesses,
                                              const vector<LTSTransRef>& ProductTrans)
-            : Mgr(Mgr), GuardComps(GuardComps), Updates(Updates), MsgType(MsgType), 
-              MsgTypeID(MsgTypeID), FairnessObjs(Fairnesses.begin(), Fairnesses.end()), 
+            : Mgr(Mgr), GuardComps(GuardComps), Updates(Updates), MsgType(MsgType),
+              MsgTypeID(MsgTypeID), FairnessObjs(Fairnesses.begin(), Fairnesses.end()),
               ProductTrans(ProductTrans),
-              Tentative(any_of(ProductTrans.begin(), ProductTrans.end(), 
+              Tentative(any_of(ProductTrans.begin(), ProductTrans.end(),
                                [&] (const LTSTransRef& Trans) -> bool
                                {
                                    return Trans->IsTentative();
@@ -301,7 +301,7 @@ namespace ESMC {
                 auto EFSM = Trans->GetAutomaton()->SAs<EFSMBase>();
                 auto const& StateType = EFSM->GetStateType();
                 auto const& InitStateName = Trans->GetInitState().GetName();
-                auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, 
+                auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ,
                                            Mgr->MakeVar("state", StateType),
                                            Mgr->MakeVal(InitStateName, StateType));
                 auto const& RebaseSubstMap = EFSM->GetRebaseSubstMap(Trans->GetParamInst());
@@ -342,7 +342,7 @@ namespace ESMC {
             return LoweredUpdates;
         }
 
-        void 
+        void
         LTSGuardedCommand::SetLoweredUpdates(const vector<LTSAssignRef>& LoweredUpdates) const
         {
             this->LoweredUpdates = LoweredUpdates;
@@ -468,10 +468,10 @@ namespace ESMC {
                                                      const ExpT& Guard,
                                                      const vector<LTSAssignRef>& Updates,
                                                      bool Tentative)
-          : TransParams(TransParams), Params(Params), Constraint(Constraint), 
+          : TransParams(TransParams), Params(Params), Constraint(Constraint),
             Automaton(Automaton), InitState(InitState), Guard(Guard), Updates(Updates),
             Tentative(Tentative)
-                           
+
         {
             // Nothing here
         }
@@ -532,7 +532,7 @@ namespace ESMC {
                                                          const ExprTypeRef& MessageType,
                                                          const vector<ExpT>& MessageParams,
                                                          bool Tentative)
-        : LTSSymbTransitionBase(TransParams, Params, Constraint, Automaton, 
+        : LTSSymbTransitionBase(TransParams, Params, Constraint, Automaton,
                                 InitState, Guard, Updates, Tentative),
           MessageName(MessageName), MessageType(MessageType), MessageParams(MessageParams)
         {
@@ -563,7 +563,7 @@ namespace ESMC {
         {
             // Nothing here
         }
-        
+
         string LTSSymbInputTransition::ToString() const
         {
             ostringstream sstr;
@@ -624,5 +624,5 @@ namespace ESMC {
     } /* end namespace */
 } /* end namespace */
 
-// 
+//
 // LTSTransitions.cpp ends here

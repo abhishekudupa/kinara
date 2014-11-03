@@ -1,13 +1,13 @@
-// PingPong.cpp --- 
-// 
+// PingPong.cpp ---
+//
 // Filename: PingPong.cpp
 // Author: Abhishek Udupa
 // Created: Tue Aug  5 10:51:04 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -82,10 +82,10 @@ int main()
     Sink->FreezeVars();
 
     vector<LTSAssignRef> SinkInputUpdates;
-    auto DataMsgExp = TheLTS->MakeVar("InMsg", DataMsgType);    
+    auto DataMsgExp = TheLTS->MakeVar("InMsg", DataMsgType);
 
-    Sink->AddInputTransitions(MsgParams, TrueExp, "InitState", "InitState", 
-                              TrueExp, SinkInputUpdates, "InMsg", 
+    Sink->AddInputTransitions(MsgParams, TrueExp, "InitState", "InitState",
+                              TrueExp, SinkInputUpdates, "InMsg",
                               DataMsgType, MsgParams);
 
     // Client structure
@@ -95,7 +95,7 @@ int main()
     // should result in a liveness violation, which is of course
     // "unfair".
     // auto ClientEFSM = TheLTS->MakeGenEFSM("Client", MsgParams, TrueExp, LTSFairnessType::None);
-    
+
     ClientEFSM->AddState("InitState");
     ClientEFSM->FreezeStates();
 
@@ -108,15 +108,15 @@ int main()
     auto BitExp = TheLTS->MakeVar("Bit", BoolType);
     auto NotBitExp = TheLTS->MakeOp(LTSOps::OpNOT, BitExp);
 
-    ClientOutputUpdates.push_back(new LTSAssignSimple(BitExp, NotBitExp));    
-    ClientEFSM->AddOutputTransition("InitState", "InitState", TrueExp, ClientOutputUpdates, 
+    ClientOutputUpdates.push_back(new LTSAssignSimple(BitExp, NotBitExp));
+    ClientEFSM->AddOutputTransition("InitState", "InitState", TrueExp, ClientOutputUpdates,
                                     "OutMsg", DataMsgType, MsgParams);
 
     cout << ClientEFSM->ToString() << endl;
     cout << Sink->ToString() << endl;
 
     TheLTS->FreezeAutomata();
-    
+
     vector<InitStateRef> InitStates;
     vector<LTSAssignRef> InitUpdates;
 
@@ -125,7 +125,7 @@ int main()
 
     auto FAType = TheLTS->MakeFieldAccessType();
 
-    auto ClientStateVar = TheLTS->MakeOp(LTSOps::OpIndex, 
+    auto ClientStateVar = TheLTS->MakeOp(LTSOps::OpIndex,
                                          TheLTS->MakeVar("Client", ClientType),
                                          ParamExp);
 
@@ -154,7 +154,7 @@ int main()
         cout << Var->ToString() << " : " << endl;
         cout << Var->GetType()->ToString() << endl;
     }
-    
+
     cout << "State vector size is " << TheLTS->GetStateVectorSize() << " bytes." << endl;
 
     cout << "Guarded Commands:" << endl;
@@ -187,7 +187,7 @@ int main()
     auto Monitor = Checker->MakeStateBuchiMonitor("GFClear", Params, TrueExp);
     Monitor->AddState("InitState", true, false);
     Monitor->AddState("AcceptState", false, true);
-    
+
     Monitor->FreezeStates();
 
     auto ClientClearExp = Monitor->MakeOp(LTSOps::OpNOT, ClientDotBit);
@@ -203,5 +203,5 @@ int main()
     delete Checker;
 }
 
-// 
+//
 // PingPong.cpp ends here

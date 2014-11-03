@@ -1,13 +1,13 @@
-// ExprTypes.hpp --- 
-// 
+// ExprTypes.hpp ---
+//
 // Filename: ExprTypes.hpp
 // Author: Abhishek Udupa
 // Created: Thu Jul 24 10:44:06 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -58,25 +58,25 @@ namespace ESMC {
             ExprTypeExtensionBase();
             virtual ~ExprTypeExtensionBase();
 
-            template <typename T> 
+            template <typename T>
             inline T* As()
             {
                 return dynamic_cast<T*>(this);
             }
 
-            template <typename T> 
+            template <typename T>
             inline const T* As() const
             {
                 return dynamic_cast<const T*>(this);
             }
 
-            template <typename T> 
+            template <typename T>
             inline T* SAs()
             {
                 return static_cast<T*>(this);
             }
 
-            template <typename T> 
+            template <typename T>
             inline const T* SAs() const
             {
                 return static_cast<const T*>(this);
@@ -116,7 +116,7 @@ namespace ESMC {
             virtual u32 GetCardinality() const = 0;
             virtual u32 GetCardinalityNoUndef() const = 0;
             virtual string GetClearValue() const = 0;
-            
+
             u64 Hash() const;
             bool Equals(const ExprTypeBase& Other) const;
             bool LT(const ExprTypeBase& Other) const;
@@ -126,7 +126,7 @@ namespace ESMC {
             i64 GetOrSetTypeID() const;
 
 
-            template <typename T> 
+            template <typename T>
             inline T* As()
             {
                 return dynamic_cast<T*>(this);
@@ -139,7 +139,7 @@ namespace ESMC {
             }
 
             template <typename T>
-            inline T* SAs() 
+            inline T* SAs()
             {
                 return static_cast<T*>(this);
             }
@@ -203,7 +203,7 @@ namespace ESMC {
                         ToDelete.push_back(it);
                     }
                 }
-                
+
                 for (auto const& it : ToDelete) {
                     Extensions.erase(it);
                     delete (*it);
@@ -253,20 +253,20 @@ namespace ESMC {
         };
 
 
-        // A generic int type, can be converted to 
-        // any kind of subrange type. 
+        // A generic int type, can be converted to
+        // any kind of subrange type.
         class ExprIntType : public ExprScalarType
         {
         protected:
             virtual void ComputeHashValue() const override;
-            
+
         public:
             ExprIntType();
             virtual ~ExprIntType();
-            
+
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
-            virtual vector<string> GetElementsNoUndef() const override;            
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
@@ -290,7 +290,7 @@ namespace ESMC {
         public:
             ExprRangeType(i64 RangeLow, i64 RangeHigh);
             virtual ~ExprRangeType();
-            
+
             i64 GetLow() const;
             i64 GetHigh() const;
             u64 GetSize() const;
@@ -298,7 +298,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
-            virtual vector<string> GetElementsNoUndef() const override;            
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
             virtual u32 GetCardinalityNoUndef() const override;
@@ -322,17 +322,17 @@ namespace ESMC {
         public:
             ExprEnumType(const string& Name, const set<string>& Members);
             virtual ~ExprEnumType();
-            
+
             const string& GetName() const;
             const set<string>& GetMembers() const;
-            
+
             bool IsMember(const string& MemberName) const;
             u32 GetMemberIdx(const string& MemberName) const;
-            
+
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
-            virtual vector<string> GetElementsNoUndef() const override;            
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
             virtual u32 GetCardinalityNoUndef() const override;
@@ -350,7 +350,7 @@ namespace ESMC {
             vector<string> Members;
             vector<string> MembersNoUndef;
             set<string> MemberSet;
-            
+
             // An index into the permutation
             // set
             mutable u32 Index;
@@ -364,7 +364,7 @@ namespace ESMC {
 
             const string& GetName() const;
             u32 GetSize() const;
-            
+
             const vector<string>& GetMembers() const;
             const string& GetMember(u32 Index) const;
             const bool IsMember(const string& Value) const;
@@ -376,7 +376,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
-            virtual vector<string> GetElementsNoUndef() const override;            
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
             virtual u32 GetCardinalityNoUndef() const override;
@@ -410,7 +410,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
-            virtual vector<string> GetElementsNoUndef() const override;            
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
             virtual u32 GetCardinalityNoUndef() const override;
@@ -436,11 +436,11 @@ namespace ESMC {
             u32 GetOffset(u32 ElemIdx) const;
             ExprTypeRef GetBaseValueType() const;
             u32 GetLevelsOfIndex() const;
-            
+
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
-            virtual vector<string> GetElementsNoUndef() const override;            
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
             virtual u32 GetCardinalityNoUndef() const override;
@@ -481,7 +481,7 @@ namespace ESMC {
             virtual string ToString() const;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
-            virtual vector<string> GetElementsNoUndef() const override;            
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
             virtual u32 GetCardinalityNoUndef() const override;
@@ -489,7 +489,7 @@ namespace ESMC {
         };
 
         // A parametric record type RESOLVES to
-        // the BASE TYPE, when instantiated with 
+        // the BASE TYPE, when instantiated with
         // VALUES of the appropriate types.
         class ExprParametricType : public ExprTypeBase
         {
@@ -499,7 +499,7 @@ namespace ESMC {
 
         protected:
             virtual void ComputeHashValue() const override;
-            
+
         public:
             ExprParametricType(const ExprTypeRef& BaseType,
                                const vector<ExprTypeRef>& ParameterTypes);
@@ -512,7 +512,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
-            virtual vector<string> GetElementsNoUndef() const override;            
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
             virtual u32 GetCardinalityNoUndef() const override;
@@ -532,7 +532,7 @@ namespace ESMC {
             virtual string ToString() const override;
             virtual i32 Compare(const ExprTypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
-            virtual vector<string> GetElementsNoUndef() const override;            
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
             virtual u32 GetCardinalityNoUndef() const override;
@@ -570,7 +570,7 @@ namespace ESMC {
             const ExprTypeRef& GetTypeIDFieldType() const;
             const u32 GetTypeIDForMemberType(const ExprTypeRef& MemType) const;
             const ExprTypeRef& GetMemberTypeForTypeID(u32 TypeID) const;
-            const string& MapFromMemberField(const ExprTypeRef& MemberType, 
+            const string& MapFromMemberField(const ExprTypeRef& MemberType,
                                              const string& FieldName) const;
             const string& MapToMemberField(u32 TypeID,
                                            const string& FieldName) const;
@@ -586,7 +586,7 @@ namespace ESMC {
             // {
             //     return Type->Hash();
             // }
-            
+
             inline u64 operator () (const ExprTypeRef& Type) const
             {
                 return Type->Hash();
@@ -637,7 +637,7 @@ namespace ESMC {
                 RHS->Is<ExprRangeType>()) {
                 return true;
             }
-            
+
             if (RHS->Is<ExprIntType>() &&
                 LHS->Is<ExprRangeType>()) {
                 return true;
@@ -653,9 +653,9 @@ namespace std {
     template<>
     struct hash<ESMC::Exprs::ExprTypeRef>
     {
-        inline size_t operator () (const ESMC::Exprs::ExprTypeRef& Type) const 
-        { 
-            return Type->Hash(); 
+        inline size_t operator () (const ESMC::Exprs::ExprTypeRef& Type) const
+        {
+            return Type->Hash();
         }
     };
 
@@ -663,5 +663,5 @@ namespace std {
 
 #endif /* ESMC_EXPR_TYPES_HPP_ */
 
-// 
+//
 // ExprTypes.hpp ends here

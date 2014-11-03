@@ -1,13 +1,13 @@
-// LTSTermSemanticizer.cpp --- 
-// 
+// LTSTermSemanticizer.cpp ---
+//
 // Filename: LTSTermSemanticizer.cpp
 // Author: Abhishek Udupa
 // Created: Sat Jul 26 15:58:15 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -43,7 +43,7 @@
 
 namespace ESMC {
     namespace LTS {
-        
+
         const i64 LTSOps::OpEQ;
         const i64 LTSOps::OpNOT;
         const i64 LTSOps::OpITE;
@@ -70,7 +70,7 @@ namespace ESMC {
         const i64 LTSOps::OpField;
 
         const i64 LTSOps::UFOffset;
-        
+
         // Temporal operators
         const i64 LTSOps::OpTemporalX;
         const i64 LTSOps::OpTemporalU;
@@ -83,7 +83,7 @@ namespace ESMC {
 
             const string BoundVarPrefix = "dbvar";
 
-            const unordered_map<i64, string> OpCodeToNameMap = 
+            const unordered_map<i64, string> OpCodeToNameMap =
                 { { LTSOps::OpEQ, "=" },
                   { LTSOps::OpNOT, "not" },
                   { LTSOps::OpITE, "ite" },
@@ -103,7 +103,7 @@ namespace ESMC {
                   { LTSOps::OpLT, "<" },
                   { LTSOps::OpLE, "<=" } };
 
-            const unordered_set<i64> LTSReservedOps = 
+            const unordered_set<i64> LTSReservedOps =
                 { { LTSOps::OpEQ, LTSOps::OpNOT, LTSOps::OpITE, LTSOps::OpOR,
                     LTSOps::OpAND, LTSOps::OpIMPLIES, LTSOps::OpIFF, LTSOps::OpXOR,
                     LTSOps::OpADD, LTSOps::OpSUB, LTSOps::OpMINUS, LTSOps::OpMUL,
@@ -115,7 +115,7 @@ namespace ESMC {
         } /* end namespace Detail */
 
         // The LTSLoweredContext implementation
-        
+
         using namespace Detail;
         using namespace TP;
 
@@ -146,11 +146,11 @@ namespace ESMC {
             }
         }
 
-        void LTSLoweredContext::AddZ3Sort(const ExprTypeRef& LTSType, 
+        void LTSLoweredContext::AddZ3Sort(const ExprTypeRef& LTSType,
                                           const Z3Sort& Sort) const
         {
             if (GetZ3Sort(LTSType) != Z3Sort::NullSort) {
-                throw ExprTypeError((string)"Z3 sort for type \"" + LTSType->ToString() + 
+                throw ExprTypeError((string)"Z3 sort for type \"" + LTSType->ToString() +
                                     "\" already exists");
             }
             LTSTypeToSort[LTSType] = Sort;
@@ -169,9 +169,9 @@ namespace ESMC {
         void LTSLoweredContext::AddLTSType(const string& VarName, const ExprTypeRef& LTSType) const
         {
             if (GetLTSType(VarName) != ExprTypeRef::NullPtr) {
-                throw ExprTypeError((string)"Error, variable named \"" + VarName + "\"" + 
+                throw ExprTypeError((string)"Error, variable named \"" + VarName + "\"" +
                                     " has already been registed with a type in the context!");
-            } 
+            }
             VarNameToLTSType[VarName] = LTSType;
         }
 
@@ -190,7 +190,7 @@ namespace ESMC {
             Assumptions.push_back(AssumptionSetT());
         }
 
-        LTSLoweredContext::AssumptionSetT 
+        LTSLoweredContext::AssumptionSetT
         LTSLoweredContext::PopAssumptionScope() const
         {
             auto Scope = Assumptions.back();
@@ -203,7 +203,7 @@ namespace ESMC {
             return Assumptions.back();
         }
 
-        const vector<LTSLoweredContext::AssumptionSetT>& 
+        const vector<LTSLoweredContext::AssumptionSetT>&
         LTSLoweredContext::GetAllAssumptions() const
         {
             return Assumptions;
@@ -219,21 +219,21 @@ namespace ESMC {
             return Ctx;
         }
 
-        ostream& operator << (const Z3Expr& Expr, ostream& Out) 
+        ostream& operator << (const Z3Expr& Expr, ostream& Out)
         {
             Out << Expr.ToString();
             return Out;
         }
 
-        ostream& operator << (const Z3Sort& Sort, ostream& Out) 
+        ostream& operator << (const Z3Sort& Sort, ostream& Out)
         {
             Out << Sort.ToString();
             return Out;
         }
-        
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
 
-// 
+//
 // LTSTermSemanticizer.cpp ends here

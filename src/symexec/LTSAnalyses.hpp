@@ -1,13 +1,13 @@
-// LTSAnalyses.hpp --- 
-// 
+// LTSAnalyses.hpp ---
+//
 // Filename: Analyses.hpp
 // Author: Abhishek Udupa
 // Created: Fri Jul 11 11:49:35 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -63,7 +63,7 @@ namespace ESMC {
             vector<ExpT> SubstStack;
 
         public:
-            SubstitutorForWP(MgrT* Mgr, const MgrT::SubstMapT& Subst, 
+            SubstitutorForWP(MgrT* Mgr, const MgrT::SubstMapT& Subst,
                              const vector<LTSAssignRef>& Updates);
             virtual ~SubstitutorForWP();
 
@@ -131,11 +131,11 @@ namespace ESMC {
 
             static vector<GCmdRef> GuardedCommandsFromTrace(TraceBase* Trace);
 
-            // static MgrT::SubstMapT 
+            // static MgrT::SubstMapT
             // GetSubstitutionsForTransMsg(const vector<LTSAssignRef>& updates);
 
-            static bool IsGuardedCommandEnabled(LabelledTS* TheLTS, 
-                                                const StateVec* StateVector, 
+            static bool IsGuardedCommandEnabled(LabelledTS* TheLTS,
+                                                const StateVec* StateVector,
                                                 GCmdRef GuardedCommand);
 
             static map<pair<EFSMBase*, vector<ExpT> >, string>

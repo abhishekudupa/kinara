@@ -1,13 +1,13 @@
-// IndexSet.hpp --- 
-// 
+// IndexSet.hpp ---
+//
 // Filename: IndexSet.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug 29 01:17:44 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -114,7 +114,7 @@ namespace ESMC {
         } /* end namespace Detail */
 
         // Manages the index vectors
-        // for ONE process, which could be 
+        // for ONE process, which could be
         // parametrized by multiple symmetric types
         class ProcessIndexSet
         {
@@ -150,7 +150,7 @@ namespace ESMC {
             const IndexVector* GetIndexVecForParamVec(const vector<ExpT>& ParamVec) const;
         };
 
-        // At any point of time, one index from the set of 
+        // At any point of time, one index from the set of
         // all process indices is tracked. Used in threaded
         // graph construction/simulation
         class SystemIndexSet
@@ -162,7 +162,7 @@ namespace ESMC {
             vector<pair<ProcessIndexSet*, u32>> IndexToPIdx;
             // Low, High for a class id
             vector<pair<u32, u32>> ClassIDBounds;
-            
+
         public:
             SystemIndexSet(const vector<vector<vector<ExpT>>>& ProcessParamInsts);
             ~SystemIndexSet();
@@ -173,11 +173,11 @@ namespace ESMC {
             u32 GetClassID(u32 IndexID) const;
             i32 GetIndexForClassID(u32 IndexID, u32 ClassID) const;
         };
-        
+
     } /* end namespace MC */
 } /* end namespace ESMC */
 
 #endif /* ESMC_INDEX_SET_HPP_ */
 
-// 
+//
 // IndexSet.hpp ends here

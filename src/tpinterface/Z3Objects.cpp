@@ -1,13 +1,13 @@
-// Z3Objects.cpp --- 
-// 
+// Z3Objects.cpp ---
+//
 // Filename: Z3Objects.cpp
 // Author: Abhishek Udupa
 // Created: Wed Oct  8 10:26:08 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -221,7 +221,7 @@ namespace ESMC {
         }
 
         Z3Sort::Z3Sort(const Z3Sort& Other)
-            : Z3Object(Other), Sort(Other.Sort), 
+            : Z3Object(Other), Sort(Other.Sort),
               FuncDecls(Other.FuncDecls)
         {
             if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
@@ -268,12 +268,12 @@ namespace ESMC {
                 AddFuncDecl(Decls[i]);
             }
         }
-            
+
         Z3_func_decl Z3Sort::GetFuncDecl(const string& Name) const
         {
             auto it = FuncDecls.find(Name);
             if (it == FuncDecls.end()) {
-                throw ESMCError((string)"Request to get function decl \"" + 
+                throw ESMCError((string)"Request to get function decl \"" +
                                 Name + "\" which does not exist in Z3Sort");
             }
             return it->second;
@@ -373,7 +373,7 @@ namespace ESMC {
         }
 
         Z3Solver::Z3Solver(Z3Solver&& Other)
-            : Z3Object(), Solver(nullptr) 
+            : Z3Object(), Solver(nullptr)
         {
             swap(Ctx, Other.Ctx);
             swap(Solver, Other.Solver);
@@ -397,11 +397,11 @@ namespace ESMC {
         {
             auto OtherAsPtr = Other.As<Z3Solver>();
             return ((OtherAsPtr != nullptr) &&
-                    (OtherAsPtr->Ctx == Ctx) && 
+                    (OtherAsPtr->Ctx == Ctx) &&
                     (OtherAsPtr->Solver == Solver));
         }
 
-        string Z3Solver::ToString() const 
+        string Z3Solver::ToString() const
         {
             if (Ctx != Z3Ctx::NullPtr && Solver != nullptr) {
                 return string(Z3_solver_to_string(*Ctx, Solver));
@@ -413,10 +413,10 @@ namespace ESMC {
         u64 Z3Solver::Hash() const
         {
             auto&& SolverString = ToString();
-            return SpookyHash::SpookyHash::Hash64(SolverString.c_str(), 
+            return SpookyHash::SpookyHash::Hash64(SolverString.c_str(),
                                                   SolverString.length(), 0);
         }
-        
+
         Z3Solver::operator Z3_solver () const
         {
             return Solver;
@@ -436,8 +436,8 @@ namespace ESMC {
         {
             // Nothing here
         }
-        
-        Z3Model::Z3Model(const Z3Model& Other) 
+
+        Z3Model::Z3Model(const Z3Model& Other)
             : Z3Object(Other), Model(Other.Model), TPPtr(Other.TPPtr)
         {
             if (Ctx != Z3Ctx::NullPtr && Model != nullptr) {
@@ -493,7 +493,7 @@ namespace ESMC {
         u64 Z3Model::Hash() const
         {
             auto&& ModelString = ToString();
-            return SpookyHash::SpookyHash::Hash64(ModelString.c_str(), 
+            return SpookyHash::SpookyHash::Hash64(ModelString.c_str(),
                                                   ModelString.length(), 0);
         }
 
@@ -517,5 +517,5 @@ namespace ESMC {
     } /* end namespace TP */
 } /* end namespace ESMC */
 
-// 
+//
 // Z3Objects.cpp ends here

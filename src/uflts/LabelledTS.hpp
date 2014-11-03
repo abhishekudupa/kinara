@@ -1,13 +1,13 @@
-// LabelledTS.hpp --- 
-// 
+// LabelledTS.hpp ---
+//
 // Filename: LabelledTS.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug  8 20:35:51 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -46,7 +46,7 @@
 namespace ESMC {
     namespace LTS {
 
-        class LabelledTS 
+        class LabelledTS
         {
         private:
             friend class ChannelEFSM;
@@ -92,7 +92,7 @@ namespace ESMC {
             // Map from automaton name to the set of valid parameter
             // instantiations
             map<string, set<vector<ExpT>>> ValidAutomata;
-            
+
             // Channel buffers that need to be sorted
             // on every transition
             vector<pair<ExpT, ExpT>> ChanBuffersToSort;
@@ -115,7 +115,7 @@ namespace ESMC {
 
             void CheckConsistency() const;
             GCmdRef MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const;
-            MgrT::SubstMapT ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
+            MgrT::SubstMapT ApplyPerm(const vector<vector<ExpT>>& ParamElems,
                                              const vector<u08>& Perm);
             void MakeMsgCanonMap();
             void InstantiateInitState(const InitStateRef& InitState);
@@ -151,12 +151,12 @@ namespace ESMC {
 
             // methods for creating expressions
             // and types.
-            // we create all expressions VIA the LTS, 
+            // we create all expressions VIA the LTS,
             // this avoids us from having to check expressions,
             // etc.
             ExprTypeRef MakeBoolType();
             ExprTypeRef MakeRangeType(i64 Low, i64 High);
-            ExprTypeRef MakeRecordType(const string& Name, 
+            ExprTypeRef MakeRecordType(const string& Name,
                                        const vector<pair<string, ExprTypeRef>>& Members);
             ExprTypeRef MakeArrayType(const ExprTypeRef& IndexType,
                                       const ExprTypeRef& ValueType);
@@ -185,9 +185,9 @@ namespace ESMC {
             ExpT MakeVar(const string& Name, const ExprTypeRef& Type);
             ExpT MakeBoundVar(i64 Idx, const ExprTypeRef& Type);
             ExpT MakeVal(const string& Value, const ExprTypeRef& Type);
-            ExpT MakeOp(i64 OpCode, const vector<ExpT>& Operands); 
-            ExpT MakeOp(i64 OpCode, const ExpT& Operand1); 
-            ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2); 
+            ExpT MakeOp(i64 OpCode, const vector<ExpT>& Operands);
+            ExpT MakeOp(i64 OpCode, const ExpT& Operand1);
+            ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2);
             ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
                         const ExpT& Operand3);
             ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
@@ -197,7 +197,7 @@ namespace ESMC {
             ExpT MakeForAll(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body);
             i64 MakeUF(const string& Name, const vector<ExprTypeRef>& Domain,
                        const ExprTypeRef& Range);
-            
+
 
             bool CheckMessageType(const ExprTypeRef& MsgType) const;
             const ExprTypeRef& GetUnifiedMType() const;
@@ -205,7 +205,7 @@ namespace ESMC {
             const ExprTypeRef& GetPrimedType(const ExprTypeRef& Type) const;
 
             template <typename T, typename... ArgTypes>
-            inline T* 
+            inline T*
             MakeEFSM(const string& Name, const vector<ExpT>& Params,
                      const ExpT& Constraint, LTSFairnessType Fairness,
                      ArgTypes&&... Args)
@@ -230,8 +230,8 @@ namespace ESMC {
             vector<EFSMBase*> GetEFSMs(const function<bool(const EFSMBase*)>& MatchPred) const;
 
             ChannelEFSM* MakeChannel(const string& Name, const vector<ExpT>& Params,
-                                     const ExpT& Constraint, u32 Capacity, 
-                                     bool Lossy, bool Ordered, bool Duplicating, 
+                                     const ExpT& Constraint, u32 Capacity,
+                                     bool Lossy, bool Ordered, bool Duplicating,
                                      bool Blocking, LTSFairnessType Fairness);
 
             void AddInitStates(const vector<InitStateRef>& InitStates);
@@ -249,5 +249,5 @@ namespace ESMC {
 
 #endif /* ESMC_LABELLED_TS_HPP_ */
 
-// 
+//
 // LabelledTS.hpp ends here

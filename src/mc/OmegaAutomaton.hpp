@@ -1,13 +1,13 @@
-// OmegaAutomaton.hpp --- 
-// 
+// OmegaAutomaton.hpp ---
+//
 // Filename: OmegaAutomaton.hpp
 // Author: Abhishek Udupa
 // Created: Tue Aug 26 01:27:03 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -133,12 +133,12 @@ namespace ESMC {
             // further indexed by stateid.
             // A transition is a guard and a next state id
             vector<vector<vector<pair<ExpT, u32>>>> Transitions;
-            
+
             inline void AssertFrozen() const;
             inline void AssertNotFrozen() const;
 
         public:
-            StateBuchiAutomaton(LabelledTS* TheLTS, const string& Name, 
+            StateBuchiAutomaton(LabelledTS* TheLTS, const string& Name,
                                 const vector<ExpT>& SymmIndices,
                                 const ExpT& Constraint, LTSCompiler* Compiler);
 
@@ -163,7 +163,7 @@ namespace ESMC {
             const ExprTypeRef& GetNamedType(const string& TypeName);
 
             // Methods for model checking
-            vector<u32> GetNextStates(u32 CurState, u32 IndexID, 
+            vector<u32> GetNextStates(u32 CurState, u32 IndexID,
                                       const StateVec* StateVector) const;
             const ExpT& GetGuardForTransition(u32 FromState, u32 ToState,
                                               u32 IndexID) const;
@@ -176,5 +176,5 @@ namespace ESMC {
 
 #endif /* ESMC_OMEGA_AUTOMATON_HPP_ */
 
-// 
+//
 // OmegaAutomaton.hpp ends here

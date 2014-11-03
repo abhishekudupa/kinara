@@ -1,13 +1,13 @@
-// LTSTypes.hpp --- 
-// 
+// LTSTypes.hpp ---
+//
 // Filename: LTSTypes.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug  8 13:34:49 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -54,7 +54,7 @@ namespace ESMC {
             None, Weak, Strong
         };
 
-        
+
         enum class SplatFairnessType {
             None, Group, Individual
         };
@@ -80,7 +80,7 @@ namespace ESMC {
         class LTSAssignBase;
         class LTSAssignSimple;
         class LTSAssignParam;
-        
+
         typedef CSmartPtr<LTSAssignBase> LTSAssignRef;
 
         class AutomatonTransitionBase;
@@ -137,5 +137,5 @@ namespace ESMC {
 
 #endif /* ESMC_LTS_TYPES_HPP_ */
 
-// 
+//
 // LTSTypes.hpp ends here

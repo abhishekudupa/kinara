@@ -1,13 +1,13 @@
-// LTSChannelEFSM.hpp --- 
-// 
+// LTSChannelEFSM.hpp ---
+//
 // Filename: LTSChannelEFSM.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug 15 12:05:23 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -93,13 +93,13 @@ namespace ESMC {
         public:
             ChannelEFSM(LabelledTS* TheLTS, const string& Name,
                         const vector<ExpT>& Params, const ExpT& Constraint,
-                        u32 Capacity, bool Lossy = false, bool Ordered = true, 
+                        u32 Capacity, bool Lossy = false, bool Ordered = true,
                         bool Duplicating = false,
-                        bool Blocking = false, LTSFairnessType 
+                        bool Blocking = false, LTSFairnessType
                         Fairness = LTSFairnessType::None);
-            
+
             virtual ~ChannelEFSM();
-            
+
             virtual void FreezeStates() override;
             virtual void FreezeVars() override;
             virtual void AddFairnessSet(const string& Name, FairSetFairnessType Fairness) override;
@@ -110,33 +110,33 @@ namespace ESMC {
                         LossDupFairnessType LossDupFairness = LossDupFairnessType::None);
 
             void AddMsgs(const vector<ExpT> NewParams,
-                         const ExpT& Constraint,    
+                         const ExpT& Constraint,
                          const ExprTypeRef& MessageType,
                          const vector<ExpT>& MessageParams = vector<ExpT>(),
                          LTSFairnessType MessageFairness = LTSFairnessType::None,
                          LossDupFairnessType LossDupFairness = LossDupFairnessType::None);
 
 
-            virtual SymmMsgDeclRef 
+            virtual SymmMsgDeclRef
             AddInputMsg(const ExprTypeRef& MessageType,
                         const vector<ExpT>& Params = vector<ExpT>()) override;
 
-            virtual SymmMsgDeclRef 
-            AddInputMsgs(const vector<ExpT>& NewParams, 
+            virtual SymmMsgDeclRef
+            AddInputMsgs(const vector<ExpT>& NewParams,
                          const ExpT& Constraint,
                          const ExprTypeRef& MessageType,
                          const vector<ExpT>& MessageParams) override;
 
-            virtual SymmMsgDeclRef 
+            virtual SymmMsgDeclRef
             AddOutputMsg(const ExprTypeRef& MessageType,
                          const vector<ExpT>& Params = vector<ExpT>()) override;
 
             virtual SymmMsgDeclRef
-            AddOutputMsgs(const vector<ExpT>& NewParams, 
+            AddOutputMsgs(const vector<ExpT>& NewParams,
                           const ExpT& Constraint,
                           const ExprTypeRef& MessageType,
                           const vector<ExpT>& MessageParams) override;
-            
+
             virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType) override;
 
             virtual void AddInputTransition(const string& InitState,
@@ -163,7 +163,7 @@ namespace ESMC {
                                              const string& MessageName,
                                              const ExprTypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
-                                             const set<string>& AddToFairnessSets = 
+                                             const set<string>& AddToFairnessSets =
                                              set<string>(),
                                              bool Tentative = false) override;
 
@@ -183,7 +183,7 @@ namespace ESMC {
             virtual void AddInternalTransition(const string& InitState,
                                                const ExpT& Guard,
                                                const vector<LTSAssignRef>& Updates,
-                                               const set<string>& AddToFairnessSets = 
+                                               const set<string>& AddToFairnessSets =
                                                set<string>(),
                                                bool Tentative = false) override;
 
@@ -202,5 +202,5 @@ namespace ESMC {
 
 #endif /* ESMC_LTS_CHANNEL_EFSM_HPP_ */
 
-// 
+//
 // LTSChannelEFSM.hpp ends here

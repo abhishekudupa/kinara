@@ -1,13 +1,13 @@
-// LTSEFSM.hpp --- 
-// 
+// LTSEFSM.hpp ---
+//
 // Filename: LTSEFSM.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug  8 13:43:28 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -51,7 +51,7 @@ namespace ESMC {
     namespace LTS {
 
         using namespace Symm;
-        
+
         class GeneralEFSM : public EFSMBase
         {
         public:
@@ -65,21 +65,21 @@ namespace ESMC {
         class DetEFSM : public EFSMBase
         {
         private:
-            inline void 
+            inline void
             CheckTransition(const TPRef& TP, u32 TransIndex,
                             const vector<LTSSymbTransRef>& CandTrans) const;
-            
+
         public:
             DetEFSM(LabelledTS* TheLTS, const string& Name,
                     const vector<ExpT>& Params, const ExpT& Constraint,
                     LTSFairnessType Fairness = LTSFairnessType::None);
 
             virtual ~DetEFSM();
-            
+
             // Override freeze to check for determinism
             virtual void Freeze() override;
         };
-        
+
         class IncompleteEFSM : public DetEFSM
         {
             friend class ESMC::Synth::Solver;
@@ -92,6 +92,9 @@ namespace ESMC {
             set<ExpT> CurrentConstraints;
             // Constraints by symbolic transitions
             unordered_map<i64, set<ExpT>> ConstraintsByGuardOp;
+            // Map from update op code to the LValue term
+            // that it updates
+            unordered_map<i64, ExpT> UpdateOpToLValue;
 
             set<i64> GuardUFIDs;
             map<string, set<SymmMsgDeclRef>> BlockedCompletions;
@@ -135,22 +138,22 @@ namespace ESMC {
                                         const ExpT& CoveredRegion);
 
             inline ExpT FindInputCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
-                                               const TPRef& TP, 
+                                               const TPRef& TP,
                                                const ExprTypeRef& MsgType,
                                                const ExpT& CoveredRegion);
 
             inline ExpT FindGlobalCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
                                                 const TPRef& TP);
-            
+
             inline void CompleteInputTransitions(const string& StateName,
                                                  const vector<LTSSymbTransRef>& Transitions,
                                                  const ExpT& CoveredPredicate,
                                                  const TPRef& TP);
-            
+
             inline ExpT MakeGuard(const set<ExpT>& DomainTerms,
                                   const ExpT& CoveredPredicate,
                                   const vector<ExpT>& GuardExps);
-            
+
             inline vector<LTSAssignRef> MakeUpdates(const set<ExpT>& DomainTerms);
 
             inline void CompleteOneInputTransition(const string& InitStateName,
@@ -170,7 +173,7 @@ namespace ESMC {
                                                     vector<ExpT>& GuardExps,
                                                     const ExpT& CoveredPred);
 
-                                                  
+
         public:
             IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
                            const vector<ExpT>& Params, const ExpT& Constraint,
@@ -178,18 +181,18 @@ namespace ESMC {
 
             virtual ~IncompleteEFSM();
             // overrides to remember variables
-            virtual void AddVariable(const string& VarName, 
+            virtual void AddVariable(const string& VarName,
                                      const ExprTypeRef& VarType) override;
 
-            // Do not add completions particular set of messages on a 
+            // Do not add completions particular set of messages on a
             // particular state
             void IgnoreMsgOnState(const SymmMsgDeclRef& MsgDecl,
                                   const string& StateName);
             void IgnoreAllMsgsOnState(const string& StateName);
             void HandleMsgOnState(const SymmMsgDeclRef& MsgDecl,
                                   const string& StateName);
-            
-            // Do not add any more completions on any message 
+
+            // Do not add any more completions on any message
             // type on a particular state
             void MarkStateComplete(const string& StateName);
             void MarkAllStatesComplete();
@@ -200,9 +203,10 @@ namespace ESMC {
             void MarkVariableReadOnly(const string& VarName);
             void MarkAllVariablesReadOnly();
             void MarkVariableWriteable(const string& VarName);
-            
+
             const set<i64>& GetGuardUFIDs() const;
             const unordered_map<i64, set<ExpT>>& GetConstraintsByGuardOp() const;
+            const unordered_map<i64, ExpT>& GetUpdateOpToLValue() const;
 
             // override freeze to add additional transitions
             // and such
@@ -214,5 +218,5 @@ namespace ESMC {
 
 #endif /* ESMC_LTS_EFSM_HPP_ */
 
-// 
+//
 // LTSEFSM.hpp ends here

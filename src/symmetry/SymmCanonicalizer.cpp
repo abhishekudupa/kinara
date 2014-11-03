@@ -1,13 +1,13 @@
-// SymmCanonicalizer.cpp --- 
-// 
+// SymmCanonicalizer.cpp ---
+//
 // Filename: SymmCanonicalizer.cpp
 // Author: Abhishek Udupa
 // Created: Sun Aug 17 18:53:45 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -57,7 +57,7 @@ namespace ESMC {
 
         using ESMC::LTS::ExpT;
         using ESMC::MC::StateVecPrinter;
-        
+
         using ESMC::MC::StateVec;
         using ESMC::Exprs::ExprArrayType;
         using ESMC::Exprs::ExprRecordType;
@@ -85,7 +85,7 @@ namespace ESMC {
         {
             return Offset;
         }
-        
+
         u32 PermuterBase::GetTypeOffset() const
         {
             return TypeOffset;
@@ -115,7 +115,7 @@ namespace ESMC {
             return new NoOpPermuter();
         }
 
-        ArrayPermuter::ArrayPermuter(u32 Offset, const ExprTypeRef& ArrayType, 
+        ArrayPermuter::ArrayPermuter(u32 Offset, const ExprTypeRef& ArrayType,
                                      const LabelledTS* TheLTS)
             : PermuterBase(Offset, 0, 0)
         {
@@ -139,7 +139,7 @@ namespace ESMC {
 
             for (u32 i = 0; i < NumElems; ++i) {
                 u32 CurOffset = Offset + (i * ElemSize);
-                auto SubPermuter = 
+                auto SubPermuter =
                     PermuterBase::MakePermuter(CurOffset, ValueType, TheLTS);
                 ElemPermuters.push_back(SubPermuter);
             }
@@ -167,7 +167,7 @@ namespace ESMC {
             return ElemPermuters;
         }
 
-        void ArrayPermuter::Permute(const StateVec* InStateVector, 
+        void ArrayPermuter::Permute(const StateVec* InStateVector,
                                     StateVec* OutStateVector,
                                     const PermutationSet::iterator& CurPerm)
         {
@@ -180,23 +180,23 @@ namespace ESMC {
             if (IsSymmArray) {
                 // Now apply my own permutation
                 // But instead of using the input state vector
-                // use a clone of the output state vector computed 
+                // use a clone of the output state vector computed
                 // so far, this way, we retain the permutations
                 // performed by the sub permuters
 
-                // Rule: Given a permutation <p1, p2, ... pn>, we 
+                // Rule: Given a permutation <p1, p2, ... pn>, we
                 // interpret this is as a map:
                 // Arr[0] |-> p1
                 // Arr[1] |-> p2
                 // ...
                 // Arr[n] |-> pn
                 auto NewOutStateVector = OutStateVector->Clone();
-                
+
                 for (u32 i = 0; i < PermSize; ++i) {
                     u32 j = i + TypeOffset;
                     const u08* SrcBasePtr = NewOutStateVector->GetStateBuffer();
                     u08* DstBasePtr = OutStateVector->GetStateBuffer();
-                    
+
                     u32 CurPutPos = Permutation[j];
                     const u08* SrcPtr = (SrcBasePtr + Offset + (ElemSize * i));
                     u08* DstPtr = (DstBasePtr + Offset + (ElemSize * CurPutPos));
@@ -239,8 +239,8 @@ namespace ESMC {
             }
         }
 
-        void RecordPermuter::Permute(const StateVec* InStateVector, 
-                                     StateVec* OutStateVector, 
+        void RecordPermuter::Permute(const StateVec* InStateVector,
+                                     StateVec* OutStateVector,
                                      const PermutationSet::iterator& CurPerm)
         {
             // Just apply the permutation to all the members
@@ -257,7 +257,7 @@ namespace ESMC {
         MTypePermuter::MTypePermuter(u32 Offset, const ExprTypeRef& Type,
                                      const LabelledTS* TheLTS)
             : PermuterBase(Offset, 0, 0),
-              MsgCanonMap(TheLTS->GetMsgCanonMap()), 
+              MsgCanonMap(TheLTS->GetMsgCanonMap()),
               TypeSize(Type->GetByteSize())
         {
             // Nothing here
@@ -270,7 +270,7 @@ namespace ESMC {
 
         void MTypePermuter::Permute(const StateVec* InStateVector,
                                     StateVec* OutStateVector,
-                                    const PermutationSet::iterator& CurPerm) 
+                                    const PermutationSet::iterator& CurPerm)
         {
             auto PermIdx = CurPerm.GetIndex();
             u32 ActVal;
@@ -281,9 +281,9 @@ namespace ESMC {
             } else {
                 ActVal = InStateVector->ReadWord(Offset);
             }
-            
+
             u32 PermVal = MsgCanonMap[ActVal][PermIdx];
-            
+
             if (TypeSize == 1) {
                 OutStateVector->WriteByte(Offset, (u08)PermVal);
             } else if (TypeSize == 2) {
@@ -307,8 +307,8 @@ namespace ESMC {
             // Nothing here
         }
 
-        void SymmTypePermuter::Permute(const StateVec* InStateVector, 
-                                     StateVec* OutStateVector, 
+        void SymmTypePermuter::Permute(const StateVec* InStateVector,
+                                     StateVec* OutStateVector,
                                      const PermutationSet::iterator& CurPerm)
         {
             auto const& Permutation = CurPerm.GetPerm();
@@ -349,8 +349,8 @@ namespace ESMC {
             // Nothing here
         }
 
-        void NoOpPermuter::Permute(const StateVec* InStateVector, 
-                                   StateVec* OutStateVector, 
+        void NoOpPermuter::Permute(const StateVec* InStateVector,
+                                   StateVec* OutStateVector,
                                    const PermutationSet::iterator& CurPerm)
         {
             // Nothing here
@@ -362,7 +362,7 @@ namespace ESMC {
         {
             auto TypeAsArray = ChanBufferType->As<ExprArrayType>();
             if (TypeAsArray == nullptr) {
-                throw InternalError((string)"Expected Channel buffer type to be an " + 
+                throw InternalError((string)"Expected Channel buffer type to be an " +
                                     "array.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
             }
             auto IndexType = TypeAsArray->GetIndexType();
@@ -383,14 +383,14 @@ namespace ESMC {
             // Nothing here
         }
 
-        void ChanBufferSorter::Sort(StateVec* OutStateVector, 
+        void ChanBufferSorter::Sort(StateVec* OutStateVector,
                                     bool RememberPerm)
         {
             if (RememberPerm) {
                 LastPermutation = IdentityPermutation;
             }
 
-            // O(n^2) sorting, I know, but we don't expect these 
+            // O(n^2) sorting, I know, but we don't expect these
             // channels to have more than 10 or so elements
             u08* BasePtr = OutStateVector->GetStateBuffer();
             auto WorkingVec = OutStateVector->Clone();
@@ -439,14 +439,14 @@ namespace ESMC {
 
             u32 Offset = 0;
             for (auto const& StateVectorVar : StateVectorVars) {
-                auto CurPermuter = PermuterBase::MakePermuter(Offset, 
+                auto CurPermuter = PermuterBase::MakePermuter(Offset,
                                                               StateVectorVar->GetType(),
                                                               TheLTS);
                 Permuters.push_back(CurPermuter);
                 Offset += StateVectorVar->GetType()->GetByteSize();
             }
 
-            // Assumption: All expressions have been 
+            // Assumption: All expressions have been
             // compiled and therefore have offsets attached
             auto const& ChansToSort = TheLTS->GetChanBuffersToSort();
             for (auto const& ChanVarCount : ChansToSort) {
@@ -493,7 +493,7 @@ namespace ESMC {
             for (auto it = PermSet->Begin(); it != PermSet->End(); ++it) {
                 WorkingStateVec->Set(*InputVector);
 
-                // cout << "Canonicalizer: Working state before any permutations are applied " 
+                // cout << "Canonicalizer: Working state before any permutations are applied "
                 //      << endl;
                 // cout << "-----------------------------------------" << endl;
                 // Printer->PrintState(WorkingStateVec, cout);
@@ -503,7 +503,7 @@ namespace ESMC {
                     Permuter->Permute(InputVector, WorkingStateVec, it);
                     // cout << "Canonicalizer: After applying permuter "
                     //      << "with offset " << Permuter->GetOffset()
-                    //      << " and permutation " + PermToString(it.GetPerm()) 
+                    //      << " and permutation " + PermToString(it.GetPerm())
                     //      << endl;
                     // cout << "-----------------------------------------" << endl;
                     // Printer->PrintState(WorkingStateVec, cout);
@@ -537,7 +537,7 @@ namespace ESMC {
             //     Printer->PrintState(BestStateVec, cout);
             //     cout << "-----------------------------------------" << endl << endl;
             // }
-            
+
 
             WorkingStateVec->Recycle();
             InputVector->Recycle();
@@ -558,8 +558,8 @@ namespace ESMC {
             return Retval;
         }
 
-        ProductState* Canonicalizer::ApplyPermutation(const ProductState *InputPS, 
-                                                      u32 PermID, 
+        ProductState* Canonicalizer::ApplyPermutation(const ProductState *InputPS,
+                                                      u32 PermID,
                                                       const ProcessIndexSet* ProcIdxSet) const
         {
             auto InputSV = InputPS->GetSVPtr();
@@ -620,5 +620,5 @@ namespace ESMC {
     } /* end namespace Symm */
 } /* end namespace ESMC */
 
-// 
+//
 // SymmCanonicalizer.cpp ends here

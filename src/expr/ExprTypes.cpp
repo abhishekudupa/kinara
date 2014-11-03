@@ -1,13 +1,13 @@
-// ExprTypes.cpp --- 
-// 
+// ExprTypes.cpp ---
+//
 // Filename: ExprTypes.cpp
 // Author: Abhishek Udupa
 // Created: Thu Jul 24 15:10:36 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -161,7 +161,7 @@ namespace ESMC {
             vector<string> Retval = { "true", "false" };
             return Retval;
         }
-        
+
         void ExprBoolType::ComputeHashValue() const
         {
             HashCode = 0;
@@ -216,7 +216,7 @@ namespace ESMC {
         {
             // Nothing here
         }
-        
+
         void ExprIntType::ComputeHashValue() const
         {
             HashCode = 0;
@@ -231,11 +231,11 @@ namespace ESMC {
         i32 ExprIntType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            
+
             if (OtherAsPtr->As<ExprBoolType>() != nullptr) {
                 return 1;
             }
-            
+
             auto OtherAsInt = OtherAsPtr->As<ExprIntType>();
             if (OtherAsInt == nullptr) {
                 return -1;
@@ -261,7 +261,7 @@ namespace ESMC {
 
         u32 ExprIntType::GetByteSize() const
         {
-            throw InternalError((string)"ExprIntType::GetByteSize() should never have been " + 
+            throw InternalError((string)"ExprIntType::GetByteSize() should never have been " +
                                 "called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
         }
 
@@ -292,8 +292,8 @@ namespace ESMC {
 
         // Inclusive range
         ExprRangeType::ExprRangeType(i64 RangeLow, i64 RangeHigh)
-            : ExprIntType(), 
-              RangeLow(RangeLow), RangeHigh(RangeHigh), 
+            : ExprIntType(),
+              RangeLow(RangeLow), RangeHigh(RangeHigh),
               Size(RangeHigh - RangeLow + 1)
         {
             if (RangeLow > RangeHigh) {
@@ -328,14 +328,14 @@ namespace ESMC {
             boost::hash_combine(HashCode, RangeHigh);
         }
 
-        u32 ExprRangeType::GetByteSize() const 
+        u32 ExprRangeType::GetByteSize() const
         {
             return BytesForRange(RangeHigh - RangeLow + 1);
         }
 
         string ExprRangeType::ToString() const
         {
-            return ((string)"(Range [" + to_string(RangeLow) + 
+            return ((string)"(Range [" + to_string(RangeLow) +
                     "-" + to_string(RangeHigh) + "])");
         }
 
@@ -348,7 +348,7 @@ namespace ESMC {
             }
 
             auto OtherAsRange = OtherAsPtr->As<ExprRangeType>();
-            
+
             if (OtherAsRange == nullptr) {
                 if (OtherAsPtr->As<ExprIntType>() != nullptr) {
                     return 1;
@@ -356,7 +356,7 @@ namespace ESMC {
                     return -1;
                 }
             }
-            
+
             if (OtherAsRange->Size > Size) {
                 return -1;
             } else if (OtherAsRange->Size < Size) {
@@ -411,7 +411,7 @@ namespace ESMC {
             return to_string(RangeLow);
         }
 
-        ExprEnumType::ExprEnumType(const string& Name, 
+        ExprEnumType::ExprEnumType(const string& Name,
                                    const set<string>& Members)
             : ExprScalarType(), Name(Name), Members(Members),
               MemberVec(Members.begin(), Members.end())
@@ -438,7 +438,7 @@ namespace ESMC {
         bool ExprEnumType::IsMember(const string& MemberName) const
         {
             vector<string> SplitVec;
-            boost::algorithm::split(SplitVec, MemberName, 
+            boost::algorithm::split(SplitVec, MemberName,
                                     boost::algorithm::is_any_of(":"),
                                     boost::algorithm::token_compress_on);
             string EnumName;
@@ -469,14 +469,14 @@ namespace ESMC {
         u32 ExprEnumType::GetMemberIdx(const string& MemberName) const
         {
             vector<string> SplitVec;
-            boost::algorithm::split(SplitVec, MemberName, 
+            boost::algorithm::split(SplitVec, MemberName,
                                     boost::algorithm::is_any_of(":"),
                                     boost::algorithm::token_compress_on);
             string EnumName;
             if (SplitVec.size() == 2) {
                 auto EnumName = boost::algorithm::trim_copy(SplitVec[0]);
                 if (EnumName != Name) {
-                    throw ESMCError((string)"Invalid Enum Member Index requested \"" + 
+                    throw ESMCError((string)"Invalid Enum Member Index requested \"" +
                        MemberName + "\"");
                 } else {
                     auto MemberName = boost::algorithm::trim_copy(SplitVec[1]);
@@ -485,7 +485,7 @@ namespace ESMC {
                             return i;
                         }
                     }
-                    throw ESMCError((string)"Invalid Enum Member Index requested \"" + 
+                    throw ESMCError((string)"Invalid Enum Member Index requested \"" +
                                     MemberName + "\"");
                 }
             } else if (SplitVec.size() == 1) {
@@ -495,11 +495,11 @@ namespace ESMC {
                         return i;
                     }
                 }
-                throw ESMCError((string)"Invalid Enum Member Index requested \"" + 
+                throw ESMCError((string)"Invalid Enum Member Index requested \"" +
                                 MemberName + "\"");
-                
+
             } else {
-                throw ESMCError((string)"Invalid Enum Member Index requested \"" + 
+                throw ESMCError((string)"Invalid Enum Member Index requested \"" +
                                 MemberName + "\"");
             }
         }
@@ -547,8 +547,8 @@ namespace ESMC {
         i32 ExprEnumType::Compare(const ExprTypeBase& Other) const
         {
             auto OtherPtr = &Other;
-            if (OtherPtr->As<ExprBoolType>() != nullptr || 
-                OtherPtr->As<ExprIntType>() != nullptr || 
+            if (OtherPtr->As<ExprBoolType>() != nullptr ||
+                OtherPtr->As<ExprIntType>() != nullptr ||
                 OtherPtr->As<ExprRangeType>() != nullptr) {
                 return 1;
             }
@@ -642,10 +642,10 @@ namespace ESMC {
                     return i;
                 }
             }
-            throw ESMCError((string)"Invalid symmetric type member index requested \"" + 
+            throw ESMCError((string)"Invalid symmetric type member index requested \"" +
                             MemberName + "\"");
         }
-        
+
         void ExprSymmetricType::SetIndex(u32 Index) const
         {
             this->Index = Index;
@@ -658,7 +658,7 @@ namespace ESMC {
 
         string ExprSymmetricType::ToString() const
         {
-            return (string)"(SymType " + Name + " " + 
+            return (string)"(SymType " + Name + " " +
                 to_string(Size) + ")";
         }
 
@@ -730,7 +730,7 @@ namespace ESMC {
             return (Name + "::undef");
         }
 
-        static inline string MangleName(const string& Name, 
+        static inline string MangleName(const string& Name,
                                         const vector<ExprTypeRef>& Args)
         {
             string Retval = Name;
@@ -740,11 +740,11 @@ namespace ESMC {
             return Retval;
         }
 
-        ExprFuncType::ExprFuncType(const string& Name, 
+        ExprFuncType::ExprFuncType(const string& Name,
                                  const vector<ExprTypeRef>& ArgTypes,
                                  const ExprTypeRef& FuncType)
             : ExprTypeBase(),
-              Name(Name), MangledName(MangleName(Name, ArgTypes)), 
+              Name(Name), MangledName(MangleName(Name, ArgTypes)),
               ArgTypes(ArgTypes), FuncType(FuncType)
         {
             for(auto const& Arg : ArgTypes) {
@@ -752,7 +752,7 @@ namespace ESMC {
                     throw ESMCError("Function types cannot have function types as params");
                 }
                 if (!Arg->Is<ExprScalarType>()) {
-                    throw ESMCError((string)"Only function types with scalar domain types " + 
+                    throw ESMCError((string)"Only function types with scalar domain types " +
                                     "are currenly supported");
                 }
             }
@@ -812,9 +812,9 @@ namespace ESMC {
                 OtherAsPtr->As<ExprSymmetricType>() != nullptr) {
                 return 1;
             }
-            
+
             auto OtherAsFunc = OtherAsPtr->As<ExprFuncType>();
-            
+
             if (OtherAsFunc == nullptr) {
                 return -1;
             }
@@ -863,7 +863,7 @@ namespace ESMC {
 
         string ExprFuncType::GetClearValue() const
         {
-            throw ESMCError((string)"ExprFuncType::GetClearValue() should never have " + 
+            throw ESMCError((string)"ExprFuncType::GetClearValue() should never have " +
                             "been called");
         }
 
@@ -882,12 +882,12 @@ namespace ESMC {
             : ExprTypeBase(), IndexType(IndexType), ValueType(ValueType)
         {
             if (IndexType->As<ExprFuncType>() != nullptr ||
-                ValueType->As<ExprFuncType>() != nullptr || 
+                ValueType->As<ExprFuncType>() != nullptr ||
                 IndexType->As<ExprScalarType>() == nullptr ||
-                ValueType->As<ExprParametricType>() != nullptr || 
+                ValueType->As<ExprParametricType>() != nullptr ||
                 ValueType->As<ExprFieldAccessType>() != nullptr) {
-                throw ESMCError((string)"Array indices and values cannot be functions, " + 
-                                "further, indices must be scalar and values cannot be " + 
+                throw ESMCError((string)"Array indices and values cannot be functions, " +
+                                "further, indices must be scalar and values cannot be " +
                                 "field access types or parametric types");
             }
         }
@@ -936,7 +936,7 @@ namespace ESMC {
 
         string ExprArrayType::ToString() const
         {
-            return ((string)"(Array " + IndexType->ToString() + " -> " + 
+            return ((string)"(Array " + IndexType->ToString() + " -> " +
                     ValueType->ToString() + ")");
         }
 
@@ -1001,20 +1001,20 @@ namespace ESMC {
 
         string ExprArrayType::GetClearValue() const
         {
-            throw ESMCError((string)"ExprArrayType::GetClearValue() should never have " + 
-                            "been called");            
+            throw ESMCError((string)"ExprArrayType::GetClearValue() should never have " +
+                            "been called");
         }
 
         ExprRecordType::ExprRecordType(const string& Name,
                                        const vector<pair<string, ExprTypeRef>>& Members)
-            : ExprTypeBase(), Name(Name), MemberVec(Members), 
+            : ExprTypeBase(), Name(Name), MemberVec(Members),
               ContainsUnboundedType(false), FieldOffsetsComputed(false)
         {
             for (auto const& NTPair : Members) {
                 if (NTPair.second->As<ExprFuncType>() != nullptr ||
-                    NTPair.second->As<ExprFieldAccessType>() != nullptr || 
+                    NTPair.second->As<ExprFieldAccessType>() != nullptr ||
                     NTPair.second->As<ExprParametricType>() != nullptr) {
-                    throw ESMCError((string)"Record members cannot be functions types or " + 
+                    throw ESMCError((string)"Record members cannot be functions types or " +
                                     "field access types, or parametric types");
                 }
                 if (NTPair.second->As<ExprIntType>() != nullptr &&
@@ -1024,8 +1024,8 @@ namespace ESMC {
             }
             for (auto const& Member : Members) {
                 if (MemberMap.find(Member.first) != MemberMap.end()) {
-                    throw ESMCError((string)"Member \"" + Member.first + 
-                                    "\" redeclared in record type \"" + 
+                    throw ESMCError((string)"Member \"" + Member.first +
+                                    "\" redeclared in record type \"" +
                                     Name + "\"");
                 }
                 MemberMap[Member.first] = Member.second;
@@ -1038,7 +1038,7 @@ namespace ESMC {
                 if (NTPair.second->As<ExprIntType>() != nullptr &&
                     NTPair.second->As<ExprRangeType>() == nullptr) {
                     ContainsUnboundedType = true;
-                }                
+                }
             }
             if (!ContainsUnboundedType) {
                 u32 CurOffset = 0;
@@ -1074,7 +1074,7 @@ namespace ESMC {
             return MemberMap;
         }
 
-        const vector<pair<string, ExprTypeRef>>& 
+        const vector<pair<string, ExprTypeRef>>&
         ExprRecordType::GetMemberVec() const
         {
             return MemberVec;
@@ -1096,15 +1096,15 @@ namespace ESMC {
                     return i;
                 }
             }
-            throw ESMCError((string)"Invalid field in request for field index \"" + 
+            throw ESMCError((string)"Invalid field in request for field index \"" +
                             FieldName + "\"");
         }
 
         u32 ExprRecordType::GetFieldOffset(const string& FieldName) const
         {
             if (ContainsUnboundedType) {
-                throw ESMCError((string)"Record type \"" + Name + "\" contains " + 
-                                "one or more unbounded types. Field offsets " + 
+                throw ESMCError((string)"Record type \"" + Name + "\" contains " +
+                                "one or more unbounded types. Field offsets " +
                                 "can therefore not be computed");
             }
             if (!FieldOffsetsComputed) {
@@ -1112,7 +1112,7 @@ namespace ESMC {
             }
             auto it = FieldOffsets.find(FieldName);
             if (it == FieldOffsets.end()) {
-                throw ESMCError((string)"Invalid field in request for field offset \"" + 
+                throw ESMCError((string)"Invalid field in request for field offset \"" +
                                 FieldName + "\"");
             }
             return it->second;
@@ -1211,7 +1211,7 @@ namespace ESMC {
             : ExprTypeBase(), BaseType(BaseType), ParameterTypes(ParameterTypes)
         {
             if (!BaseType->Is<ExprRecordType>()) {
-                throw ESMCError((string)"Only record types " + 
+                throw ESMCError((string)"Only record types " +
                                 "can currently be parametrized");
             }
 
@@ -1219,7 +1219,7 @@ namespace ESMC {
                 if (ParameterType->As<ExprEnumType>() == nullptr &&
                     ParameterType->As<ExprRangeType>() == nullptr &&
                     ParameterType->As<ExprSymmetricType>() == nullptr) {
-                    throw ESMCError((string)"Parameteric types must have enum, range " + 
+                    throw ESMCError((string)"Parameteric types must have enum, range " +
                                     "or symmetric types as type parameters");
                 }
             }
@@ -1293,7 +1293,7 @@ namespace ESMC {
             const u32 NumParams = ParameterTypes.size();
             const u32 OtherNumParams = OtherAsPar->ParameterTypes.size();
             if (NumParams < OtherNumParams) {
-                return -1; 
+                return -1;
             } else if (NumParams > OtherNumParams) {
                 return 1;
             } else {
@@ -1329,13 +1329,13 @@ namespace ESMC {
 
         u32 ExprParametricType::GetByteSize() const
         {
-            throw InternalError((string)"ExprParametricType::GetByteSize() should never " + 
+            throw InternalError((string)"ExprParametricType::GetByteSize() should never " +
                                 "have been called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
         }
 
         string ExprParametricType::GetClearValue() const
         {
-            throw ESMCError((string)"ExprParametricType::GetClearValue() should never " + 
+            throw ESMCError((string)"ExprParametricType::GetClearValue() should never " +
                             "have been called");
         }
 
@@ -1363,7 +1363,7 @@ namespace ESMC {
                 Other.As<ExprRangeType>() != nullptr ||
                 Other.As<ExprEnumType> () != nullptr ||
                 Other.As<ExprSymmetricType>() != nullptr ||
-                Other.As<ExprFuncType> () != nullptr || 
+                Other.As<ExprFuncType> () != nullptr ||
                 Other.As<ExprArrayType>() != nullptr ||
                 Other.As<ExprRecordType>() != nullptr ||
                 Other.As<ExprParametricType>() != nullptr) {
@@ -1404,13 +1404,13 @@ namespace ESMC {
 
         u32 ExprFieldAccessType::GetByteSize() const
         {
-            throw InternalError((string)"ExprFieldAccessType::GetByteSize() should never " + 
+            throw InternalError((string)"ExprFieldAccessType::GetByteSize() should never " +
                                 "have been called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
         }
 
         string ExprFieldAccessType::GetClearValue() const
         {
-            throw InternalError((string)"ExprFieldAccessType::GetClearValue() " + 
+            throw InternalError((string)"ExprFieldAccessType::GetClearValue() " +
                                 "should never have been called");
         }
 
@@ -1423,7 +1423,7 @@ namespace ESMC {
             this->Name = Name;
             // Sanity checks
             if (!TypeIDFieldType->Is<ExprRangeType>()) {
-                throw ESMCError((string)"ExprUnionType must be instantiated with a " + 
+                throw ESMCError((string)"ExprUnionType must be instantiated with a " +
                                 "subrange type for TypeIDFieldType");
             }
 
@@ -1432,18 +1432,18 @@ namespace ESMC {
             if (Low != 0) {
                 throw ESMCError((string)"Subrange type for ExprUnionType must have low at 0");
             }
-            
+
             const u32 MaxNumTypes = TypeIDTypeAsRange->GetHigh();
             if (MaxNumTypes < MemberTypes.size()) {
-                throw ESMCError((string)"Subrange type not sufficient to accommodate all " + 
+                throw ESMCError((string)"Subrange type not sufficient to accommodate all " +
                                 "member types");
             }
-            
+
             u32 NumTypesSeen = 1;
             // Find the maximum number of occurences of each type
             // in each member type
             map<ExprTypeRef, u32> MaxOccCount;
-            
+
             for (auto const& MemberType : MemberTypes) {
                 auto MemberTypeAsRec = MemberType->As<ExprRecordType>();
                 if (MemberTypeAsRec == nullptr) {
@@ -1451,13 +1451,13 @@ namespace ESMC {
                 }
                 map<ExprTypeRef, u32> CurOccCount;
                 auto const& MemberVec = MemberTypeAsRec->GetMemberVec();
-                
+
                 for (auto const& Member : MemberVec) {
                     if (Member.first == TypeIDFieldName) {
-                        throw ESMCError((string)"One of the record types in args to MessageType " + 
+                        throw ESMCError((string)"One of the record types in args to MessageType " +
                                         "contains a reserved field \"" + TypeIDFieldName + "\"");
                     }
-                    
+
                     if (CurOccCount.find(Member.second) == CurOccCount.end()) {
                         CurOccCount[Member.second] = 0;
                     }
@@ -1559,7 +1559,7 @@ namespace ESMC {
             }
             auto it = MemberTypeToID.find(TypeAsRec);
             if (it == MemberTypeToID.end()) {
-                throw ESMCError((string)"Type \"" + MemType->ToString() + " \" does not " + 
+                throw ESMCError((string)"Type \"" + MemType->ToString() + " \" does not " +
                                 "seem to be a member of union type");
             }
             return it->second;
@@ -1569,7 +1569,7 @@ namespace ESMC {
         {
             auto it = IDToMemberType.find(TypeID);
             if (it == IDToMemberType.end()) {
-                throw ESMCError((string)"TypeID " + to_string(TypeID) + 
+                throw ESMCError((string)"TypeID " + to_string(TypeID) +
                                 " not a valid type id for message type");
             }
             return it->second;
@@ -1578,17 +1578,17 @@ namespace ESMC {
         const string& ExprUnionType::MapFromMemberField(const ExprTypeRef& MemberType,
                                                           const string& FieldName) const
         {
-            
+
             auto TypeAsRec = MemberType->As<ExprRecordType>();
             if (TypeAsRec == nullptr) {
-                TypeAsRec = 
+                TypeAsRec =
                     MemberType->As<ExprParametricType>()->GetBaseType()->As<ExprRecordType>();
             }
 
             auto it = MemberTypeToID.find(TypeAsRec);
             if (it == MemberTypeToID.end()) {
-                throw ESMCError((string)"Type \"" + MemberType->ToString() + " \" does not " + 
-                                "seem to be a member of union type");                
+                throw ESMCError((string)"Type \"" + MemberType->ToString() + " \" does not " +
+                                "seem to be a member of union type");
             }
             auto TypeID = it->second;
 
@@ -1605,13 +1605,13 @@ namespace ESMC {
         {
             auto it = FieldToMemberField.find(TypeID);
             if (it == FieldToMemberField.end()) {
-                throw ESMCError((string)"TypeID " + to_string(TypeID) + " not a valid " + 
+                throw ESMCError((string)"TypeID " + to_string(TypeID) + " not a valid " +
                                 "type id for union type");
             }
             auto const& Map = it->second;
             auto it2 = Map.find(FieldName);
             if (it2 == Map.end()) {
-                throw ESMCError((string)"Field Name \"" + FieldName + "\" does not " + 
+                throw ESMCError((string)"Field Name \"" + FieldName + "\" does not " +
                                 "seem to be a member of union type");
             }
             return it2->second;
@@ -1633,13 +1633,13 @@ namespace ESMC {
                 Other.As<ExprRangeType>() != nullptr ||
                 Other.As<ExprEnumType> () != nullptr ||
                 Other.As<ExprSymmetricType>() != nullptr ||
-                Other.As<ExprFuncType> () != nullptr || 
+                Other.As<ExprFuncType> () != nullptr ||
                 Other.As<ExprArrayType>() != nullptr ||
-                Other.As<ExprParametricType>() != nullptr || 
+                Other.As<ExprParametricType>() != nullptr ||
                 Other.As<ExprFieldAccessType>() != nullptr) {
                 return 1;
             }
-            if (Other.As<ExprRecordType>() != nullptr && 
+            if (Other.As<ExprRecordType>() != nullptr &&
                 Other.As<ExprUnionType>() == nullptr) {
                 return 1;
             }
@@ -1659,12 +1659,12 @@ namespace ESMC {
 
         string ExprUnionType::GetClearValue() const
         {
-            throw ESMCError((string)"ExprUnionType::GetClearValue() should never " + 
+            throw ESMCError((string)"ExprUnionType::GetClearValue() should never " +
                             "have been called");
         }
-        
+
     } /* end namespace Exprs */
 } /* end namespace ESMC */
 
-// 
+//
 // ExprTypes.cpp ends here

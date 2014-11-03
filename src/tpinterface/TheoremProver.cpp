@@ -1,13 +1,13 @@
-// TheoremProver.cpp --- 
-// 
+// TheoremProver.cpp ---
+//
 // Filename: TheoremProver.cpp
 // Author: Abhishek Udupa
 // Created: Tue Oct  7 18:10:46 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -45,9 +45,9 @@ namespace ESMC {
         IncompleteTheoryException::IncompleteTheoryException(const ExpT& Expression) throw ()
             : Expression(Expression)
         {
-            ExceptionInfo = 
-                (string)"Could not determine satisfiability of expression:\n" + 
-                Expression->ToString() + "\nThis could be due to incompleteness " + 
+            ExceptionInfo =
+                (string)"Could not determine satisfiability of expression:\n" +
+                Expression->ToString() + "\nThis could be due to incompleteness " +
                 "in the theorem prover";
         }
 
@@ -83,7 +83,7 @@ namespace ESMC {
             return LastSolveResult;
         }
 
-        const string& TheoremProver::GetName() const 
+        const string& TheoremProver::GetName() const
         {
             return Name;
         }
@@ -117,28 +117,28 @@ namespace ESMC {
                                    bool UnrollQuantifiers) const
         {
             if (!Assertion->GetType()->Is<Exprs::ExprBoolType>()) {
-                throw ESMCError((string)"Attempted to assert a non-Boolean " + 
-                                "expression.\nThe expression is:\n" + 
+                throw ESMCError((string)"Attempted to assert a non-Boolean " +
+                                "expression.\nThe expression is:\n" +
                                 Assertion->ToString());
             }
             AssertionStack.top().push_back(Assertion);
         }
-        
+
         // Again, assumes that quantifiers are unrolled already
         void TheoremProver::Assert(const vector<ExpT>& Assertions,
                                    bool UnrollQuantifiers) const
         {
             for (auto const& Assertion : Assertions) {
                 if (!Assertion->GetType()->Is<Exprs::ExprBoolType>()) {
-                    throw ESMCError((string)"Attempted to assert a non-Boolean " + 
-                                    "expression.\nThe expression is:\n" + 
+                    throw ESMCError((string)"Attempted to assert a non-Boolean " +
+                                    "expression.\nThe expression is:\n" +
                                     Assertion->ToString());
                 }
                 AssertionStack.top().push_back(Assertion);
             }
         }
 
-        
+
         // Z3TheoremProver implementation
         Z3TheoremProver::Z3TheoremProver()
             : TheoremProver("Z3TheoremProver"),
@@ -157,19 +157,19 @@ namespace ESMC {
             // Push the default scope on
             Z3_solver_push(*Ctx, Solver);
         }
-        
+
         Z3TheoremProver::~Z3TheoremProver()
         {
             // Nothing here
         }
 
-        void Z3TheoremProver::ClearSolution() const 
+        void Z3TheoremProver::ClearSolution() const
         {
             TheoremProver::ClearSolution();
             TheModel = Z3Model::NullModel;
         }
 
-        void Z3TheoremProver::Push() const 
+        void Z3TheoremProver::Push() const
         {
             Z3_solver_push(*Ctx, Solver);
             TheoremProver::Push();
@@ -191,12 +191,12 @@ namespace ESMC {
                                      bool UnrollQuantifiers) const
         {
             auto Mgr = Assertion->GetMgr();
-            // cout << "Non Unrolled assertion:" << endl 
+            // cout << "Non Unrolled assertion:" << endl
             //      << Assertion->ToString() << endl;
             // flush(cout);
             LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
             ExpT UnrolledExp = ExpT::NullPtr;
-            
+
             if (UnrollQuantifiers) {
                 UnrolledExp = Mgr->UnrollQuantifiers(Assertion);
             } else {
@@ -210,7 +210,7 @@ namespace ESMC {
             Z3_solver_assert(*Ctx, Solver, LoweredAssertion);
             // cout << "[Z3TheoremProver] Asserted:" << endl
             //      << LoweredAssertion.ToString() << endl;
-            
+
             // Assert the constraints from the lowered context as well
             auto const& Assumptions = LTSCtx->GetAllAssumptions();
             for (auto const& AssumptionSet : Assumptions) {
@@ -277,7 +277,7 @@ namespace ESMC {
             //      << LoweredAssertion.ToString() << endl;
 
             Z3_solver_assert(*Ctx, FlashSolver, LoweredAssertion);
-            
+
             auto const& Assumptions = LTSCtx->GetAllAssumptions();
             for (auto const& AssumptionSet : Assumptions) {
                 for (auto const& Assumption : AssumptionSet) {
@@ -298,38 +298,38 @@ namespace ESMC {
             TheModel = Z3Model::NullModel;
             return LastSolveResult;
         }
-        
+
         ExpT Z3TheoremProver::Evaluate(const ExpT& Exp) const
         {
             if (LastSolveResult != TPResult::SATISFIABLE) {
-                throw ESMCError((string)"Z3TheoremProver::Evaluate() called, but " + 
-                                "last solve was not satisfiable. No model to evaluate " + 
+                throw ESMCError((string)"Z3TheoremProver::Evaluate() called, but " +
+                                "last solve was not satisfiable. No model to evaluate " +
                                 "expression over!");
             }
 
             auto ExpType = Exp->GetType();
             if (!ExpType->Is<Exprs::ExprScalarType>()) {
-                throw ESMCError((string)"Z3TheoremProver::Evaluate() called " + 
-                                "on non-scalar typed expression. This is not " + 
+                throw ESMCError((string)"Z3TheoremProver::Evaluate() called " +
+                                "on non-scalar typed expression. This is not " +
                                 "currently supported!");
             }
 
             // Get the model if not already done
             if (TheModel == Z3Model::NullModel) {
-                TheModel = Z3Model(Ctx, Z3_solver_get_model(*Ctx, 
-                                                         (LastSolveWasFlash ? 
-                                                          FlashSolver : Solver)), 
+                TheModel = Z3Model(Ctx, Z3_solver_get_model(*Ctx,
+                                                         (LastSolveWasFlash ?
+                                                          FlashSolver : Solver)),
                                    const_cast<Z3TheoremProver*>(this));
             }
 
             auto Mgr = Exp->GetMgr();
-            
+
             LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
             auto LoweredExpr = Mgr->LowerExpr(Exp, LTSCtx);
             Z3_ast OutAst = nullptr;
             auto EvalRes = Z3_model_eval(*Ctx, TheModel, LoweredExpr, true, &OutAst);
             if (EvalRes == Z3_FALSE) {
-                throw ESMCError((string)"Could not evaluate the expression in the model.\n" + 
+                throw ESMCError((string)"Could not evaluate the expression in the model.\n" +
                                 "Expression: " + Exp->ToString());
             }
             Z3Expr EvalLExpr(Ctx, OutAst);
@@ -339,11 +339,11 @@ namespace ESMC {
         const Z3Model& Z3TheoremProver::GetModel() const
         {
             if (LastSolveResult != TPResult::SATISFIABLE) {
-                throw ESMCError((string)"Z3TheoremProver::GetModel() called, but " + 
+                throw ESMCError((string)"Z3TheoremProver::GetModel() called, but " +
                                 "last solve was not satisfiable. No model to return.");
             }
             if (TheModel == Z3Model::NullModel) {
-                TheModel = Z3Model(Ctx, Z3_solver_get_model(*Ctx, (LastSolveWasFlash ? 
+                TheModel = Z3Model(Ctx, Z3_solver_get_model(*Ctx, (LastSolveWasFlash ?
                                                                    FlashSolver : Solver)),
                                    const_cast<Z3TheoremProver*>(this));
             }
@@ -359,9 +359,9 @@ namespace ESMC {
         {
             return Solver;
         }
-        
+
     } /* end namespace TP */
 } /* end namespace ESMC */
 
-// 
+//
 // TheoremProver.cpp ends here

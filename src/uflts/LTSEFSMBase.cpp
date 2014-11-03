@@ -1,13 +1,13 @@
-// LTSEFSMBase.cpp --- 
-// 
+// LTSEFSMBase.cpp ---
+//
 // Filename: LTSEFSMBase.cpp
 // Author: Abhishek Udupa
 // Created: Fri Aug 15 12:10:58 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -127,7 +127,7 @@ namespace ESMC {
               Fairnesses(new LTSProcessFairnessGroup(this))
         {
             if (Fairness != LTSFairnessType::None) {
-                auto FairsetFairness = Fairness == LTSFairnessType::Weak ? 
+                auto FairsetFairness = Fairness == LTSFairnessType::Weak ?
                     FairSetFairnessType::Weak : FairSetFairnessType::Strong;
 
                 Fairnesses->AddFairnessSet("ProcessFairness", FairsetFairness);
@@ -175,7 +175,7 @@ namespace ESMC {
             return it->second;
         }
 
-        vector<LTSTransRef> 
+        vector<LTSTransRef>
         EFSMBase::GetOutputTransitionsOnMsg(const ExprTypeRef& MsgType) const
         {
             vector<LTSTransRef> Retval;
@@ -195,7 +195,7 @@ namespace ESMC {
                 if (it3 == Transitions.end()) {
                     continue;
                 }
-                
+
                 auto const& TransVec = it3->second;
                 for (auto const& Trans : TransVec) {
                     if (Trans->Is<LTSTransitionOutput>()) {
@@ -210,11 +210,11 @@ namespace ESMC {
             return Retval;
         }
 
-        vector<vector<LTSTransRef>> 
+        vector<vector<LTSTransRef>>
         EFSMBase::GetInputTransitionsOnMsg(const ExprTypeRef& MsgType) const
         {
             vector<vector<LTSTransRef>> Retval;
-            
+
             for (auto const& ParamInst : ParamInsts) {
 
                 vector<LTSTransRef> RetvalComp;
@@ -234,7 +234,7 @@ namespace ESMC {
                 }
 
                 auto const& TransVec = it3->second;
-                
+
                 for (auto const& Trans : TransVec) {
                     if (Trans->Is<LTSTransitionInput>()) {
                         auto TransAsIn = Trans->SAs<LTSTransitionInput>();
@@ -249,7 +249,7 @@ namespace ESMC {
                     Retval.push_back(RetvalComp);
                 }
             }
-            
+
             return Retval;
         }
 
@@ -269,11 +269,11 @@ namespace ESMC {
         }
 
         void EFSMBase::AddState(const string& StateName,
-                                bool Initial, bool Final, 
+                                bool Initial, bool Final,
                                 bool Accepting, bool Error)
         {
             if (Initial || Accepting) {
-                throw ESMCError((string)"EFSMs cannot have initial states or " + 
+                throw ESMCError((string)"EFSMs cannot have initial states or " +
                                 "accepting states");
             }
             AutomatonBase::AddState(StateName, Initial, Final, Accepting, Error);
@@ -307,32 +307,32 @@ namespace ESMC {
             }
         }
 
-        void EFSMBase::AssertInput(const vector<ExpT>& ParamInst, 
+        void EFSMBase::AssertInput(const vector<ExpT>& ParamInst,
                                    const ExprTypeRef& MessageType) const
         {
             auto it = Inputs.find(ParamInst);
             if (it == Inputs.end()) {
-                throw InternalError((string)"Attempted instantation of msg with invalid " + 
+                throw InternalError((string)"Attempted instantation of msg with invalid " +
                                     "parameters.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
             }
             auto it2 = it->second.find(MessageType);
             if (it2 == it->second.end()) {
-                throw ESMCError((string)"Message type \"" + MessageType->ToString() + "\" is not " + 
+                throw ESMCError((string)"Message type \"" + MessageType->ToString() + "\" is not " +
                                 "an input for machine named \"" + Name + "\"");
             }
         }
 
-        void EFSMBase::AssertOutput(const vector<ExpT>& ParamInst, 
+        void EFSMBase::AssertOutput(const vector<ExpT>& ParamInst,
                                     const ExprTypeRef& MessageType) const
         {
             auto it = Outputs.find(ParamInst);
             if (it == Outputs.end()) {
-                throw InternalError((string)"Attempted instantation of msg with invalid " + 
+                throw InternalError((string)"Attempted instantation of msg with invalid " +
                                     "parameters.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
             }
             auto it2 = it->second.find(MessageType);
             if (it2 == it->second.end()) {
-                throw ESMCError((string)"Message type \"" + MessageType->ToString() + "\" is not " + 
+                throw ESMCError((string)"Message type \"" + MessageType->ToString() + "\" is not " +
                                 "an output for machine named \"" + Name + "\"");
             }
         }
@@ -343,13 +343,13 @@ namespace ESMC {
             if (TypeAsRec == nullptr) {
                 auto TypeAsParam = Type->As<ExprParametricType>();
                 if (TypeAsParam == nullptr) {
-                    throw ESMCError((string)"Message type \"" + Type->ToString() + 
+                    throw ESMCError((string)"Message type \"" + Type->ToString() +
                                     "\" is not a record type or parametric type");
                 }
                 TypeAsRec = TypeAsParam->GetBaseType()->As<ExprRecordType>();
             }
             if (!TheLTS->CheckMessageType(Type)) {
-                throw ESMCError((string)"Message type \"" + TypeAsRec->GetName() + 
+                throw ESMCError((string)"Message type \"" + TypeAsRec->GetName() +
                                 "\" has not been registered with the LTS");
             }
         }
@@ -361,7 +361,7 @@ namespace ESMC {
             }
         }
 
-        ExprTypeRef EFSMBase::InstantiateMessageType(const vector<ExpT>& Params, 
+        ExprTypeRef EFSMBase::InstantiateMessageType(const vector<ExpT>& Params,
                                                      const MgrT::SubstMapT& SubstMap,
                                                      const ExprTypeRef& MsgType)
         {
@@ -371,15 +371,15 @@ namespace ESMC {
                 return InstantiateType(MsgType, SubstVec, Mgr);
             } else {
                 if (!MsgType->Is<ExprRecordType>()) {
-                    throw ESMCError((string)"Message type not plain record type, " + 
+                    throw ESMCError((string)"Message type not plain record type, " +
                                     "but attempted to instantiate with no params");
                 }
                 return MsgType;
             }
         }
 
-        SymmMsgDeclRef EFSMBase::AddMsg(const ExprTypeRef& MsgType, 
-                                        const vector<ExpT>& Params, 
+        SymmMsgDeclRef EFSMBase::AddMsg(const ExprTypeRef& MsgType,
+                                        const vector<ExpT>& Params,
                                         bool IsInput)
         {
             AssertStatesFrozen();
@@ -391,7 +391,7 @@ namespace ESMC {
 
             for (u32 i = 0; i < NumInsts; ++i) {
                 auto const& SubstMap = ParamSubsts[i];
-                
+
                 auto ActMsgType = InstantiateMessageType(Params, SubstMap, MsgType);
 
                 auto const& InpSet = Inputs[ParamInsts[i]];
@@ -400,31 +400,31 @@ namespace ESMC {
 
                 if (IsInput) {
                     if (OutSet.find(ActMsgType) != OutSet.end()) {
-                        throw ESMCError((string)"Message type "  + ActMsgType->ToString()  + 
+                        throw ESMCError((string)"Message type "  + ActMsgType->ToString()  +
                                         " conflicts in input/output definition");
                     }
 
                     Inputs[ParamInsts[i]].insert(ActMsgType);
                 } else {
                     if (InpSet.find(ActMsgType) != InpSet.end()) {
-                        throw ESMCError((string)"Message type "  + ActMsgType->ToString()  + 
+                        throw ESMCError((string)"Message type "  + ActMsgType->ToString()  +
                                         " conflicts in input/output definition");
                     }
 
                     Outputs[ParamInsts[i]].insert(ActMsgType);
                 }
             }
-            
+
             SymmetricMessages.push_back(new SymmetricMessageDecl(MsgType, vector<ExpT>(),
                                                                  this->Constraint,
                                                                  Params, IsInput));
             return SymmetricMessages.back();
         }
 
-        SymmMsgDeclRef EFSMBase::AddMsgs(const vector<ExpT>& NewParams, 
-                                         const ExpT& Constraint, 
-                                         const ExprTypeRef& MsgType, 
-                                         const vector<ExpT>& Params, 
+        SymmMsgDeclRef EFSMBase::AddMsgs(const vector<ExpT>& NewParams,
+                                         const ExpT& Constraint,
+                                         const ExprTypeRef& MsgType,
+                                         const vector<ExpT>& Params,
                                          bool IsInput)
         {
             AssertStatesFrozen();
@@ -436,17 +436,17 @@ namespace ESMC {
             CheckParams(NewParams, Constraint, SymTab, Mgr, true);
             CheckParams(Params, SymTab);
             SymTab.Pop();
-            
+
             const u32 NumInsts = ParamInsts.size();
             const u32 NumNewParams = NewParams.size();
-            
+
             for (u32 i = 0; i < NumInsts; ++i) {
                 auto const& SubstMap = ParamSubsts[i];
                 auto SubstConstraint = Mgr->Substitute(SubstMap, Constraint);
-                
+
                 auto&& NewInsts = InstantiateParams(NewParams, SubstConstraint, Mgr);
                 const u32 NumNewInsts = NewInsts.size();
-                
+
                 for (u32 j = 0; j < NumNewInsts; ++j) {
                     MgrT::SubstMapT LocalSubstMap = SubstMap;
                     auto const& CurNewInst = NewInsts[j];
@@ -462,34 +462,34 @@ namespace ESMC {
 
                     if (IsInput) {
                         if (OutSet.find(ActMsgType) != OutSet.end()) {
-                            throw ESMCError((string)"Message type "  + ActMsgType->ToString()  + 
+                            throw ESMCError((string)"Message type "  + ActMsgType->ToString()  +
                                             " conflicts in input/output definition");
                         }
                         if (InpSet.find(ActMsgType) != InpSet.end()) {
-                            throw ESMCError((string)"Message type "  + ActMsgType->ToString()  + 
-                                            " already declared as input of machine \"" + 
-                                            Name + "\"");
-                        }
-                        
-                        Inputs[ParamInsts[i]].insert(ActMsgType);
-                    } else {
-                        if (InpSet.find(ActMsgType) != InpSet.end()) {
-                            throw ESMCError((string)"Message type "  + ActMsgType->ToString()  + 
-                                            " conflicts in input/output definition");
-                        }
-                        if (OutSet.find(ActMsgType) != OutSet.end()) {
-                            throw ESMCError((string)"Message type "  + ActMsgType->ToString()  + 
-                                            " already declared as output of machine \"" + 
+                            throw ESMCError((string)"Message type "  + ActMsgType->ToString()  +
+                                            " already declared as input of machine \"" +
                                             Name + "\"");
                         }
 
-                        
+                        Inputs[ParamInsts[i]].insert(ActMsgType);
+                    } else {
+                        if (InpSet.find(ActMsgType) != InpSet.end()) {
+                            throw ESMCError((string)"Message type "  + ActMsgType->ToString()  +
+                                            " conflicts in input/output definition");
+                        }
+                        if (OutSet.find(ActMsgType) != OutSet.end()) {
+                            throw ESMCError((string)"Message type "  + ActMsgType->ToString()  +
+                                            " already declared as output of machine \"" +
+                                            Name + "\"");
+                        }
+
+
                         Outputs[ParamInsts[i]].insert(ActMsgType);
                     }
                 }
             }
 
-            SymmetricMessages.push_back(new SymmetricMessageDecl(MsgType, NewParams, 
+            SymmetricMessages.push_back(new SymmetricMessageDecl(MsgType, NewParams,
                                                                  Constraint, Params,
                                                                  IsInput));
             return SymmetricMessages.back();
@@ -503,7 +503,7 @@ namespace ESMC {
         {
             auto Mgr = TheLTS->GetMgr();
             auto const& SubstMap = ParamSubst;
-            
+
             vector<LTSAssignRef> Retval;
 
             for (auto const& Update : Updates) {
@@ -526,12 +526,12 @@ namespace ESMC {
                 auto&& UpdateInsts = InstantiateParams(UpdateParams, SubstConstraint, Mgr);
                 for (auto const& UpdateInst : UpdateInsts) {
                     MgrT::SubstMapT LocalSubstMap = SubstMap;
-                    
+
                     for(u32 i = 0; i < NumUpdateParams; ++i) {
                         LocalSubstMap[UpdateParams[i]] = UpdateInst[i];
                     }
-                    
-                    auto NewAsgn = 
+
+                    auto NewAsgn =
                         new LTSAssignSimple(Mgr->Substitute(LocalSubstMap, PUpdate->GetLHS()),
                                             Mgr->Substitute(LocalSubstMap, PUpdate->GetRHS()));
                     Retval.push_back(NewAsgn);
@@ -544,11 +544,11 @@ namespace ESMC {
                 // Need to subst out message types
                 vector<LTSAssignRef> Retval2;
                 MgrT::SubstMapT LocalSubstMap;
-                LocalSubstMap[Mgr->MakeVar(MessageName, MessageType)] = 
+                LocalSubstMap[Mgr->MakeVar(MessageName, MessageType)] =
                     Mgr->MakeVar(MessageName, ActMType);
 
                 for (auto const& Update : Retval) {
-                    
+
                     auto LHS = Mgr->Substitute(LocalSubstMap, Update->GetLHS());
                     auto RHS = Mgr->Substitute(LocalSubstMap, Update->GetRHS());
                     Retval2.push_back(new LTSAssignSimple(LHS, RHS));
@@ -564,7 +564,7 @@ namespace ESMC {
             const u32 NumUpdates = Updates.size();
             vector<LTSAssignRef> Retval(NumUpdates);
             auto const& RebaseSubstMap = RebaseSubstMaps[ParamInst];
-            
+
             for (u32 i = 0; i < NumUpdates; ++i) {
                 auto RebasedLHS = Mgr->Substitute(RebaseSubstMap, Updates[i]->GetLHS());
                 auto RebasedRHS = Mgr->Substitute(RebaseSubstMap, Updates[i]->GetRHS());
@@ -584,13 +584,13 @@ namespace ESMC {
             for (u32 i = 0; i < NumUpdates; ++i) {
                 auto const& LHS = Updates[i]->GetLHS();
                 auto const& RHS = Updates[i]->GetRHS();
-                auto NewLHS = 
+                auto NewLHS =
                     Mgr->ApplyTransform<Detail::MsgTransformer>(LHS, MessageName,
-                                                                MessageType, 
+                                                                MessageType,
                                                                 TheLTS->GetUnifiedMType());
-                auto NewRHS = 
+                auto NewRHS =
                     Mgr->ApplyTransform<Detail::MsgTransformer>(RHS, MessageName,
-                                                                MessageType, 
+                                                                MessageType,
                                                                 TheLTS->GetUnifiedMType());
                 Retval[i] = new LTSAssignSimple(NewLHS, NewRHS);
             }
@@ -606,7 +606,7 @@ namespace ESMC {
             for (u32 i = 0; i < NumUpdates; ++i) {
                 auto SimpLHS = Mgr->Simplify(Updates[i]->GetLHS());
                 auto SimpRHS = Mgr->Simplify(Updates[i]->GetRHS());
-                
+
                 if (SimpLHS == SimpRHS) {
                     // identity, ignore
                     continue;
@@ -617,7 +617,7 @@ namespace ESMC {
             }
             return Retval;
         }
-        
+
 
         LTSFairnessType EFSMBase::GetFairnessType() const
         {
@@ -637,7 +637,7 @@ namespace ESMC {
             return Fairnesses->GetFairnessObj(FairnessName, InstParams);
         }
 
-        const LTSFairSetRef& 
+        const LTSFairSetRef&
         EFSMBase::GetFairnessSet(const string& FairnessName) const
         {
             return Fairnesses->GetFairnessSet(FairnessName);
@@ -649,7 +649,7 @@ namespace ESMC {
             return Fairnesses;
         }
 
-        void EFSMBase::FreezeStates() 
+        void EFSMBase::FreezeStates()
         {
             AutomatonBase::FreezeStates();
             // Create a variable called "state"
@@ -690,12 +690,12 @@ namespace ESMC {
                 auto const& ParamSubst = ParamSubsts[i];
                 auto PrefixExp = Mgr->MakeVar(Name, StateVarType);
                 for (auto const& Param : Params) {
-                    PrefixExp = Mgr->MakeExpr(LTSOps::OpIndex, PrefixExp, 
+                    PrefixExp = Mgr->MakeExpr(LTSOps::OpIndex, PrefixExp,
                                               Mgr->Substitute(ParamSubst, Param));
                 }
 
                 auto FAType = Mgr->MakeType<ExprFieldAccessType>();
-            
+
                 // Create a substitution for each var
                 for (auto const& Decl : DeclMap) {
                     if (Decl.second->Is<VarDecl>()) {
@@ -710,7 +710,7 @@ namespace ESMC {
             // Make the error and final conditions on states
             auto ErrorConditionOne = Mgr->MakeFalse();
             auto FinalConditionOne = Mgr->MakeFalse();
-            
+
             for (auto const& StateDesc : States) {
                 auto const& Desc = StateDesc.second;
                 if (Desc.IsError()) {
@@ -730,7 +730,7 @@ namespace ESMC {
             vector<ExpT> ErrorConditions;
             vector<ExpT> FinalConditions;
             for (auto const& ParamInst : ParamInsts) {
-                ErrorConditions.push_back(Mgr->Substitute(RebaseSubstMaps[ParamInst], 
+                ErrorConditions.push_back(Mgr->Substitute(RebaseSubstMaps[ParamInst],
                                                           ErrorConditionOne));
                 FinalConditions.push_back(Mgr->Substitute(RebaseSubstMaps[ParamInst],
                                                           FinalConditionOne));
@@ -752,7 +752,7 @@ namespace ESMC {
             if (EFSMFrozen) {
                 return;
             }
-            
+
             EFSMFrozen = true;
             return;
         }
@@ -763,8 +763,8 @@ namespace ESMC {
             return AddMsg(MsgType, Params, true);
         }
 
-        SymmMsgDeclRef EFSMBase::AddInputMsgs(const vector<ExpT>& NewParams, 
-                                              const ExpT& Constraint, 
+        SymmMsgDeclRef EFSMBase::AddInputMsgs(const vector<ExpT>& NewParams,
+                                              const ExpT& Constraint,
                                               const ExprTypeRef& MessageType,
                                               const vector<ExpT>& MessageParams)
         {
@@ -777,8 +777,8 @@ namespace ESMC {
             return AddMsg(MsgType, Params, false);
         }
 
-        SymmMsgDeclRef EFSMBase::AddOutputMsgs(const vector<ExpT>& NewParams, 
-                                               const ExpT& Constraint, 
+        SymmMsgDeclRef EFSMBase::AddOutputMsgs(const vector<ExpT>& NewParams,
+                                               const ExpT& Constraint,
                                                const ExprTypeRef& MessageType,
                                                const vector<ExpT>& MessageParams)
         {
@@ -792,18 +792,18 @@ namespace ESMC {
             AssertEFSMNotFrozen();
 
             if (SymTab.Lookup(VarName) != DeclRef::NullPtr) {
-                throw ESMCError((string)"Something named \"" + VarName + "\" already declared " + 
+                throw ESMCError((string)"Something named \"" + VarName + "\" already declared " +
                                 "in EFSM \"" + Name + "\"");
             }
             SymTab.Bind(VarName, new VarDecl(VarName, VarType));
         }
 
-        void EFSMBase::AddInputTransForInstance(u32 InstanceID, 
+        void EFSMBase::AddInputTransForInstance(u32 InstanceID,
                                                 const MgrT::SubstMapT& SubstMap,
-                                                const string& InitState, 
-                                                const ExpT& Guard, 
-                                                const vector<LTSAssignRef>& Updates, 
-                                                const string& MessageName, 
+                                                const string& InitState,
+                                                const ExpT& Guard,
+                                                const vector<LTSAssignRef>& Updates,
+                                                const string& MessageName,
                                                 const ExprTypeRef& MessageType,
                                                 const ExprTypeRef& ActMType,
                                                 const LTSSymbTransRef& SymbTrans)
@@ -818,45 +818,45 @@ namespace ESMC {
             auto const& IS = States[InitState];
 
             auto const& ParamInst = ParamInsts[InstanceID];
-            
+
             auto LocalUpdates = Updates;
             auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates, MessageName,
                                                     MessageType, ActMType);
             auto&& RebasedUpdates = RebaseUpdates(ParamInst, InstUpdates);
             auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates,
-                                                               MessageName, 
+                                                               MessageName,
                                                                ActMType);
             auto&& SimpUpdates = SimplifyUpdates(MsgTransformedUpdates);
             SimpUpdates = ExpandUpdates(SimpUpdates);
-            
-            auto LocalGuard = 
+
+            auto LocalGuard =
                 Mgr->MakeExpr(LTSOps::OpAND,
                               Mgr->MakeExpr(LTSOps::OpEQ,
                                             Mgr->MakeVar("state", StateType),
                                             Mgr->MakeVal(InitState, StateType)),
                               Guard);
-            
+
             auto SubstGuard = Mgr->Substitute(SubstMap, LocalGuard);
-            auto RebasedGuard = Mgr->Substitute(RebaseSubstMaps[ParamInst], 
+            auto RebasedGuard = Mgr->Substitute(RebaseSubstMaps[ParamInst],
                                                 SubstGuard);
-            auto MsgTransformedGuard = 
+            auto MsgTransformedGuard =
                 Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard,
                                                             MessageName, MessageType,
                                                             TheLTS->GetUnifiedMType());
 
-            // Finally, unroll quantifiers 
+            // Finally, unroll quantifiers
             auto ElimGuard = Mgr->UnrollQuantifiers(MsgTransformedGuard);
             auto SimpGuard = Mgr->Simplify(ElimGuard);
 
             auto CurTransition = new LTSTransitionInput(this, ParamInst, IS, SimpGuard,
-                                                        SimpUpdates, MessageName, 
+                                                        SimpUpdates, MessageName,
                                                         ActMType, SymbTrans);
             Transitions[ParamInst].push_back(CurTransition);
         }
 
-        void EFSMBase::AddInputTransition(const string& InitState, const string& FinalState, 
-                                          const ExpT& Guard, const vector<LTSAssignRef>& Updates, 
-                                          const string& MessageName, const ExprTypeRef& MessageType, 
+        void EFSMBase::AddInputTransition(const string& InitState, const string& FinalState,
+                                          const ExpT& Guard, const vector<LTSAssignRef>& Updates,
+                                          const string& MessageName, const ExprTypeRef& MessageType,
                                           const vector<ExpT>& MessageParams, bool Tentative)
         {
             auto Mgr = TheLTS->GetMgr();
@@ -864,7 +864,7 @@ namespace ESMC {
             auto LocalUpdates = Updates;
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
-            AddInputTransition(InitState, Guard, LocalUpdates, MessageName, 
+            AddInputTransition(InitState, Guard, LocalUpdates, MessageName,
                                MessageType, MessageParams, Tentative);
         }
 
@@ -879,16 +879,16 @@ namespace ESMC {
             auto LocalUpdates = Updates;
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
-            AddInputTransitions(TransParams, Constraint, InitState, Guard, 
-                                LocalUpdates, MessageName, MessageType, 
+            AddInputTransitions(TransParams, Constraint, InitState, Guard,
+                                LocalUpdates, MessageName, MessageType,
                                 MessageParams, Tentative);
         }
 
-        void EFSMBase::AddInputTransition(const string& InitState, 
-                                          const ExpT& Guard, 
-                                          const vector<LTSAssignRef>& Updates, 
-                                          const string& MessageName, 
-                                          const ExprTypeRef& MessageType, 
+        void EFSMBase::AddInputTransition(const string& InitState,
+                                          const ExpT& Guard,
+                                          const vector<LTSAssignRef>& Updates,
+                                          const string& MessageName,
+                                          const ExprTypeRef& MessageType,
                                           const vector<ExpT>& MessageParams,
                                           bool Tentative)
         {
@@ -900,7 +900,7 @@ namespace ESMC {
 
             CheckExpr(Guard, SymTab, Mgr);
             CheckParams(MessageParams, SymTab);
- 
+
             ExprTypeRef ActMsgType = nullptr;
             if (MessageType->Is<ExprParametricType>()) {
                 ActMsgType = MessageType->SAs<ExprParametricType>()->GetBaseType();
@@ -908,13 +908,13 @@ namespace ESMC {
             else if (MessageType->Is<ExprRecordType>()) {
                 ActMsgType = MessageType;
             } else {
-                throw ESMCError((string)"Message type \"" + MessageType->ToString() + 
+                throw ESMCError((string)"Message type \"" + MessageType->ToString() +
                                 "\" is not a record or parametric type");
             }
 
             SymTab.Push();
             if (SymTab.Lookup(MessageName) != DeclRef::NullPtr) {
-                throw ESMCError((string)"Message Name \"" + MessageName + "\" shadows " + 
+                throw ESMCError((string)"Message Name \"" + MessageName + "\" shadows " +
                                 "earlier declaration in machine \"" + Name + "\"");
             }
 
@@ -927,7 +927,7 @@ namespace ESMC {
                                                         Guard, Updates, MessageName,
                                                         MessageType, MessageParams, Tentative);
             SymbolicTransitions.push_back(SymbTrans);
-            
+
             const u32 NumInsts = ParamInsts.size();
             for (u32 i = 0; i < NumInsts; ++i) {
                 auto const& SubstMap = ParamSubsts[i];
@@ -941,13 +941,13 @@ namespace ESMC {
             }
         }
 
-        void EFSMBase::AddInputTransitions(const vector<ExpT>& TransParams, 
-                                           const ExpT& Constraint, 
-                                           const string& InitState, 
-                                           const ExpT& Guard, 
-                                           const vector<LTSAssignRef>& Updates, 
-                                           const string& MessageName, 
-                                           const ExprTypeRef& MessageType, 
+        void EFSMBase::AddInputTransitions(const vector<ExpT>& TransParams,
+                                           const ExpT& Constraint,
+                                           const string& InitState,
+                                           const ExpT& Guard,
+                                           const vector<LTSAssignRef>& Updates,
+                                           const string& MessageName,
+                                           const ExprTypeRef& MessageType,
                                            const vector<ExpT>& MessageParams,
                                            bool Tentative)
         {
@@ -962,7 +962,7 @@ namespace ESMC {
             CheckParams(TransParams, Constraint, SymTab, Mgr, true);
             CheckParams(MessageParams, SymTab);
             CheckExpr(Guard, SymTab, Mgr);
-            
+
             ExprTypeRef ActMsgType = nullptr;
             if (MessageType->Is<ExprParametricType>()) {
                 ActMsgType = MessageType->SAs<ExprParametricType>()->GetBaseType();
@@ -970,12 +970,12 @@ namespace ESMC {
             else if (MessageType->Is<ExprRecordType>()) {
                 ActMsgType = MessageType;
             } else {
-                throw ESMCError((string)"Message type \"" + MessageType->ToString() + 
+                throw ESMCError((string)"Message type \"" + MessageType->ToString() +
                                 "\" is not a record or parametric type");
             }
             SymTab.Push();
             if (SymTab.Lookup(MessageName) != DeclRef::NullPtr) {
-                throw ESMCError((string)"Message Name \"" + MessageName + "\" shadows " + 
+                throw ESMCError((string)"Message Name \"" + MessageName + "\" shadows " +
                                 "earlier declaration in machine \"" + Name + "\"");
             }
             SymTab.Bind(MessageName, new InMsgDecl(MessageName, ActMsgType));
@@ -1011,7 +1011,7 @@ namespace ESMC {
                         LocalSubstMap[TransParams[j]] = TransParamInst[j];
                     }
 
-                    auto ActMType = 
+                    auto ActMType =
                         InstantiateMessageType(MessageParams, LocalSubstMap, MessageType);
                     CheckMsgType(ActMType);
                     AssertInput(ParamInsts[i], ActMType);
@@ -1024,7 +1024,7 @@ namespace ESMC {
             }
         }
 
-        void EFSMBase::AddOutputTransForInstance(u32 InstanceID, 
+        void EFSMBase::AddOutputTransForInstance(u32 InstanceID,
                                                  const MgrT::SubstMapT& SubstMap,
                                                  const string& InitState,
                                                  const ExpT& Guard,
@@ -1051,36 +1051,36 @@ namespace ESMC {
             auto const& TypeIDFieldName = UMTypeAsUnion->GetTypeIDFieldName();
             auto const& TypeIDFieldType = UMTypeAsUnion->GetTypeIDFieldType();
             auto FieldVar = Mgr->MakeVar(TypeIDFieldName, Mgr->MakeType<ExprFieldAccessType>());
-            auto FieldExp = Mgr->MakeExpr(LTSOps::OpField, 
+            auto FieldExp = Mgr->MakeExpr(LTSOps::OpField,
                                           Mgr->MakeVar(MessageName, UMType), FieldVar);
-            auto TypeIDExp = 
+            auto TypeIDExp =
                 Mgr->MakeVal(to_string(UMTypeAsUnion->GetTypeIDForMemberType(ActMType)),
                              TypeIDFieldType);
 
-            
+
             auto LocalUpdates = Updates;
             LocalUpdates.push_back(new LTSAssignSimple(FieldExp, TypeIDExp));
-                                                           
+
             auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates,
                                                     MessageName, MessageType, ActMType);
             auto&& RebasedUpdates = RebaseUpdates(ParamInst, InstUpdates);
-            auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates, 
-                                                               MessageName, 
+            auto&& MsgTransformedUpdates = MsgTransformUpdates(RebasedUpdates,
+                                                               MessageName,
                                                                ActMType);
             auto&& SimpUpdates = SimplifyUpdates(MsgTransformedUpdates);
             SimpUpdates = ExpandUpdates(SimpUpdates);
 
             auto LocalGuard = Mgr->MakeExpr(LTSOps::OpAND, Guard,
-                                            Mgr->MakeExpr(LTSOps::OpEQ, 
+                                            Mgr->MakeExpr(LTSOps::OpEQ,
                                                           Mgr->MakeVar("state", StateType),
                                                           Mgr->MakeVal(InitState, StateType)));
 
             auto SubstGuard = Mgr->Substitute(SubstMap, LocalGuard);
-            auto RebasedGuard = Mgr->Substitute(RebaseSubstMaps[ParamInst], 
+            auto RebasedGuard = Mgr->Substitute(RebaseSubstMaps[ParamInst],
                                                 SubstGuard);
-            auto MsgTransformedGuard = 
-                Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard, MessageName, 
-                                                            MessageType, 
+            auto MsgTransformedGuard =
+                Mgr->ApplyTransform<Detail::MsgTransformer>(RebasedGuard, MessageName,
+                                                            MessageType,
                                                             TheLTS->GetUnifiedMType());
             auto ElimGuard = Mgr->UnrollQuantifiers(MsgTransformedGuard);
             auto SimpGuard = Mgr->Simplify(ElimGuard);
@@ -1100,13 +1100,13 @@ namespace ESMC {
             Transitions[ParamInst].push_back(CurTransition);
         }
 
-        void EFSMBase::AddOutputTransition(const string& InitState, 
-                                           const string& FinalState, 
-                                           const ExpT& Guard, 
-                                           const vector<LTSAssignRef>& Updates, 
-                                           const string& MessageName, 
-                                           const ExprTypeRef& MessageType, 
-                                           const vector<ExpT>& MessageParams, 
+        void EFSMBase::AddOutputTransition(const string& InitState,
+                                           const string& FinalState,
+                                           const ExpT& Guard,
+                                           const vector<LTSAssignRef>& Updates,
+                                           const string& MessageName,
+                                           const ExprTypeRef& MessageType,
+                                           const vector<ExpT>& MessageParams,
                                            const set<string> &AddToFairnessSets,
                                            bool Tentative)
         {
@@ -1120,11 +1120,11 @@ namespace ESMC {
                                 Tentative);
         }
 
-        void EFSMBase::AddOutputTransition(const string& InitState, 
-                                           const ExpT& Guard, 
-                                           const vector<LTSAssignRef>& Updates, 
-                                           const string& MessageName, 
-                                           const ExprTypeRef& MessageType, 
+        void EFSMBase::AddOutputTransition(const string& InitState,
+                                           const ExpT& Guard,
+                                           const vector<LTSAssignRef>& Updates,
+                                           const string& MessageName,
+                                           const ExprTypeRef& MessageType,
                                            const vector<ExpT>& MessageParams,
                                            const set<string>& AddToFairnessSets,
                                            bool Tentative)
@@ -1138,20 +1138,20 @@ namespace ESMC {
             CheckFairnessSets(AddToFairnessSets);
             CheckExpr(Guard, SymTab, Mgr);
             CheckParams(MessageParams, SymTab);
-            
+
             ExprTypeRef ActMsgType = nullptr;
             if (MessageType->Is<ExprParametricType>()) {
                 ActMsgType = MessageType->SAs<ExprParametricType>()->GetBaseType();
             } else if (MessageType->Is<ExprRecordType>()) {
                 ActMsgType = MessageType;
             } else {
-                throw ESMCError((string)"Message type \"" + MessageType->ToString() + 
+                throw ESMCError((string)"Message type \"" + MessageType->ToString() +
                                 "\" is not a record or parametric type");
             }
-            
+
             SymTab.Push();
             if (SymTab.Lookup(MessageName) != DeclRef::NullPtr) {
-                throw ESMCError((string)"Message Name \"" + MessageName + "\" shadows " + 
+                throw ESMCError((string)"Message Name \"" + MessageName + "\" shadows " +
                                 "earlier declaration in machine \"" + Name + "\"");
             }
 
@@ -1176,21 +1176,21 @@ namespace ESMC {
                 AssertOutput(ParamInsts[i], ActMType);
 
                 AddOutputTransForInstance(i, SubstMap, InitState,
-                                          Guard, Updates, MessageName, 
-                                          MessageType, ActMType, 
+                                          Guard, Updates, MessageName,
+                                          MessageType, ActMType,
                                           AddToFairnessSets, SymbTrans);
             }
         }
 
 
-        void EFSMBase::AddOutputTransitions(const vector<ExpT>& TransParams, 
-                                            const ExpT& Constraint, 
-                                            const string& InitState, 
-                                            const string& FinalState, 
-                                            const ExpT& Guard, 
-                                            const vector<LTSAssignRef>& Updates, 
-                                            const string& MessageName, 
-                                            const ExprTypeRef& MessageType, 
+        void EFSMBase::AddOutputTransitions(const vector<ExpT>& TransParams,
+                                            const ExpT& Constraint,
+                                            const string& InitState,
+                                            const string& FinalState,
+                                            const ExpT& Guard,
+                                            const vector<LTSAssignRef>& Updates,
+                                            const string& MessageName,
+                                            const ExprTypeRef& MessageType,
                                             const vector<ExpT>& MessageParams,
                                             LTSFairnessType FairnessKind,
                                             SplatFairnessType SplatFairness,
@@ -1203,18 +1203,18 @@ namespace ESMC {
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
             AddOutputTransitions(TransParams, Constraint, InitState,
-                                 Guard, LocalUpdates, MessageName, MessageType, 
-                                 MessageParams, FairnessKind, SplatFairness, 
+                                 Guard, LocalUpdates, MessageName, MessageType,
+                                 MessageParams, FairnessKind, SplatFairness,
                                  SplatFairnessName, Tentative);
         }
 
-        void EFSMBase::AddOutputTransitions(const vector<ExpT>& TransParams, 
-                                            const ExpT& Constraint, 
-                                            const string& InitState, 
-                                            const ExpT& Guard, 
-                                            const vector<LTSAssignRef>& Updates, 
-                                            const string& MessageName, 
-                                            const ExprTypeRef& MessageType, 
+        void EFSMBase::AddOutputTransitions(const vector<ExpT>& TransParams,
+                                            const ExpT& Constraint,
+                                            const string& InitState,
+                                            const ExpT& Guard,
+                                            const vector<LTSAssignRef>& Updates,
+                                            const string& MessageName,
+                                            const ExprTypeRef& MessageType,
                                             const vector<ExpT>& MessageParams,
                                             LTSFairnessType FairnessKind,
                                             SplatFairnessType SplatFairness,
@@ -1229,14 +1229,14 @@ namespace ESMC {
             string SplatPrefix;
             if (SplatFairness != SplatFairnessType::None) {
                 if (FairnessKind == LTSFairnessType::None) {
-                    throw ESMCError((string)"Cannot create splat fairness with FairnessKind " + 
+                    throw ESMCError((string)"Cannot create splat fairness with FairnessKind " +
                                     "specified as None");
                 }
-                SetFairnessType = FairnessKind == LTSFairnessType::Weak ? 
+                SetFairnessType = FairnessKind == LTSFairnessType::Weak ?
                     FairSetFairnessType::Weak : FairSetFairnessType::Strong;
 
                 if (SplatFairnessName == "") {
-                    SplatPrefix = ((string)"SplatFairness_" + 
+                    SplatPrefix = ((string)"SplatFairness_" +
                                    to_string(FairnessUIDGenerator.GetUID()));
                 } else {
                     SplatPrefix = SplatFairnessName;
@@ -1258,15 +1258,15 @@ namespace ESMC {
             else if (MessageType->Is<ExprRecordType>()) {
                 ActMsgType = MessageType;
             } else {
-                throw ESMCError((string)"Message type \"" + MessageType->ToString() + 
+                throw ESMCError((string)"Message type \"" + MessageType->ToString() +
                                 "\" is not a record or parametric type");
             }
             SymTab.Push();
             if (SymTab.Lookup(MessageName) != DeclRef::NullPtr) {
-                throw ESMCError((string)"Message Name \"" + MessageName + "\" shadows " + 
+                throw ESMCError((string)"Message Name \"" + MessageName + "\" shadows " +
                                 "earlier declaration in machine \"" + Name + "\"");
             }
-            
+
             SymTab.Bind(MessageName, new OutMsgDecl(MessageName, ActMsgType));
             CheckUpdates(Updates, SymTab, Mgr, false, MessageName);
             SymTab.Pop();
@@ -1300,7 +1300,7 @@ namespace ESMC {
 
                 auto const& SubstMap = ParamSubsts[i];
                 auto SubstConstraint = Mgr->Substitute(SubstMap, Constraint);
-                
+
                 auto&& TransParamInsts = InstantiateParams(TransParams, SubstConstraint, Mgr);
                 UIDGenerator LocalFairnessUIDGenerator;
 
@@ -1313,7 +1313,7 @@ namespace ESMC {
                         LocalSubstMap[TransParams[j]] = TransParamInst[j];
                     }
 
-                    auto ActMType = 
+                    auto ActMType =
                         InstantiateMessageType(MessageParams, LocalSubstMap, MessageType);
 
                     CheckMsgType(ActMType);
@@ -1321,25 +1321,25 @@ namespace ESMC {
 
                     set<string> LocalFairnessSets;
                     string SplatFairnessSetName;
-                    
+
                     if (SplatFairness == SplatFairnessType::Group) {
                         SplatFairnessSetName = SplatPrefix;
                         LocalFairnessSets.insert(SplatFairnessSetName);
                     }
                     if (SplatFairness == SplatFairnessType::Individual) {
-                        SplatFairnessSetName = SplatPrefix + "_" + 
+                        SplatFairnessSetName = SplatPrefix + "_" +
                             to_string(LocalFairnessUIDGenerator.GetUID());
                         LocalFairnessSets.insert(SplatFairnessSetName);
-                        
+
                         if (FirstInstance) {
                             Fairnesses->AddFairnessSet(SplatFairnessSetName, SetFairnessType);
                             UserToInternalFairness[SplatPrefix].insert(SplatFairnessSetName);
                         }
                     }
-                    
+
                     AddOutputTransForInstance(i, LocalSubstMap, InitState,
-                                              Guard, Updates, MessageName, 
-                                              MessageType, ActMType, 
+                                              Guard, Updates, MessageName,
+                                              MessageType, ActMType,
                                               LocalFairnessSets, SymbTrans);
                 }
 
@@ -1366,16 +1366,16 @@ namespace ESMC {
 
             auto const& IS = States[InitState];
             auto const& ParamInst = ParamInsts[InstanceID];
-            
+
             auto LocalUpdates = Updates;
             auto&& InstUpdates = InstantiateUpdates(SubstMap, LocalUpdates,
                                                     "", ExprTypeRef::NullPtr, ExprTypeRef::NullPtr);
             auto&& RebasedUpdates = RebaseUpdates(ParamInst, InstUpdates);
             auto&& SimpUpdates = SimplifyUpdates(RebasedUpdates);
             SimpUpdates = ExpandUpdates(SimpUpdates);
-             
-            auto LocalGuard = 
-                Mgr->MakeExpr(LTSOps::OpAND, 
+
+            auto LocalGuard =
+                Mgr->MakeExpr(LTSOps::OpAND,
                               Mgr->MakeExpr(LTSOps::OpEQ,
                                             Mgr->MakeVar("state", StateType),
                                             Mgr->MakeVal(InitState, StateType)),
@@ -1398,9 +1398,9 @@ namespace ESMC {
             Transitions[ParamInst].push_back(CurTransition);
         }
 
-        void EFSMBase::AddInternalTransition(const string& InitState, 
-                                             const string& FinalState, 
-                                             const ExpT& Guard, 
+        void EFSMBase::AddInternalTransition(const string& InitState,
+                                             const string& FinalState,
+                                             const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const set<string>& AddToFairnessSets,
                                              bool Tentative)
@@ -1410,12 +1410,12 @@ namespace ESMC {
             auto LocalUpdates = Updates;
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
-            AddInternalTransition(InitState, Guard, LocalUpdates, 
+            AddInternalTransition(InitState, Guard, LocalUpdates,
                                   AddToFairnessSets, Tentative);
         }
 
-        void EFSMBase::AddInternalTransition(const string& InitState, 
-                                             const ExpT& Guard, 
+        void EFSMBase::AddInternalTransition(const string& InitState,
+                                             const ExpT& Guard,
                                              const vector<LTSAssignRef> &Updates,
                                              const set<string>& AddToFairnessSets,
                                              bool Tentative)
@@ -1440,18 +1440,18 @@ namespace ESMC {
 
             for (u32 i = 0; i < NumInsts; ++i) {
                 auto const& SubstMap = ParamSubsts[i];
-                AddInternalTransForInstance(i, SubstMap, InitState, Guard, 
+                AddInternalTransForInstance(i, SubstMap, InitState, Guard,
                                             Updates, AddToFairnessSets, SymbTrans);
             }
         }
 
-        void EFSMBase::AddInternalTransitions(const vector<ExpT>& TransParams, 
-                                              const ExpT& Constraint, 
-                                              const string& InitState, 
-                                              const string& FinalState, 
-                                              const ExpT& Guard, 
-                                              const vector<LTSAssignRef>& Updates, 
-                                              LTSFairnessType FairnessKind, 
+        void EFSMBase::AddInternalTransitions(const vector<ExpT>& TransParams,
+                                              const ExpT& Constraint,
+                                              const string& InitState,
+                                              const string& FinalState,
+                                              const ExpT& Guard,
+                                              const vector<LTSAssignRef>& Updates,
+                                              LTSFairnessType FairnessKind,
                                               SplatFairnessType SplatFairness,
                                               const string& SplatFairnessName,
                                               bool Tentative)
@@ -1461,17 +1461,17 @@ namespace ESMC {
             auto LocalUpdates = Updates;
             LocalUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                        Mgr->MakeVal(FinalState, StateType)));
-            AddInternalTransitions(TransParams, Constraint, InitState, 
-                                   Guard, LocalUpdates, FairnessKind, SplatFairness, 
+            AddInternalTransitions(TransParams, Constraint, InitState,
+                                   Guard, LocalUpdates, FairnessKind, SplatFairness,
                                    SplatFairnessName, Tentative);
         }
 
-        void EFSMBase::AddInternalTransitions(const vector<ExpT>& TransParams, 
-                                              const ExpT& Constraint, 
-                                              const string& InitState, 
-                                              const ExpT& Guard, 
-                                              const vector<LTSAssignRef>& Updates, 
-                                              LTSFairnessType FairnessKind, 
+        void EFSMBase::AddInternalTransitions(const vector<ExpT>& TransParams,
+                                              const ExpT& Constraint,
+                                              const string& InitState,
+                                              const ExpT& Guard,
+                                              const vector<LTSAssignRef>& Updates,
+                                              LTSFairnessType FairnessKind,
                                               SplatFairnessType SplatFairness,
                                               const string& SplatFairnessName,
                                               bool Tentative)
@@ -1484,14 +1484,14 @@ namespace ESMC {
             string SplatPrefix;
             if (SplatFairness != SplatFairnessType::None) {
                 if (FairnessKind == LTSFairnessType::None) {
-                    throw ESMCError((string)"Cannot create splat fairness with FairnessKind " + 
+                    throw ESMCError((string)"Cannot create splat fairness with FairnessKind " +
                                     "specified as None");
                 }
-                SetFairnessType = FairnessKind == LTSFairnessType::Weak ? 
+                SetFairnessType = FairnessKind == LTSFairnessType::Weak ?
                     FairSetFairnessType::Weak : FairSetFairnessType::Strong;
 
                 if (SplatFairnessName == "") {
-                    SplatPrefix = ((string)"SplatFairness_" + 
+                    SplatPrefix = ((string)"SplatFairness_" +
                                    to_string(FairnessUIDGenerator.GetUID()));
                 } else {
                     SplatPrefix = SplatFairnessName;
@@ -1529,7 +1529,7 @@ namespace ESMC {
             }
 
             bool FirstInstance = true;
-            
+
             for (u32 i = 0; i < NumInsts; ++i) {
 
                 auto const& SubstMap = ParamSubsts[i];
@@ -1547,7 +1547,7 @@ namespace ESMC {
 
                     set<string> LocalFairnessSets;
                     string SplatFairnessSetName;
-                    
+
                     if (Fairness != LTSFairnessType::None) {
                         LocalFairnessSets.insert("ProcessFairness");
                     }
@@ -1556,7 +1556,7 @@ namespace ESMC {
                         LocalFairnessSets.insert(SplatFairnessSetName);
                     }
                     if (SplatFairness == SplatFairnessType::Individual) {
-                        SplatFairnessSetName = SplatPrefix + "_" + 
+                        SplatFairnessSetName = SplatPrefix + "_" +
                             to_string(LocalFairnessUIDGenerator.GetUID());
                         LocalFairnessSets.insert(SplatFairnessSetName);
 
@@ -1565,7 +1565,7 @@ namespace ESMC {
                             UserToInternalFairness[SplatPrefix].insert(SplatFairnessSetName);
                         }
                     }
-                    
+
                     AddInternalTransForInstance(i, LocalSubstMap, InitState,
                                                 Guard, Updates, LocalFairnessSets,
                                                 SymbTrans);
@@ -1603,11 +1603,11 @@ namespace ESMC {
                     }
                     sstr << "    }" << endl;
                 }
-                
+
                 sstr << "    vars {" << endl;
                 for (auto const& NameDecl : SymTab.Bot()->GetDeclMap()) {
                     if (NameDecl.second->Is<VarDecl>()) {
-                        sstr << "        " << NameDecl.first << " : " 
+                        sstr << "        " << NameDecl.first << " : "
                              << NameDecl.second->GetType()->ToString() << endl;
                     }
                 }
@@ -1636,8 +1636,8 @@ namespace ESMC {
         {
             auto it = RebaseSubstMaps.find(ParamInst);
             if (it == RebaseSubstMaps.end()) {
-                throw InternalError((string)"Requested rebase substitution map of non-existent " + 
-                                    "instance of EFSM \"" + Name + "\"\nAt: " + __FILE__ + 
+                throw InternalError((string)"Requested rebase substitution map of non-existent " +
+                                    "instance of EFSM \"" + Name + "\"\nAt: " + __FILE__ +
                                     ":" + to_string(__LINE__));
             }
             return it->second;
@@ -1648,8 +1648,8 @@ namespace ESMC {
             return SymbolicTransitions;
         }
 
-        vector<LTSSymbTransRef> 
-        EFSMBase::GetSymbolicTransitions(const function<bool(const LTSSymbTransRef&)>& 
+        vector<LTSSymbTransRef>
+        EFSMBase::GetSymbolicTransitions(const function<bool(const LTSSymbTransRef&)>&
                                          MatchPred) const
         {
             vector<LTSSymbTransRef> Retval;
@@ -1666,8 +1666,8 @@ namespace ESMC {
             return SymmetricMessages;
         }
 
-        vector<SymmMsgDeclRef> 
-        EFSMBase::GetSymmetricMessages(const function<bool(const SymmMsgDeclRef&)>& 
+        vector<SymmMsgDeclRef>
+        EFSMBase::GetSymmetricMessages(const function<bool(const SymmMsgDeclRef&)>&
                                        MatchPred) const
         {
             vector<SymmMsgDeclRef> Retval;
@@ -1678,13 +1678,10 @@ namespace ESMC {
             }
             return Retval;
         }
-            
+
 
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-// 
+//
 // LTSEFSMBase.cpp ends here
-
-
-

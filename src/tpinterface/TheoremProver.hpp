@@ -1,13 +1,13 @@
-// TheoremProver.hpp --- 
-// 
+// TheoremProver.hpp ---
+//
 // Filename: TheoremProver.hpp
 // Author: Abhishek Udupa
 // Created: Mon Oct  6 10:51:31 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -68,7 +68,7 @@ namespace ESMC {
         private:
             ExpT Expression;
             string ExceptionInfo;
-            
+
         public:
             IncompleteTheoryException(const ExpT& Expression) throw ();
             virtual ~IncompleteTheoryException() throw ();
@@ -93,16 +93,16 @@ namespace ESMC {
             const string& GetName() const;
 
             virtual void ClearSolution() const;
-            
+
             virtual void Push() const;
             virtual vector<ExpT> Pop() const;
             virtual void Pop(u32 NumScopes) const;
 
-            virtual void Assert(const ExpT& Assertion, 
+            virtual void Assert(const ExpT& Assertion,
                                 bool UnrollQuantifiers) const;
-            virtual void Assert(const vector<ExpT>& Assertions, 
+            virtual void Assert(const vector<ExpT>& Assertions,
                                 bool UnrollQuantifiers) const;
-            
+
             virtual TPResult CheckSat() const = 0;
             // Ignores all the assertions on the stack
             virtual TPResult CheckSat(const ExpT& Assertion,
@@ -118,7 +118,7 @@ namespace ESMC {
                 return Retval;
             }
 
-            template <typename T> 
+            template <typename T>
             inline T* As()
             {
                 return dynamic_cast<T*>(this);
@@ -130,7 +130,7 @@ namespace ESMC {
                 return dynamic_cast<const T*>(this);
             }
 
-            template <typename T> 
+            template <typename T>
             inline T* SAs()
             {
                 return static_cast<T*>(this);
@@ -141,9 +141,9 @@ namespace ESMC {
             {
                 return static_cast<const T*>(this);
             }
-            
+
             template <typename T>
-            inline bool Is() const 
+            inline bool Is() const
             {
                 return (dynamic_cast<const T*>(this) != nullptr);
             }
@@ -167,8 +167,8 @@ namespace ESMC {
             virtual void Push() const override;
             virtual vector<ExpT> Pop() const override;
             virtual void Pop(u32 NumScopes) const override;
-            
-            virtual void Assert(const ExpT& Assertion, 
+
+            virtual void Assert(const ExpT& Assertion,
                                 bool UnrollQuantifiers = false) const override;
             virtual void Assert(const vector<ExpT>& Assertions,
                                 bool UnrollQuantifiers = false) const override;
@@ -191,5 +191,5 @@ namespace ESMC {
 
 #endif /* ESMC_THEOREM_PROVER_HPP_ */
 
-// 
+//
 // TheoremProver.hpp ends here

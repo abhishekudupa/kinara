@@ -1,13 +1,13 @@
-// LTSExtensions.hpp --- 
-// 
+// LTSExtensions.hpp ---
+//
 // Filename: LTSExtensions.hpp
 // Author: Abhishek Udupa
 // Created: Tue Jul 29 08:53:58 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -63,10 +63,10 @@ namespace ESMC {
             i64 ConstVal;
             // Info for record accesses
             u32 FieldOffset;
-            // Interpreter for whatever 
+            // Interpreter for whatever
             // cannot be compiled in
             RValueInterpreter* Interp;
-            
+
             LTSExtensionT();
             virtual ~LTSExtensionT();
         };
@@ -88,5 +88,5 @@ namespace ESMC {
 
 #endif /* ESMC_LTS_EXTENSIONS_HPP_ */
 
-// 
+//
 // LTSExtensions.hpp ends here

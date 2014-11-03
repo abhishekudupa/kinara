@@ -1,13 +1,13 @@
-// LTSTransitions.hpp --- 
-// 
+// LTSTransitions.hpp ---
+//
 // Filename: LTSTransitions.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug  8 14:01:14 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -55,7 +55,7 @@ namespace ESMC {
             AutomatonBase* Automaton;
             LTSState InitState;
             ExpT Guard;
-            // The parameters with which I was 
+            // The parameters with which I was
             // instantiated
             vector<ExpT> ParamInst;
 
@@ -72,7 +72,7 @@ namespace ESMC {
             const vector<ExpT>& GetParamInst() const;
 
             virtual string ToString(u32 Indent = 0) const = 0;
-            
+
             template <typename T>
             T* As()
             {
@@ -115,7 +115,7 @@ namespace ESMC {
             ExpT Guard;
             vector<LTSAssignRef> Updates;
             bool Tentative;
-            
+
         public:
             LTSSymbTransitionBase(const vector<ExpT>& TransParams,
                                   const vector<ExpT>& Params,
@@ -143,7 +143,7 @@ namespace ESMC {
             {
                 return dynamic_cast<T*>(this);
             }
-            
+
             template <typename T>
             inline const T* As() const
             {
@@ -155,7 +155,7 @@ namespace ESMC {
             {
                 return static_cast<T*>(this);
             }
-            
+
             template <typename T>
             inline const T* SAs() const
             {
@@ -224,10 +224,10 @@ namespace ESMC {
         class LTSTransitionBase : public AutomatonTransitionBase
         {
         protected:
-            // The EFSM that this transition is a part of 
+            // The EFSM that this transition is a part of
             vector<LTSAssignRef> Updates;
             LTSSymbTransRef SymbolicTransition;
-            
+
         public:
             LTSTransitionBase(EFSMBase* TheEFSM,
                               const vector<ExpT>& ParamInst,
@@ -273,7 +273,7 @@ namespace ESMC {
                                const ExpT& Guard,
                                const vector<LTSAssignRef>& Updates,
                                const string& MessageName,
-                               const ExprTypeRef& MessageType, 
+                               const ExprTypeRef& MessageType,
                                const LTSSymbTransRef& SymbolicTransition);
             virtual ~LTSTransitionInput();
 
@@ -383,7 +383,7 @@ namespace ESMC {
                          const ExpT& Constraint,
                          const vector<LTSAssignRef>& Updates);
             virtual ~LTSInitState();
-            
+
             const vector<ExpT>& GetParams() const;
             const ExpT& GetConstraint() const;
             const vector<LTSAssignRef>& GetUpdates() const;
@@ -395,5 +395,5 @@ namespace ESMC {
 
 #endif /* ESMC_LTS_TRANSITIONS_HPP_ */
 
-// 
+//
 // LTSTransitions.hpp ends here

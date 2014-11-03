@@ -1,13 +1,13 @@
-// FwdDecls.hpp --- 
-// 
+// FwdDecls.hpp ---
+//
 // Filename: FwdDecls.hpp
 // Author: Abhishek Udupa
 // Created: Sun Jun 29 13:46:14 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -62,7 +62,7 @@ namespace ESMC {
         template <typename ExtType, template <typename> class SemType> class VarExpression;
         template <typename ExtType, template <typename> class SemType> class BoundVarExpression;
         template <typename ExtType, template <typename> class SemType> class OpExpression;
-        template <typename ExtType, 
+        template <typename ExtType,
                   template <typename> class SemType> class QuantifiedExpressionBase;
         template <typename ExtType, template <typename> class SemType> class AQuantifiedExpression;
         template <typename ExtType, template <typename> class SemType> class EQuantifiedExpression;
@@ -91,10 +91,10 @@ namespace ESMC {
 
         class ExprTypeBase;
         class ExprFuncType;
-        
+
         typedef CSmartPtr<ExprTypeBase> ExprTypeRef;
     } /* end namespace Exprs */
-    
+
     namespace LTS {
 
         class LabelledTS;
@@ -105,7 +105,7 @@ namespace ESMC {
         class DetEFSM;
 
         class SymmetricMessageDecl;
-        
+
         typedef CSmartPtr<SymmetricMessageDecl> SymmMsgDeclRef;
 
         template <typename E> class LTSTermSemantizer;
@@ -136,7 +136,7 @@ namespace ESMC {
 
         typedef CSmartPtr<LTSSymbTransitionBase> LTSSymbTransRef;
 
-        class LTSGuardedCommand;        
+        class LTSGuardedCommand;
         typedef CSmartPtr<LTSGuardedCommand> GCmdRef;
 
     } /* end namespace LTS */
@@ -156,7 +156,7 @@ namespace ESMC {
         class RValueInterpreter;
         class LValueInterpreter;
         class AQStructure;
-        template <typename STATETYPE> 
+        template <typename STATETYPE>
         class AnnotatedEdge;
 
         typedef AnnotatedEdge<StateVec> AQSEdge;
@@ -166,15 +166,15 @@ namespace ESMC {
         class StateVecPrinter;
 
         typedef AnnotatedEdge<ProductState> ProductEdge;
-        
+
         class BuchiAutomatonBase;
         class StateBuchiAutomaton;
         class MsgBuchiAutomaton;
-        
+
         class IndexVector;
         class ProcessIndexSet;
         class SystemIndexSet;
-        
+
         // Traces
         typedef pair<LTS::GCmdRef, const StateVec*> TraceElemT;
         typedef pair<LTS::GCmdRef, const ProductState*> PSTraceElemT;
@@ -206,7 +206,7 @@ namespace ESMC {
     } /* end namespace Symm */
 
     namespace TP {
-        
+
         class Z3Object;
         class Z3CtxWrapper;
         class Z3Expr;
@@ -215,12 +215,12 @@ namespace ESMC {
         class Z3Solver;
 
         typedef CSmartPtr<Z3CtxWrapper> Z3Ctx;
-        
+
         class TheoremProver;
         class Z3TheoremProver;
-        
+
         typedef CSmartPtr<TheoremProver> TPRef;
-        
+
     } /* end namespace TP */
 
     namespace Synth {
@@ -244,13 +244,5 @@ namespace ESMC {
 
 #endif /* ESMC_FWD_DECLS_HPP_ */
 
-// 
+//
 // FwdDecls.hpp ends here
-
-
-
-
-
-
-
-

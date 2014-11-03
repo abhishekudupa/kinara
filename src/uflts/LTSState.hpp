@@ -1,13 +1,13 @@
-// LTSState.hpp --- 
-// 
+// LTSState.hpp ---
+//
 // Filename: LTSState.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug  8 13:43:46 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -54,7 +54,7 @@ namespace ESMC {
             bool Final;
             bool Error;
             bool Initial;
-            
+
         private:
             LTSState(const string& StateName, bool Initial,
                      bool Final, bool Accepting, bool Error);
@@ -73,7 +73,7 @@ namespace ESMC {
             bool IsInitial() const;
             string ToString() const;
 
-            static LTSState MakeEFSMState(const string& StateName, 
+            static LTSState MakeEFSMState(const string& StateName,
                                           bool Initial = false,
                                           bool Final = false,
                                           bool Error = false);
@@ -88,5 +88,5 @@ namespace ESMC {
 
 #endif /* ESMC_LTS_STATE_HPP_ */
 
-// 
+//
 // LTSState.hpp ends here

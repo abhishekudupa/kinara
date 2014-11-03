@@ -1,13 +1,13 @@
-// LTSAssign.cpp --- 
-// 
+// LTSAssign.cpp ---
+//
 // Filename: LTSAssign.cpp
 // Author: Abhishek Udupa
 // Created: Fri Aug  8 15:38:49 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -100,8 +100,8 @@ namespace ESMC {
                 Retval.push_back(this);
                 return Retval;
             }
-            
-            
+
+
             if (LHS->GetType()->Is<ExprRecordType>()) {
                 auto TypeAsRec = LHS->GetType()->SAs<ExprRecordType>();
                 auto const& Fields = TypeAsRec->GetMemberVec();
@@ -120,7 +120,7 @@ namespace ESMC {
                             NewRHS = Mgr->MakeVal(FieldType->GetClearValue(), FieldType);
                         }
                     } else {
-                        NewRHS = Mgr->MakeExpr(LTSOps::OpField, RHS, 
+                        NewRHS = Mgr->MakeExpr(LTSOps::OpField, RHS,
                                                Mgr->MakeVar(FieldName, FAType));
                     }
 
@@ -133,11 +133,11 @@ namespace ESMC {
                 auto const& IndexType = TypeAsArray->GetIndexType();
                 auto const& ValueType = TypeAsArray->GetValueType();
                 auto const& IndexElems = IndexType->GetElementsNoUndef();
-                
+
                 for (auto const& IndexElem : IndexElems) {
                     auto IndexExp = Mgr->MakeVal(IndexElem, IndexType);
                     auto NewLHS = Mgr->MakeExpr(LTSOps::OpIndex, LHS, IndexExp);
-                    
+
                     ExpT NewRHS = ExpT::NullPtr;
                     if (RHS->Is<ConstExpression>()) {
                         if (!ValueType->Is<ExprScalarType>()) {
@@ -155,8 +155,8 @@ namespace ESMC {
                 }
             } else {
                 throw InternalError((string)"Unhandled type:\n" + LHS->GetType()->ToString() +
-                                    "\nwhen trying expand updates in assignment:\n" + 
-                                    this->ToString() + "\nAt: " + __FILE__ + ":" + 
+                                    "\nwhen trying expand updates in assignment:\n" +
+                                    this->ToString() + "\nAt: " + __FILE__ + ":" +
                                     to_string(__LINE__));
             }
             // Get the compiler to shut up
@@ -173,14 +173,14 @@ namespace ESMC {
             if (LHS->GetType()->Is<ExprSymmetricType>()) {
                 if (RHS->Is<Exprs::ConstExpression>()) {
                     if (RHS->SAs<Exprs::ConstExpression>()->GetConstValue() != "clear") {
-                        throw ESMCError((string)"Cannot make a parametric assignment " + 
+                        throw ESMCError((string)"Cannot make a parametric assignment " +
                                         "to an arbitrary constant of a symmetric type");
                     }
                 }
                 if (LHS->Is<Exprs::VarExpression>()) {
                     for (auto const& Param : Params) {
                         if (RHS == Param) {
-                            throw ESMCError((string)"Cannot initialize parameteric LHS to " + 
+                            throw ESMCError((string)"Cannot initialize parameteric LHS to " +
                                             "the value of a parameter");
                         }
                     }
@@ -197,7 +197,7 @@ namespace ESMC {
         {
             return Params;
         }
-        
+
         const ExpT& LTSAssignParam::GetConstraint() const
         {
             return Constraint;
@@ -210,13 +210,13 @@ namespace ESMC {
 
         vector<LTSAssignRef> LTSAssignParam::ExpandNonScalarUpdates() const
         {
-            throw InternalError((string)"LTSAssignParam::ExpandNonScalarUpdates() " + 
-                                "should never have been called\nAt: " + __FILE__ + 
+            throw InternalError((string)"LTSAssignParam::ExpandNonScalarUpdates() " +
+                                "should never have been called\nAt: " + __FILE__ +
                                 ":" + to_string(__LINE__));
         }
-        
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-// 
+//
 // LTSAssign.cpp ends here

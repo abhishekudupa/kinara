@@ -1,13 +1,13 @@
-// Solver.cpp --- 
-// 
+// Solver.cpp ---
+//
 // Filename: Solver.cpp
 // Author: Abhishek Udupa
 // Created: Thu Oct 23 11:13:37 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -53,7 +53,7 @@
 
 namespace ESMC {
     namespace Synth {
-        
+
         using namespace ESMC::LTS;
         using namespace ESMC::MC;
         using namespace ESMC::TP;
@@ -74,13 +74,40 @@ namespace ESMC {
               Bound(0),
               GuardedCommands(TheLTS->GetGuardedCmds())
         {
+            auto Mgr = TheLTS->GetMgr();
             // push a scope onto the theorem prover and assert
             // true
+
             TP->Push();
             TP->Assert(TheLTS->MakeTrue(), true);
-            
+
             TPAsZ3 = const_cast<Z3TheoremProver*>(TP->As<Z3TheoremProver>());
             Ctx = TPAsZ3->GetCtx();
+
+            // Find the maximum number of lvalues in any incomplete EFSM
+            u32 MaxLValues = 0;
+            auto const& AllEFSMs = TheLTS->AllEFSMs;
+
+            for (auto const& NameEFSM : AllEFSMs) {
+                if (!NameEFSM.second->Is<IncompleteEFSM>()) {
+                    continue;
+                }
+                auto EFSMAsInc = NameEFSM.second->SAs<IncompleteEFSM>();
+
+                vector<ExpT> LValues;
+                for (auto const& Var : EFSMAsInc->UpdateableVariables) {
+                    auto&& CurLValues = GetScalarTerms(Mgr->MakeVar(Var.first,
+                                                                    Var.second));
+                    LValues.insert(LValues.end(), CurLValues.begin(),
+                                   CurLValues.end());
+                }
+
+                if (LValues.size() > MaxLValues) {
+                    MaxLValues = LValues.size();
+                }
+            }
+
+            UpdateBoundsMultiplier = MaxLValues;
         }
 
         Solver::~Solver()
@@ -88,7 +115,7 @@ namespace ESMC {
             // Nothing here
         }
 
-        inline void Solver::HandleOneSafetyViolation(const StateVec* ErrorState, 
+        inline void Solver::HandleOneSafetyViolation(const StateVec* ErrorState,
                                                      const ExpT& BlownInvariant)
         {
             auto Mgr = TheLTS->GetMgr();
@@ -112,12 +139,11 @@ namespace ESMC {
 
             auto LastState = Trace->GetTraceElems().back().second;
 
-
             auto ActualBlownInvariant = BlownInvariant;
             // Find out the invariant blown on the last state of trace now
             if (BlownInvariant != Checker->TheLTS->InvariantExp) {
                 auto const& BoundsInvariants = Checker->BoundsInvariants;
-                
+
                 bool FoundBlown = false;
                 for (auto const& Invar : BoundsInvariants) {
                     // cout << "Evaluating invariant: " << Invar->ToString() << endl;
@@ -134,10 +160,10 @@ namespace ESMC {
                 if (!FoundBlown) {
                     ostringstream sstr;
                     Checker->Printer->PrintState(LastState, sstr);
-                    throw InternalError((string)"Could not find the bounds invariant that was " + 
-                                        "blown in call to Solver::HandleOneSafetyViolation()\n" + 
-                                        "The State:\n" + sstr.str() + "\nCould not find bounds " + 
-                                        "invariant that was blown for the state listed above.\n" + 
+                    throw InternalError((string)"Could not find the bounds invariant that was " +
+                                        "blown in call to Solver::HandleOneSafetyViolation()\n" +
+                                        "The State:\n" + sstr.str() + "\nCould not find bounds " +
+                                        "invariant that was blown for the state listed above.\n" +
                                         "At: " + __FILE__ + ":" + to_string(__LINE__));
                 }
             }
@@ -146,7 +172,7 @@ namespace ESMC {
                  << ActualBlownInvariant->ToString() << endl << "Computing weakest pre... ";
             flush(cout);
 
-            auto&& WPConditions = 
+            auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this, Trace, ActualBlownInvariant);
             for (auto const& Pred : WPConditions) {
                 cout << "Asserting Safety Pre: " << endl
@@ -203,7 +229,7 @@ namespace ESMC {
                     TP->Assert(Pred, true);
                 }
             }
-            
+
             // Mark all guards that have a full interpretation as such
             for (auto const& Cmd : GuardedCommands) {
                 auto const& Guard = Cmd->GetGuard();
@@ -235,7 +261,7 @@ namespace ESMC {
                 auto AppExp = Mgr->MakeExpr(NewOp, BoundArgs);
                 auto ExistsExp = Mgr->MakeExists(DomainTypes, AppExp);
                 auto IndicatorType = Mgr->MakeType<ExprRangeType>(0, 1);
-                
+
                 auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
                 IndicatorExps[NewOp] = IndicatorVar;
 
@@ -258,10 +284,10 @@ namespace ESMC {
             flush(cout);
 
             auto PPath = AQS->FindShortestPath(ErrorState, CostFunc);
-            
+
             cout << "Done!" << endl << "Unwinding trace... ";
             flush(cout);
-            
+
             auto Trace = TraceBase::MakeDeadlockViolation(PPath, Checker);
 
             cout << "Done!" << endl
@@ -310,16 +336,16 @@ namespace ESMC {
             cout << "Done!" << endl << "Computing weakest pre... ";
             flush(cout);
 
-            auto&& WPConditions = 
-                TraceAnalyses::WeakestPrecondition(this, 
-                                                   Trace->As<SafetyViolation>(), 
+            auto&& WPConditions =
+                TraceAnalyses::WeakestPrecondition(this,
+                                                   Trace->As<SafetyViolation>(),
                                                    GoodExp);
 
             for (auto const& Pred : WPConditions) {
                 cout << "Asserting Pre: " << endl << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
-            
+
             cout << "Done!" << endl;
             flush(cout);
 
@@ -330,7 +356,7 @@ namespace ESMC {
         {
             auto const& ErrorStates = Checker->GetAllErrorStates();
             auto const& DeadlockFreeInvar = Checker->DeadlockFreeInvariant;
-            
+
             u32 NumDeadlocks = 0;
             u32 i = 0;
             set<ExpT> BlownInvariantsCovered;
@@ -361,7 +387,7 @@ namespace ESMC {
         inline void Solver::HandleLivenessViolation(const LivenessViolation* Trace,
                                                     StateBuchiAutomaton* Monitor)
         {
-            auto Predicate = 
+            auto Predicate =
                 TraceAnalyses::WeakestPreconditionForLiveness(this, Monitor, Trace);
             cout << "Asserting predicate for liveness violation:" << endl
                  << Predicate->ToString() << endl << endl;
@@ -386,7 +412,7 @@ namespace ESMC {
                 SumExp = Mgr->MakeExpr(LTSOps::OpADD, Summands);
             }
 
-            auto BoundExp = Mgr->MakeVal(to_string(Bound), 
+            auto BoundExp = Mgr->MakeVal(to_string(Bound),
                                          Mgr->MakeType<ExprRangeType>(0, Bound));
             auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundExp);
             cout << "Asserting Bounds Constraint:" << endl
@@ -397,7 +423,7 @@ namespace ESMC {
         // Algorithm:
         // unlocked := {}
         // bound := 0
-        // while (true) 
+        // while (true)
         //   success := model check
         //   if success then
         //     return completed protocol
@@ -446,7 +472,7 @@ namespace ESMC {
                     HandleSafetyViolations();
                     continue;
                 }
-                
+
                 // Safe
                 bool CompletionGood = true;
                 auto const& LivenessNames = Checker->GetBuchiMonitorNames();
@@ -471,12 +497,12 @@ namespace ESMC {
                 }
             }
 
-            cout << "[Solver]: Exceeded limit on number of transitions " 
+            cout << "[Solver]: Exceeded limit on number of transitions "
                  << "that were allowed to be added. Bailing..." << endl << endl;
         }
 
     } /* end namespace Synth */
 } /* end namespace ESMC */
 
-// 
+//
 // Solver.cpp ends here

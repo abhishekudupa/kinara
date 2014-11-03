@@ -1,13 +1,13 @@
-// LTSFairnessSet.hpp --- 
-// 
+// LTSFairnessSet.hpp ---
+//
 // Filename: LTSFairnessSet.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug  8 17:09:14 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -48,7 +48,7 @@
 namespace ESMC {
     namespace LTS {
 
-        // One fairness object, that can consist 
+        // One fairness object, that can consist
         // of multiple transitions, all parameterized
         // by the same index vector
         class LTSFairnessObject : public RefCountable
@@ -86,7 +86,7 @@ namespace ESMC {
             static void ResetFairnessUID();
         };
 
-        // A parametrized fairness object, which consists of 
+        // A parametrized fairness object, which consists of
         // one or more instances of fairness objects
         class LTSFairnessSet : public RefCountable
         {
@@ -104,10 +104,10 @@ namespace ESMC {
             u32 FairnessSetID;
 
             static UIDGenerator FairnessSetUIDGenerator;
-            
+
             // Raw pointer to avoid ref counted cycles
             LTSProcessFairnessGroup* PFGroup;
-            
+
         public:
             LTSFairnessSet(LTSProcessFairnessGroup* PFGroup,
                            const string& Name, EFSMBase* TheEFSM,
@@ -136,35 +136,24 @@ namespace ESMC {
         private:
             EFSMBase* TheEFSM;
             mutable map<string, LTSFairSetRef> FairnessSets;
-            
+
         public:
             LTSProcessFairnessGroup(EFSMBase* TheEFSM);
             virtual ~LTSProcessFairnessGroup();
-            
+
             void AddFairnessSet(const string& Name, FairSetFairnessType FairnessType) const;
             EFSMBase* GetEFSM() const;
             const map<string, LTSFairSetRef>& GetFairnessSets() const;
-            
+
             const LTSFairSetRef& GetFairnessSet(const string& Name) const;
-            const LTSFairObjRef& GetFairnessObj(const string& Name, 
+            const LTSFairObjRef& GetFairnessObj(const string& Name,
                                                 const vector<ExpT>& Instance) const;
         };
-        
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LTS_FAIRNESS_SET_HPP_ */
 
-// 
+//
 // LTSFairnessSet.hpp ends here
-
-
-
-
-
-
-
-
-
-
-

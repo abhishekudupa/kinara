@@ -1,13 +1,13 @@
-// LabelledTS.cpp --- 
-// 
+// LabelledTS.cpp ---
+//
 // Filename: LabelledTS.cpp
 // Author: Abhishek Udupa
 // Created: Mon Aug 11 11:11:33 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -57,7 +57,7 @@ namespace ESMC {
         const string LabelledTS::ProductMsgName = "__trans_msg__";
 
         using ESMC::Symm::PermutationSet;
-        
+
         LabelledTS::LabelledTS()
             : Mgr(new MgrT()),
               Frozen(false), MsgsFrozen(false), AutomataFrozen(false),
@@ -99,7 +99,7 @@ namespace ESMC {
         void LabelledTS::AssertFrozen() const
         {
             if (!Frozen) {
-                throw ESMCError((string)"Operation cannot be performed before freezing " + 
+                throw ESMCError((string)"Operation cannot be performed before freezing " +
                                 "the Labelled Transition System");
             }
         }
@@ -107,7 +107,7 @@ namespace ESMC {
         void LabelledTS::AssertNotFrozen() const
         {
             if (Frozen) {
-                throw ESMCError((string)"Operation cannot be performed after freezing " + 
+                throw ESMCError((string)"Operation cannot be performed after freezing " +
                                 "the Labelled Transition System");
             }
 
@@ -116,32 +116,32 @@ namespace ESMC {
         void LabelledTS::AssertMsgsFrozen() const
         {
             if (!MsgsFrozen) {
-                throw ESMCError((string)"Operation cannot be performed before freezing " + 
-                                "messages of the Labelled Transition System");                
+                throw ESMCError((string)"Operation cannot be performed before freezing " +
+                                "messages of the Labelled Transition System");
             }
         }
 
         void LabelledTS::AssertMsgsNotFrozen() const
         {
             if (MsgsFrozen) {
-                throw ESMCError((string)"Operation cannot be performed after freezing " + 
-                                "messages of the Labelled Transition System");                
+                throw ESMCError((string)"Operation cannot be performed after freezing " +
+                                "messages of the Labelled Transition System");
             }
         }
 
         void LabelledTS::AssertAutomataFrozen() const
         {
             if (!AutomataFrozen) {
-                throw ESMCError((string)"Operation cannot be performed before freezing " + 
-                                "the automata of the Labelled Transition System");                
+                throw ESMCError((string)"Operation cannot be performed before freezing " +
+                                "the automata of the Labelled Transition System");
             }
         }
 
         void LabelledTS::AssertAutomataNotFrozen() const
         {
             if (AutomataFrozen) {
-                throw ESMCError((string)"Operation cannot be performed after freezing " + 
-                                "the automata of the Labelled Transition System");                
+                throw ESMCError((string)"Operation cannot be performed after freezing " +
+                                "the automata of the Labelled Transition System");
             }
         }
 
@@ -158,8 +158,8 @@ namespace ESMC {
 
                     for (auto const& Output : OutSet) {
                         if (Outputs.find(Output) != Outputs.end()) {
-                            throw ESMCError((string)"Multiple EFSMs have message type \"" + 
-                                            Output->SAs<ExprRecordType>()->GetName() + 
+                            throw ESMCError((string)"Multiple EFSMs have message type \"" +
+                                            Output->SAs<ExprRecordType>()->GetName() +
                                             "\" defined as an output");
                         }
                         Outputs.insert(Output);
@@ -178,8 +178,8 @@ namespace ESMC {
                 sstr << "The LTS is not closed." << endl;
                 vector<ExprTypeRef> InputsMinusOutputs;
                 vector<ExprTypeRef> OutputsMinusInputs;
-                set_difference(Inputs.begin(), Inputs.end(), 
-                               Outputs.begin(), Outputs.end(), 
+                set_difference(Inputs.begin(), Inputs.end(),
+                               Outputs.begin(), Outputs.end(),
                                back_inserter(InputsMinusOutputs));
                 set_difference(Outputs.begin(), Outputs.end(),
                                Inputs.begin(), Inputs.end(),
@@ -204,7 +204,7 @@ namespace ESMC {
             return;
         }
 
-        GCmdRef 
+        GCmdRef
         LabelledTS::MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const
         {
             vector<ExpT> GuardComps;
@@ -220,8 +220,8 @@ namespace ESMC {
 
             for (auto const& Trans : ProductTrans) {
                 if (!Trans->Is<LTSTransitionIOBase>()) {
-                    throw InternalError((string)"Expected transition to be an IO " + 
-                                        "transition.\nAt: " + __FILE__ + ":" + 
+                    throw InternalError((string)"Expected transition to be an IO " +
+                                        "transition.\nAt: " + __FILE__ + ":" +
                                         to_string(__LINE__));
                 }
                 auto TransAsIO = Trans->SAs<LTSTransitionIOBase>();
@@ -230,17 +230,17 @@ namespace ESMC {
                     MsgType = TransAsIO->GetMessageType();
                 } else {
                     if (MsgType != TransAsIO->GetMessageType()) {
-                        throw InternalError((string)"Error in cross product construction. " + 
-                                            "Expected all product transitions to be on the " + 
-                                            "same message type.\nAt: " + __FILE__ + ":" + 
+                        throw InternalError((string)"Error in cross product construction. " +
+                                            "Expected all product transitions to be on the " +
+                                            "same message type.\nAt: " + __FILE__ + ":" +
                                             to_string(__LINE__));
                     }
                 }
 
                 MgrT::SubstMapT SubstMap;
-                SubstMap[Mgr->MakeVar(MsgName, UnifiedMsgType)] = 
+                SubstMap[Mgr->MakeVar(MsgName, UnifiedMsgType)] =
                     Mgr->MakeVar(ProductMsgName, UnifiedMsgType);
-                
+
                 GuardComps.push_back(Mgr->Substitute(SubstMap, TransAsIO->GetGuard()));
                 auto const& OldUpdates = TransAsIO->GetUpdates();
 
@@ -250,7 +250,7 @@ namespace ESMC {
                     UpdateComps.push_back(new LTSAssignSimple(SubstLHS, SubstRHS));
                 }
             }
-                        
+
             // Get the fairness sets
             auto OutputTrans = ProductTrans[0]->As<LTSTransitionOutput>();
             auto OutputEFSM = OutputTrans->GetAutomaton()->As<EFSMBase>();
@@ -259,13 +259,13 @@ namespace ESMC {
 
             set<LTSFairObjRef> ActualFairnesses;
             for (auto const& StrFairness : StrFairnesses) {
-                auto const& ActFairness = 
+                auto const& ActFairness =
                     OutputEFSM->Fairnesses->GetFairnessObj(StrFairness, ParamInst);
                 ActualFairnesses.insert(ActFairness);
             }
             auto UMTypeAsUnion = UnifiedMsgType->As<ExprUnionType>();
             auto MsgTypeID = UMTypeAsUnion->GetTypeIDForMemberType(MsgType);
-            return (new LTSGuardedCommand(Mgr, GuardComps, UpdateComps, MsgType, 
+            return (new LTSGuardedCommand(Mgr, GuardComps, UpdateComps, MsgType,
                                           MsgTypeID, ActualFairnesses, ProductTrans));
         }
 
@@ -277,26 +277,26 @@ namespace ESMC {
             }
             Frozen = true;
             u32 GCmdCounter = 0;
-            
+
             // We now compute the product
-            // which will be represented as a 
+            // which will be represented as a
             // list of guarded commands
 
             // First check consistency of EFSMs
             CheckConsistency();
 
-            // for each message type, get the transitions 
+            // for each message type, get the transitions
             // on the message type from each efsm
 
             for (auto const& NameType : MsgTypes) {
                 vector<vector<LTSTransRef>> TransForCP;
 
                 auto const& MType = NameType.second;
-                
+
                 // Get the output transitions first
                 for (auto const& NameEFSM : AllEFSMs) {
                     auto EFSM = NameEFSM.second;
-                    
+
                     auto&& OutputTrans = EFSM->GetOutputTransitionsOnMsg(MType);
                     if (OutputTrans.size() > 0) {
                         TransForCP.push_back(OutputTrans);
@@ -317,14 +317,14 @@ namespace ESMC {
                 }
 
                 if (TransForCP.size() > 0 && !HasOutput) {
-                    throw ESMCError((string)"Message type \"" + 
-                                    MType->SAs<ExprRecordType>()->GetName() + 
+                    throw ESMCError((string)"Message type \"" +
+                                    MType->SAs<ExprRecordType>()->GetName() +
                                     "\" is the output of no EFSM but is used as an " +
                                     "input to one or more EFSMs");
                 }
 
                 auto&& CPTrans = CrossProduct<LTSTransRef>(TransForCP.begin(), TransForCP.end());
-                for (auto const& CPElem : CPTrans) {                    
+                for (auto const& CPElem : CPTrans) {
                     GuardedCommands.push_back(MakeGuardedCommand(CPElem));
                     GuardedCommands.back()->SetCmdID(GCmdCounter++);
                 }
@@ -341,7 +341,7 @@ namespace ESMC {
 
                     set<LTSFairObjRef> ActualFairSet;
                     for (auto const& StrFairness : StrFairnesses) {
-                        auto const& ActFairness = 
+                        auto const& ActFairness =
                             EFSM->Fairnesses->GetFairnessObj(StrFairness, ParamInst);
                         ActualFairSet.insert(ActFairness);
                     }
@@ -365,8 +365,8 @@ namespace ESMC {
             // Build the invariant and final condition
             for (auto const& NameEFSM : AllEFSMs) {
                 auto EFSM = NameEFSM.second;
-                InvariantExp = Mgr->MakeExpr(LTSOps::OpAND, InvariantExp, 
-                                             Mgr->MakeExpr(LTSOps::OpNOT, 
+                InvariantExp = Mgr->MakeExpr(LTSOps::OpAND, InvariantExp,
+                                             Mgr->MakeExpr(LTSOps::OpNOT,
                                                            EFSM->ErrorCondition));
                 FinalCondExp = Mgr->MakeExpr(LTSOps::OpAND, FinalCondExp,
                                              EFSM->FinalCondition);
@@ -409,7 +409,7 @@ namespace ESMC {
             return StateVectorSize;
         }
 
-        MgrT::SubstMapT LabelledTS::ApplyPerm(const vector<vector<ExpT>>& ParamElems, 
+        MgrT::SubstMapT LabelledTS::ApplyPerm(const vector<vector<ExpT>>& ParamElems,
                                               const vector<u08>& Perm)
         {
             MgrT::SubstMapT Retval;
@@ -429,12 +429,12 @@ namespace ESMC {
             auto UMType = UnifiedMsgType->As<ExprUnionType>();
             const u32 NumMsgTypes = UMType->GetMemberTypes().size();
             MsgCanonMap = vector<vector<u32>>(NumMsgTypes + 1);
-            
+
             vector<u32> TypeSizes;
             for (auto const& Type : UsedSymmTypes) {
                 TypeSizes.push_back(Type->GetCardinalityNoUndef());
             }
-            
+
             PermutationSet PermSet(TypeSizes, true);
             const u32 NumPerms = PermSet.GetSize();
             for (u32 i = 0; i < NumMsgTypes + 1; ++i) {
@@ -467,9 +467,9 @@ namespace ESMC {
                     for (auto it2 = PermSet.Begin(); it2 != PermSet.End(); ++it2) {
                         const u32 CurPermIndex = it2.GetIndex();
                         auto const& CurPerm = it2.GetPerm();
-                    
+
                         auto SubstMap = ApplyPerm(ParamElems, CurPerm);
-                        
+
                         vector<ExpT> PermParams;
                         for (auto const& InstParam : InstParams) {
                             if (SubstMap.find(InstParam) == SubstMap.end()) {
@@ -497,7 +497,7 @@ namespace ESMC {
             for (auto const& NameType : MsgTypes) {
                 auto const& Type = NameType.second;
                 auto const& Name = NameType.first;
-                
+
                 const u32 TypeID = UMType->GetTypeIDForMemberType(Type);
                 MsgTypeMap[TypeID] = Name;
             }
@@ -522,31 +522,31 @@ namespace ESMC {
 
                 // Make the state variables
                 auto CurStateVar = Mgr->MakeVar(Name, StateVarType);
-                // Not strictly our job, but it's easiest to 
+                // Not strictly our job, but it's easiest to
                 // add the extension data right here
                 CurStateVar->ExtensionData.Offset = StateVectorSize;
                 cout << "Var \"" << Name << "\" assigned to offset " << StateVectorSize
                      << " - " << StateVectorSize + StateVarType->GetByteSize() << endl;
                 StateVectorVars.push_back(CurStateVar);
                 StateVectorSize += StateVarType->GetByteSize();
-                ValidAutomata[EFSM->Name] = 
+                ValidAutomata[EFSM->Name] =
                     set<vector<ExpT>>(EFSM->ParamInsts.begin(),
                                       EFSM->ParamInsts.end());
 
                 SymTab.Bind(Name, new VarDecl(Name, StateVarType));
 
 
-                // Add any symmetric parameters to the list of 
+                // Add any symmetric parameters to the list of
                 // symmetric types marked as used
-                
+
                 auto const& EFSMParams = EFSM->Params;
                 u64 TotalPermSize = 1;
                 for (auto const& Param : EFSMParams) {
                     UsedSymmTypes.insert(Param->GetType());
                     TotalPermSize *= (Factorial(Param->GetType()->GetCardinalityNoUndef()));
                     if (TotalPermSize > UINT32_MAX) {
-                        throw ESMCError((string)"Product of permutation sizes of " + 
-                                        "symmetric types exceeds the maximum supported " + 
+                        throw ESMCError((string)"Product of permutation sizes of " +
+                                        "symmetric types exceeds the maximum supported " +
                                         "value");
                     }
                 }
@@ -559,7 +559,7 @@ namespace ESMC {
                 }
             }
 
-            // Again, not strictly our job, but it makes it 
+            // Again, not strictly our job, but it makes it
             // easier to add the extension data to the types
             // right here as well
             u32 TypeIDCounter = 0;
@@ -596,7 +596,7 @@ namespace ESMC {
 
             MakeMsgCanonMap();
         }
-        
+
         void LabelledTS::FreezeMsgs()
         {
             if (MsgsFrozen) {
@@ -613,11 +613,11 @@ namespace ESMC {
 
             auto TypeIDFieldType = Mgr->MakeType<ExprRangeType>(0, 65000);
             UnifiedMsgType = Mgr->MakeType<ExprUnionType>("UnifiedMsgType",
-                                                          UnionMembers, 
+                                                          UnionMembers,
                                                           TypeIDFieldType);
         }
 
-        const vector<vector<LTSAssignRef>>& 
+        const vector<vector<LTSAssignRef>>&
         LabelledTS::GetInitStateGenerators() const
         {
             return InitStateGenerators;
@@ -651,12 +651,12 @@ namespace ESMC {
                 throw ESMCError((string)"Type name \"UnifiedMsgType\" is reserved");
             }
             if (NamedTypes.find(Name) != NamedTypes.end()) {
-                throw ESMCError((string)"A type named \"" + Name + "\" already exists. " + 
+                throw ESMCError((string)"A type named \"" + Name + "\" already exists. " +
                                 "Use GetNamedType() to retrieve it");
             }
         }
 
-        ExprTypeRef LabelledTS::MakeBoolType() 
+        ExprTypeRef LabelledTS::MakeBoolType()
         {
             return Mgr->MakeType<ExprBoolType>();
         }
@@ -665,8 +665,8 @@ namespace ESMC {
         {
             if (High - Low + 1 >= UINT32_MAX ||
                 High >= INT64_MAX / 2) {
-                throw ESMCError((string)"Bounds for range type exceed limits. " + 
-                                "We require High - Low + 1 < " + to_string(UINT32_MAX) + 
+                throw ESMCError((string)"Bounds for range type exceed limits. " +
+                                "We require High - Low + 1 < " + to_string(UINT32_MAX) +
                                 " and HIGH < " + to_string(INT64_MAX / 2));
             }
             return Mgr->MakeType<ExprRangeType>(Low, High);
@@ -747,27 +747,27 @@ namespace ESMC {
             CheckTypeName(Name);
 
             if (Size > 12) {
-                throw ESMCError((string)"Symmetric types of size > 12 cannot " + 
-                                "be created. The factorial representation gets " + 
+                throw ESMCError((string)"Symmetric types of size > 12 cannot " +
+                                "be created. The factorial representation gets " +
                                 "too large");
             }
 
-            NamedTypes[Name] = SymmTypes[Name] = 
+            NamedTypes[Name] = SymmTypes[Name] =
                 Mgr->MakeType<ExprSymmetricType>(Name, Size);
-            
+
             return SymmTypes[Name];
         }
 
-        const ExprTypeRef& LabelledTS::MakeMsgType(const string& Name, 
+        const ExprTypeRef& LabelledTS::MakeMsgType(const string& Name,
                                                    const vector<pair<string, ExprTypeRef>> &Members,
                                                    bool IncludePrimed)
         {
             AssertMsgsNotFrozen();
             CheckTypeName(Name);
 
-            if (MsgTypes.find(Name) != MsgTypes.end() || 
+            if (MsgTypes.find(Name) != MsgTypes.end() ||
                 ParametricMsgTypes.find(Name) != ParametricMsgTypes.end()) {
-                throw ESMCError((string)"Message type name \"" + Name + "\" has already been " + 
+                throw ESMCError((string)"Message type name \"" + Name + "\" has already been " +
                                 "created");
             }
 
@@ -780,7 +780,7 @@ namespace ESMC {
             NamedTypes[Name] = MsgTypes[Name] = Mgr->MakeType<ExprRecordType>(Name, Members);
             if (IncludePrimed) {
                 auto PrimedName = Name + "'";
-                NamedTypes[PrimedName] = MsgTypes[PrimedName] = 
+                NamedTypes[PrimedName] = MsgTypes[PrimedName] =
                     Mgr->MakeType<ExprRecordType>(PrimedName, Members);
                 TypeToPrimed[MsgTypes[Name]] = MsgTypes[PrimedName];
             }
@@ -803,13 +803,13 @@ namespace ESMC {
 
             auto&& ParamInsts = InstantiateParams(Params, Constraint, Mgr);
             if (ParamInsts.size() == 0) {
-                throw ESMCError((string)"Instantiation of parametric type \"" + Name + 
+                throw ESMCError((string)"Instantiation of parametric type \"" + Name +
                                 "\" is empty");
             }
 
-            if (ParametricMsgTypes.find(Name) != ParametricMsgTypes.end() || 
+            if (ParametricMsgTypes.find(Name) != ParametricMsgTypes.end() ||
                 MsgTypes.find(Name) != MsgTypes.end()) {
-                throw ESMCError((string)"Message type name \"" + Name + "\" has already been " + 
+                throw ESMCError((string)"Message type name \"" + Name + "\" has already been " +
                                 "created");
             }
 
@@ -851,7 +851,7 @@ namespace ESMC {
                     auto PInstType = InstantiateType(PPType, ParamInst, Mgr);
                     auto const& PInstName = PInstType->As<ExprRecordType>()->GetName();
                     NamedTypes[PInstName] = MsgTypes[PInstName] = PInstType;
-                    TypeToPrimed[MsgTypes[InstType->As<ExprRecordType>()->GetName()]] = 
+                    TypeToPrimed[MsgTypes[InstType->As<ExprRecordType>()->GetName()]] =
                         MsgTypes[PInstType->As<ExprRecordType>()->GetName()];
                     ParamTypeInsts[PPType].push_back(PInstType);
                     PInstToParams[PInstType] = ParamInst;
@@ -884,14 +884,14 @@ namespace ESMC {
         {
             auto it = TypeToPrimed.find(Type);
             if (it == TypeToPrimed.end()) {
-                throw ESMCError((string)"Could not find primed type for type:\n" + 
+                throw ESMCError((string)"Could not find primed type for type:\n" +
                                 Type->ToString());
             }
             return it->second;
         }
 
         // Expression creation
-        ExpT LabelledTS::MakeTrue() 
+        ExpT LabelledTS::MakeTrue()
         {
             return Mgr->MakeTrue();
         }
@@ -904,7 +904,7 @@ namespace ESMC {
         ExpT LabelledTS::MakeVar(const string& Name, const ExprTypeRef& Type)
         {
             if (boost::algorithm::starts_with(Name, "_")) {
-                throw ESMCError((string)"Variable names beginning with an underscore " + 
+                throw ESMCError((string)"Variable names beginning with an underscore " +
                                 "are reserved for use by the ESMC system");
             }
             return Mgr->MakeVar(Name, Type);
@@ -925,15 +925,15 @@ namespace ESMC {
                                     "can be created is the \"clear\" constant");
                 }
                 if (!Type->Is<ExprScalarType>()) {
-                    throw ESMCError((string)"Cannot create constant of type \"" + 
-                                    Type->ToString() + "\" only boolean, numeric and enumerated " + 
+                    throw ESMCError((string)"Cannot create constant of type \"" +
+                                    Type->ToString() + "\" only boolean, numeric and enumerated " +
                                     " type constants are allowed to be created");
                 }
             }
             return Mgr->MakeVal(ValString, Type);
         }
 
-        ExpT LabelledTS::MakeOp(i64 OpCode, const vector<ExpT>& Operands) 
+        ExpT LabelledTS::MakeOp(i64 OpCode, const vector<ExpT>& Operands)
         {
             if (OpCode == LTSOps::OpEQ) {
                 if (!Operands[0]->GetType()->Is<ExprScalarType>() ||
@@ -944,13 +944,13 @@ namespace ESMC {
             return Mgr->MakeExpr(OpCode, Operands);
         }
 
-        ExpT LabelledTS::MakeOp(i64 OpCode, const ExpT& Operand1) 
+        ExpT LabelledTS::MakeOp(i64 OpCode, const ExpT& Operand1)
         {
             vector<ExpT> Operands = { Operand1 };
             return Mgr->MakeExpr(OpCode, Operands);
         }
 
-        ExpT LabelledTS::MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2) 
+        ExpT LabelledTS::MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2)
         {
             vector<ExpT> Operands = { Operand1, Operand2 };
             if (OpCode == LTSOps::OpEQ) {
@@ -964,14 +964,14 @@ namespace ESMC {
         }
 
         ExpT LabelledTS::MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
-                                const ExpT& Operand3) 
+                                const ExpT& Operand3)
         {
             vector<ExpT> Operands = { Operand1, Operand2, Operand3 };
             return Mgr->MakeExpr(OpCode, Operands);
         }
 
         ExpT LabelledTS::MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
-                                const ExpT& Operand3, const ExpT& Operand4) 
+                                const ExpT& Operand3, const ExpT& Operand4)
         {
             vector<ExpT> Operands = { Operand1, Operand2, Operand3, Operand4 };
             return Mgr->MakeExpr(OpCode, Operands);
@@ -986,7 +986,7 @@ namespace ESMC {
         {
             return Mgr->MakeForAll(QVarTypes, Body);
         }
-        
+
         i64 LabelledTS::MakeUF(const string& Name, const vector<ExprTypeRef>& Domain,
                                const ExprTypeRef& Range)
         {
@@ -1005,7 +1005,7 @@ namespace ESMC {
             return MakeEFSM<DetEFSM>(Name, Params, Constraint, Fairness);
         }
 
-        vector<EFSMBase*> 
+        vector<EFSMBase*>
         LabelledTS::GetEFSMs(const function<bool(const EFSMBase*)>& MatchPred) const
         {
             vector<EFSMBase*> Retval;
@@ -1017,20 +1017,20 @@ namespace ESMC {
             return Retval;
         }
 
-        ChannelEFSM* LabelledTS::MakeChannel(const string& Name, const vector<ExpT> &Params, 
-                                             const ExpT& Constraint, u32 Capacity, 
-                                             bool Lossy, bool Ordered, bool Duplicating, 
+        ChannelEFSM* LabelledTS::MakeChannel(const string& Name, const vector<ExpT> &Params,
+                                             const ExpT& Constraint, u32 Capacity,
+                                             bool Lossy, bool Ordered, bool Duplicating,
                                              bool Blocking, LTSFairnessType Fairness)
         {
             AssertMsgsFrozen();
             AssertAutomataNotFrozen();
 
             if (AllEFSMs.find(Name) != AllEFSMs.end()) {
-                throw ESMCError((string)"A machine named \"" + Name + "\" has already " + 
+                throw ESMCError((string)"A machine named \"" + Name + "\" has already " +
                                 "been created in the LTS");
             }
 
-            auto Retval = new ChannelEFSM(this, Name, Params, Constraint, Capacity, 
+            auto Retval = new ChannelEFSM(this, Name, Params, Constraint, Capacity,
                                           Lossy, Ordered, Duplicating, Blocking, Fairness);
             AllEFSMs[Name] = Retval;
             ChannelEFSMs[Name] = Retval;
@@ -1045,12 +1045,12 @@ namespace ESMC {
 
             SymTab.Push();
             CheckParams(Params, Constraint, SymTab, Mgr, true);
-            
+
             auto&& ParamInsts = InstantiateParams(Params, Constraint, Mgr);
             const u32 NumParams = Params.size();
             for (auto const& ParamInst : ParamInsts) {
                 InitStateGenerators.push_back(vector<LTSAssignRef>());
-                
+
                 MgrT::SubstMapT SubstMap;
                 for (u32 i = 0; i < NumParams; ++i) {
                     SubstMap[Params[i]] = ParamInst[i];
@@ -1064,7 +1064,7 @@ namespace ESMC {
                         auto NewAsgn = new LTSAssignSimple(SubstLHS, SubstRHS);
                         auto&& Vars = Mgr->Gather(SubstRHS, Detail::VarGatherer());
                         if (Vars.size() > 0) {
-                            throw ESMCError((string)"Init state updates cannot refer " + 
+                            throw ESMCError((string)"Init state updates cannot refer " +
                                             "to variables");
                         }
                         InitStateGenerators.back().push_back(NewAsgn);
@@ -1075,7 +1075,7 @@ namespace ESMC {
 
                         CheckUpdates({ Update }, SymTab, Mgr, false, "");
 
-                        auto&& AsgnParamInsts = InstantiateParams(AsgnParams, 
+                        auto&& AsgnParamInsts = InstantiateParams(AsgnParams,
                                                                   AsgnConstraint, Mgr);
                         const u32 NumAsgnParams = AsgnParams.size();
 
@@ -1090,14 +1090,14 @@ namespace ESMC {
                             auto NewAsgn = new LTSAssignSimple(SubstLHS, SubstRHS);
                             auto&& Vars = Mgr->Gather(SubstRHS, Detail::VarGatherer());
                             if (Vars.size() > 0) {
-                                throw ESMCError((string)"Init state updates cannot refer " + 
+                                throw ESMCError((string)"Init state updates cannot refer " +
                                                 "to variables");
                             }
                             InitStateGenerators.back().push_back(NewAsgn);
                         }
                     }
                 }
-                
+
                 // Add the initial states for the channels as well
                 for (auto const& NameChanEFSM : ChannelEFSMs) {
                     auto ChanEFSM = NameChanEFSM.second;
@@ -1146,5 +1146,5 @@ namespace ESMC {
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-// 
+//
 // LabelledTS.cpp ends here

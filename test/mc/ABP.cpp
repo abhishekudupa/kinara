@@ -332,7 +332,7 @@ int main()
     auto TimerStateVar = TheLTS->MakeVar("Timer", TimerType);
     auto ReceiverStateVar = TheLTS->MakeVar("Receiver", ReceiverType);
     auto ReceiverClientStateVar = TheLTS->MakeVar("ReceiverClient", ReceiverClientType);
-    
+
     auto StateAcc = TheLTS->MakeVar("state", FAType);
 
     auto SenderClientDotState = TheLTS->MakeOp(LTSOps::OpField, SenderClientStateVar, StateAcc);

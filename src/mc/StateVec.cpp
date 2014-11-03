@@ -1,13 +1,13 @@
-// StateVec.cpp --- 
-// 
+// StateVec.cpp ---
+//
 // Filename: StateVec.cpp
 // Author: Abhishek Udupa
 // Created: Wed Aug 13 20:19:02 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -127,7 +127,7 @@ namespace ESMC {
             return (memcmp(StateBuffer, Other.StateBuffer, GetSize()));
         }
 
-        void StateVec::Set(const StateVec& Other) 
+        void StateVec::Set(const StateVec& Other)
         {
             memcpy(StateBuffer, Other.StateBuffer, GetSize());
         }
@@ -139,7 +139,7 @@ namespace ESMC {
 
         u32 StateVec::Hash() const
         {
-            return SpookyHash::SpookyHash::Hash32(StateBuffer, GetSize(), 
+            return SpookyHash::SpookyHash::Hash32(StateBuffer, GetSize(),
                                                   0xBEADFEED);
         }
 
@@ -227,5 +227,5 @@ namespace ESMC {
     } /* end namespace MC */
 } /* end namespace ESMC */
 
-// 
+//
 // StateVec.cpp ends here

@@ -390,7 +390,7 @@ int main()
     Monitor->Freeze();
 
     auto TheSolver = new Solver(Checker);
-    
+
     TheSolver->Solve();
 
     delete Checker;

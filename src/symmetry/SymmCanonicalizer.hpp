@@ -1,13 +1,13 @@
-// SymmCanonicalizer.hpp --- 
-// 
+// SymmCanonicalizer.hpp ---
+//
 // Filename: SymmCanonicalizer.hpp
 // Author: Abhishek Udupa
 // Created: Sun Aug 17 17:36:42 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -69,7 +69,7 @@ namespace ESMC {
             u32 TypeOffset;
             // Size of the permutation, essentially, this means
             // apply the permutation contained in the range
-            // [TypeOffset, TypeOffset + PermSize) of the 
+            // [TypeOffset, TypeOffset + PermSize) of the
             // permutation vector
             u32 PermSize;
 
@@ -135,7 +135,7 @@ namespace ESMC {
             u32 TypeSize;
 
         public:
-            MTypePermuter(u32 Offset, const ExprTypeRef& Type, 
+            MTypePermuter(u32 Offset, const ExprTypeRef& Type,
                           const LabelledTS* TheLTS);
 
             virtual ~MTypePermuter();
@@ -161,7 +161,7 @@ namespace ESMC {
         public:
             NoOpPermuter();
             virtual ~NoOpPermuter();
-            
+
             virtual void Permute(const StateVec* InStateVector,
                                  StateVec* OutStateVector,
                                  const PermutationSet::iterator& CurPerm) override;
@@ -198,7 +198,7 @@ namespace ESMC {
         public:
             Canonicalizer(const LabelledTS* TheLTS, StateVecPrinter* Printer);
             ~Canonicalizer();
-            
+
             StateVec* Canonicalize(const StateVec* InputVector, u32& PermID) const;
             StateVec* ApplyPermutation(const StateVec* InputVector, u32 PermID) const;
             ProductState* ApplyPermutation(const ProductState* InputPS, u32 PermID,
@@ -209,11 +209,11 @@ namespace ESMC {
             bool StatesEquivalent(const StateVec* SV1, const StateVec* SV2) const;
             StateVecPrinter* GetPrinter() const;
         };
-        
+
     } /* end namespace Symm */
 } /* end namespace ESMC */
 
 #endif /* ESMC_SYMM_CANONICALIZER_HPP_ */
 
-// 
+//
 // SymmCanonicalizer.hpp ends here

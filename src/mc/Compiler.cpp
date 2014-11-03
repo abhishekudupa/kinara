@@ -1,13 +1,13 @@
-// Compiler.cpp --- 
-// 
+// Compiler.cpp ---
+//
 // Filename: Compiler.cpp
 // Author: Abhishek Udupa
 // Created: Mon Aug 18 12:02:24 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLD ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -78,16 +78,16 @@ namespace ESMC {
             if (Exp->GetVarType()->Is<ExprFieldAccessType>()) {
                 return;
             }
-            throw InternalError((string)"Variable without offset encountered: " + 
-                                Exp->ToString() + "\n.At: " + __FILE__ + ":" + 
+            throw InternalError((string)"Variable without offset encountered: " +
+                                Exp->ToString() + "\n.At: " + __FILE__ + ":" +
                                 to_string(__LINE__));
         }
 
         void OffsetCompiler::VisitBoundVarExpression(const BoundVarExpT* Exp)
         {
-            throw InternalError((string)"Bound var was not expected in compilation. " + 
-                                "This should have been unrolled. Expression:\n" + 
-                                Exp->ToString() + "\nAt: " + __FILE__ + ":" + 
+            throw InternalError((string)"Bound var was not expected in compilation. " +
+                                "This should have been unrolled. Expression:\n" +
+                                Exp->ToString() + "\nAt: " + __FILE__ + ":" +
                                 to_string(__LINE__));
         }
 
@@ -107,17 +107,17 @@ namespace ESMC {
         void OffsetCompiler::VisitEQuantifiedExpression(const EQExpT* Exp)
         {
             throw InternalError((string)"Quantified expr was not expected in compilation. " +
-                                "This should have been unrolled. Expression:\n" + 
-                                Exp->ToString() + "\nAt: " + __FILE__ + ":" + 
-                                to_string(__LINE__));            
+                                "This should have been unrolled. Expression:\n" +
+                                Exp->ToString() + "\nAt: " + __FILE__ + ":" +
+                                to_string(__LINE__));
         }
 
         void OffsetCompiler::VisitAQuantifiedExpression(const AQExpT* Exp)
         {
             throw InternalError((string)"Quantified expr was not expected in compilation. " +
-                                "This should have been unrolled. Expression:\n" + 
-                                Exp->ToString() + "\nAt: " + __FILE__ + ":" + 
-                                to_string(__LINE__));            
+                                "This should have been unrolled. Expression:\n" +
+                                Exp->ToString() + "\nAt: " + __FILE__ + ":" +
+                                to_string(__LINE__));
         }
 
         void OffsetCompiler::VisitOpExpression(const OpExpT* Exp)
@@ -138,14 +138,14 @@ namespace ESMC {
                     auto ValueType = ArrayType->GetValueType();
                     auto ValueSize = ValueType->GetByteSize();
                     ValueSize = Align(ValueSize, ValueSize);
-                    
+
                     if (IndexType->Is<ExprSymmetricType>()) {
-                        Exp->ExtensionData.Offset = 
-                            Children[0]->ExtensionData.Offset + 
+                        Exp->ExtensionData.Offset =
+                            Children[0]->ExtensionData.Offset +
                             (ValueSize * (Children[1]->ExtensionData.ConstVal - 1));
                     } else {
-                        Exp->ExtensionData.Offset = 
-                            Children[0]->ExtensionData.Offset + 
+                        Exp->ExtensionData.Offset =
+                            Children[0]->ExtensionData.Offset +
                             (ValueSize * (Children[1]->ExtensionData.ConstVal));
                     }
                     return;
@@ -159,7 +159,7 @@ namespace ESMC {
                 Exp->ExtensionData.FieldOffset = RecType->GetFieldOffset(FieldName);
 
                 if (Children[0]->ExtensionData.Offset != -1) {
-                    Exp->ExtensionData.Offset = Children[0]->ExtensionData.Offset + 
+                    Exp->ExtensionData.Offset = Children[0]->ExtensionData.Offset +
                         Exp->ExtensionData.FieldOffset;
                 }
             }
@@ -216,8 +216,8 @@ namespace ESMC {
             // We need to build an interpreter for these
             auto ExpAsOp = Exp->As<Exprs::OpExpression>();
             if (ExpAsOp == nullptr) {
-                throw InternalError((string)"Unexpected expression type in compilation:\n" + 
-                                    Exp->ToString() + "\nAt: " + __FILE__ + ":" + 
+                throw InternalError((string)"Unexpected expression type in compilation:\n" +
+                                    Exp->ToString() + "\nAt: " + __FILE__ + ":" +
                                     to_string(__LINE__));
             }
 
@@ -302,19 +302,19 @@ namespace ESMC {
                 auto const& RecType = Children[0]->GetType()->SAs<ExprRecordType>();
                 auto const& FieldName = Children[1]->SAs<VarExpression>()->GetVarName();
                 auto FieldOffset = RecType->GetFieldOffset(FieldName);
-                
+
                 Ext.Interp = new FieldInterpreter(SubInterps[0]->SAs<LValueInterpreter>(),
                                                   FieldOffset, Exp);
-                                                  
+
             }
                 break;
-                
+
             default: {
                 // must be an uninterpreted function
                 Ext.Interp = new UFInterpreter(SubInterps, Exp);
             }
             }
-                
+
             Compiler->RegisterInterp(Ext.Interp);
         }
 
@@ -373,13 +373,13 @@ namespace ESMC {
             return Size;
         }
 
-        bool LValueInterpreter::Update(const RValueInterpreter *RHS, 
-                                       const StateVec *InStateVector, 
+        bool LValueInterpreter::Update(const RValueInterpreter *RHS,
+                                       const StateVec *InStateVector,
                                        StateVec *OutStateVector) const
         {
             return Write(RHS->Evaluate(InStateVector), InStateVector, OutStateVector);
         }
-        
+
         CompiledConstInterpreter::CompiledConstInterpreter(i64 Value, ExpPtrT Exp)
             : RValueInterpreter(Exp), Value(Value)
         {
@@ -410,7 +410,7 @@ namespace ESMC {
         i64 CompiledLValueInterpreter::Evaluate(const StateVec* StateVector) const
         {
             if (!Scalar) {
-                throw InternalError((string)"Evaluate() called on non-scalar lvalue" + 
+                throw InternalError((string)"Evaluate() called on non-scalar lvalue" +
                                     "\nAt: " + __FILE__ + ":" + to_string(__LINE__));
             }
             i64 RawVal = 0;
@@ -425,7 +425,7 @@ namespace ESMC {
         }
 
         bool CompiledLValueInterpreter::Write(i64 Value, const StateVec* InStateVector,
-                                              StateVec* StateVector) const 
+                                              StateVec* StateVector) const
         {
             i64 RawValue = 0;
             if (!Scalar) {
@@ -461,7 +461,7 @@ namespace ESMC {
         // Uninterpreted function interpreter implementation
         UFInterpreter::UFInterpreter(const vector<RValueInterpreter*>& ArgInterps,
                                      ExpPtrT Exp)
-            : RValueInterpreter(Exp), 
+            : RValueInterpreter(Exp),
               ArgInterps(ArgInterps), SubEvals(ArgInterps.size()),
               NumArgInterps(ArgInterps.size()), Model(Z3Model::NullModel),
               Enabled(false), MyOpCode(Exp->As<OpExpression>()->GetOpCode())
@@ -504,14 +504,14 @@ namespace ESMC {
             }
 
             auto ConcAppExp = Mgr->MakeExpr(OpCode, AppArgExps);
-            
+
             // Evaluate the expression in the model
             TPRef TP = Model.GetTPPtr();
             auto EvalExp = TP->Evaluate(ConcAppExp);
             auto EvalAsConst = EvalExp->As<Exprs::ConstExpression>();
             if (EvalAsConst == nullptr) {
-                throw ESMCError((string)"Evaluating a term on the model did not " + 
-                                "result in a constant valued interpretation.\nTerm:\n" + 
+                throw ESMCError((string)"Evaluating a term on the model did not " +
+                                "result in a constant valued interpretation.\nTerm:\n" +
                                 ConcAppExp->ToString() + "\nEvaluation:\n" + EvalExp->ToString());
             }
             auto RangeType = EvalExp->GetType()->As<Exprs::ExprScalarType>();
@@ -550,8 +550,8 @@ namespace ESMC {
                     auto ResAsConst = Res->As<Exprs::ConstExpression>();
                     if (ResAsConst == nullptr) {
                         throw ESMCError((string)"Evaluating an indicator variable on the model " +
-                                        "did not result in a constant valued interpretation.\n" + 
-                                        "Term:\n" + it->second->ToString() + 
+                                        "did not result in a constant valued interpretation.\n" +
+                                        "Term:\n" + it->second->ToString() +
                                         "\nEvaluation:\n" + Res->ToString());
                     }
                     if (ResAsConst->GetConstValue() != "0") {
@@ -571,7 +571,7 @@ namespace ESMC {
 
         OpInterpreter::OpInterpreter(const vector<RValueInterpreter*>& SubInterps,
                                      ExpPtrT Exp)
-            : RValueInterpreter(Exp), SubInterps(SubInterps), 
+            : RValueInterpreter(Exp), SubInterps(SubInterps),
               SubEvals(SubInterps.size()), NumSubInterps(SubInterps.size())
         {
             // Nothing here
@@ -796,7 +796,7 @@ namespace ESMC {
             }
             return Retval;
         }
-        
+
         MINUSInterpreter::MINUSInterpreter(const vector<RValueInterpreter*>& SubInterps,
                                            ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
@@ -838,7 +838,7 @@ namespace ESMC {
             }
             return Retval;
         }
-        
+
         DIVInterpreter::DIVInterpreter(const vector<RValueInterpreter*>& SubInterps,
                                        ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
@@ -892,7 +892,7 @@ namespace ESMC {
             EvaluateSubInterps(StateVector);
             return (SubEvals[0] > SubEvals[1]);
         }
-        
+
         GEInterpreter::GEInterpreter(const vector<RValueInterpreter*>& SubInterps,
                                      ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
@@ -954,7 +954,7 @@ namespace ESMC {
               ArrayInterp(ArrayInterp), IndexInterp(IndexInterp)
         {
             auto const& ArrayType = ArrayInterp->GetExp()->GetType();
-            
+
             ElemSize = ArrayType->SAs<ExprArrayType>()->GetValueType()->GetByteSize();
             ElemSize = Align(ElemSize, ElemSize);
             IndexSymmetric = IndexInterp->GetExp()->GetType()->Is<ExprSymmetricType>();
@@ -964,7 +964,7 @@ namespace ESMC {
         {
             // Nothing here
         }
-        
+
         i64 IndexInterpreter::Evaluate(const StateVec* StateVector) const
         {
             if (!Scalar) {
@@ -1014,7 +1014,7 @@ namespace ESMC {
             } else {
                 *((u32*)(DstPtr)) = (u32)RawVal;
             }
-            
+
             return true;
         }
 
@@ -1032,7 +1032,7 @@ namespace ESMC {
                     IndexValue = IndexValue - 1;
                 }
             }
-            
+
             return BaseOffset + (IndexValue * ElemSize);
         }
 
@@ -1134,7 +1134,7 @@ namespace ESMC {
             OffsetCompiler::Do(Exp, TheLTS);
             RValueInterpreter::MakeInterpreter(Exp, this);
         }
-        
+
         void LTSCompiler::CompileLTS(LabelledTS* TheLTS)
         {
             for (auto const& GCmd : TheLTS->GuardedCommands) {
@@ -1160,13 +1160,13 @@ namespace ESMC {
                 }
             }
         }
-        
+
         inline bool LTSCompiler::HasMsgLValue(const ExpT& Exp, ESMC::LTS::LabelledTS* TheLTS)
         {
             auto Mgr = TheLTS->GetMgr();
-            auto&& Vars = 
-                Mgr->Gather(Exp, 
-                            [&] (const ExpBaseT* Exp) -> bool 
+            auto&& Vars =
+                Mgr->Gather(Exp,
+                            [&] (const ExpBaseT* Exp) -> bool
                             {
                                 auto ExpAsVar = Exp->As<VarExpression>();
                                 if (ExpAsVar != nullptr) {
@@ -1181,8 +1181,8 @@ namespace ESMC {
         }
 
         // Removes the dependence on the __trans_msg__ variable
-        // also populates the "lowered" updates. The lowering 
-        // essentially unrolls array terms as required for the 
+        // also populates the "lowered" updates. The lowering
+        // essentially unrolls array terms as required for the
         // weakest precondition and other symbolic analyses.
         vector<GCmdRef> LTSCompiler::CompileCommands(const vector<GCmdRef>& Commands,
                                                      LabelledTS* TheLTS)
@@ -1213,7 +1213,7 @@ namespace ESMC {
 
                 Retval.push_back(new LTSGuardedCommand(Cmd->GetMgr(),
                                                        Cmd->GetGuardComps(),
-                                                       NewUpdates, 
+                                                       NewUpdates,
                                                        Cmd->GetMsgType(),
                                                        Cmd->GetMsgTypeID(),
                                                        FairObjSet,
@@ -1251,5 +1251,5 @@ namespace ESMC {
     } /* end namespace */
 } /* end namespace */
 
-// 
+//
 // Compiler.cpp ends here

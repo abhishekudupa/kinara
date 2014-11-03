@@ -1,13 +1,13 @@
-// Z3Objects.hpp --- 
-// 
+// Z3Objects.hpp ---
+//
 // Filename: Z3Objects.hpp
 // Author: Abhishek Udupa
 // Created: Wed Oct  8 10:23:14 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -79,7 +79,7 @@ namespace ESMC {
             virtual ~Z3Object();
 
             const Z3Ctx& GetCtx() const;
-            
+
             virtual bool operator == (const Z3Object& Other) const = 0;
             virtual u64 Hash() const = 0;
             virtual string ToString() const = 0;
@@ -119,7 +119,7 @@ namespace ESMC {
         {
         private:
             Z3_ast AST;
-            
+
         public:
             Z3Expr();
             Z3Expr(const Z3Expr& Other);
@@ -129,7 +129,7 @@ namespace ESMC {
 
             Z3Expr& operator = (Z3Expr Other);
 
-            virtual bool operator == (const Z3Object& Other) const override;            
+            virtual bool operator == (const Z3Object& Other) const override;
             virtual string ToString() const override;
             virtual u64 Hash() const override;
 
@@ -150,7 +150,7 @@ namespace ESMC {
                 return Expr.Hash();
             }
         };
-            
+
         class Z3Sort : public Z3Object
         {
         private:
@@ -189,7 +189,7 @@ namespace ESMC {
         {
         private:
             Z3_solver Solver;
-            
+
         public:
             Z3Solver();
             Z3Solver(Z3Ctx Ctx);
@@ -203,7 +203,7 @@ namespace ESMC {
             virtual bool operator == (const Z3Object& Other) const override;
             virtual string ToString() const override;
             virtual u64 Hash() const override;
-            
+
             operator Z3_solver () const;
             Z3_solver GetSolver() const;
 
@@ -241,5 +241,5 @@ namespace ESMC {
 
 #endif /* ESMC_Z3_OBJECTS_HPP_ */
 
-// 
+//
 // Z3Objects.hpp ends here

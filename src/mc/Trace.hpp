@@ -1,13 +1,13 @@
-// Trace.hpp --- 
-// 
+// Trace.hpp ---
+//
 // Filename: Trace.hpp
 // Author: Abhishek Udupa
 // Created: Mon Aug 25 15:10:30 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -82,7 +82,7 @@ namespace ESMC {
         } /* end namespace detail */
 
         // A straightforward permuted path
-        // where states are successors modulo some 
+        // where states are successors modulo some
         // permutation
         // Assumption: nodes and edges are NOT owned by me
         template <typename STATETYPE>
@@ -90,7 +90,7 @@ namespace ESMC {
         {
         public:
             typedef AnnotatedEdge<STATETYPE>* PathElemType;
-            
+
         private:
             const STATETYPE* Origin;
             vector<PathElemType> PathElems;
@@ -119,15 +119,15 @@ namespace ESMC {
             }
         };
 
-        class TraceBase 
+        class TraceBase
         {
         protected:
             StateVecPrinter* Printer;
-            
+
         public:
             TraceBase(StateVecPrinter* Printer);
             virtual ~TraceBase();
-            
+
             StateVecPrinter* GetPrinter() const;
 
             virtual string ToString(u32 Verbosity = 0) const = 0;
@@ -163,11 +163,11 @@ namespace ESMC {
             }
 
         private:
-            static inline const StateVec* 
-            UnwindPermPath(AQSPermPath* PermPath, 
+            static inline const StateVec*
+            UnwindPermPath(AQSPermPath* PermPath,
                            LTSChecker* Checker,
                            vector<TraceElemT>& PathElems);
-            
+
             static inline const ProductState*
             UnwindPermPath(PSPermPath* PermPath,
                            LTSChecker* Checker,
@@ -179,11 +179,11 @@ namespace ESMC {
 
             // returns a pair of states:
             // 1. The state corresponding to the unwinding of the root state
-            // 2. The permuted state in the product structure corresponding 
-            //    to the last unwound state in the path (for subsequent calls to 
+            // 2. The permuted state in the product structure corresponding
+            //    to the last unwound state in the path (for subsequent calls to
             //    DoUnwoundBFS)
             static inline pair<const ProductState*, const ProductState*>
-            DoUnwoundBFS(const ProductState* Root, 
+            DoUnwoundBFS(const ProductState* Root,
                          const LTSChecker* Checker,
                          u32& InvPermAlongPathOut,
                          const function<bool(u32, const ProductState*)>& MatchPred,
@@ -278,5 +278,5 @@ namespace ESMC {
 
 #endif /* ESMC_TRACE_HPP_ */
 
-// 
+//
 // Trace.hpp ends here

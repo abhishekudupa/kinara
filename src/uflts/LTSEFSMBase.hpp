@@ -1,13 +1,13 @@
-// LTSEFSMBase.hpp --- 
-// 
+// LTSEFSMBase.hpp ---
+//
 // Filename: LTSEFSMBase.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug 15 12:09:30 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,13 +32,13 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
 #if !defined ESMC_LTS_EFSM_BASE_HPP_
-#define ESMC_LTS_EFSM_BASE_HPP_ 
+#define ESMC_LTS_EFSM_BASE_HPP_
 
 #include "LTSTypes.hpp"
 #include "LTSState.hpp"
@@ -100,7 +100,7 @@ namespace ESMC {
             map<vector<ExpT>, vector<LTSTransRef>> Transitions;
 
             LTSPFGRef Fairnesses;
-            // mapping between internal fairness sets and user 
+            // mapping between internal fairness sets and user
             // defined names for fairnesses
             map<string, set<string>> UserToInternalFairness;
 
@@ -111,14 +111,14 @@ namespace ESMC {
 
             ExpT ErrorCondition;
             ExpT FinalCondition;
-            
+
             // helper methods
 
             void AssertVarsFrozen() const;
             void AssertVarsNotFrozen() const;
             void AssertEFSMFrozen() const;
             void AssertEFSMNotFrozen() const;
-            
+
             void AssertInput(const vector<ExpT>& ParamInst, const ExprTypeRef& MessageType) const;
             void AssertOutput(const vector<ExpT>& ParamInst, const ExprTypeRef& MessageType) const;
 
@@ -138,7 +138,7 @@ namespace ESMC {
                                    const ExprTypeRef& MsgType,
                                    const vector<ExpT>& Params,
                                    bool IsInput);
-            
+
             vector<LTSAssignRef> InstantiateUpdates(const MgrT::SubstMapT& ParamSubst,
                                                     const vector<LTSAssignRef>& Updates,
                                                     const string& MessageName,
@@ -148,23 +148,23 @@ namespace ESMC {
             vector<LTSAssignRef> RebaseUpdates(const vector<ExpT>& ParamInst,
                                                const vector<LTSAssignRef>& Updates);
             vector<LTSAssignRef> MsgTransformUpdates(const vector<LTSAssignRef>& Updates,
-                                                     const string& MessageName, 
+                                                     const string& MessageName,
                                                      const ExprTypeRef& MessageType);
             vector<LTSAssignRef> SimplifyUpdates(const vector<LTSAssignRef>& Updates);
 
             // For internal use. e.g. in the case of channels
             // expects final state to be part of updates
-            void AddInputTransForInstance(u32 InstanceID, 
+            void AddInputTransForInstance(u32 InstanceID,
                                           const MgrT::SubstMapT& SubstMap,
                                           const string& InitialState,
                                           const ExpT& Guard,
                                           const vector<LTSAssignRef>& Updates,
-                                          const string& MessageName, 
+                                          const string& MessageName,
                                           const ExprTypeRef& MessageType,
                                           const ExprTypeRef& ActMType,
                                           const LTSSymbTransRef& SymbTrans);
 
-            void AddOutputTransForInstance(u32 InstanceID, 
+            void AddOutputTransForInstance(u32 InstanceID,
                                            const MgrT::SubstMapT& SubstMap,
                                            const string& InitState,
                                            const ExpT& Guard,
@@ -175,7 +175,7 @@ namespace ESMC {
                                            const set<string>& AddToFairnessSets,
                                            const LTSSymbTransRef& SymbTrans);
 
-            void AddInternalTransForInstance(u32 InstanceID, 
+            void AddInternalTransForInstance(u32 InstanceID,
                                              const MgrT::SubstMapT& SubstMap,
                                              const string& InitState,
                                              const ExpT& Guard,
@@ -193,7 +193,7 @@ namespace ESMC {
             // This helps preserve the structure of the EFSM
             set<ExprTypeRef> GetInputs() const;
             set<ExprTypeRef> GetInputsForInstance(u32 InstanceID) const;
-            
+
             set<ExprTypeRef> GetOutputs() const;
             set<ExprTypeRef> GetOutputsForInstance(u32 InstanceID) const;
 
@@ -202,14 +202,14 @@ namespace ESMC {
             vector<LTSTransRef> GetInternalTransitions() const;
 
             virtual void AddState(const string& StateName,
-                                  bool Initial = false, bool Final = false, 
+                                  bool Initial = false, bool Final = false,
                                   bool Accepting = false, bool Error = false) override;
 
             virtual LTSFairnessType GetFairnessType() const;
 
             virtual void AddFairnessSet(const string& Name, FairSetFairnessType Fairness);
             virtual const LTSFairSetRef& GetFairnessSet(const string& FairnessName) const;
-            virtual const LTSFairObjRef& 
+            virtual const LTSFairObjRef&
             GetFairnessForInst(const string& FairnessName,
                                const vector<ExpT>& InstParams) const;
 
@@ -222,15 +222,15 @@ namespace ESMC {
             virtual SymmMsgDeclRef AddInputMsg(const ExprTypeRef& MessageType,
                                                const vector<ExpT>& Params = vector<ExpT>());
 
-            virtual SymmMsgDeclRef AddInputMsgs(const vector<ExpT>& NewParams, 
+            virtual SymmMsgDeclRef AddInputMsgs(const vector<ExpT>& NewParams,
                                                 const ExpT& Constraint,
-                                                const ExprTypeRef& MessageType, 
+                                                const ExprTypeRef& MessageType,
                                                 const vector<ExpT>& MessageParams);
 
             virtual SymmMsgDeclRef AddOutputMsg(const ExprTypeRef& MessageType,
                                                 const vector<ExpT>& Params = vector<ExpT>());
 
-            virtual SymmMsgDeclRef AddOutputMsgs(const vector<ExpT>& NewParams, 
+            virtual SymmMsgDeclRef AddOutputMsgs(const vector<ExpT>& NewParams,
                                                  const ExpT& Constraint,
                                                  const ExprTypeRef& MessageType,
                                                  const vector<ExpT>& MEssageParams);
@@ -254,7 +254,7 @@ namespace ESMC {
                                             const ExprTypeRef& MessageType,
                                             const vector<ExpT>& MessageParams,
                                             bool Tentative = false);
-            
+
             virtual void AddInputTransitions(const vector<ExpT>& TransParams,
                                              const ExpT& Constraint,
                                              const string& InitState,
@@ -284,7 +284,7 @@ namespace ESMC {
                                              const string& MessageName,
                                              const ExprTypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
-                                             const set<string>& AddToFairnessSets = 
+                                             const set<string>& AddToFairnessSets =
                                              set<string>(),
                                              bool Tentative = false);
 
@@ -295,7 +295,7 @@ namespace ESMC {
                                              const string& MessageName,
                                              const ExprTypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
-                                             const set<string>& AddToFairnessSets = 
+                                             const set<string>& AddToFairnessSets =
                                              set<string>(),
                                              bool Tentative = false);
 
@@ -331,15 +331,15 @@ namespace ESMC {
                                                const string& FinalState,
                                                const ExpT& Guard,
                                                const vector<LTSAssignRef>& Updates,
-                                               const set<string>& AddToFairnessSets = 
+                                               const set<string>& AddToFairnessSets =
                                                set<string>(),
                                                bool Tentative = false);
-            
+
             // Final state specified in updates
             virtual void AddInternalTransition(const string& InitState,
                                                const ExpT& Guard,
                                                const vector<LTSAssignRef>& Updates,
-                                               const set<string>& AddToFairnessSets = 
+                                               const set<string>& AddToFairnessSets =
                                                set<string>(),
                                                bool Tentative = false);
 
@@ -349,20 +349,20 @@ namespace ESMC {
                                                 const string& FinalState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
-                                                LTSFairnessType FairnessKind = 
+                                                LTSFairnessType FairnessKind =
                                                 LTSFairnessType::None,
                                                 SplatFairnessType SplatFairness =
                                                 SplatFairnessType::None,
                                                 const string& SplatFairnessName = "",
                                                 bool Tentative = false);
-            
+
             // Final state specified in updates
             virtual void AddInternalTransitions(const vector<ExpT>& TransParams,
                                                 const ExpT& Constraint,
                                                 const string& InitState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
-                                                LTSFairnessType FairnessKind = 
+                                                LTSFairnessType FairnessKind =
                                                 LTSFairnessType::None,
                                                 SplatFairnessType SplatFairness =
                                                 SplatFairnessType::None,
@@ -388,5 +388,5 @@ namespace ESMC {
 
 #endif /* ESMC_LTS_EFSM_BASE_HPP_ */
 
-// 
+//
 // LTSEFSMBase.hpp ends here

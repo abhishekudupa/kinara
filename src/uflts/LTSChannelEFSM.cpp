@@ -1,13 +1,13 @@
-// LTSChannelEFSM.cpp --- 
-// 
+// LTSChannelEFSM.cpp ---
+//
 // Filename: LTSChannelEFSM.cpp
 // Author: Abhishek Udupa
 // Created: Fri Aug 15 12:06:46 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -58,7 +58,7 @@ namespace ESMC {
             if (Blocking && !Lossy) {
                 throw ESMCError((string)"Non lossy channels cannot be declared blocking");
             }
-            
+
             AddState("ChanInitState");
             if (Lossy) {
                 AddState("LossDecideState");
@@ -70,10 +70,10 @@ namespace ESMC {
             ValType = TheLTS->GetUnifiedMType();
             ArrayType = Mgr->MakeType<ExprArrayType>(IndexType, ValType);
             CountType = Mgr->MakeType<ExprRangeType>(0, Capacity);
-            
+
             EFSMBase::AddVariable("MsgBuffer", ArrayType);
             EFSMBase::AddVariable("MsgCount", CountType);
-            
+
             if (Lossy) {
                 EFSMBase::AddVariable("LastMsg", ValType);
             }
@@ -93,7 +93,7 @@ namespace ESMC {
             InitUpdates.push_back(new LTSAssignSimple(CountExp, Mgr->MakeVal("0", CountType)));
             InitUpdates.push_back(new LTSAssignSimple(ArrayExp, Mgr->MakeVal("clear", ArrayType)));
             if (Lossy) {
-                InitUpdates.push_back(new LTSAssignSimple(LastMsgExp, 
+                InitUpdates.push_back(new LTSAssignSimple(LastMsgExp,
                                                           Mgr->MakeVal("clear", ValType)));
             }
             InitUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
@@ -135,10 +135,10 @@ namespace ESMC {
 
             auto RecType = MessageType->As<ExprRecordType>();
             if (RecType == nullptr) {
-                throw ESMCError((string)"Expected Record type as message type " + 
+                throw ESMCError((string)"Expected Record type as message type " +
                                 "in ChannelEFSM::MakeInputTransition()");
             }
-            
+
             ExpT TargetExp = nullptr;
             if (Lossy) {
                 TargetExp = LastMsgExp;
@@ -152,7 +152,7 @@ namespace ESMC {
             string InMsgName = "__inmsg__";
             auto InMsgVar = Mgr->MakeVar(InMsgName, UMType);
             auto TrueExp = Mgr->MakeTrue();
-            
+
             auto Guard = Mgr->MakeExpr(LTSOps::OpLT, CountExp, MaxChanExp);
             NoCountUpdates.push_back(new LTSAssignSimple(TargetExp, InMsgVar));
             Updates = NoCountUpdates;
@@ -163,18 +163,18 @@ namespace ESMC {
 
             if (Lossy) {
                 NoCountUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
-                                                             Mgr->MakeVal("LossDecideState", 
+                                                             Mgr->MakeVal("LossDecideState",
                                                                           StateType)));
             }
 
             if (!Lossy) {
                 EFSMBase::AddInputTransForInstance(InstanceID,
                                                    SubstMap,
-                                                   "ChanInitState", 
-                                                   Guard, 
-                                                   Updates, 
-                                                   InMsgName, 
-                                                   MessageType, 
+                                                   "ChanInitState",
+                                                   Guard,
+                                                   Updates,
+                                                   InMsgName,
+                                                   MessageType,
                                                    MessageType,
                                                    LTSSymbTransRef::NullPtr);
             } else {
@@ -183,13 +183,13 @@ namespace ESMC {
                 Step2Updates.push_back(new LTSAssignSimple(CountExp,
                                                            Mgr->MakeExpr(LTSOps::OpADD,
                                                                          CountExp, OneExp)));
-                Step2Updates.push_back(new LTSAssignSimple(LastMsgExp, 
+                Step2Updates.push_back(new LTSAssignSimple(LastMsgExp,
                                                            Mgr->MakeVal("clear", UMType)));
                 Step2Updates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                            Mgr->MakeVal("ChanInitState",
                                                                         StateType)));
                 vector<LTSAssignRef> LossUpdates;
-                LossUpdates.push_back(new LTSAssignSimple(LastMsgExp, 
+                LossUpdates.push_back(new LTSAssignSimple(LastMsgExp,
                                                           Mgr->MakeVal("clear", UMType)));
                 LossUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
                                                           Mgr->MakeVal("ChanInitState",
@@ -199,10 +199,10 @@ namespace ESMC {
                 if (Blocking) {
                     EFSMBase::AddInputTransForInstance(InstanceID,
                                                        SubstMap,
-                                                       "ChanInitState", 
-                                                       Guard, 
-                                                       NoCountUpdates, 
-                                                       InMsgName, 
+                                                       "ChanInitState",
+                                                       Guard,
+                                                       NoCountUpdates,
+                                                       InMsgName,
                                                        MessageType,
                                                        MessageType,
                                                        LTSSymbTransRef::NullPtr);
@@ -210,10 +210,10 @@ namespace ESMC {
                 } else {
                     EFSMBase::AddInputTransForInstance(InstanceID,
                                                        SubstMap,
-                                                       "ChanInitState", 
-                                                       TrueExp, 
+                                                       "ChanInitState",
+                                                       TrueExp,
                                                        NoCountUpdates,
-                                                       InMsgName, 
+                                                       InMsgName,
                                                        MessageType,
                                                        MessageType,
                                                        LTSSymbTransRef::NullPtr);
@@ -223,17 +223,17 @@ namespace ESMC {
                 // Lossy transition
                 EFSMBase::AddInternalTransForInstance(InstanceID,
                                                       SubstMap,
-                                                      "LossDecideState", 
-                                                      TrueExp, 
-                                                      LossUpdates, 
+                                                      "LossDecideState",
+                                                      TrueExp,
+                                                      LossUpdates,
                                                       set<string>(),
                                                       LTSSymbTransRef::NullPtr);
                 // Non lossy
                 EFSMBase::AddInternalTransForInstance(InstanceID,
                                                       SubstMap,
-                                                      "LossDecideState", 
-                                                      Guard2, 
-                                                      Step2Updates, 
+                                                      "LossDecideState",
+                                                      Guard2,
+                                                      Step2Updates,
                                                       InputFairnessSets,
                                                       LTSSymbTransRef::NullPtr);
             }
@@ -241,7 +241,7 @@ namespace ESMC {
 
         void ChannelEFSM::MakeOutputTransition(u32 InstanceID,
                                                const MgrT::SubstMapT& SubstMap,
-                                               const ExprTypeRef& MessageType, 
+                                               const ExprTypeRef& MessageType,
                                                const set<string>& NonDupOutputFairnessSets,
                                                const set<string>& DupOutputFairnessSets)
         {
@@ -264,22 +264,22 @@ namespace ESMC {
                 auto FAType = Mgr->MakeType<ExprFieldAccessType>();
                 auto FieldVar = Mgr->MakeVar(UMType->GetTypeIDFieldName(), FAType);
                 auto FieldExp = Mgr->MakeExpr(LTSOps::OpField, ChooseIndexExp, FieldVar);
-                
+
                 auto NonEmptyExp = Mgr->MakeExpr(LTSOps::OpGT, CountExp, ZeroExp);
                 auto TypeID = UMType->GetTypeIDForMemberType(MessageType);
-                auto MatchExp = Mgr->MakeExpr(LTSOps::OpEQ, FieldExp, 
-                                              Mgr->MakeVal(to_string(TypeID), 
+                auto MatchExp = Mgr->MakeExpr(LTSOps::OpEQ, FieldExp,
+                                              Mgr->MakeVal(to_string(TypeID),
                                                            UMType->GetTypeIDFieldType()));
                 auto ChooseOkExp = Mgr->MakeExpr(LTSOps::OpLT, ChooseExp, CountExp);
                 auto Guard = Mgr->MakeExpr(LTSOps::OpAND, NonEmptyExp, ChooseOkExp, MatchExp);
                 string OutMsgName = "__outmsg__";
                 auto OutMsgExp = Mgr->MakeVar(OutMsgName, ValType);
                 auto CntSubExp = Mgr->MakeExpr(LTSOps::OpSUB, CountExp, OneExp);
-                
+
                 vector<LTSAssignRef> Updates;
                 Updates.push_back(new LTSAssignSimple(OutMsgExp, ChooseIndexExp));
                 Updates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
-                                                      Mgr->MakeVal("ChanInitState", 
+                                                      Mgr->MakeVal("ChanInitState",
                                                                    StateType)));
                 vector<LTSAssignRef> MsgUpdates = Updates;
 
@@ -299,15 +299,15 @@ namespace ESMC {
                         auto FieldVar = Mgr->MakeVar(Field.first, FAType);
                         auto IExp = Mgr->MakeVal(to_string(i), IndexType);
                         auto IPlusOneExp = Mgr->MakeVal(to_string(i + 1), IndexType);
-                        auto ArrayIndexExpIf = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, 
+                        auto ArrayIndexExpIf = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp,
                                                              IPlusOneExp);
-                        auto ArrayIndexExpElse = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, 
+                        auto ArrayIndexExpElse = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp,
                                                                IExp);
-                        auto IfBranch = Mgr->MakeExpr(LTSOps::OpField, 
-                                                      ArrayIndexExpIf, 
+                        auto IfBranch = Mgr->MakeExpr(LTSOps::OpField,
+                                                      ArrayIndexExpIf,
                                                       FieldVar);
-                        auto ElseBranch = Mgr->MakeExpr(LTSOps::OpField, 
-                                                        ArrayIndexExpElse, 
+                        auto ElseBranch = Mgr->MakeExpr(LTSOps::OpField,
+                                                        ArrayIndexExpElse,
                                                         FieldVar);
                         auto ITEExp = Mgr->MakeExpr(LTSOps::OpITE, Cond, IfBranch, ElseBranch);
                         Updates.push_back(new LTSAssignSimple(ElseBranch, ITEExp));
@@ -316,22 +316,22 @@ namespace ESMC {
 
                 EFSMBase::AddOutputTransForInstance(InstanceID,
                                                     SubstMap,
-                                                    "ChanInitState", 
-                                                    Guard, 
-                                                    Updates, 
-                                                    OutMsgName, 
-                                                    PMessageType, 
+                                                    "ChanInitState",
+                                                    Guard,
+                                                    Updates,
+                                                    OutMsgName,
+                                                    PMessageType,
                                                     PMessageType,
                                                     NonDupOutputFairnessSets,
                                                     LTSSymbTransRef::NullPtr);
                 if (Duplicating) {
                     EFSMBase::AddOutputTransForInstance(InstanceID,
                                                         SubstMap,
-                                                        "ChanInitState", 
+                                                        "ChanInitState",
                                                         Guard,
-                                                        MsgUpdates, 
+                                                        MsgUpdates,
                                                         OutMsgName,
-                                                        PMessageType, 
+                                                        PMessageType,
                                                         PMessageType,
                                                         DupOutputFairnessSets,
                                                         LTSSymbTransRef::NullPtr);
@@ -353,7 +353,7 @@ namespace ESMC {
             set<string> NonDupOutputFairnessSets;
             set<string> DupOutputFairnessSets;
 
-            if (Lossy && (LossDupFairness == LossDupFairnessType::NotAlwaysLost || 
+            if (Lossy && (LossDupFairness == LossDupFairnessType::NotAlwaysLost ||
                           LossDupFairness == LossDupFairnessType::NotAlwaysLostOrDup)) {
                 auto FairID = LossDupFairnessUIDGen.GetUID();
                 string FairnessName = "LossFairness_" + to_string(FairID);
@@ -363,28 +363,28 @@ namespace ESMC {
 
             if (!Duplicating) {
                 if (MessageFairness != LTSFairnessType::None) {
-                    string FairnessSetName = "MessageFairness_" + 
+                    string FairnessSetName = "MessageFairness_" +
                         to_string(MessageFairnessUIDGen.GetUID());
                     EFSMBase::AddFairnessSet(FairnessSetName,
-                                             MessageFairness == LTSFairnessType::Strong ? 
-                                             FairSetFairnessType::Strong : 
+                                             MessageFairness == LTSFairnessType::Strong ?
+                                             FairSetFairnessType::Strong :
                                              FairSetFairnessType::Weak);
                     NonDupOutputFairnessSets.insert(FairnessSetName);
                 }
             } else {
                 if (LossDupFairness == LossDupFairnessType::NotAlwaysDup ||
                     LossDupFairness == LossDupFairnessType::NotAlwaysLostOrDup) {
-                    string FairnessSetName = "DupFairness_" + 
+                    string FairnessSetName = "DupFairness_" +
                         to_string(LossDupFairnessUIDGen.GetUID());
                     EFSMBase::AddFairnessSet(FairnessSetName,
                                              FairSetFairnessType::Strong);
                     NonDupOutputFairnessSets.insert(FairnessSetName);
                 } else if (MessageFairness != LTSFairnessType::None) {
-                    string FairnessSetName = "MessageFairness_" + 
+                    string FairnessSetName = "MessageFairness_" +
                         to_string(MessageFairnessUIDGen.GetUID());
                     EFSMBase::AddFairnessSet(FairnessSetName,
-                                             MessageFairness == LTSFairnessType::Strong ? 
-                                             FairSetFairnessType::Strong : 
+                                             MessageFairness == LTSFairnessType::Strong ?
+                                             FairSetFairnessType::Strong :
                                              FairSetFairnessType::Weak);
                     NonDupOutputFairnessSets.insert(FairnessSetName);
                     DupOutputFairnessSets = NonDupOutputFairnessSets;
@@ -395,22 +395,22 @@ namespace ESMC {
             for (u32 i = 0; i < NumInsts; ++i) {
                 auto const& SubstMap = ParamSubsts[i];
                 auto&& SubstParams = SubstAll(Params, SubstMap, Mgr);
-                
+
                 auto ActMType = InstantiateType(MessageType, SubstParams, Mgr);
                 MakeInputTransition(i, SubstMap, ActMType, InputFairnessSets);
-                MakeOutputTransition(i, SubstMap, ActMType, NonDupOutputFairnessSets, 
+                MakeOutputTransition(i, SubstMap, ActMType, NonDupOutputFairnessSets,
                                      DupOutputFairnessSets);
             }
         }
 
         void ChannelEFSM::AddMsgs(const vector<ExpT> NewParams,
-                                  const ExpT& Constraint,    
+                                  const ExpT& Constraint,
                                   const ExprTypeRef& MessageType,
                                   const vector<ExpT>& MessageParams,
                                   LTSFairnessType MessageFairness,
                                   LossDupFairnessType LossDupFairness)
         {
-            // We need to instantiate these ourselves 
+            // We need to instantiate these ourselves
             // because we need more fine grained control
             auto Mgr = TheLTS->GetMgr();
             auto PMessageType = TheLTS->GetPrimedType(MessageType);
@@ -435,9 +435,9 @@ namespace ESMC {
                 auto const& SubstMap = ParamSubsts[i];
                 auto SubstConstraint = Mgr->Substitute(SubstMap, Constraint);
                 auto const&& NewInsts = InstantiateParams(NewParams, SubstConstraint, Mgr);
-                
+
                 if (i == 0) {
-                    if (Lossy && (LossDupFairness == LossDupFairnessType::NotAlwaysLost || 
+                    if (Lossy && (LossDupFairness == LossDupFairnessType::NotAlwaysLost ||
                                   LossDupFairness == LossDupFairnessType::NotAlwaysLostOrDup)) {
                         auto FairID = LossDupFairnessUIDGen.GetUID();
                         string FairnessName = "LossFairness_" + to_string(FairID);
@@ -447,28 +447,28 @@ namespace ESMC {
 
                     if (!Duplicating) {
                         if (MessageFairness != LTSFairnessType::None) {
-                            string FairnessSetName = "MessageFairness_" + 
+                            string FairnessSetName = "MessageFairness_" +
                                 to_string(MessageFairnessUIDGen.GetUID());
                             EFSMBase::AddFairnessSet(FairnessSetName,
-                                                     MessageFairness == LTSFairnessType::Strong ? 
-                                                     FairSetFairnessType::Strong : 
+                                                     MessageFairness == LTSFairnessType::Strong ?
+                                                     FairSetFairnessType::Strong :
                                                      FairSetFairnessType::Weak);
                             NonDupOutputFairnessSets.insert(FairnessSetName);
                         }
                     } else {
                         if (LossDupFairness == LossDupFairnessType::NotAlwaysDup ||
                             LossDupFairness == LossDupFairnessType::NotAlwaysLostOrDup) {
-                            string FairnessSetName = "DupFairness_" + 
+                            string FairnessSetName = "DupFairness_" +
                                 to_string(LossDupFairnessUIDGen.GetUID());
                             EFSMBase::AddFairnessSet(FairnessSetName,
                                                      FairSetFairnessType::Strong);
                             NonDupOutputFairnessSets.insert(FairnessSetName);
                         } else if (MessageFairness != LTSFairnessType::None) {
-                            string FairnessSetName = "MessageFairness_" + 
+                            string FairnessSetName = "MessageFairness_" +
                                 to_string(MessageFairnessUIDGen.GetUID());
                             EFSMBase::AddFairnessSet(FairnessSetName,
-                                                     MessageFairness == LTSFairnessType::Strong ? 
-                                                     FairSetFairnessType::Strong : 
+                                                     MessageFairness == LTSFairnessType::Strong ?
+                                                     FairSetFairnessType::Strong :
                                                      FairSetFairnessType::Weak);
                             NonDupOutputFairnessSets.insert(FairnessSetName);
                             DupOutputFairnessSets = NonDupOutputFairnessSets;
@@ -487,7 +487,7 @@ namespace ESMC {
                     auto PMType = TheLTS->GetPrimedType(MType);
 
                     MakeInputTransition(i, LocalSubstMap, MType, InputFairnessSets);
-                    MakeOutputTransition(i, LocalSubstMap, MType, NonDupOutputFairnessSets, 
+                    MakeOutputTransition(i, LocalSubstMap, MType, NonDupOutputFairnessSets,
                                          DupOutputFairnessSets);
                 }
             }
@@ -499,7 +499,7 @@ namespace ESMC {
             throw ESMCError((string)"ChannelEFSM::AddInputMsg() should not be called");
         }
 
-        SymmMsgDeclRef ChannelEFSM::AddInputMsgs(const vector<ExpT>& NewParams, 
+        SymmMsgDeclRef ChannelEFSM::AddInputMsgs(const vector<ExpT>& NewParams,
                                                  const ExpT& Constraint,
                                                  const ExprTypeRef& MessageType,
                                                  const vector<ExpT>& MessageParams)
@@ -513,7 +513,7 @@ namespace ESMC {
             throw ESMCError((string)"ChannelEFSM::AddOutputMsg() should not be called");
         }
 
-        SymmMsgDeclRef ChannelEFSM::AddOutputMsgs(const vector<ExpT>& NewParams, 
+        SymmMsgDeclRef ChannelEFSM::AddOutputMsgs(const vector<ExpT>& NewParams,
                                                   const ExpT& Constraint,
                                                   const ExprTypeRef& MessageType,
                                                   const vector<ExpT>& MessageParams)
@@ -550,7 +550,7 @@ namespace ESMC {
         {
             throw ESMCError((string)"ChannelEFSM::AddInputTransitions() should not be called");
         }
-            
+
         void ChannelEFSM::AddOutputTransition(const string& InitState,
                                               const ExpT& Guard,
                                               const vector<LTSAssignRef>& Updates,
@@ -579,7 +579,7 @@ namespace ESMC {
             throw ESMCError((string)"ChannelEFSM::AddOutputTransitions() should not be called");
         }
 
-        
+
         void ChannelEFSM::AddInternalTransition(const string& InitState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
@@ -606,5 +606,5 @@ namespace ESMC {
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-// 
+//
 // LTSChannelEFSM.cpp ends here
