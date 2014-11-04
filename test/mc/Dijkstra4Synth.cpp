@@ -6,6 +6,7 @@
 // original paper on the topic.
 
 #include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include "../../src/uflts/LabelledTS.hpp"
 #include "../../src/uflts/LTSEFSM.hpp"
@@ -644,15 +645,10 @@ int main()
         cout << Transition->ToString() << endl;
         /// assert length of Updates is 1
 
-        // auto Guard = Transition->GetGuard();
-        // auto UFFunctionsInGuard = Guard->GetMgr()->Gather(Guard, HasUF);
-        // cout << "UF in Guard" << endl;
-        // for (auto UFFunctionInGuard : UFFunctionsInGuard) {
-        //     cout << UFFunctionInGuard << endl;
-        // }
-        // auto UFGuard = *(UFFunctionsInGuard.begin());
-        // auto UFGuardOpCode = UFGuard->As<OpExpression>()->GetOpCode();
-        // // Setting UF guard to be true everywhere
+        auto Guard = Transition->GetGuard();
+        auto UFFunctionsInGuard = Guard->GetMgr()->Gather(Guard, HasUF);
+        auto UFGuard = *(UFFunctionsInGuard.begin());
+        auto UFGuardOpCode = UFGuard->As<OpExpression>()->GetOpCode();
 
         auto StateUpdate = Transition->GetUpdates()[0];
         auto StateUpdateExpression = StateUpdate->GetRHS();
@@ -673,6 +669,51 @@ int main()
             // cout << GuardIsTrue << endl;
             // TheSolver->MakeAssertion(GuardIsTrue);
         }
+
+        DataElems.clear();
+        for (size_t i = 0; i < 4; ++i) {
+            DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
+        }
+        DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
+
+        int CandidateStateCounter = 1;
+        vector<ExpT> Indicators;
+        for (auto DataVal : DataCombinations) {
+            // auto StateUpdateExp = TheLTS->MakeOp(UFOpCode, DataVal);
+            // auto StateUpdateExpEQIllegitimateState = TheLTS->MakeOp(LTSOps::OpEQ, StateUpdateExp, ShadowMonitorIllegitimateState);
+            vector<ExpT> ActualArguments;
+
+            int DataCombinationIndex = 0;
+            for (auto Arg : UFGuard->As<OpExpression>()->GetChildren()) {
+                // cout << Arg << endl;
+                auto ArgName = Arg->ToString();
+                if (boost::algorithm::ends_with(ArgName, "Up0")) {
+                    ActualArguments.push_back(TheLTS->MakeTrue());
+                } else if (boost::algorithm::ends_with(ArgName, "Up2")) {
+                    ActualArguments.push_back(TheLTS->MakeFalse());
+                } else {
+                    ActualArguments.push_back(DataVal[DataCombinationIndex]);
+                    DataCombinationIndex++;
+                }
+            }
+
+            auto ZeroOneType = TheLTS->MakeRangeType(0, 1);
+            cout << "Creating indicator variable with index " << CandidateStateCounter << endl;
+            auto IndicatorVariable = TheLTS->MakeVar("LegitimateIndicator" + to_string(CandidateStateCounter),
+                                                     ZeroOneType);
+            ExpT LegitimateStatePredicate = TheLTS->MakeOp(UFGuardOpCode, ActualArguments);
+            auto IndicatorVariableEQOne = TheLTS->MakeOp(LTSOps::OpEQ, IndicatorVariable,
+                                                         TheLTS->MakeVal("1", ZeroOneType));
+            TheSolver->MakeAssertion(TheLTS->MakeOp(LTSOps::OpIMPLIES,
+                                                    LegitimateStatePredicate,
+                                                    IndicatorVariableEQOne));
+            Indicators.push_back(IndicatorVariable);
+            CandidateStateCounter++;
+        }
+
+        auto IndicatorSum = TheLTS->MakeOp(LTSOps::OpADD, Indicators);
+        auto NumIndicatorsType = TheLTS->MakeRangeType(0, Indicators.size());
+        TheSolver->MakeAssertion(TheLTS->MakeOp(LTSOps::OpLE, IndicatorSum, TheLTS->MakeVal("8", NumIndicatorsType)));
     }
 
     for (auto Transition : ShadowMonitor->GetOutputTransitionsOnMsg(IllegitimateAnnouncement)) {
@@ -705,11 +746,6 @@ int main()
             auto StateUpdateExpEQIllegitimateState = TheLTS->MakeOp(LTSOps::OpEQ, StateUpdateExp, ShadowMonitorIllegitimateState);
             // cout << StateUpdateExpEQIllegitimateState << endl;
             TheSolver->MakeAssertion(StateUpdateExpEQIllegitimateState);
-
-            auto GuardIsTrue = TheLTS->MakeOp(UFGuardOpCode, DataVal);
-            cout << GuardIsTrue << endl;
-            TheSolver->MakeAssertion(GuardIsTrue);
-
         }
     }
 
@@ -729,6 +765,8 @@ int main()
 
 
     TheSolver->Solve();
+
+    TheSolver->PrintSolution();
 
     delete Checker;
 
