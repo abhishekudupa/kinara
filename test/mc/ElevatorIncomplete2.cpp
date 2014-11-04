@@ -54,7 +54,7 @@ int main()
     Controller->FreezeStates();
     Controller->AddVariable("CurrentFloor", FloorType);
     Controller->AddVariable("TargetFloor", FloorType);
-    Controller->AddInputMsg(Msgs["Request"], {});
+    auto RequestMsgDecl = Controller->AddInputMsg(Msgs["Request"], {});
     Controller->AddInputMsg(Msgs["UpAck"], {});
     Controller->AddInputMsg(Msgs["DownAck"], {});
     Controller->AddOutputMsg(Msgs["Up"], {});
@@ -104,7 +104,12 @@ int main()
                                    "DownAck", Msgs["DownAck"], {});
     Updates.clear();
 
-    Controller->SAs<IncompleteEFSM>()->MarkVariableReadOnly("TargetFloor");
+    auto ControllerAsIncomplete = Controller->SAs<IncompleteEFSM>();
+    ControllerAsIncomplete->MarkVariableReadOnly("TargetFloor");
+    ControllerAsIncomplete->IgnoreMsgOnState(RequestMsgDecl, "Initial");
+    ControllerAsIncomplete->IgnoreMsgOnState(RequestMsgDecl, "CheckRequest");
+    ControllerAsIncomplete->IgnoreMsgOnState(RequestMsgDecl, "SentUp");
+    ControllerAsIncomplete->IgnoreMsgOnState(RequestMsgDecl, "SentDown");
 
     ////////////////////////////////////////////////////////////
     // User
