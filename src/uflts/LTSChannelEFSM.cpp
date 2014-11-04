@@ -158,7 +158,11 @@ namespace ESMC {
                 if (Lossy) {
                     TargetExp = LastMsgExp;
                 } else {
-                    TargetExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, ChooseExp);
+                    if (!Ordered) {
+                        TargetExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, ChooseExp);
+                    } else {
+                        TargetExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, CountExp);
+                    }
                 }
 
                 auto FAType = Mgr->MakeType<ExprFieldAccessType>();

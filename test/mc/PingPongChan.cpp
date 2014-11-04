@@ -51,6 +51,7 @@
 #include "../../src/uflts/LTSTransitions.hpp"
 #include "../../src/mc/LTSChecker.hpp"
 #include "../../src/mc/OmegaAutomaton.hpp"
+#include "../../src/mc/Trace.hpp"
 
 using namespace ESMC;
 using namespace LTS;
@@ -286,7 +287,18 @@ int main()
     // }
 
     auto Checker = new LTSChecker(TheLTS);
-    Checker->BuildAQS(AQSConstructionMethod::DepthFirst);
+    auto Safe = Checker->BuildAQS(AQSConstructionMethod::DepthFirst);
+    if (!Safe) {
+        // Build a trace to the error state
+        auto const& ErrorStates = Checker->GetAllErrorStates();
+        cout << "Found " << ErrorStates.size() << " error states" << endl;
+        for (auto const& ErrorState : ErrorStates) {
+            auto Trace = Checker->MakeTraceToError(ErrorState.first);
+            cout << Trace->ToString() << endl;
+            delete Trace;
+            break;
+        }
+    }
 
     auto Monitor = Checker->MakeStateBuchiMonitor("GFZero", Params, TrueExp);
     Monitor->AddState("InitState", true, false);
