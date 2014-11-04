@@ -368,10 +368,6 @@ namespace ESMC {
             // possibly solve this deadlock
             vector<ExpT> Disjuncts;
             for (auto const& Cmd : GuardedCommands) {
-                if (!Cmd->IsTentative()) {
-                    continue;
-                }
-
                 auto const& FixedInterp = Cmd->GetFixedInterpretation();
                 auto Interp = FixedInterp->ExtensionData.Interp;
                 auto Res = Interp->Evaluate(LastState);
