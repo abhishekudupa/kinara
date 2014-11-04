@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include "../../src/uflts/LabelledTS.hpp"
 #include "../../src/uflts/LTSEFSM.hpp"
@@ -22,15 +23,8 @@ using namespace Synth;
 using namespace Analyses;
 
 
-int main(int argc, char* argv[])
+int main()
 {
-    if (argc < 2) {
-        cerr << "Usage: " << argv[0] <<  " CONF" << endl
-             << "CONF is 0 for no missing edges" << endl
-             << "1 for missing UpAck from SentUp to CheckRequest" << endl;
-        return 1;
-    }
-    int Configuration = stoi(argv[1]);
     int TopFloorInt = 3;
     auto TheLTS = new LabelledTS();
     auto True = TheLTS->MakeTrue();
@@ -75,34 +69,32 @@ int main(int argc, char* argv[])
                                    True, Updates,
                                    "Request", Msgs["Request"], {});
 
-    auto TargetFloorEQCurrentFloor = TheLTS->MakeOp(LTSOps::OpEQ, TargetFloor, CurrentFloor);
-    Controller->AddOutputTransition("CheckRequest", "Initial",
-                                    TargetFloorEQCurrentFloor, {},
-                                    "Arrive", Msgs["Arrive"], {}, set<string>());
+    // auto TargetFloorEQCurrentFloor = TheLTS->MakeOp(LTSOps::OpEQ, TargetFloor, CurrentFloor);
+    // Controller->AddOutputTransition("CheckRequest", "Initial",
+    //                                 TargetFloorEQCurrentFloor, {},
+    //                                 "Arrive", Msgs["Arrive"], {}, set<string>());
 
-    if (Configuration != 2) {
-        auto TargetFloorGTCurrentFloor = TheLTS->MakeOp(LTSOps::OpGT, TargetFloor, CurrentFloor);
-        Controller->AddOutputTransition("CheckRequest", "SentUp",
-                                        TargetFloorGTCurrentFloor, {},
-                                        "Up", Msgs["Up"], {}, set<string>());
-    }
 
-    if (Configuration != 2) {
-        auto TargetFloorLTCurrentFloor = TheLTS->MakeOp(LTSOps::OpLT, TargetFloor, CurrentFloor);
-        Controller->AddOutputTransition("CheckRequest", "SentDown",
-                                        TargetFloorLTCurrentFloor, {},
-                                        "Down", Msgs["Down"], {}, set<string>());
-    }
+    auto TargetFloorGTCurrentFloor = TheLTS->MakeOp(LTSOps::OpGT, TargetFloor, CurrentFloor);
+    Controller->AddOutputTransition("CheckRequest", "SentUp",
+                                   TargetFloorGTCurrentFloor, {},
+                                    "Up", Msgs["Up"], {}, set<string>());
+
+    auto TargetFloorLTCurrentFloor = TheLTS->MakeOp(LTSOps::OpLT, TargetFloor, CurrentFloor);
+    Controller->AddOutputTransition("CheckRequest", "SentDown",
+                                    TargetFloorLTCurrentFloor, {},
+                                    "Down", Msgs["Down"], {}, set<string>());
+
+
 
     auto FloorOne = TheLTS->MakeVal("1", FloorType);
-    if (Configuration != 1) {
-        Updates.clear();
-        auto CurrentFloorPlusOne = TheLTS->MakeOp(LTSOps::OpADD, CurrentFloor, FloorOne);
-        Updates = {new LTSAssignSimple(CurrentFloor, CurrentFloorPlusOne)};
-        Controller->AddInputTransition("SentUp", "CheckRequest",
-                                       True, Updates,
-                                       "UpAck", Msgs["UpAck"], {});
-    }
+    Updates.clear();
+    auto CurrentFloorPlusOne = TheLTS->MakeOp(LTSOps::OpADD, CurrentFloor, FloorOne);
+    Updates = {new LTSAssignSimple(CurrentFloor, CurrentFloorPlusOne)};
+    Controller->AddInputTransition("SentUp", "CheckRequest",
+                                   True, Updates,
+                                   "UpAck", Msgs["UpAck"], {});
+
     auto CurrentFloorMinusOne = TheLTS->MakeOp(LTSOps::OpSUB, CurrentFloor, FloorOne);
     Updates.clear();
     Updates = {new LTSAssignSimple(CurrentFloor, CurrentFloorMinusOne)};
@@ -322,10 +314,58 @@ int main(int argc, char* argv[])
     Monitor->Freeze();
     auto TheSolver = new Solver(Checker);
 
+    ////////////////////////////////////////////////////////////
+    // Constraint of Correct Solution
+    ////////////////////////////////////////////////////////////
+    auto ArriveTransition = Controller->GetOutputTransitionsOnMsg(Msgs["Arrive"])[0];
+    vector<ExpT> SolutionConjuncts;
+    auto HasUF = [&] (const ExpBaseT* Exp) -> bool
+        {
+            auto ExpAsOpExp = Exp->As<OpExpression>();
+            if (ExpAsOpExp != nullptr) {
+                auto Code = ExpAsOpExp->GetOpCode();
+                return (Code >= LTSOps::UFOffset);
+            }
+            return false;
+        };
+    auto Guard = ArriveTransition->GetGuard();
+    auto UFFunctionsInGuard = Guard->GetMgr()->Gather(Guard, HasUF);
+    auto UFGuard = *(UFFunctionsInGuard.begin());
+    auto UFGuardOpCode = UFGuard->As<OpExpression>()->GetOpCode();
+    for (u32 i = 1; i <= 3; ++i) {
+        auto GuardTrue = TheLTS->MakeOp(UFGuardOpCode,
+                                        {TheLTS->MakeVal(to_string(i), FloorType),
+                                                TheLTS->MakeVal(to_string(i), FloorType)});
+        SolutionConjuncts.push_back(GuardTrue);
+    }
+    Updates = ArriveTransition->GetUpdates();
+    for (auto Update : Updates) {
+        auto LHS = Update->GetLHS();
+        auto RHS = Update->GetRHS();
+        if (boost::algorithm::ends_with(LHS->ToString(), "state")) {
+            auto StateUpdateOpCode = RHS->As<OpExpression>()->GetOpCode();
+            cout << "State update op code is " << StateUpdateOpCode << endl;
+            for (u32 i = 1; i <= 3; ++i) {
+                auto StateUpdate = TheLTS->MakeOp(StateUpdateOpCode,
+                                                  {TheLTS->MakeVal(to_string(i), FloorType),
+                                                          TheLTS->MakeVal(to_string(i), FloorType)});
+                auto StateUpdateConstraint = TheLTS->MakeOp(LTSOps::OpEQ,
+                                                            StateUpdate,
+                                                            ControllerInitialState);
+                SolutionConjuncts.push_back(StateUpdateConstraint);
+            }
+        }
+    }
+    auto Solution = TheLTS->MakeOp(LTSOps::OpAND, SolutionConjuncts);
+    cout << "THE SOLUTION PREDICATE IS " << Solution << endl;
 
     TheSolver->Solve();
-    // TheSolver->PrintSolution();
+    TheSolver->PrintSolution();
 
     delete Checker;
     delete TheSolver;
 }
+
+
+
+
