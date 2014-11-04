@@ -32,7 +32,10 @@ using namespace Synth;
 
 #define __LOGSTR__ string(__FILE__) + ", " + to_string(__LINE__) + ": "
 
-const size_t NumProcesses = 3;
+// for number of processes = 3, the minimum number of legitimate states is 8.
+// for number of processes = 4, the minimum number of legitimate states is 12.
+const size_t NumProcesses = 4;
+
 
 // Messages
 vector<ExprTypeRef> WriteMsgs;
@@ -46,7 +49,7 @@ void DeclareMsgs(LabelledTS* TheLTS)
 {
     assert(TheLTS != nullptr);
     cout << __LOGSTR__ << "Declaring messages." << endl;
-    
+
     auto BoolType = TheLTS->MakeBoolType();
     for (size_t i = 0; i < NumProcesses; i++) {
         vector<pair<string, ExprTypeRef>> fields { make_pair(string("Data"), BoolType),
@@ -153,7 +156,7 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
     Proc[i]->FreezeVars();
 
     cout << __LOGSTR__ << "Adding transitions." << endl;
-    
+
     Proc[i]->AddInputMsg(WriteMsgs[i - 1], {});
     auto Rim1Exp = TheLTS->MakeVar("R" + to_string(i - 1), WriteMsgs[i - 1]);
     auto Dim1Exp = TheLTS->MakeVar(string("Data") + to_string(i - 1), TheLTS->MakeBoolType());
@@ -656,7 +659,7 @@ int main()
         cout << "UF op code is " << UFOpCode << endl;
 
         vector<vector<ExpT>> DataElems;
-        for (size_t i = 0; i < 6; ++i) {
+        for (size_t i = 0; i < 2 * NumProcesses; ++i) {
             DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
         }
         auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
@@ -671,7 +674,7 @@ int main()
         }
 
         DataElems.clear();
-        for (size_t i = 0; i < 4; ++i) {
+        for (size_t i = 0; i < 2 * NumProcesses - 2; ++i) {
             DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
         }
         DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
@@ -689,7 +692,7 @@ int main()
                 auto ArgName = Arg->ToString();
                 if (boost::algorithm::ends_with(ArgName, "Up0")) {
                     ActualArguments.push_back(TheLTS->MakeTrue());
-                } else if (boost::algorithm::ends_with(ArgName, "Up2")) {
+                } else if (boost::algorithm::ends_with(ArgName, "Up" + to_string(NumProcesses - 1))) {
                     ActualArguments.push_back(TheLTS->MakeFalse());
                 } else {
                     ActualArguments.push_back(DataVal[DataCombinationIndex]);
@@ -713,7 +716,7 @@ int main()
 
         auto IndicatorSum = TheLTS->MakeOp(LTSOps::OpADD, Indicators);
         auto NumIndicatorsType = TheLTS->MakeRangeType(0, Indicators.size());
-        TheSolver->MakeAssertion(TheLTS->MakeOp(LTSOps::OpLE, IndicatorSum, TheLTS->MakeVal("8", NumIndicatorsType)));
+        TheSolver->MakeAssertion(TheLTS->MakeOp(LTSOps::OpLE, IndicatorSum, TheLTS->MakeVal("12", NumIndicatorsType)));
     }
 
     for (auto Transition : ShadowMonitor->GetOutputTransitionsOnMsg(IllegitimateAnnouncement)) {
@@ -737,7 +740,7 @@ int main()
         cout << "UF op code is " << UFOpCode << endl;
 
         vector<vector<ExpT>> DataElems;
-        for (size_t i = 0; i < 6; ++i) {
+        for (size_t i = 0; i < 2 * NumProcesses; ++i) {
             DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
         }
         auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
