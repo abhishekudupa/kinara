@@ -110,6 +110,28 @@ namespace ESMC {
             }
 
             UpdateBoundsMultiplier = MaxLValues;
+
+            // Populate the set of fixed commands and create the cost function
+            unordered_set<u32> FixedCommands;
+            for (auto const& Cmd : GuardedCommands) {
+                auto const& SynthOps = GetSynthOps(Cmd->GetGuard());
+                if (SynthOps.size() == 0) {
+                    FixedCommands.insert(Cmd->GetCmdID());
+                }
+            }
+
+            CostFunction = Detail::SynthCostFunction(FixedCommands);
+        }
+
+        inline void Solver::CheckedAssert(const ExpT& Assertion)
+        {
+            if (AssertedConstraints.find(Assertion) != AssertedConstraints.end()) {
+                return;
+            }
+
+            AssertedConstraints.insert(Assertion);
+            cout << "Asserting: " << Assertion->ToString() << endl;
+            TP->Assert(Assertion, true);
         }
 
         Solver::~Solver()
@@ -121,13 +143,12 @@ namespace ESMC {
                                                      const ExpT& BlownInvariant)
         {
             auto Mgr = TheLTS->GetMgr();
-            Detail::SynthCostFunction CostFunc(EnabledCommands);
             auto AQS = Checker->AQS;
 
             cout << "Handling one safety violation, computing shortest path... ";
             flush(cout);
 
-            // auto PPath = AQS->FindShortestPath(ErrorState, CostFunc);
+            // auto PPath = AQS->FindShortestPath(ErrorState, CostFunction);
             auto PPath = AQS->FindPath(ErrorState);
 
             cout << "Done!" << endl << "Unwinding trace... ";
@@ -186,60 +207,136 @@ namespace ESMC {
             delete Trace;
         }
 
-        void Solver::MakeAssertion(const ExpT& Pred)
+        inline void Solver::CreateMutualExclusionConstraint(const ExpT& GuardExp1,
+                                                            const ExpT& GuardExp2)
         {
             auto Mgr = TheLTS->GetMgr();
-            TP->Assert(Pred, true);
-            auto&& SynthOps = GetSynthOps(Pred);
 
-            // Find the structural constraints that need to be added
-            // for the newly exposed operations
-            unordered_set<i64> NewGuardOps;
-            unordered_set<i64> NewUpdateOps;
-
-            auto const& ConstraintsByOp = TheLTS->GetConstraintsByOp();
-            for (auto const& SynthOp : SynthOps) {
-                if (InterpretedOps.find(SynthOp) != InterpretedOps.end()) {
-                    // We've already interpreted these,
-                    // no need to add structural constraints
-                    continue;
-                }
-                InterpretedOps.insert(SynthOp);
-
-                auto it = ConstraintsByOp.find(SynthOp);
-                if (it == ConstraintsByOp.end()) {
-                    continue;
-                }
-
-                // This is a new guard op
-                NewGuardOps.insert(SynthOp);
-
-                auto const& Constraints = it->second;
-
-                for (auto const& Pred : Constraints) {
-                    // Any synth ops in the predicate are also interpreted
-                    auto&& PredOps = GetSynthOps(Pred);
-                    for (auto const& PredOp : PredOps) {
-                        // This is a newly encountered guard op?
-                        if (InterpretedOps.find(PredOp) == InterpretedOps.end()) {
-                            auto it2 = ConstraintsByOp.find(PredOp);
-                            if (it2 != ConstraintsByOp.end()) {
-                                // Yes!
-                                NewGuardOps.insert(PredOp);
-                            } else {
-                                // This is a newly encountered update op
-                                NewUpdateOps.insert(PredOp);
-                            }
-                        }
-                    }
-                    MakeAssertion(Pred);
-                }
+            set<ExpT> Args;
+            vector<ExpT> ArgsMine;
+            if (GuardExp1->Is<OpExpression>() &&
+                LTSReservedOps.find(GuardExp1->SAs<OpExpression>()->GetOpCode()) ==
+                LTSReservedOps.end()) {
+                ArgsMine = GetOpArgs(GuardExp1);
+            }
+            vector<ExpT> ArgsOther;
+            if (GuardExp2->Is<OpExpression>() &&
+                LTSReservedOps.find(GuardExp2->SAs<OpExpression>()->GetOpCode()) ==
+                LTSReservedOps.end()) {
+                ArgsOther = GetOpArgs(GuardExp2);
             }
 
-            // Mark all guards that have a full interpretation as such
+            Args.insert(ArgsMine.begin(), ArgsMine.end());
+            Args.insert(ArgsOther.begin(), ArgsOther.end());
+
+            vector<ExpT> QVars(Args.begin(), Args.end());
+            vector<ExprTypeRef> QVarTypes;
+
+            auto MutexExp = Mgr->MakeExpr(LTSOps::OpAND, GuardExp1, GuardExp2);
+            MutexExp = Mgr->MakeExpr(LTSOps::OpNOT, MutexExp);
+
+            transform(QVars.begin(), QVars.end(), back_inserter(QVarTypes),
+                      [&] (const ExpT& Exp) -> ExprTypeRef
+                      {
+                          return Exp->GetType();
+                      });
+            MgrT::SubstMapT SubstMap;
+            const u32 NumQVars = QVarTypes.size();
+            for (u32 i = 0; i < NumQVars; ++i) {
+                SubstMap[QVars[i]] = Mgr->MakeBoundVar(QVarTypes[i],
+                                                       NumQVars - i - 1);
+            }
+            auto QBody = Mgr->BoundSubstitute(SubstMap, MutexExp);
+            auto Constraint = Mgr->MakeForAll(QVarTypes, QBody);
+            CheckedAssert(Constraint);
+        }
+
+        inline void Solver::CreateGuardIndicator(i64 GuardOp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+
+            auto IndicatorUID = IndicatorUIDGenerator.GetUID();
+            string IndicatorVarName = (string)"__indicator_" + to_string(IndicatorUID);
+            auto FuncType = Mgr->LookupUninterpretedFunction(GuardOp)->As<ExprFuncType>();
+            IndicatorVarName += (string)"_" + FuncType->GetName();
+            auto const& DomainTypes = FuncType->GetArgTypes();
+            vector<ExpT> BoundArgs;
+            const u32 NumDomainTypes = DomainTypes.size();
+            for (u32 i = 0; i < NumDomainTypes; ++i) {
+                auto BoundVar = Mgr->MakeBoundVar(DomainTypes[i], NumDomainTypes - i - 1);
+                BoundArgs.push_back(BoundVar);
+            }
+            auto AppExp = Mgr->MakeExpr(GuardOp, BoundArgs);
+            auto ExistsExp = Mgr->MakeExists(DomainTypes, AppExp);
+            auto IndicatorType = Mgr->MakeType<ExprRangeType>(0, 1);
+
+            auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
+            IndicatorExps[GuardOp] = IndicatorVar;
+
+            auto Implies = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
+                                         Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
+                                                       Mgr->MakeVal("1", IndicatorType)));
+            cout << "Asserting Indicator Implication:" << endl
+                 << Implies->ToString() << endl << endl;
+            CheckedAssert(Implies);
+        }
+
+        inline void Solver::CreateUpdateIndicator(i64 UpdateOp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto const& UpdateOpToLValue = TheLTS->UpdateOpToUpdateLValue;
+
+            auto it = UpdateOpToLValue.find(UpdateOp);
+            if (it == UpdateOpToLValue.end()) {
+                // This must be an exempt lvalue
+                return;
+            }
+
+            auto IndicatorUID = UpdateIndicatorUIDGenerator.GetUID();
+            string IndicatorVarName =
+                (string)"__update_indicator_" + to_string(IndicatorUID);
+
+            auto const& UpdateExp = it->second.first;
+            auto const& LValue = it->second.second;
+
+            auto const& OpArgs = GetOpArgs(UpdateExp);
+            // remove the lvalue itself from the op args
+            vector<ExprTypeRef> ArgTypes;
+            transform(OpArgs.begin(), OpArgs.end(), back_inserter(ArgTypes),
+                      [&] (const ExpT& Exp) -> ExprTypeRef
+                      {
+                          return Exp->GetType();
+                      });
+
+            // replace each of the arg types by a bound var
+            MgrT::SubstMapT SubstMap;
+            const u32 NumArgs = ArgTypes.size();
+            for (u32 i = 0; i < NumArgs; ++i) {
+                auto BoundVar = Mgr->MakeBoundVar(ArgTypes[i], NumArgs - i - 1);
+                SubstMap[OpArgs[i]] = BoundVar;
+            }
+
+            // Substitute the bound vars
+            auto QBodyExp = Mgr->MakeExpr(LTSOps::OpEQ, LValue, UpdateExp);
+            QBodyExp = Mgr->MakeExpr(LTSOps::OpNOT, QBodyExp);
+            QBodyExp = Mgr->BoundSubstitute(SubstMap, QBodyExp);
+            auto ExistsExp = Mgr->MakeExists(ArgTypes, QBodyExp);
+            auto IndicatorType = Mgr->MakeType<ExprRangeType>(0, 1);
+            auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
+            UpdateIndicatorExps[UpdateOp] = IndicatorVar;
+
+            auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
+                                            Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
+                                                          Mgr->MakeVal("1", IndicatorType)));
+            cout << "Asserting Update Indicator Implication:" << endl
+                 << ImpliesExp->ToString() << endl << endl;
+            CheckedAssert(ImpliesExp);
+        }
+
+        inline void Solver::UpdateCommands()
+        {
             for (auto const& Cmd : GuardedCommands) {
-                auto const& Guard = Cmd->GetGuard();
-                auto&& SynthOps = GetSynthOps(Guard);
+                auto&& SynthOps = GetSynthOps(Cmd->GetGuard());
                 bool FullyInterpreted = true;
                 for (auto const& Op : SynthOps) {
                     if (InterpretedOps.find(Op) == InterpretedOps.end()) {
@@ -247,99 +344,122 @@ namespace ESMC {
                         break;
                     }
                 }
-                EnabledCommands.insert(Cmd->GetCmdID());
+
                 Cmd->SetFullyInterpreted(FullyInterpreted);
             }
+        }
 
-            // Create indicator variables for the new guards
-            // and assert constraints on those as well
-            for (auto const& NewOp : NewGuardOps) {
-                auto IndicatorUID = IndicatorUIDGenerator.GetUID();
-                string IndicatorVarName = (string)"__indicator_" + to_string(IndicatorUID);
-                auto FuncType = Mgr->LookupUninterpretedFunction(NewOp)->As<ExprFuncType>();
-                auto const& DomainTypes = FuncType->GetArgTypes();
-                vector<ExpT> BoundArgs;
-                const u32 NumDomainTypes = DomainTypes.size();
-                for (u32 i = 0; i < NumDomainTypes; ++i) {
-                    auto BoundVar = Mgr->MakeBoundVar(DomainTypes[i], NumDomainTypes - i - 1);
-                    BoundArgs.push_back(BoundVar);
-                }
-                auto AppExp = Mgr->MakeExpr(NewOp, BoundArgs);
-                auto ExistsExp = Mgr->MakeExists(DomainTypes, AppExp);
-                auto IndicatorType = Mgr->MakeType<ExprRangeType>(0, 1);
+        void Solver::MakeAssertion(const ExpT& Pred)
+        {
+            CheckedAssert(Pred);
+            auto&& SynthOps = GetSynthOps(Pred);
+            auto const& GuardOpToExp = TheLTS->GuardOpToExp;
+            auto const& GuardSymmetryConstraints = TheLTS->GuardSymmetryConstraints;
+            auto const& GuardMutualExclusiveSets = TheLTS->GuardMutualExclusiveSets;
+            auto const& GuardOpToUpdates = TheLTS->GuardOpToUpdates;
+            auto const& GuardOpToUpdateSymmetryConstraints =
+                TheLTS->GuardOpToUpdateSymmetryConstraints;
 
-                auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
-                IndicatorExps[NewOp] = IndicatorVar;
+            unordered_set<i64> NewlyUnveiledUpdates;
 
-                auto Implies = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
-                                             Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
-                                                           Mgr->MakeVal("1", IndicatorType)));
-                cout << "Asserting Indicator Implication:" << endl
-                     << Implies->ToString() << endl << endl;
-                TP->Assert(Implies, true);
-            }
-
-            // Create indicator variables for new update ops
-            auto const& UpdateOpToLValue = TheLTS->GetUpdateOpToUpdateLValue();
-            for (auto const& NewOp : NewUpdateOps) {
-                auto it = UpdateOpToLValue.find(NewOp);
-                if (it == UpdateOpToLValue.end()) {
-                    // This must be an exempt lvalue
+            // Process all the guard ops first
+            for (auto const& Op : SynthOps) {
+                if (UnveiledGuardOps.find(Op) != UnveiledGuardOps.end()) {
                     continue;
                 }
 
-                auto IndicatorUID = UpdateIndicatorUIDGenerator.GetUID();
-                string IndicatorVarName =
-                    (string)"__update_indicator_" + to_string(IndicatorUID);
-
-                auto const& UpdateExp = it->second.first;
-                auto const& LValue = it->second.second;
-
-                auto const& OpArgs = GetOpArgs(UpdateExp);
-                // remove the lvalue itself from the op args
-                vector<ExprTypeRef> ArgTypes;
-                transform(OpArgs.begin(), OpArgs.end(), back_inserter(ArgTypes),
-                          [&] (const ExpT& Exp) -> ExprTypeRef
-                          {
-                              return Exp->GetType();
-                          });
-
-                // replace each of the arg types by a bound var
-                MgrT::SubstMapT SubstMap;
-                const u32 NumArgs = ArgTypes.size();
-                for (u32 i = 0; i < NumArgs; ++i) {
-                    auto BoundVar = Mgr->MakeBoundVar(ArgTypes[i], NumArgs - i - 1);
-                    SubstMap[OpArgs[i]] = BoundVar;
+                auto ExpIt = GuardOpToExp.find(Op);
+                if (ExpIt == GuardOpToExp.end()) {
+                    // Not unveiled, and not a guard, must be an unveiled update
+                    if (UnveiledUpdateOps.find(Op) == UnveiledUpdateOps.end()) {
+                        throw InternalError((string)"Expected Op " + to_string(Op) +
+                                            "to have been unveiled already.\nWhen asserting: " +
+                                            Pred->ToString() + "\nAt: " + __FILE__ + ":" +
+                                            to_string(__LINE__));
+                    }
+                    continue;
                 }
 
-                // Substitute the bound vars
-                auto QBodyExp = Mgr->MakeExpr(LTSOps::OpEQ, LValue, UpdateExp);
-                QBodyExp = Mgr->MakeExpr(LTSOps::OpNOT, QBodyExp);
-                QBodyExp = Mgr->BoundSubstitute(SubstMap, QBodyExp);
-                auto ExistsExp = Mgr->MakeExists(ArgTypes, QBodyExp);
-                auto IndicatorType = Mgr->MakeType<ExprRangeType>(0, 1);
-                auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
-                UpdateIndicatorExps[NewOp] = IndicatorVar;
+                auto GuardExp = ExpIt->second;
 
-                auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
-                                                Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
-                                                              Mgr->MakeVal("1", IndicatorType)));
-                cout << "Asserting Update Indicator Implication:" << endl
-                     << ImpliesExp->ToString() << endl << endl;
-                TP->Assert(ImpliesExp, true);
+                cout << "Unveiling Guard Exp: " << GuardExp->ToString() << endl;
+                cout << "Asserting Symmetry constraints:" << endl;
+
+                // This is a new guard
+                // Assert the symmetry constraints
+                auto it = GuardSymmetryConstraints.find(Op);
+                if (it != GuardSymmetryConstraints.end()) {
+                    for (auto const& Constraint : it->second) {
+                        CheckedAssert(Constraint);
+                    }
+                }
+
+                cout << "End of Symmetry constraints:" << endl;
+                cout << "Asserting Determinism constraints:" << endl;
+
+                // Assert the determinism constraints wrt guards
+                // that have already been unveiled
+                auto it2 = GuardMutualExclusiveSets.find(Op);
+                if (it2 != GuardMutualExclusiveSets.end()) {
+                    for (auto const& OtherGuard : it2->second) {
+                        auto OtherOp = OtherGuard->SAs<OpExpression>()->GetOpCode();
+                        if (UnveiledGuardOps.find(OtherOp) == UnveiledGuardOps.end() &&
+                            LTSReservedOps.find(OtherOp) == LTSReservedOps.end()) {
+                            continue;
+                        }
+                        // Assert the mutual exclusion constraint
+                        CreateMutualExclusionConstraint(GuardExp, OtherGuard);
+                    }
+                }
+                cout << "End of Determinism constraints:" << endl;
+                cout << "Asserting Symmetry constraints on updates:" << endl;
+
+                // add the symmetry constraints for updates associated with
+                // this guard
+                auto it3 = GuardOpToUpdateSymmetryConstraints.find(Op);
+                if (it3 != GuardOpToUpdateSymmetryConstraints.end()) {
+                    for (auto const& Constraint : it3->second) {
+                        CheckedAssert(Constraint);
+                    }
+                }
+
+                cout << "End of Symmetry constraints on updates:" << endl;
+
+                // Mark the guard and its updates as unveiled
+                UnveiledGuardOps.insert(Op);
+                InterpretedOps.insert(Op);
+                auto it4 = GuardOpToUpdates.find(Op);
+                if (it4 != GuardOpToUpdates.end()) {
+                    for (auto const& UpdateExp : it4->second) {
+                        auto UpdateOp = UpdateExp->SAs<OpExpression>()->GetOpCode();
+                        UnveiledUpdateOps.insert(UpdateOp);
+                        NewlyUnveiledUpdates.insert(UpdateOp);
+                        InterpretedOps.insert(UpdateOp);
+                    }
+                }
+
+                // Create the indicator variable for the guard
+                // and assert the implication on the indicator variable
+                CreateGuardIndicator(Op);
+
+                // Create indicator variables for each newly unveiled update as well
+                for (auto const& NewUpdateOp : NewlyUnveiledUpdates) {
+                    CreateUpdateIndicator(NewUpdateOp);
+                }
             }
+
+            UpdateCommands();
         }
 
         inline void Solver::HandleOneDeadlockViolation(const StateVec* ErrorState)
         {
             auto Mgr = TheLTS->GetMgr();
-            Detail::SynthCostFunction CostFunc(EnabledCommands);
             auto AQS = Checker->AQS;
 
             cout << "Handling one deadlock violation, computing shortest path... ";
             flush(cout);
 
-            auto PPath = AQS->FindShortestPath(ErrorState, CostFunc);
+            auto PPath = AQS->FindShortestPath(ErrorState, CostFunction);
 
             cout << "Done!" << endl << "Unwinding trace... ";
             flush(cout);
@@ -542,8 +662,7 @@ namespace ESMC {
                 // all good. extract a model
                 auto const& Model = TPAsZ3->GetModel();
 
-                cout << "Model checking with model:" << endl
-                     << Model.ToString() << endl << endl;
+                PrintSolution();
 
                 Compiler->UpdateModel(Model, InterpretedOps, IndicatorExps);
 
@@ -598,11 +717,11 @@ namespace ESMC {
                 for (u32 i = 0; i < ArgVector.size(); ++i) {
                     auto StringArg = ArgVector[i];
                     auto ArgType = ArgTypes[i];
-                    auto Arg = TheLTS->MakeVal(StringArg, ArgType);
+                    auto Arg = Mgr->MakeVal(StringArg, ArgType);
                     cout << Arg << " ";
                     Args.push_back(Arg);
                 }
-                auto AppExp = TheLTS->MakeOp(UFCode, Args);
+                auto AppExp = Mgr->MakeExpr(UFCode, Args);
                 auto ModelValue = TPAsZ3->Evaluate(AppExp);
                 cout << "-> " << ModelValue << endl;
             }

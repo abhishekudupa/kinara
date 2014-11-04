@@ -95,7 +95,7 @@ namespace ESMC {
 
             // Channel buffers that need to be sorted
             // on every transition
-            vector<pair<ExpT, ExpT>> ChanBuffersToSort;
+            vector<pair<ExpT, u32>> ChanBuffersToSort;
 
             u32 StateVectorSize;
             vector<vector<LTSAssignRef>> InitStateGenerators;
@@ -124,8 +124,13 @@ namespace ESMC {
             ExpT InvariantExp;
             ExpT FinalCondExp;
 
-            unordered_map<i64, set<ExpT>> ConstraintsByOp;
             unordered_map<i64, pair<ExpT, ExpT>> UpdateOpToUpdateLValue;
+
+            unordered_map<i64, ExpT> GuardOpToExp;
+            unordered_map<i64, set<ExpT>> GuardSymmetryConstraints;
+            unordered_map<i64, set<ExpT>> GuardMutualExclusiveSets;
+            unordered_map<i64, set<ExpT>> GuardOpToUpdates;
+            unordered_map<i64, set<ExpT>> GuardOpToUpdateSymmetryConstraints;
 
             // Interface only for friends
             MgrT* GetMgr() const;
@@ -241,9 +246,7 @@ namespace ESMC {
             const ExpT& GetInvariant() const;
             const ExpT& GetFinalCond() const;
 
-            const vector<pair<ExpT, ExpT>>& GetChanBuffersToSort() const;
-            const unordered_map<i64, set<ExpT>>& GetConstraintsByOp() const;
-            const unordered_map<i64, pair<ExpT, ExpT>>& GetUpdateOpToUpdateLValue() const;
+            const vector<pair<ExpT, u32>>& GetChanBuffersToSort() const;
         };
 
     } /* end namespace LTS */

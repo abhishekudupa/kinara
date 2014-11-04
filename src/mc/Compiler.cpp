@@ -1150,7 +1150,6 @@ namespace ESMC {
 
             for (auto const& ChanExpPair : TheLTS->ChanBuffersToSort) {
                 CompileExp(ChanExpPair.first, TheLTS);
-                CompileExp(ChanExpPair.second, TheLTS);
             }
 
             for (auto const& InitStateGen : TheLTS->InitStateGenerators) {

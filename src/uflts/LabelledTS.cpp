@@ -375,24 +375,26 @@ namespace ESMC {
             InvariantExp = Mgr->Simplify(InvariantExp);
             FinalCondExp = Mgr->Simplify(FinalCondExp);
 
-            // unify the constraints by op for each incomplete efsm
+            // unify the constraints on completions from each incomplete EFSM
             for (auto const& NameEFSM : AllEFSMs) {
                 auto EFSM = NameEFSM.second;
                 if (!EFSM->Is<IncompleteEFSM>()) {
                     continue;
                 }
-
-                auto const& CurConstraints =
-                    EFSM->SAs<IncompleteEFSM>()->GetConstraintsByGuardOp();
-                for (auto const& OpConstraints : CurConstraints) {
-                    ConstraintsByOp[OpConstraints.first] = OpConstraints.second;
-                }
-
-                auto const& CurUpdateOpToLValue =
-                    EFSM->SAs<IncompleteEFSM>()->GetUpdateOpToUpdateLValue();
-                for (auto const& OpLValPair : CurUpdateOpToLValue) {
-                    UpdateOpToUpdateLValue[OpLValPair.first] = OpLValPair.second;
-                }
+                auto IncEFSM = EFSM->SAs<IncompleteEFSM>();
+                UpdateOpToUpdateLValue.insert(IncEFSM->UpdateOpToUpdateLValue.begin(),
+                                              IncEFSM->UpdateOpToUpdateLValue.end());
+                GuardOpToExp.insert(IncEFSM->GuardOpToExp.begin(),
+                                    IncEFSM->GuardOpToExp.end());
+                GuardSymmetryConstraints.insert(IncEFSM->GuardSymmetryConstraints.begin(),
+                                                IncEFSM->GuardSymmetryConstraints.end());
+                GuardMutualExclusiveSets.insert(IncEFSM->GuardMutualExclusiveSets.begin(),
+                                                IncEFSM->GuardMutualExclusiveSets.end());
+                GuardOpToUpdates.insert(IncEFSM->GuardOpToUpdates.begin(),
+                                        IncEFSM->GuardOpToUpdates.end());
+                auto& LHS = GuardOpToUpdateSymmetryConstraints;
+                auto const& RHS = IncEFSM->GuardOpToUpdateSymmetryConstraints;
+                LHS.insert(RHS.begin(), RHS.end());
             }
         }
 
@@ -593,10 +595,7 @@ namespace ESMC {
                         auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
                         auto BufferExp = Mgr->MakeExpr(LTSOps::OpField, VarExp,
                                                        Mgr->MakeVar("MsgBuffer", FAType));
-                        auto CountExp = Mgr->MakeExpr(LTSOps::OpField, VarExp,
-                                                      Mgr->MakeVar("MsgCount", FAType));
-
-                        ChanBuffersToSort.push_back(make_pair(BufferExp, CountExp));
+                        ChanBuffersToSort.push_back(make_pair(BufferExp, Chan->Capacity));
                     }
                 }
             }
@@ -635,7 +634,7 @@ namespace ESMC {
             return GuardedCommands;
         }
 
-        const vector<pair<ExpT, ExpT>>& LabelledTS::GetChanBuffersToSort() const
+        const vector<pair<ExpT, u32>>& LabelledTS::GetChanBuffersToSort() const
         {
             return ChanBuffersToSort;
         }
@@ -1143,17 +1142,6 @@ namespace ESMC {
             CheckExpr(ElimExp, SymTab, Mgr);
             InvariantExp = Mgr->MakeExpr(LTSOps::OpAND, InvariantExp, ElimExp);
             InvariantExp = Mgr->Simplify(InvariantExp);
-        }
-
-        const unordered_map<i64, set<ExpT>>& LabelledTS::GetConstraintsByOp() const
-        {
-            return ConstraintsByOp;
-        }
-
-        const unordered_map<i64, pair<ExpT, ExpT>>&
-        LabelledTS::GetUpdateOpToUpdateLValue() const
-        {
-            return UpdateOpToUpdateLValue;
         }
 
     } /* end namespace LTS */

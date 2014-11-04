@@ -82,21 +82,21 @@ namespace ESMC {
 
         class IncompleteEFSM : public DetEFSM
         {
+            friend class ESMC::LTS::LabelledTS;
             friend class ESMC::Synth::Solver;
 
         private:
-            // Constraints over uninterpreted functions
-            set<ExpT> Constraints;
-
-            // A temporary to store current constraints
-            set<ExpT> CurrentConstraints;
-            // Constraints by symbolic transitions
-            unordered_map<i64, set<ExpT>> ConstraintsByGuardOp;
             // Map from update op code to the LValue term
             // that it updates
             unordered_map<i64, pair<ExpT, ExpT>> UpdateOpToUpdateLValue;
 
-            set<i64> GuardUFIDs;
+            unordered_map<i64, ExpT> GuardOpToExp;
+            unordered_map<i64, set<ExpT>> GuardSymmetryConstraints;
+            unordered_map<i64, set<ExpT>> GuardMutualExclusiveSets;
+            unordered_map<i64, set<ExpT>> GuardOpToUpdates;
+            unordered_map<i64, set<ExpT>> GuardOpToUpdateSymmetryConstraints;
+            unordered_map<string, set<ExpT>> AddedTransitionsByState;
+
             map<string, set<SymmMsgDeclRef>> BlockedCompletions;
             set<string> CompleteStates;
             set<string> ReadOnlyVars;
@@ -104,10 +104,6 @@ namespace ESMC {
             map<string, ExprTypeRef> AllVariables;
             UIDGenerator GuardUFUIDGen;
             UIDGenerator UpdateUFUIDGen;
-
-            // Constraint addition methods. mainly for logging
-            inline void AddConstraint(const ExpT& Constraint);
-            inline void AddConstraint(const vector<ExpT>& Constraints);
 
             inline void FilterTerms(set<ExpT>& DomainTerms, const ExprTypeRef& RangeType);
             set<ExpT> GetDomainTerms(const map<string, ExprTypeRef>& DomainVars);
@@ -152,20 +148,18 @@ namespace ESMC {
 
             inline ExpT MakeGuard(const set<ExpT>& DomainTerms,
                                   const ExpT& CoveredPredicate,
-                                  const vector<ExpT>& GuardExps,
                                   const string& NameSuffix);
 
-            inline vector<LTSAssignRef> MakeUpdates(const set<ExpT>& DomainTerms,
+            inline vector<LTSAssignRef> MakeUpdates(i64 GuardOp,
+                                                    const set<ExpT>& DomainTerms,
                                                     const string& string);
 
             inline void CompleteOneInputTransition(const string& InitStateName,
                                                    const SymmMsgDeclRef& MsgDecl,
                                                    const map<string, ExprTypeRef>& DomainVars,
-                                                   vector<ExpT>& GuardExps,
                                                    const ExpT& CoveredPred);
 
             inline void CompleteOutputTransitions(const string& InitStateName,
-                                                  const vector<LTSSymbTransRef>& Transitions,
                                                   const ExpT& CoveredPredicate,
                                                   const TPRef& TP);
 
@@ -205,10 +199,6 @@ namespace ESMC {
             void MarkVariableReadOnly(const string& VarName);
             void MarkAllVariablesReadOnly();
             void MarkVariableWriteable(const string& VarName);
-
-            const set<i64>& GetGuardUFIDs() const;
-            const unordered_map<i64, set<ExpT>>& GetConstraintsByGuardOp() const;
-            const unordered_map<i64, pair<ExpT, ExpT>>& GetUpdateOpToUpdateLValue() const;
 
             // override freeze to add additional transitions
             // and such

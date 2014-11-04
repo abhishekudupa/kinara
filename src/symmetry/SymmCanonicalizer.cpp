@@ -357,8 +357,8 @@ namespace ESMC {
         }
 
         ChanBufferSorter::ChanBufferSorter(u32 Offset, const ExprTypeRef& ChanBufferType,
-                                           const ExpT& CountExp)
-            : Offset(Offset), CountExp(CountExp)
+                                           u32 Capacity)
+            : Offset(Offset), Capacity(Capacity)
         {
             auto TypeAsArray = ChanBufferType->As<ExprArrayType>();
             if (TypeAsArray == nullptr) {
@@ -396,7 +396,7 @@ namespace ESMC {
             auto WorkingVec = OutStateVector->Clone();
             u08* WorkBasePtr = WorkingVec->GetStateBuffer();
 
-            auto NumElems = CountExp->ExtensionData.Interp->Evaluate(OutStateVector);
+            auto NumElems = Capacity;
 
             for (u32 i = 0; i < NumElems - 1; ++i) {
                 u32 MinIndex = i;

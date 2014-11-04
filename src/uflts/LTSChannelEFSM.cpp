@@ -72,7 +72,9 @@ namespace ESMC {
             CountType = Mgr->MakeType<ExprRangeType>(0, Capacity);
 
             EFSMBase::AddVariable("MsgBuffer", ArrayType);
-            EFSMBase::AddVariable("MsgCount", CountType);
+            if (Ordered) {
+                EFSMBase::AddVariable("MsgCount", CountType);
+            }
 
             if (Lossy) {
                 EFSMBase::AddVariable("LastMsg", ValType);
@@ -90,7 +92,9 @@ namespace ESMC {
 
             // Make the initial states as well
             vector<LTSAssignRef> InitUpdates;
-            InitUpdates.push_back(new LTSAssignSimple(CountExp, Mgr->MakeVal("0", CountType)));
+            if (Ordered) {
+                InitUpdates.push_back(new LTSAssignSimple(CountExp, Mgr->MakeVal("0", CountType)));
+            }
             InitUpdates.push_back(new LTSAssignSimple(ArrayExp, Mgr->MakeVal("clear", ArrayType)));
             if (Lossy) {
                 InitUpdates.push_back(new LTSAssignSimple(LastMsgExp,
@@ -131,7 +135,7 @@ namespace ESMC {
                                                      const set<string>& InputFairnessSets)
         {
             auto Mgr = TheLTS->GetMgr();
-            auto const& UMType = TheLTS->GetUnifiedMType();
+            auto const& UMType = TheLTS->GetUnifiedMType()->As<ExprUnionType>();
 
             auto RecType = MessageType->As<ExprRecordType>();
             if (RecType == nullptr) {
@@ -139,103 +143,143 @@ namespace ESMC {
                                 "in ChannelEFSM::MakeInputTransition()");
             }
 
-            ExpT TargetExp = nullptr;
-            if (Lossy) {
-                TargetExp = LastMsgExp;
+            vector<ExpT> ChooseExps;
+            if (!Ordered) {
+                for (u32 i = 0; i < Capacity; ++i) {
+                    ChooseExps.push_back(Mgr->MakeVal(to_string(i), IndexType));
+                }
             } else {
-                TargetExp = IndexExp;
+                ChooseExps.push_back(Mgr->MakeExpr(LTSOps::OpSUB, CountExp, OneExp));
             }
 
-            auto FAType = Mgr->MakeType<ExprFieldAccessType>();
-            vector<LTSAssignRef> Updates;
-            vector<LTSAssignRef> NoCountUpdates;
-            string InMsgName = "__inmsg__";
-            auto InMsgVar = Mgr->MakeVar(InMsgName, UMType);
-            auto TrueExp = Mgr->MakeTrue();
+            bool First = true;
+            for (auto const& ChooseExp : ChooseExps) {
+                ExpT TargetExp = nullptr;
+                if (Lossy) {
+                    TargetExp = LastMsgExp;
+                } else {
+                    TargetExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, ChooseExp);
+                }
 
-            auto Guard = Mgr->MakeExpr(LTSOps::OpLT, CountExp, MaxChanExp);
-            NoCountUpdates.push_back(new LTSAssignSimple(TargetExp, InMsgVar));
-            Updates = NoCountUpdates;
-            Updates.push_back(new LTSAssignSimple(CountExp, Mgr->MakeExpr(LTSOps::OpADD,
-                                                                          CountExp, OneExp)));
-            Updates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
-                                                  Mgr->MakeVal("ChanInitState", StateType)));
+                auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+                vector<LTSAssignRef> Updates;
+                vector<LTSAssignRef> NoCountUpdates;
+                string InMsgName = "__inmsg__";
+                auto InMsgVar = Mgr->MakeVar(InMsgName, UMType);
+                auto TrueExp = Mgr->MakeTrue();
 
-            if (Lossy) {
-                NoCountUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
-                                                             Mgr->MakeVal("LossDecideState",
-                                                                          StateType)));
-            }
+                ExpT Guard = ExpT::NullPtr;
 
-            if (!Lossy) {
-                EFSMBase::AddInputTransForInstance(InstanceID,
-                                                   SubstMap,
-                                                   "ChanInitState",
-                                                   Guard,
-                                                   Updates,
-                                                   InMsgName,
-                                                   MessageType,
-                                                   MessageType,
-                                                   LTSSymbTransRef::NullPtr);
-            } else {
-                vector<LTSAssignRef> Step2Updates;
-                Step2Updates.push_back(new LTSAssignSimple(IndexExp, LastMsgExp));
-                Step2Updates.push_back(new LTSAssignSimple(CountExp,
-                                                           Mgr->MakeExpr(LTSOps::OpADD,
-                                                                         CountExp, OneExp)));
-                Step2Updates.push_back(new LTSAssignSimple(LastMsgExp,
-                                                           Mgr->MakeVal("clear", UMType)));
-                Step2Updates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
-                                                           Mgr->MakeVal("ChanInitState",
-                                                                        StateType)));
-                vector<LTSAssignRef> LossUpdates;
-                LossUpdates.push_back(new LTSAssignSimple(LastMsgExp,
-                                                          Mgr->MakeVal("clear", UMType)));
-                LossUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
-                                                          Mgr->MakeVal("ChanInitState",
-                                                                       StateType)));
+                if (Ordered) {
+                    Guard = Mgr->MakeExpr(LTSOps::OpLT, CountExp, MaxChanExp);
+                } else {
+                    auto ChooseIndexExp = Mgr->MakeExpr(LTSOps::OpIndex,
+                                                        ArrayExp, ChooseExp);
+                    auto FieldVar = Mgr->MakeVar(UMType->GetTypeIDFieldName(), FAType);
+                    auto FieldExp = Mgr->MakeExpr(LTSOps::OpField, ChooseIndexExp, FieldVar);
+                    Guard = Mgr->MakeExpr(LTSOps::OpEQ, FieldExp,
+                                          Mgr->MakeVal("0", UMType->GetTypeIDFieldType()));
+                }
 
-                ExpT Guard2 = nullptr;
-                if (Blocking) {
+                NoCountUpdates.push_back(new LTSAssignSimple(TargetExp, InMsgVar));
+                Updates = NoCountUpdates;
+
+                if (Ordered) {
+                    Updates.push_back(new LTSAssignSimple(CountExp, Mgr->MakeExpr(LTSOps::OpADD,
+                                                                                  CountExp,
+                                                                                  OneExp)));
+                }
+                Updates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                      Mgr->MakeVal("ChanInitState", StateType)));
+                if (Lossy) {
+                    NoCountUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                                 Mgr->MakeVal("LossDecideState",
+                                                                              StateType)));
+                }
+                if (!Lossy && First) {
                     EFSMBase::AddInputTransForInstance(InstanceID,
                                                        SubstMap,
                                                        "ChanInitState",
                                                        Guard,
-                                                       NoCountUpdates,
+                                                       Updates,
                                                        InMsgName,
                                                        MessageType,
                                                        MessageType,
                                                        LTSSymbTransRef::NullPtr);
-                    Guard2 = TrueExp;
                 } else {
-                    EFSMBase::AddInputTransForInstance(InstanceID,
-                                                       SubstMap,
-                                                       "ChanInitState",
-                                                       TrueExp,
-                                                       NoCountUpdates,
-                                                       InMsgName,
-                                                       MessageType,
-                                                       MessageType,
-                                                       LTSSymbTransRef::NullPtr);
-                    Guard2 = Guard;
-                }
+                    vector<LTSAssignRef> Step2Updates;
+                    ExpT PushIndexExp = nullptr;
+                    if (!Ordered) {
+                        PushIndexExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, ChooseExp);
+                    } else {
+                        PushIndexExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, CountExp);
+                    }
+                    Step2Updates.push_back(new LTSAssignSimple(PushIndexExp, LastMsgExp));
+                    if (Ordered) {
+                        Step2Updates.push_back(new LTSAssignSimple(CountExp,
+                                                                   Mgr->MakeExpr(LTSOps::OpADD,
+                                                                                 CountExp,
+                                                                                 OneExp)));
+                    }
+                    Step2Updates.push_back(new LTSAssignSimple(LastMsgExp,
+                                                               Mgr->MakeVal("clear", UMType)));
+                    Step2Updates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                               Mgr->MakeVal("ChanInitState",
+                                                                            StateType)));
+                    vector<LTSAssignRef> LossUpdates;
+                    LossUpdates.push_back(new LTSAssignSimple(LastMsgExp,
+                                                          Mgr->MakeVal("clear", UMType)));
+                    LossUpdates.push_back(new LTSAssignSimple(Mgr->MakeVar("state", StateType),
+                                                              Mgr->MakeVal("ChanInitState",
+                                                                       StateType)));
 
-                // Lossy transition
-                EFSMBase::AddInternalTransForInstance(InstanceID,
-                                                      SubstMap,
-                                                      "LossDecideState",
-                                                      TrueExp,
-                                                      LossUpdates,
-                                                      set<string>(),
-                                                      LTSSymbTransRef::NullPtr);
-                // Non lossy
-                EFSMBase::AddInternalTransForInstance(InstanceID,
-                                                      SubstMap,
-                                                      "LossDecideState",
-                                                      Guard2,
-                                                      Step2Updates,
-                                                      InputFairnessSets,
-                                                      LTSSymbTransRef::NullPtr);
+                    ExpT Guard2 = nullptr;
+                    if (Blocking) {
+                        EFSMBase::AddInputTransForInstance(InstanceID,
+                                                           SubstMap,
+                                                           "ChanInitState",
+                                                           Guard,
+                                                           NoCountUpdates,
+                                                           InMsgName,
+                                                           MessageType,
+                                                           MessageType,
+                                                           LTSSymbTransRef::NullPtr);
+                        Guard2 = TrueExp;
+                    } else {
+                        if (First) {
+                            EFSMBase::AddInputTransForInstance(InstanceID,
+                                                               SubstMap,
+                                                               "ChanInitState",
+                                                               TrueExp,
+                                                               NoCountUpdates,
+                                                               InMsgName,
+                                                               MessageType,
+                                                               MessageType,
+                                                               LTSSymbTransRef::NullPtr);
+                        }
+                        Guard2 = Guard;
+                    }
+
+                    // Lossy transition
+                    if (First) {
+                        EFSMBase::AddInternalTransForInstance(InstanceID,
+                                                              SubstMap,
+                                                              "LossDecideState",
+                                                              TrueExp,
+                                                              LossUpdates,
+                                                              set<string>(),
+                                                              LTSSymbTransRef::NullPtr);
+                        First = false;
+                    }
+                    // Non lossy
+                    EFSMBase::AddInternalTransForInstance(InstanceID,
+                                                          SubstMap,
+                                                          "LossDecideState",
+                                                          Guard2,
+                                                          Step2Updates,
+                                                          InputFairnessSets,
+                                                          LTSSymbTransRef::NullPtr);
+                }
             }
         }
 
@@ -265,12 +309,19 @@ namespace ESMC {
                 auto FieldVar = Mgr->MakeVar(UMType->GetTypeIDFieldName(), FAType);
                 auto FieldExp = Mgr->MakeExpr(LTSOps::OpField, ChooseIndexExp, FieldVar);
 
-                auto NonEmptyExp = Mgr->MakeExpr(LTSOps::OpGT, CountExp, ZeroExp);
+
+                ExpT ChooseOkExp = TrueExp;
+                ExpT NonEmptyExp = TrueExp;
+
+                if (Ordered) {
+                    NonEmptyExp = Mgr->MakeExpr(LTSOps::OpGT, CountExp, ZeroExp);
+                    ChooseOkExp = Mgr->MakeExpr(LTSOps::OpLT, ChooseExp, CountExp);
+                }
+
                 auto TypeID = UMType->GetTypeIDForMemberType(MessageType);
                 auto MatchExp = Mgr->MakeExpr(LTSOps::OpEQ, FieldExp,
                                               Mgr->MakeVal(to_string(TypeID),
                                                            UMType->GetTypeIDFieldType()));
-                auto ChooseOkExp = Mgr->MakeExpr(LTSOps::OpLT, ChooseExp, CountExp);
                 auto Guard = Mgr->MakeExpr(LTSOps::OpAND, NonEmptyExp, ChooseOkExp, MatchExp);
                 string OutMsgName = "__outmsg__";
                 auto OutMsgExp = Mgr->MakeVar(OutMsgName, ValType);
@@ -284,33 +335,47 @@ namespace ESMC {
                 vector<LTSAssignRef> MsgUpdates = Updates;
 
                 // Clear the last message
-                Updates.push_back(new LTSAssignSimple(Mgr->MakeExpr(LTSOps::OpIndex,
-                                                                    ArrayExp, CntSubExp),
-                                                      Mgr->MakeVal("clear", ValType)));
+                if (Ordered) {
+                    Updates.push_back(new LTSAssignSimple(Mgr->MakeExpr(LTSOps::OpIndex,
+                                                                        ArrayExp, CntSubExp),
+                                                          Mgr->MakeVal("clear", ValType)));
+                } else {
+                    Updates.push_back(new LTSAssignSimple(Mgr->MakeExpr(LTSOps::OpIndex,
+                                                                        ArrayExp, ChooseExp),
+                                                          Mgr->MakeVal("clear", ValType)));
+                }
 
-                Updates.push_back(new LTSAssignSimple(CountExp, CntSubExp));
+                if (Ordered) {
+                    Updates.push_back(new LTSAssignSimple(CountExp, CntSubExp));
+                }
                 // Push all the elements past the chosen element back
-                for (u32 i = 0; i < Capacity - 1; ++i) {
-                    auto Cond = Mgr->MakeExpr(LTSOps::OpGE, Mgr->MakeVal(to_string(i),
-                                                                         IndexType),
-                                              ChooseExp);
-                    auto const& Fields = ValType->SAs<ExprRecordType>()->GetMemberVec();
-                    for (auto const& Field : Fields) {
-                        auto FieldVar = Mgr->MakeVar(Field.first, FAType);
-                        auto IExp = Mgr->MakeVal(to_string(i), IndexType);
-                        auto IPlusOneExp = Mgr->MakeVal(to_string(i + 1), IndexType);
-                        auto ArrayIndexExpIf = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp,
-                                                             IPlusOneExp);
-                        auto ArrayIndexExpElse = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp,
-                                                               IExp);
-                        auto IfBranch = Mgr->MakeExpr(LTSOps::OpField,
-                                                      ArrayIndexExpIf,
-                                                      FieldVar);
-                        auto ElseBranch = Mgr->MakeExpr(LTSOps::OpField,
-                                                        ArrayIndexExpElse,
-                                                        FieldVar);
-                        auto ITEExp = Mgr->MakeExpr(LTSOps::OpITE, Cond, IfBranch, ElseBranch);
-                        Updates.push_back(new LTSAssignSimple(ElseBranch, ITEExp));
+                // (only for ordered channels, leave it alone for unordered)
+                if (Ordered) {
+                    for (u32 i = 0; i < Capacity - 1; ++i) {
+                        auto Cond = Mgr->MakeExpr(LTSOps::OpGE, Mgr->MakeVal(to_string(i),
+                                                                             IndexType),
+                                                  ChooseExp);
+                        auto const& Fields = ValType->SAs<ExprRecordType>()->GetMemberVec();
+                        for (auto const& Field : Fields) {
+                            auto FieldVar = Mgr->MakeVar(Field.first, FAType);
+                            auto IExp = Mgr->MakeVal(to_string(i), IndexType);
+                            auto IPlusOneExp = Mgr->MakeVal(to_string(i + 1), IndexType);
+                            auto ArrayIndexExpIf = Mgr->MakeExpr(LTSOps::OpIndex,
+                                                                 ArrayExp,
+                                                                 IPlusOneExp);
+                            auto ArrayIndexExpElse = Mgr->MakeExpr(LTSOps::OpIndex,
+                                                                   ArrayExp,
+                                                                   IExp);
+                            auto IfBranch = Mgr->MakeExpr(LTSOps::OpField,
+                                                          ArrayIndexExpIf,
+                                                          FieldVar);
+                            auto ElseBranch = Mgr->MakeExpr(LTSOps::OpField,
+                                                            ArrayIndexExpElse,
+                                                            FieldVar);
+                            auto ITEExp = Mgr->MakeExpr(LTSOps::OpITE, Cond,
+                                                        IfBranch, ElseBranch);
+                            Updates.push_back(new LTSAssignSimple(ElseBranch, ITEExp));
+                        }
                     }
                 }
 

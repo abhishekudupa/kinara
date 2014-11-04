@@ -187,28 +187,6 @@ namespace ESMC {
             AllVariables[VarName] = VarType;
         }
 
-        inline void IncompleteEFSM::AddConstraint(const ExpT& Constraint)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            auto SimpConstraint = Mgr->Simplify(Constraint);
-            cout << "Adding Constraint:" << endl << SimpConstraint->ToString() << endl;
-            Constraints.insert(SimpConstraint);
-            CurrentConstraints.insert(SimpConstraint);
-        }
-
-        inline void IncompleteEFSM::AddConstraint(const vector<ExpT>& Constraints)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            cout << "Adding Constraints:" << endl;
-            for (auto const& Constraint : Constraints) {
-                auto SimpConstraint = Mgr->Simplify(Constraint);
-                cout << SimpConstraint->ToString() << endl << endl;
-                this->Constraints.insert(SimpConstraint);
-                CurrentConstraints.insert(SimpConstraint);
-            }
-            cout << "End of constraint set." << endl;
-        }
-
         set<ExpT> IncompleteEFSM::GetDomainTerms(const map<string, ExprTypeRef>& DomainVars)
         {
             set<ExpT> Retval;
@@ -586,7 +564,6 @@ namespace ESMC {
 
         inline ExpT IncompleteEFSM::MakeGuard(const set<ExpT>& DomainTerms,
                                               const ExpT& CoveredPred,
-                                              const vector<ExpT>& GuardExps,
                                               const string& NameSuffix)
         {
             auto Mgr = TheLTS->GetMgr();
@@ -601,47 +578,29 @@ namespace ESMC {
 
             // Register a new uninterpreted function
             string GuardUFName =
-                (string)"SynGuard_" + this->Name + "_" + to_string(GuardUFUIDGen.GetUID()) + "_" + NameSuffix;
+                (string)"SynGuard_" + this->Name + "_" +
+                to_string(GuardUFUIDGen.GetUID()) + "_" + NameSuffix;
+
             auto GuardOp = Mgr->MakeUninterpretedFunction(GuardUFName,
                                                           DomainTypes,
                                                           Mgr->MakeType<ExprBoolType>());
-            GuardUFIDs.insert(GuardOp);
             auto GuardExp = Mgr->MakeExpr(GuardOp, DomainTermVec);
             cout << "Made Guard Exp: " << GuardExp->ToString() << endl << endl;
             // Make the constraints for symmetry on the guard expression
             auto&& SymmConstraints = GetSymmetryConstraints(GuardExp);
+
             cout << "Symmetry constraints:" << endl;
-            AddConstraint(SymmConstraints);
-
-            // Make the determinism constraints
-            vector<ExpT> DetConstraints;
-            // The intersection of the guard with the covered region
-            // must be empty
-            auto GuardAndCovered = Mgr->MakeExpr(LTSOps::OpAND, GuardExp, CoveredPred);
-            DetConstraints.push_back(Mgr->MakeExpr(LTSOps::OpNOT, GuardAndCovered));
-
-            for (auto const& OtherGuard : GuardExps) {
-                auto Conjunction = Mgr->MakeExpr(LTSOps::OpAND, GuardExp,
-                                                 OtherGuard);
-                DetConstraints.push_back(Mgr->MakeExpr(LTSOps::OpNOT, Conjunction));
+            for (auto const& Constraint : SymmConstraints) {
+                cout << Constraint->ToString() << endl << endl;
             }
+            cout << "End of symmetry constraints" << endl;
 
-            ExpT FinalDetConstraint = MakeConjunction(DetConstraints, Mgr);
+            GuardSymmetryConstraints[GuardOp].insert(SymmConstraints.begin(),
+                                                     SymmConstraints.end());
 
-            // Quantify on all the domain terms
-            MgrT::SubstMapT SubstMap;
-            const u32 NumDomainTerms = DomainTermVec.size();
-            vector<ExprTypeRef> QVarTypes(DomainTypes.rbegin(), DomainTypes.rend());
-            for (u32 i = 0; i < NumDomainTerms; ++i) {
-                auto const& DomTerm = DomainTermVec[i];
-                auto const& DomTermType = DomainTypes[i];
-                SubstMap[DomTerm] = Mgr->MakeBoundVar(DomTermType, i);
-            }
+            GuardMutualExclusiveSets[GuardOp].insert(CoveredPred);
+            GuardOpToExp[GuardOp] = GuardExp;
 
-            auto BodyExp = Mgr->BoundSubstitute(SubstMap, FinalDetConstraint);
-            auto QExp = Mgr->MakeForAll(QVarTypes, BodyExp);
-            cout << "Determinism Constraint:" << endl;
-            AddConstraint(QExp);
             return GuardExp;
         }
 
@@ -840,7 +799,8 @@ namespace ESMC {
         }
 
         inline vector<LTSAssignRef>
-        IncompleteEFSM::MakeUpdates(const set<ExpT>& DomainTerms,
+        IncompleteEFSM::MakeUpdates(i64 GuardOp,
+                                    const set<ExpT>& DomainTerms,
                                     const string& NameSuffix)
         {
             auto Mgr = TheLTS->GetMgr();
@@ -901,19 +861,30 @@ namespace ESMC {
                 // Register a new uninterpreted function
                 // for the update of each domain term
                 string UpdateUFName =
-                    (string)"Update_" + this->Name + "_" + to_string(UpdateUFUIDGen.GetUID()) + "_" + NameSuffix + "_" + LValue->ToString();
+                    (string)"Update_" + this->Name + "_" +
+                    to_string(UpdateUFUIDGen.GetUID()) + "_" +
+                    NameSuffix + "_" + LValue->ToString();
+
                 auto UpdateOp = Mgr->MakeUninterpretedFunction(UpdateUFName,
                                                                DomainTypes,
                                                                LValue->GetType());
                 auto UpdateExp = Mgr->MakeExpr(UpdateOp, DomainTermVec);
+                GuardOpToUpdates[GuardOp].insert(UpdateExp);
+
                 cout << "Made update exp for term " << LValue->ToString()
                      << ":" << endl << UpdateExp->ToString() << endl;
 
                 if (GroupedLValues.find(LValue) == GroupedLValues.end()) {
                     auto&& SymmConstraints = GetSymmetryConstraints(UpdateExp);
+
                     cout << "Symmetry constraints for update of term " << LValue->ToString()
                          << ":" << endl;
-                    AddConstraint(SymmConstraints);
+                    for (auto const& Constraint : SymmConstraints) {
+                        cout << Constraint->ToString() << endl << endl;
+                    }
+                    cout << "End of symmetry constraints" << endl << endl;
+                    GuardOpToUpdateSymmetryConstraints[GuardOp].insert(SymmConstraints.begin(),
+                                                                       SymmConstraints.end());
                 } else {
                     // Group symmetry constraints are applied later
                     GroupedLValueToUpdateExp[LValue] = UpdateExp;
@@ -930,7 +901,13 @@ namespace ESMC {
                 auto&& SymmConstraints = GetSymmetryConstraints(ArrayLValueGroup,
                                                                 GroupedLValueToUpdateExp);
                 cout << "Symmetry constraints for symmetric updates:" << endl;
-                AddConstraint(SymmConstraints);
+                for (auto const& Constraint : SymmConstraints) {
+                    cout << Constraint->ToString() << endl << endl;
+                }
+                cout << "End of symmetry constraints" << endl << endl;
+
+                GuardOpToUpdateSymmetryConstraints[GuardOp].insert(SymmConstraints.begin(),
+                                                                   SymmConstraints.end());
             }
 
             return Retval;
@@ -940,11 +917,9 @@ namespace ESMC {
         IncompleteEFSM::CompleteOneInputTransition(const string& InitStateName,
                                                    const SymmMsgDeclRef& MsgDecl,
                                                    const map<string, ExprTypeRef>& DomainVars,
-                                                   vector<ExpT>& GuardExps,
                                                    const ExpT& CoveredPred)
         {
             auto LocalDomVars = DomainVars;
-            CurrentConstraints.clear();
 
             // Get the domain terms
             auto&& DomainTerms = GetDomainTerms(LocalDomVars);
@@ -964,17 +939,17 @@ namespace ESMC {
                  << "\" on message type \"" << ActMsgType->SAs<ExprRecordType>()->GetName()
                  << "\"" << endl;
 
-            auto MsgTypeAsRecord = MsgType->As<ExprRecordType>();
+            auto MsgTypeAsRecord = ActMsgType->SAs<ExprRecordType>();
             auto NameSuffix = InitStateName + "_" + MsgTypeAsRecord->GetName();
-            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, GuardExps, NameSuffix);
-            GuardExps.push_back(GuardExp);
+            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, NameSuffix);
+            auto GuardOp = GuardExp->SAs<OpExpression>()->GetOpCode();
 
             LocalDomVars["InMsg"] = MsgDecl->GetMessageType();
 
             DomainTerms = GetDomainTerms(LocalDomVars);
 
             // Make the updates
-            auto&& Updates = MakeUpdates(DomainTerms, NameSuffix);
+            auto&& Updates = MakeUpdates(GuardOp, DomainTerms, NameSuffix);
 
             auto const& NewParams = MsgDecl->GetNewParams();
 
@@ -989,9 +964,8 @@ namespace ESMC {
                                     MsgDecl->GetMessageType(),
                                     MsgDecl->GetMessageParams(), true);
             }
-            auto GuardOp = GuardExp->SAs<OpExpression>()->GetOpCode();
 
-            ConstraintsByGuardOp[GuardOp] = CurrentConstraints;
+            AddedTransitionsByState[InitStateName].insert(GuardExp);
         }
 
         inline void
@@ -1046,11 +1020,7 @@ namespace ESMC {
                     DomainVariables[ParamAsVar->GetVarName()] = ParamAsVar->GetVarType();
                 }
 
-                vector<ExpT> GuardExps;
-
-                CompleteOneInputTransition(StateName,
-                                           MsgDecl, DomainVariables,
-                                           GuardExps, CoveredMsgPred);
+                CompleteOneInputTransition(StateName, MsgDecl, DomainVariables, CoveredMsgPred);
             }
         }
 
@@ -1060,8 +1030,6 @@ namespace ESMC {
                                                          vector<ExpT>& GuardExps,
                                                          const ExpT& CoveredPred)
         {
-            CurrentConstraints.clear();
-
             auto&& DomainTerms = GetDomainTerms(DomainVars);
             FilterTerms(DomainTerms, TheLTS->MakeBoolType());
 
@@ -1077,14 +1045,14 @@ namespace ESMC {
                  << "\" on message type \"" << ActMsgType->SAs<ExprRecordType>()->GetName()
                  << "\"" << endl;
 
-            auto MsgTypeAsRecord = MsgType->As<ExprRecordType>();
+            auto MsgTypeAsRecord = ActMsgType->SAs<ExprRecordType>();
             auto NameSuffix = InitStateName + "_" + MsgTypeAsRecord->GetName();
-            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, GuardExps, NameSuffix);
-            GuardExps.push_back(GuardExp);
+            auto GuardExp = MakeGuard(DomainTerms, CoveredPred, NameSuffix);
+            auto GuardOp = GuardExp->SAs<OpExpression>()->GetOpCode();
 
             UpdateableVariables["OutMsg"] = MsgType;
 
-            auto&& Updates = MakeUpdates(DomainTerms, NameSuffix);
+            auto&& Updates = MakeUpdates(GuardOp, DomainTerms, NameSuffix);
 
             UpdateableVariables.erase("OutMsg");
 
@@ -1104,12 +1072,17 @@ namespace ESMC {
                                      "", true);
             }
 
-            auto GuardOp = GuardExp->SAs<OpExpression>()->GetOpCode();
-            ConstraintsByGuardOp[GuardOp] = CurrentConstraints;
+            AddedTransitionsByState[InitStateName].insert(GuardExp);
+            for (auto const& OtherGuard : GuardExps) {
+                auto OtherOp = OtherGuard->SAs<OpExpression>()->GetOpCode();
+                GuardMutualExclusiveSets[GuardOp].insert(OtherGuard);
+                GuardMutualExclusiveSets[OtherOp].insert(GuardExp);
+                GuardMutualExclusiveSets[GuardOp].insert(CoveredPred);
+            }
+            GuardExps.push_back(GuardExp);
         }
 
         void IncompleteEFSM::CompleteOutputTransitions(const string& StateName,
-                                                       const vector<LTSSymbTransRef>& Transitions,
                                                        const ExpT& CoveredPredicate,
                                                        const TPRef& TP)
         {
@@ -1117,7 +1090,12 @@ namespace ESMC {
                 return;
             }
 
+            auto it = AddedTransitionsByState.find(StateName);
             vector<ExpT> GuardExps;
+            if (it != AddedTransitionsByState.end()) {
+                GuardExps.insert(GuardExps.end(), it->second.begin(),
+                                 it->second.end());
+            }
 
             for (auto const& MsgDecl : SymmetricMessages) {
                 if (!MsgDecl->IsOutput()) {
@@ -1187,26 +1165,24 @@ namespace ESMC {
 
             for (auto const& NameState : States) {
                 auto const& StateName = NameState.first;
-                auto&& TransFromState =
-                    GetSymbolicTransitions([&] (const LTSSymbTransRef& Trans) -> bool
-                                           {
-                                               return (Trans->GetInitState().GetName() ==
-                                                       StateName);
-                                           });
-                auto CoveredPred = FindDisjunction(TransFromState, TP, Mgr->MakeFalse());
+                auto Pred =
+                    [&] (const LTSSymbTransRef& Trans) -> bool
+                    {
+                        auto Part1 = (Trans->GetInitState().GetName() == StateName);
+                        auto OpCode = Trans->GetGuard()->SAs<OpExpression>()->GetOpCode();
+                        auto Part2 = (LTSReservedOps.find(OpCode) != LTSReservedOps.end());
+                        return (Part1 && Part2);
+                    };
+                auto&& FixedTransFromState = GetSymbolicTransitions(Pred);
+                auto CoveredPred = FindDisjunction(FixedTransFromState, TP, Mgr->MakeFalse());
                 if (CoveredPred == Mgr->MakeTrue()) {
                     continue;
                 }
 
-                CompleteOutputTransitions(StateName, TransFromState, CoveredPred, TP);
+                CompleteOutputTransitions(StateName, CoveredPred, TP);
             }
 
             EFSMFrozen = true;
-        }
-
-        const set<i64>& IncompleteEFSM::GetGuardUFIDs() const
-        {
-            return GuardUFIDs;
         }
 
         void IncompleteEFSM::IgnoreAllMsgsOnState(const string& StateName)
@@ -1295,18 +1271,6 @@ namespace ESMC {
             }
             ReadOnlyVars.erase(VarName);
             UpdateableVariables[VarName] = STEntry->GetType();
-        }
-
-        const unordered_map<i64, set<ExpT>>&
-        IncompleteEFSM::GetConstraintsByGuardOp() const
-        {
-            return ConstraintsByGuardOp;
-        }
-
-        const unordered_map<i64, pair<ExpT, ExpT>>&
-        IncompleteEFSM::GetUpdateOpToUpdateLValue() const
-        {
-            return UpdateOpToUpdateLValue;
         }
 
     } /* end namespace LTS */

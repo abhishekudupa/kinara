@@ -62,11 +62,16 @@ namespace ESMC {
             class SynthCostFunction
             {
             private:
-                const unordered_set<u32>& TentativeCommands;
+                unordered_set<u32> FixedCommands;
 
             public:
-                inline SynthCostFunction(const unordered_set<u32>& TentativeCommands)
-                    : TentativeCommands(TentativeCommands)
+                inline SynthCostFunction()
+                {
+                    // Default (empty) constructor
+                }
+
+                inline SynthCostFunction(const unordered_set<u32>& FixedCommands)
+                    : FixedCommands(FixedCommands)
                 {
                     // Nothing here
                 }
@@ -78,12 +83,23 @@ namespace ESMC {
 
                 inline u64 operator () (const StateVec* SVPtr, const AQSEdge* Edge) const
                 {
-                    auto it = TentativeCommands.find(Edge->GetGCmdIndex());
-                    if (it == TentativeCommands.end()) {
-                        return 1;
-                    } else {
+                    auto it = FixedCommands.find(Edge->GetGCmdIndex());
+                    if (it == FixedCommands.end()) {
                         return TentativeEdgeCost;
+                    } else {
+                        return 1;
                     }
+                }
+            };
+
+            class UnorderedExpSetHasher
+            {
+            public:
+                inline u64 operator () (const ExpT& Exp) const
+                {
+                    u64 Retval = 0;
+                    boost::hash_combine(Retval, Exp.GetPtr_());
+                    return Retval;
                 }
             };
 
@@ -101,8 +117,17 @@ namespace ESMC {
             LTSChecker* Checker;
             u32 Bound;
             vector<GCmdRef> GuardedCommands;
-            unordered_set<u32> EnabledCommands;
+            Detail::SynthCostFunction CostFunction;
+
+            unordered_set<i64> UnveiledGuardOps;
+            unordered_set<i64> UnveiledUpdateOps;
+            // Union of the two sets above, maintained
+            // for efficiency
             unordered_set<i64> InterpretedOps;
+
+            // The set of assertions already asserted
+            unordered_set<ExpT, Detail::UnorderedExpSetHasher> AssertedConstraints;
+
             unordered_map<i64, ExpT> IndicatorExps;
             unordered_map<i64, ExpT> UpdateIndicatorExps;
             Z3TheoremProver* TPAsZ3;
@@ -113,6 +138,12 @@ namespace ESMC {
             u32 UpdateBoundsMultiplier;
             u32 UpdateBound;
 
+            inline void CheckedAssert(const ExpT& Assertion);
+
+            inline void CreateGuardIndicator(i64 GuardOp);
+            inline void CreateUpdateIndicator(i64 UpdateOp);
+            inline void CreateMutualExclusionConstraint(const ExpT& GuardExp1,
+                                                        const ExpT& GuardExp2);
             inline void AssertBoundsConstraint();
             inline void HandleSafetyViolations();
             inline void HandleOneSafetyViolation(const StateVec* ErrorState,
@@ -120,6 +151,7 @@ namespace ESMC {
             inline void HandleOneDeadlockViolation(const StateVec* ErrorState);
             inline void HandleLivenessViolation(const LivenessViolation* Trace,
                                                 StateBuchiAutomaton* Monitor);
+            inline void UpdateCommands();
 
         public:
             Solver(LTSChecker* Checker);

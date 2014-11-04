@@ -173,14 +173,14 @@ namespace ESMC {
         private:
             u32 Offset;
             u32 ElemSize;
-            ExpT CountExp;
+            u32 Capacity;
             u32 BufferSize;
             vector<u32> LastPermutation;
             vector<u32> IdentityPermutation;
 
         public:
             ChanBufferSorter(u32 Offset, const ExprTypeRef& ChanBufferType,
-                             const ExpT& CountExp);
+                             u32 Capacity);
             ~ChanBufferSorter();
 
             void Sort(StateVec* OutStateVector, bool RememberPerm = false);
