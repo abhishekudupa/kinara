@@ -349,10 +349,8 @@ namespace ESMC {
             }
         }
 
-        void Solver::MakeAssertion(const ExpT& Pred)
+        void Solver::UnveilGuardOp(i64 Op)
         {
-            CheckedAssert(Pred);
-            auto&& SynthOps = GetSynthOps(Pred);
             auto const& GuardOpToExp = TheLTS->GuardOpToExp;
             auto const& GuardSymmetryConstraints = TheLTS->GuardSymmetryConstraints;
             auto const& GuardMutualExclusiveSets = TheLTS->GuardMutualExclusiveSets;
@@ -361,94 +359,97 @@ namespace ESMC {
                 TheLTS->GuardOpToUpdateSymmetryConstraints;
 
             unordered_set<i64> NewlyUnveiledUpdates;
+            auto ExpIt = GuardOpToExp.find(Op);
+            if (ExpIt == GuardOpToExp.end()) {
+                // Not unveiled, and not a guard, must be an unveiled update
+                if (UnveiledUpdateOps.find(Op) == UnveiledUpdateOps.end()) {
+                    throw InternalError((string)"Expected Op " + to_string(Op) +
+                                        "to have been unveiled already.\nWhen asserting: " +
+                                        "At: " + __FILE__ + ":" +
+                                        to_string(__LINE__));
+                }
+                return;
+            }
 
-            // Process all the guard ops first
+            auto GuardExp = ExpIt->second;
+
+            cout << "Unveiling Guard Exp: " << GuardExp->ToString() << endl;
+            cout << "Asserting Symmetry constraints:" << endl;
+
+            // This is a new guard
+            // Assert the symmetry constraints
+            auto it = GuardSymmetryConstraints.find(Op);
+            if (it != GuardSymmetryConstraints.end()) {
+                for (auto const& Constraint : it->second) {
+                    CheckedAssert(Constraint);
+                }
+            }
+
+            cout << "End of Symmetry constraints:" << endl;
+            cout << "Asserting Determinism constraints:" << endl;
+
+            // Assert the determinism constraints wrt guards
+            // that have already been unveiled
+            auto it2 = GuardMutualExclusiveSets.find(Op);
+            if (it2 != GuardMutualExclusiveSets.end()) {
+                for (auto const& OtherGuard : it2->second) {
+                    auto OtherOp = OtherGuard->SAs<OpExpression>()->GetOpCode();
+                    if (UnveiledGuardOps.find(OtherOp) == UnveiledGuardOps.end() &&
+                        LTSReservedOps.find(OtherOp) == LTSReservedOps.end()) {
+                        continue;
+                    }
+                    // Assert the mutual exclusion constraint
+                    CreateMutualExclusionConstraint(GuardExp, OtherGuard);
+                }
+            }
+            cout << "End of Determinism constraints:" << endl;
+            cout << "Asserting Symmetry constraints on updates:" << endl;
+
+            // add the symmetry constraints for updates associated with
+            // this guard
+            auto it3 = GuardOpToUpdateSymmetryConstraints.find(Op);
+            if (it3 != GuardOpToUpdateSymmetryConstraints.end()) {
+                for (auto const& Constraint : it3->second) {
+                    CheckedAssert(Constraint);
+                }
+            }
+
+            cout << "End of Symmetry constraints on updates:" << endl;
+
+            // Mark the guard and its updates as unveiled
+            UnveiledGuardOps.insert(Op);
+            InterpretedOps.insert(Op);
+            auto it4 = GuardOpToUpdates.find(Op);
+            if (it4 != GuardOpToUpdates.end()) {
+                for (auto const& UpdateExp : it4->second) {
+                    auto UpdateOp = UpdateExp->SAs<OpExpression>()->GetOpCode();
+                    UnveiledUpdateOps.insert(UpdateOp);
+                    NewlyUnveiledUpdates.insert(UpdateOp);
+                    InterpretedOps.insert(UpdateOp);
+                }
+            }
+
+            // Create the indicator variable for the guard
+            // and assert the implication on the indicator variable
+            CreateGuardIndicator(Op);
+
+            // Create indicator variables for each newly unveiled update as well
+            for (auto const& NewUpdateOp : NewlyUnveiledUpdates) {
+                CreateUpdateIndicator(NewUpdateOp);
+            }
+            UpdateCommands();
+        }
+
+        void Solver::MakeAssertion(const ExpT& Pred)
+        {
+            CheckedAssert(Pred);
+            auto&& SynthOps = GetSynthOps(Pred);
             for (auto const& Op : SynthOps) {
                 if (UnveiledGuardOps.find(Op) != UnveiledGuardOps.end()) {
                     continue;
                 }
-
-                auto ExpIt = GuardOpToExp.find(Op);
-                if (ExpIt == GuardOpToExp.end()) {
-                    // Not unveiled, and not a guard, must be an unveiled update
-                    if (UnveiledUpdateOps.find(Op) == UnveiledUpdateOps.end()) {
-                        throw InternalError((string)"Expected Op " + to_string(Op) +
-                                            "to have been unveiled already.\nWhen asserting: " +
-                                            Pred->ToString() + "\nAt: " + __FILE__ + ":" +
-                                            to_string(__LINE__));
-                    }
-                    continue;
-                }
-
-                auto GuardExp = ExpIt->second;
-
-                cout << "Unveiling Guard Exp: " << GuardExp->ToString() << endl;
-                cout << "Asserting Symmetry constraints:" << endl;
-
-                // This is a new guard
-                // Assert the symmetry constraints
-                auto it = GuardSymmetryConstraints.find(Op);
-                if (it != GuardSymmetryConstraints.end()) {
-                    for (auto const& Constraint : it->second) {
-                        CheckedAssert(Constraint);
-                    }
-                }
-
-                cout << "End of Symmetry constraints:" << endl;
-                cout << "Asserting Determinism constraints:" << endl;
-
-                // Assert the determinism constraints wrt guards
-                // that have already been unveiled
-                auto it2 = GuardMutualExclusiveSets.find(Op);
-                if (it2 != GuardMutualExclusiveSets.end()) {
-                    for (auto const& OtherGuard : it2->second) {
-                        auto OtherOp = OtherGuard->SAs<OpExpression>()->GetOpCode();
-                        if (UnveiledGuardOps.find(OtherOp) == UnveiledGuardOps.end() &&
-                            LTSReservedOps.find(OtherOp) == LTSReservedOps.end()) {
-                            continue;
-                        }
-                        // Assert the mutual exclusion constraint
-                        CreateMutualExclusionConstraint(GuardExp, OtherGuard);
-                    }
-                }
-                cout << "End of Determinism constraints:" << endl;
-                cout << "Asserting Symmetry constraints on updates:" << endl;
-
-                // add the symmetry constraints for updates associated with
-                // this guard
-                auto it3 = GuardOpToUpdateSymmetryConstraints.find(Op);
-                if (it3 != GuardOpToUpdateSymmetryConstraints.end()) {
-                    for (auto const& Constraint : it3->second) {
-                        CheckedAssert(Constraint);
-                    }
-                }
-
-                cout << "End of Symmetry constraints on updates:" << endl;
-
-                // Mark the guard and its updates as unveiled
-                UnveiledGuardOps.insert(Op);
-                InterpretedOps.insert(Op);
-                auto it4 = GuardOpToUpdates.find(Op);
-                if (it4 != GuardOpToUpdates.end()) {
-                    for (auto const& UpdateExp : it4->second) {
-                        auto UpdateOp = UpdateExp->SAs<OpExpression>()->GetOpCode();
-                        UnveiledUpdateOps.insert(UpdateOp);
-                        NewlyUnveiledUpdates.insert(UpdateOp);
-                        InterpretedOps.insert(UpdateOp);
-                    }
-                }
-
-                // Create the indicator variable for the guard
-                // and assert the implication on the indicator variable
-                CreateGuardIndicator(Op);
-
-                // Create indicator variables for each newly unveiled update as well
-                for (auto const& NewUpdateOp : NewlyUnveiledUpdates) {
-                    CreateUpdateIndicator(NewUpdateOp);
-                }
+                UnveilGuardOp(Op);
             }
-
-            UpdateCommands();
         }
 
         inline void Solver::HandleOneDeadlockViolation(const StateVec* ErrorState)

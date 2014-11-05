@@ -162,6 +162,8 @@ namespace ESMC {
             // fixed interpretation.
             void MakeAssertion(const ExpT& Pred);
 
+            void UnveilGuardOp(i64 Op);
+
             void Solve();
 
             void PrintUFModel(i64 UFCode);
