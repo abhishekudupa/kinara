@@ -319,51 +319,6 @@ int main()
     Monitor->Freeze();
     auto TheSolver = new Solver(Checker);
 
-    ////////////////////////////////////////////////////////////
-    // Constraint of Correct Solution
-    ////////////////////////////////////////////////////////////
-    auto ArriveTransition = Controller->GetOutputTransitionsOnMsg(Msgs["Arrive"])[0];
-    vector<ExpT> SolutionConjuncts;
-    auto HasUF = [&] (const ExpBaseT* Exp) -> bool
-        {
-            auto ExpAsOpExp = Exp->As<OpExpression>();
-            if (ExpAsOpExp != nullptr) {
-                auto Code = ExpAsOpExp->GetOpCode();
-                return (Code >= LTSOps::UFOffset);
-            }
-            return false;
-        };
-    auto Guard = ArriveTransition->GetGuard();
-    auto UFFunctionsInGuard = Guard->GetMgr()->Gather(Guard, HasUF);
-    auto UFGuard = *(UFFunctionsInGuard.begin());
-    auto UFGuardOpCode = UFGuard->As<OpExpression>()->GetOpCode();
-    for (u32 i = 1; i <= 3; ++i) {
-        auto GuardTrue = TheLTS->MakeOp(UFGuardOpCode,
-                                        {TheLTS->MakeVal(to_string(i), FloorType),
-                                                TheLTS->MakeVal(to_string(i), FloorType)});
-        SolutionConjuncts.push_back(GuardTrue);
-    }
-    Updates = ArriveTransition->GetUpdates();
-    for (auto Update : Updates) {
-        auto LHS = Update->GetLHS();
-        auto RHS = Update->GetRHS();
-        if (boost::algorithm::ends_with(LHS->ToString(), "state")) {
-            auto StateUpdateOpCode = RHS->As<OpExpression>()->GetOpCode();
-            cout << "State update op code is " << StateUpdateOpCode << endl;
-            for (u32 i = 1; i <= 3; ++i) {
-                auto StateUpdate = TheLTS->MakeOp(StateUpdateOpCode,
-                                                  {TheLTS->MakeVal(to_string(i), FloorType),
-                                                          TheLTS->MakeVal(to_string(i), FloorType)});
-                auto StateUpdateConstraint = TheLTS->MakeOp(LTSOps::OpEQ,
-                                                            StateUpdate,
-                                                            ControllerInitialState);
-                SolutionConjuncts.push_back(StateUpdateConstraint);
-            }
-        }
-    }
-    auto Solution = TheLTS->MakeOp(LTSOps::OpAND, SolutionConjuncts);
-    cout << "THE SOLUTION PREDICATE IS " << Solution << endl;
-
     TheSolver->Solve();
     TheSolver->PrintSolution();
 
