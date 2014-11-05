@@ -511,6 +511,33 @@ void DeclareLivenessMonitor(LabelledTS* TheLTS, LTSChecker* Checker)
     Monitor->Freeze();
 }
 
+vector<unordered_map<string, ExpT>> GetValidStatesMap(LabelledTS* TheLTS) {
+    vector<unordered_map<string, ExpT>> Retval;
+    vector<vector<ExpT>> DataElems;
+    for (size_t i = 0; i < 2 * NumProcesses - 2; ++i) {
+        DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
+    }
+    auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
+    int CandidateStateCounter = 1;
+    vector<ExpT> Indicators;
+    for (auto DataCombination : DataCombinations) {
+        unordered_map<string, ExpT> ValidState;
+        u32 DataCombinationIndex = 0;
+        for (u32 i = 0; i < NumProcesses; ++i) {
+            ValidState["Data" + to_string(i)] = DataCombination[DataCombinationIndex];
+            DataCombinationIndex++;
+        }
+        for (u32 i = 1; i < NumProcesses - 1; ++i) {
+            ValidState["Up" + to_string(i)] = DataCombination[DataCombinationIndex];
+            DataCombinationIndex++;
+        }
+        ValidState["Up0"] = TheLTS->MakeTrue();
+        ValidState["Up" + to_string(NumProcesses - 1)] = TheLTS->MakeFalse();
+        Retval.push_back(ValidState);
+    }
+    return Retval;
+}
+
 
 int main()
 {
@@ -576,10 +603,11 @@ int main()
             vector<ExpT> ActualArguments;
             int DataCombinationIndex = 0;
             for (auto Arg : UFGuard->As<OpExpression>()->GetChildren()) {
-                auto ArgName = Arg->ToString();
-                if (boost::algorithm::ends_with(ArgName, "Up0")) {
+                auto ArgField = Arg->As<OpExpression>()->GetChildren()[1];
+                auto ArgName = ArgField->As<VarExpression>()->GetVarName();
+                if (ArgName ==  "Up0") {
                     ActualArguments.push_back(TheLTS->MakeTrue());
-                } else if (boost::algorithm::ends_with(ArgName, "Up" + to_string(NumProcesses - 1))) {
+                } else if (ArgName == ("Up" + to_string(NumProcesses - 1))) {
                     ActualArguments.push_back(TheLTS->MakeFalse());
                 } else {
                     ActualArguments.push_back(DataVal[DataCombinationIndex]);
@@ -657,7 +685,70 @@ int main()
 
     TheSolver->Solve();
 
-    TheSolver->PrintSolution();
+    // TheSolver->PrintSolution();
+
+    for (auto ValidState : GetValidStatesMap(TheLTS)) {
+        for (auto NameValue : ValidState) {
+            cout << NameValue.first << " : " << NameValue.second << endl;
+        }
+    }
+
+    auto Proc0 = TheLTS->GetEFSMs([&](const EFSMBase* EFSM)
+                                  {return EFSM->GetName() == "Proc0";})[0];
+
+    auto Proc0Type = TheLTS->GetEFSMType("Proc0");
+    auto Proc0StateVar = TheLTS->MakeVar("Proc0", Proc0Type);
+    auto Mgr = Proc0StateVar->GetMgr();
+    for (auto OutputMsg : Proc0->GetOutputs()) {
+        for (auto Transition : Proc0->GetOutputTransitionsOnMsg(OutputMsg)) {
+            cout << Transition->ToString() << endl;
+            auto Guard = Transition->GetGuard();
+            for (auto ValidState : GetValidStatesMap(TheLTS)) {
+                MgrT::SubstMapT ValidStateMap;
+                auto StateVariable = TheLTS->MakeOp(LTSOps::OpField,
+                                                    Proc0StateVar,
+                                                    TheLTS->MakeVar("state",
+                                                                    TheLTS->MakeFieldAccessType()));
+                ValidStateMap[StateVariable] = TheLTS->MakeVal("TheState", StateVariable->GetType());
+                for (auto NameValue : ValidState) {
+                    auto Name = NameValue.first;
+                    if (Name != "Up0" && Name != "Up1" && Name != "Data0" && Name != "Data1") {
+                        continue;
+                    }
+                    cout << NameValue.first << " : " << NameValue.second << endl;
+
+                    auto Variable = TheLTS->MakeOp(LTSOps::OpField, Proc0StateVar,
+                                                   TheLTS->MakeVar(NameValue.first,
+                                                                   TheLTS->MakeFieldAccessType()));
+                    ValidStateMap[Variable] = NameValue.second;
+                }
+                auto GuardResult = Mgr->TermSubstitute(ValidStateMap, Guard);
+                cout << GuardResult << endl;
+                cout << Mgr->Simplify(GuardResult) << endl;
+            }
+        }
+    }
+
+    for (auto Var : TheLTS->GetStateVectorVars()) {
+        cout << Var << endl;
+        for (auto ScalarTerm : GetScalarTerms(Var)) {
+            cout << ScalarTerm << endl;
+        }
+    }
+
+    for (auto ValidState : GetValidStatesMap(TheLTS)) {
+        for (auto NameValue : ValidState) {
+            cout << NameValue.first << " : " << NameValue.second << endl;
+        }
+    }
+
+    // Check that every legitimate state is deterministic
+
+    // Get all valid initial states
+
+    // Check that every deterministic state is illegitimate
+
+
 
     delete Checker;
 
