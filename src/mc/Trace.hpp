@@ -43,8 +43,10 @@
 #include <vector>
 #include <boost/functional/hash.hpp>
 #include <unordered_set>
+#include <tuple>
 
 #include "../common/FwdDecls.hpp"
+#include "../uflts/LTSTypes.hpp"
 
 namespace ESMC {
     namespace MC {
@@ -53,6 +55,7 @@ namespace ESMC {
         using LTS::LabelledTS;
         using LTS::ExpT;
         using Symm::Canonicalizer;
+        using LTS::LTSAssignRef;
 
         namespace Detail {
 
@@ -73,11 +76,26 @@ namespace ESMC {
             typedef pair<const ProductState*, u32> PSPermPairT;
             // for storing unwound states
             typedef unordered_set<PSPermPairT, PSPermPairHasher> PSPermSetT;
-            typedef pair<u32, PSPermPairT> UnwoundEdgeT;
+            // Product state, inverse permutation, inverse sort permutation
+            typedef tuple<const ProductState*, u32, u32> BFSQueueEntryT;
+
+            class BFSQueueEntryHasher
+            {
+            public:
+                inline u64 operator () (const BFSQueueEntryT& Entry) const
+                {
+                    u64 Retval = 0;
+                    boost::hash_combine(Retval, get<0>(Entry));
+                    boost::hash_combine(Retval, get<1>(Entry));
+                    boost::hash_combine(Retval, get<2>(Entry));
+                    return Retval;
+                }
+            };
+
             // For storing unwound edges
             // unwound(first) <-- unwound(second.second) with command (second.first)
-            typedef unordered_map<PSPermPairT, UnwoundEdgeT,
-                                  PSPermPairHasher> UnwoundPredMapT;
+            typedef unordered_map<BFSQueueEntryT, pair<u32, BFSQueueEntryT>,
+                                  BFSQueueEntryHasher> UnwoundPredMapT;
 
         } /* end namespace detail */
 
@@ -178,14 +196,15 @@ namespace ESMC {
             ExpandSCC(const ProductState* SCCRoot, LTSChecker* Checker);
 
             // returns a pair of states:
-            // 1. The state corresponding to the unwinding of the root state
-            // 2. The permuted state in the product structure corresponding
+            // 1. The permuted state in the product structure corresponding
             //    to the last unwound state in the path (for subsequent calls to
             //    DoUnwoundBFS)
-            static inline pair<const ProductState*, const ProductState*>
+            // 2. The inverse permutation along the path is returned in InvPermAlongPathOut
+            static inline const ProductState*
             DoUnwoundBFS(const ProductState* Root,
                          const LTSChecker* Checker,
                          u32& InvPermAlongPathOut,
+                         u32& InvSortPermAlongPathOut,
                          const function<bool(u32, const ProductState*)>& MatchPred,
                          vector<PSTraceElemT>& PathElems,
                          const unordered_set<const ProductState*>& Bounds);
@@ -255,11 +274,21 @@ namespace ESMC {
             const ProductState* InitialState;
             const ProductStructure* ThePS;
             vector<PSTraceElemT> StemPath;
+            // The updates that need to be made
+            // after executing the last command in the stem
+            // to get the true stem last state
+            vector<LTSAssignRef> StemSortPermutation;
             vector<PSTraceElemT> LoopPath;
+            // The updates to be made after executing the
+            // last command in the loop to get back to the
+            // last state of the stem
+            vector<LTSAssignRef> LoopSortPermutation;
 
             LivenessViolation(const ProductState* InitialState,
                               const vector<PSTraceElemT>& Stem,
-                              const vector<PSTraceElemT>& Lasso,
+                              const vector<LTSAssignRef>& StemSortPermutation,
+                              const vector<PSTraceElemT>& Loop,
+                              const vector<LTSAssignRef>& LoopSortPermutation,
                               StateVecPrinter* Printer,
                               const ProductStructure* ThePS);
 
@@ -271,6 +300,8 @@ namespace ESMC {
             const vector<PSTraceElemT>& GetLoop() const;
 
             virtual string ToString(u32 Verbosity = 0) const override;
+            const vector<LTSAssignRef>& GetStemSortPermutation() const;
+            const vector<LTSAssignRef>& GetLoopSortPermutation() const;
         };
 
     } /* end namespace MC */

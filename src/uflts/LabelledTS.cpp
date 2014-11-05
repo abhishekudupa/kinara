@@ -587,7 +587,10 @@ namespace ESMC {
                 auto Chan = ChanEFSM.second;
                 if (!Chan->Ordered) {
                     auto const& Name = Chan->Name;
-                    for (auto const& ParamInst : Chan->ParamInsts) {
+                    auto const& ChanParamInsts = Chan->ParamInsts;
+                    const u32 NumChanInsts = ChanParamInsts.size();
+                    for (u32 i = 0; i < NumChanInsts; ++i) {
+                        auto const& ParamInst = ChanParamInsts[i];
                         auto VarExp = Mgr->MakeVar(Name, Chan->StateVarType);
                         for (auto const& Param : ParamInst) {
                             VarExp = Mgr->MakeExpr(LTSOps::OpIndex, VarExp, Param);
@@ -595,7 +598,7 @@ namespace ESMC {
                         auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
                         auto BufferExp = Mgr->MakeExpr(LTSOps::OpField, VarExp,
                                                        Mgr->MakeVar("MsgBuffer", FAType));
-                        ChanBuffersToSort.push_back(make_pair(BufferExp, Chan->Capacity));
+                        ChanBuffersToSort.push_back(make_tuple(Chan, BufferExp, i));
                     }
                 }
             }
@@ -634,7 +637,7 @@ namespace ESMC {
             return GuardedCommands;
         }
 
-        const vector<pair<ExpT, u32>>& LabelledTS::GetChanBuffersToSort() const
+        const vector<tuple<ChannelEFSM*, ExpT, u32>>& LabelledTS::GetChanBuffersToSort() const
         {
             return ChanBuffersToSort;
         }

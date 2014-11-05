@@ -100,7 +100,7 @@ namespace ESMC {
 
         public:
             DomainPermuter(u32 DomainSize, u32 Offset,
-                               bool Compact = false);
+                           bool Compact = false);
             ~DomainPermuter();
 
             // Accessors
@@ -176,7 +176,6 @@ namespace ESMC {
 
             inline void GetPermForIndex(u32 Index);
             inline void GetPermForIndex(u32 Index, vector<u08>& OutVec) const;
-            inline u32 GetIndexForPerm(const vector<u08>& Perm) const;
 
         public:
             PermutationSet(const vector<u32>& DomainSizes, bool Compact);
@@ -192,6 +191,8 @@ namespace ESMC {
 
             const iterator& Begin() const;
             const iterator& End() const;
+
+            u32 GetIndexForPerm(const vector<u08>& Perm) const;
 
             void Print(u32 PermIdx, ostream& Out) const;
         };

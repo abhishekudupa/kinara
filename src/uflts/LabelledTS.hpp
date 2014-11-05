@@ -40,6 +40,8 @@
 #if !defined ESMC_LABELLED_TS_HPP_
 #define ESMC_LABELLED_TS_HPP_
 
+#include <tuple>
+
 #include "LTSTypes.hpp"
 #include "SymbolTable.hpp"
 
@@ -95,7 +97,8 @@ namespace ESMC {
 
             // Channel buffers that need to be sorted
             // on every transition
-            vector<pair<ExpT, u32>> ChanBuffersToSort;
+            // The actual channel, the expression and the instance id
+            vector<tuple<ChannelEFSM*, ExpT, u32>> ChanBuffersToSort;
 
             u32 StateVectorSize;
             vector<vector<LTSAssignRef>> InitStateGenerators;
@@ -246,7 +249,7 @@ namespace ESMC {
             const ExpT& GetInvariant() const;
             const ExpT& GetFinalCond() const;
 
-            const vector<pair<ExpT, u32>>& GetChanBuffersToSort() const;
+            const vector<tuple<ChannelEFSM*, ExpT, u32>>& GetChanBuffersToSort() const;
         };
 
     } /* end namespace LTS */

@@ -1148,8 +1148,8 @@ namespace ESMC {
             CompileExp(TheLTS->InvariantExp, TheLTS);
             CompileExp(TheLTS->FinalCondExp, TheLTS);
 
-            for (auto const& ChanExpPair : TheLTS->ChanBuffersToSort) {
-                CompileExp(ChanExpPair.first, TheLTS);
+            for (auto const& ChanBufferExp : TheLTS->ChanBuffersToSort) {
+                CompileExp(get<1>(ChanBufferExp), TheLTS);
             }
 
             for (auto const& InitStateGen : TheLTS->InitStateGenerators) {

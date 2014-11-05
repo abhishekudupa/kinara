@@ -45,6 +45,7 @@
 #include "../uflts/LTSFairnessSet.hpp"
 #include "../uflts/LTSAutomaton.hpp"
 #include "../uflts/LTSEFSMBase.hpp"
+#include "../uflts/LTSAssign.hpp"
 #include "../symmetry/SymmCanonicalizer.hpp"
 
 #include "StateVec.hpp"
@@ -118,6 +119,7 @@ namespace ESMC {
 
                 // Now find out which command takes us from the current
                 // unwound state to the next unwound state
+                StateVec* NextUnsortedState = nullptr;
                 bool FoundCmd = false;
                 for (auto const& Cmd : GuardedCommands) {
 
@@ -127,15 +129,20 @@ namespace ESMC {
                     if (CandidateState == nullptr) {
                         continue;
                     }
-                    auto SortedCandidateState = TheCanonicalizer->SortChans(CandidateState);
-                    CandidateState->Recycle();
+                    u32 Dummy;
+                    auto SortedCandidateState = TheCanonicalizer->SortChans(CandidateState,
+                                                                            false, Dummy);
+
                     if (SortedCandidateState->Equals(*NextUnwoundState)) {
+                        NextUnsortedState = CandidateState;
                         FoundCmd = true;
                         SortedCandidateState->Recycle();
-                        PathElems.push_back(TraceElemT(Cmd, NextUnwoundState));
+                        PathElems.push_back(TraceElemT(Cmd, NextUnsortedState));
+                        NextUnwoundState->Recycle();
                         break;
                     } else {
                         SortedCandidateState->Recycle();
+                        CandidateState->Recycle();
                     }
                 }
                 if (!FoundCmd) {
@@ -173,7 +180,9 @@ namespace ESMC {
                         if (CandNext == nullptr) {
                             continue;
                         }
-                        auto SortedCand = TheCanonicalizer->SortChans(CandNext);
+                        u32 Dummy;
+                        auto SortedCand = TheCanonicalizer->SortChans(CandNext, false,
+                                                                      Dummy);
                         CandNext->Recycle();
                         sstr << "Firing command:" << endl << Cmd->ToString() << endl
                              << "yields diff (from desired state):" << endl;
@@ -218,7 +227,7 @@ namespace ESMC {
 
                 // Do not recycle the unwound state
                 // it's part of the return value
-                CurUnwoundState = NextUnwoundState;
+                CurUnwoundState = NextUnsortedState;
             }
             return UnwoundOrigin;
         }
@@ -255,6 +264,8 @@ namespace ESMC {
                                                                         ProcIdxSet);
                 // find out which command takes us here
                 bool FoundCmd = false;
+                ProductState* NextUnsortedPS = nullptr;
+
                 for (auto const& Cmd : GuardedCommands) {
                     // we ignore the exception here
                     bool Exception = false;
@@ -264,16 +275,23 @@ namespace ESMC {
                         continue;
                     }
 
-                    auto SortedCandidateSV = TheCanonicalizer->SortChans(CandidateSV);
-                    CandidateSV->Recycle();
+                    u32 Dummy;
+                    auto SortedCandidateSV = TheCanonicalizer->SortChans(CandidateSV, false,
+                                                                         Dummy);
 
                     if (SortedCandidateSV->Equals(*(NextUnwoundPS->GetSVPtr()))) {
+                        NextUnsortedPS = new ProductState(CandidateSV,
+                                                          NextUnwoundPS->GetMonitorState(),
+                                                          NextUnwoundPS->GetIndexID(), 0);
                         FoundCmd = true;
                         SortedCandidateSV->Recycle();
-                        PathElems.push_back(PSTraceElemT(Cmd, NextUnwoundPS));
+                        PathElems.push_back(PSTraceElemT(Cmd, NextUnsortedPS));
+                        NextUnwoundPS->GetSVPtr()->Recycle();
+                        delete NextUnwoundPS;
                         break;
                     } else {
                         SortedCandidateSV->Recycle();
+                        CandidateSV->Recycle();
                     }
                 }
 
@@ -283,7 +301,7 @@ namespace ESMC {
                                         to_string(__LINE__));
                 }
 
-                CurUnwoundState = NextUnwoundPS;
+                CurUnwoundState = NextUnsortedPS;
             }
 
             InvPermAlongPathOut = InvPermAlongPath;
@@ -323,9 +341,11 @@ namespace ESMC {
             return SCCNodes;
         }
 
-        inline pair<const ProductState*, const ProductState*>
-        TraceBase::DoUnwoundBFS(const ProductState* Root, const LTSChecker* Checker,
+        inline const ProductState*
+        TraceBase::DoUnwoundBFS(const ProductState* Root,
+                                const LTSChecker* Checker,
                                 u32& InvPermAlongPathOut,
+                                u32& InvSortPermAlongPathOut,
                                 const function<bool(u32, const ProductState*)>& MatchPred,
                                 vector<PSTraceElemT>& PathElems,
                                 const unordered_set<const ProductState*>& Bounds)
@@ -333,33 +353,39 @@ namespace ESMC {
             auto ThePS = Checker->ThePS;
             auto TheCanonicalizer = Checker->TheCanonicalizer;
             auto PermSet = TheCanonicalizer->GetPermSet();
+            auto SortPermSet = TheCanonicalizer->GetSortPermSet();
             auto Monitor = ThePS->GetMonitor();
             auto ProcIdxSet = Monitor->GetIndexSet();
             auto const& GuardedCmds = Checker->GuardedCommands;
             const u32 NumGuardedCmds = GuardedCmds.size();
 
-            deque<Detail::PSPermPairT> BFSQueue;
+            deque<Detail::BFSQueueEntryT> BFSQueue;
             Detail::PSPermSetT VisitedStates;
             Detail::UnwoundPredMapT PredMap;
 
             auto InvPermAlongPath = InvPermAlongPathOut;
+            auto InvSortPermAlongPath = InvSortPermAlongPathOut;
             auto OriginPair = make_pair(Root, InvPermAlongPath);
+            auto OriginTuple = make_tuple(Root, InvPermAlongPath, InvSortPermAlongPath);
             VisitedStates.insert(OriginPair);
-            BFSQueue.push_back(OriginPair);
+            BFSQueue.push_back(OriginTuple);
 
             bool ReachedTarget = false;
-            Detail::PSPermPairT TargetPSPerm;
+            Detail::BFSQueueEntryT TargetPSPerm;
 
             while (BFSQueue.size() > 0 && !ReachedTarget) {
-                auto CurPair = BFSQueue.front();
+                auto CurTuple = BFSQueue.front();
                 BFSQueue.pop_front();
 
-                auto CurPermPS = CurPair.first;
-                auto CurPermIndex = CurPair.second;
+                auto CurPermPS = get<0>(CurTuple);
+                auto CurPermIndex = get<1>(CurTuple);
+                auto CurSortPermIndex = get<2>(CurTuple);
 
-                auto CurUnwoundPS = TheCanonicalizer->ApplyPermutation(CurPermPS,
-                                                                       CurPermIndex,
-                                                                       ProcIdxSet);
+                auto CurUnsortedPS = TheCanonicalizer->ApplyPermutation(CurPermPS,
+                                                                        CurPermIndex,
+                                                                        CurSortPermIndex,
+                                                                        ProcIdxSet);
+
                 auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurPermPS));
 
                 for (auto Edge : Edges) {
@@ -382,12 +408,9 @@ namespace ESMC {
                     }
 
                     VisitedStates.insert(NextPair);
-                    BFSQueue.push_back(NextPair);
-
                     auto NextUnwoundPS = TheCanonicalizer->ApplyPermutation(NextPermPS,
                                                                             NextPermIndex,
                                                                             ProcIdxSet);
-
                     // Find out which command takes us from the current
                     // unwound product state to the next unwound product
                     // state
@@ -397,27 +420,45 @@ namespace ESMC {
 
                         // We ignore the exception here
                         bool Exception = false;
-                        auto CandidateSV = TryExecuteCommand(Cmd, CurUnwoundPS->GetSVPtr(),
+                        auto CandidateSV = TryExecuteCommand(Cmd, CurUnsortedPS->GetSVPtr(),
                                                              Exception);
                         if (CandidateSV == nullptr) {
                             continue;
                         }
 
-                        auto SortedCandidateSV = TheCanonicalizer->SortChans(CandidateSV);
-                        CandidateSV->Recycle();
-
+                        u32 SortPermIdx;
+                        auto SortedCandidateSV = TheCanonicalizer->SortChans(CandidateSV, true,
+                                                                             SortPermIdx);
                         if (SortedCandidateSV->Equals(*(NextUnwoundPS->GetSVPtr()))) {
                             FoundCmd = true;
                             SortedCandidateSV->Recycle();
-                            PredMap[NextPair] = make_pair(i, CurPair);
+                            auto InvSortPermIdx =
+                                SortPermSet->GetIteratorForInv(SortPermIdx).GetIndex();
+                            auto NextSortPermIt = SortPermSet->Compose(CurSortPermIndex,
+                                                                       InvSortPermIdx);
+                            auto NextSortPermIdx = NextSortPermIt.GetIndex();
 
-                            if (MatchPred(i, NextUnwoundPS)) {
+                            auto NextUnsortedPS = new ProductState(CandidateSV,
+                                                                   NextUnwoundPS->GetMonitorState(),
+                                                                   NextUnwoundPS->GetIndexID(), 0);
+
+                            auto NextTuple = make_tuple(NextPermPS, NextPermIndex,
+                                                        NextSortPermIdx);
+                            PredMap[NextTuple] = make_pair(i, CurTuple);
+                            BFSQueue.push_back(NextTuple);
+
+                            if (MatchPred(i, NextUnsortedPS)) {
                                 ReachedTarget = true;
-                                TargetPSPerm = NextPair;
+                                TargetPSPerm = NextTuple;
                             }
+
+                            // delete the next unsorted ps
+                            CandidateSV->Recycle();
+                            delete NextUnsortedPS;
                             break;
                         } else {
                             SortedCandidateSV->Recycle();
+                            CandidateSV->Recycle();
                         }
                     }
 
@@ -438,18 +479,21 @@ namespace ESMC {
                 }
 
                 // Delete the current unwound product state as well
-                CurUnwoundPS->GetSVPtr()->Recycle();
-                delete CurUnwoundPS;
+                CurUnsortedPS->GetSVPtr()->Recycle();
+                delete CurUnsortedPS;
             }
 
             // We now need to assemble a path from the predecessors
-            auto CurPair = TargetPSPerm;
-            auto it = PredMap.find(CurPair);
-            auto CurPermPS = CurPair.first;
-            auto CurPerm = CurPair.second;
-            auto CurUnwoundPS = TheCanonicalizer->ApplyPermutation(CurPermPS, CurPerm,
-                                                                   ProcIdxSet);
+            auto CurTuple = TargetPSPerm;
+            auto it = PredMap.find(CurTuple);
+            auto CurPermPS = get<0>(CurTuple);
+            auto CurPerm = get<1>(CurTuple);
+            auto CurSortPerm = get<2>(CurTuple);
+
+            auto CurUnsortedPS = TheCanonicalizer->ApplyPermutation(CurPermPS, CurPerm,
+                                                                    CurSortPerm, ProcIdxSet);
             InvPermAlongPathOut = CurPerm;
+            InvSortPermAlongPathOut = CurSortPerm;
 
             vector<PSTraceElemT> RTraceElems;
             while (it != PredMap.end()) {
@@ -457,19 +501,22 @@ namespace ESMC {
                 auto UnwoundEdge = it->second;
                 auto PredStatePerm = UnwoundEdge.second;
                 auto CmdID = UnwoundEdge.first;
-                auto PredPermPS = PredStatePerm.first;
-                auto PredPerm = PredStatePerm.second;
+                auto PredPermPS = get<0>(PredStatePerm);
+                auto PredPerm = get<1>(PredStatePerm);
+                auto PredSortPerm = get<2>(PredStatePerm);
 
-                auto UnwoundPredPS = TheCanonicalizer->ApplyPermutation(PredPermPS, PredPerm,
-                                                                        ProcIdxSet);
-                RTraceElems.push_back(PSTraceElemT(GuardedCmds[CmdID], CurUnwoundPS));
+                auto UnsortedPredPS = TheCanonicalizer->ApplyPermutation(PredPermPS, PredPerm,
+                                                                         PredSortPerm,
+                                                                         ProcIdxSet);
+
+                RTraceElems.push_back(PSTraceElemT(GuardedCmds[CmdID], CurUnsortedPS));
                 it = PredMap.find(PredStatePerm);
-                CurUnwoundPS = UnwoundPredPS;
+                CurUnsortedPS = UnsortedPredPS;
             }
 
             PathElems.clear();
             PathElems.insert(PathElems.end(), RTraceElems.rbegin(), RTraceElems.rend());
-            return (make_pair(CurUnwoundPS, TargetPSPerm.first));
+            return get<0>(TargetPSPerm);
         }
 
         inline bool
@@ -570,6 +617,7 @@ namespace ESMC {
         {
             auto ThePS = Checker->ThePS;
             auto const& GuardedCmds = Checker->GuardedCommands;
+            auto TheCanonicalizer = Checker->TheCanonicalizer;
 
             auto&& SCCNodes = ExpandSCC(SCCRoot, Checker);
             // cout << "[Trace:]" << "ExpandedSCC contains " << SCCNodes.size()
@@ -585,8 +633,26 @@ namespace ESMC {
             vector<PSTraceElemT> StemPath;
             auto InitState = UnwindPermPath(StemPPath, Checker, StemPath, InvPermAlongPath);
 
-            auto StartOfLoop = StemPath.back().second;
+            auto StemPathBackPair = StemPath.back();
+            auto StartOfLoop = StemPathBackPair.second;
+
+
+            u32 StemPermID;
+            auto SortedSOLSV = TheCanonicalizer->SortChans(StartOfLoop->GetSVPtr(), true,
+                                                           StemPermID);
+            auto StemPermUpdates = TheCanonicalizer->GetChanUpdatesForPermutation(StemPermID);
+
+            auto SortedStartOfLoop = new ProductState(SortedSOLSV,
+                                                      StartOfLoop->GetMonitorState(),
+                                                      StartOfLoop->GetIndexID(), 0);
+            StemPath.pop_back();
+            StemPath.push_back(PSTraceElemT(StemPathBackPair.first, SortedStartOfLoop));
+            StartOfLoop->GetSVPtr()->Recycle();
+            delete StartOfLoop;
+            StartOfLoop = SortedStartOfLoop;
+
             auto CurEndOfPath = StemPPath->GetPathElems().back()->GetTarget();
+            u32 InvSortPermAlongPath = 0;
 
             delete StemPPath;
 
@@ -647,24 +713,39 @@ namespace ESMC {
                             }
                         }
 
-                        auto CurPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
-                                                    MatchPred, CurElems, SCCNodes);
+                        CurEndOfPath = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
+                                                    InvSortPermAlongPath, MatchPred,
+                                                    CurElems, SCCNodes);
 
-                        CurPair.first->GetSVPtr()->Recycle();
-                        delete CurPair.first;
-
-                        CurEndOfPath = CurPair.second;
                         PathSoFar.insert(PathSoFar.end(), CurElems.begin(), CurElems.end());
                     }
                 }
             }
 
             // are we done?
-            if (PathSoFar.size() > 0 &&
-                PathSoFar.back().second->Equals(StartOfLoop)) {
-                return (new LivenessViolation(InitState, StemPath, PathSoFar,
-                                              Checker->Printer, ThePS));
-            } else if (PathSoFar.size() == 0 && SCCNodes.size() == 1) {
+            if (PathSoFar.size() > 0) {
+                auto LastPair = PathSoFar.back();
+                auto LastPS = LastPair.second;
+                u32 FinalPermID;
+                auto SortedSV = TheCanonicalizer->SortChans(LastPS->GetSVPtr(), false, FinalPermID);
+                if (SortedSV->Equals(*(StartOfLoop->GetSVPtr())) &&
+                    StartOfLoop->GetMonitorState() == LastPS->GetMonitorState() &&
+                    StartOfLoop->GetIndexID() == LastPS->GetIndexID()) {
+
+                    auto&& LoopPermUpdates =
+                        TheCanonicalizer->GetChanUpdatesForPermutation(FinalPermID);
+                    PathSoFar.pop_back();
+                    auto SortedPS = new ProductState(SortedSV, StartOfLoop->GetMonitorState(),
+                                                     StartOfLoop->GetIndexID(), 0);
+                    PathSoFar.push_back(PSTraceElemT(LastPair.first, SortedPS));
+                    LastPS->GetSVPtr()->Recycle();
+                    delete LastPS;
+
+                    return (new LivenessViolation(InitState, StemPath, StemPermUpdates,
+                                                  PathSoFar, LoopPermUpdates,
+                                                  Checker->Printer, ThePS));
+                }
+            } if (PathSoFar.size() == 0 && SCCNodes.size() == 1) {
                 // Single node SCC with self loop
                 // Find the command
                 auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurEndOfPath));
@@ -675,8 +756,8 @@ namespace ESMC {
                                                               Edge->GetTarget()->GetMonitorState(),
                                                               Edge->GetTarget()->GetIndexID(), 1));
                         PathSoFar.push_back(CurElem);
-                        return new LivenessViolation(InitState, StemPath, PathSoFar,
-                                                     Checker->Printer, ThePS);
+                        return new LivenessViolation(InitState, StemPath, StemPermUpdates,
+                                                     PathSoFar, {}, Checker->Printer, ThePS);
                     }
                 }
                 throw InternalError((string)"Could not complete cycle in single node SCC.\n" +
@@ -685,15 +766,13 @@ namespace ESMC {
                 // Transition to some other state first and then call
                 // do unwound bfs
                 vector<PSTraceElemT> TempPath;
-                auto TempPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
-                                             [&] (u32 CmdID, const ProductState* State) -> bool
-                                             {
-                                                 return (!State->Equals(StartOfLoop));
-                                             }, TempPath, SCCNodes);
+                CurEndOfPath = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
+                                            InvSortPermAlongPath,
+                                            [&] (u32 CmdID, const ProductState* State) -> bool
+                                            {
+                                                return (!State->Equals(StartOfLoop));
+                                            }, TempPath, SCCNodes);
 
-                TempPair.first->GetSVPtr()->Recycle();
-                delete TempPair.first;
-                CurEndOfPath = TempPair.second;
                 PathSoFar.insert(PathSoFar.end(), TempPath.begin(), TempPath.end());
                 // fall through and be a man! Do the right thing!
             }
@@ -701,20 +780,38 @@ namespace ESMC {
             // That handles all the special cases!
             // Now connect this path back to the original state
             vector<PSTraceElemT> LoopBack;
-            auto FinalPair = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
-                                          [&] (u32 CmdID, const ProductState* State) -> bool
-                                          {
-                                              return (State->Equals(StartOfLoop));
-                                          },
-                                          LoopBack, SCCNodes);
+            auto FinalPred =
+                [&] (u32 CmdID, const ProductState* State) -> bool
+                {
+                    u32 Dummy;
+                    auto SortedSV = TheCanonicalizer->SortChans(State->GetSVPtr(), false, Dummy);
+                    auto Retval = SortedSV->Equals(*(StartOfLoop->GetSVPtr()));
+                    Retval = Retval && State->GetMonitorState() == StartOfLoop->GetMonitorState();
+                    Retval = Retval && State->GetIndexID() == StartOfLoop->GetIndexID();
+                    SortedSV->Recycle();
+                    return Retval;
+                };
 
-            FinalPair.first->GetSVPtr()->Recycle();
-            delete FinalPair.first;
+            DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
+                         InvSortPermAlongPath,
+                         FinalPred, LoopBack, SCCNodes);
+            // Sort the final state and include the updates
+            auto OldEndOfPathPair = LoopBack.back();
+            auto OldEndOfPath = OldEndOfPathPair.second;
+            LoopBack.pop_back();
+            u32 FinalPermID;
+            auto SortedSV = TheCanonicalizer->SortChans(OldEndOfPath->GetSVPtr(), true,
+                                                        FinalPermID);
+            auto SortedEndOfPath = new ProductState(SortedSV, OldEndOfPath->GetMonitorState(),
+                                                    OldEndOfPath->GetIndexID(), 0);
+            OldEndOfPath->GetSVPtr()->Recycle();
+            LoopBack.push_back(PSTraceElemT(OldEndOfPathPair.first, SortedEndOfPath));
+            auto&& LoopPermUpdates = TheCanonicalizer->GetChanUpdatesForPermutation(FinalPermID);
 
             PathSoFar.insert(PathSoFar.end(), LoopBack.begin(), LoopBack.end());
 
-            return (new LivenessViolation(InitState, StemPath, PathSoFar,
-                                          Checker->Printer, ThePS));
+            return (new LivenessViolation(InitState, StemPath, StemPermUpdates, PathSoFar,
+                                          LoopPermUpdates, Checker->Printer, ThePS));
         }
 
         // Takes ownership of trace elems
@@ -805,11 +902,14 @@ namespace ESMC {
         // Implementation of LivenessViolation
         LivenessViolation::LivenessViolation(const ProductState* InitialState,
                                              const vector<PSTraceElemT>& StemElems,
+                                             const vector<LTSAssignRef>& StemSortPermutation,
                                              const vector<PSTraceElemT>& LoopElems,
+                                             const vector<LTSAssignRef>& LoopSortPermutation,
                                              StateVecPrinter* Printer,
                                              const ProductStructure* ThePS)
             : TraceBase(Printer), InitialState(InitialState), ThePS(ThePS),
-              StemPath(StemElems), LoopPath(LoopElems)
+              StemPath(StemElems), StemSortPermutation(StemSortPermutation),
+              LoopPath(LoopElems), LoopSortPermutation(LoopSortPermutation)
         {
             // Nothing here
         }
@@ -907,6 +1007,16 @@ namespace ESMC {
             Printer->PrintState(PrevState, ThePS, sstr);
             sstr << "-----------------------------------------------------" << endl << endl;
             return sstr.str();
+        }
+
+        const vector<LTSAssignRef>& LivenessViolation::GetStemSortPermutation() const
+        {
+            return StemSortPermutation;
+        }
+
+        const vector<LTSAssignRef>& LivenessViolation::GetLoopSortPermutation() const
+        {
+            return LoopSortPermutation;
         }
 
     } /* end namespace MC */

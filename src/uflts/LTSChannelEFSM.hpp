@@ -99,6 +99,7 @@ namespace ESMC {
                         Fairness = LTSFairnessType::None);
 
             virtual ~ChannelEFSM();
+            u32 GetCapacity() const;
 
             virtual void FreezeStates() override;
             virtual void FreezeVars() override;
@@ -196,6 +197,9 @@ namespace ESMC {
                                                 SplatFairnessType SplatFairness,
                                                 const string& SplatFairnessName,
                                                 bool Tentative = false) override;
+
+            vector<LTSAssignRef> GetUpdatesForPermutation(const vector<u08>& Permutation,
+                                                          u32 InstanceID) const;
         };
     } /* end namespace LTS */
 } /* end namespace ESMC */

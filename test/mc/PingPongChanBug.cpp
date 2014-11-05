@@ -87,7 +87,7 @@ int main()
     auto ClientIDParam = TheLTS->MakeVar("ClientID", ClientIDType);
     auto ClientEFSM = TheLTS->MakeGenEFSM("Client", Params, TrueExp, LTSFairnessType::Strong);
 
-    auto C2SChan = TheLTS->MakeChannel("C2SChan", vector<ExpT>(), TrueExp, 2, false,
+    auto C2SChan = TheLTS->MakeChannel("C2SChan", vector<ExpT>(), TrueExp, 3, false,
                                        false, false, false, LTSFairnessType::Strong);
     auto S2CChan = TheLTS->MakeChannel("S2CChan", Params, TrueExp, 1, false, true,
                                        false, false, LTSFairnessType::Strong);

@@ -427,7 +427,7 @@ namespace ESMC {
             return;
         }
 
-        inline u32 PermutationSet::GetIndexForPerm(const vector<u08>& Perm) const
+        u32 PermutationSet::GetIndexForPerm(const vector<u08>& Perm) const
         {
             u32 RunningOffset = 0;
             u32 Index = 0;

@@ -558,12 +558,13 @@ namespace ESMC {
         }
 
         vector<LTSAssignRef> EFSMBase::RebaseUpdates(const vector<ExpT>& ParamInst,
-                                                     const vector<LTSAssignRef>& Updates)
+                                                     const vector<LTSAssignRef>& Updates) const
         {
             auto Mgr = TheLTS->GetMgr();
             const u32 NumUpdates = Updates.size();
             vector<LTSAssignRef> Retval(NumUpdates);
-            auto const& RebaseSubstMap = RebaseSubstMaps[ParamInst];
+            auto it = RebaseSubstMaps.find(ParamInst);
+            auto const& RebaseSubstMap = it->second;
 
             for (u32 i = 0; i < NumUpdates; ++i) {
                 auto RebasedLHS = Mgr->Substitute(RebaseSubstMap, Updates[i]->GetLHS());

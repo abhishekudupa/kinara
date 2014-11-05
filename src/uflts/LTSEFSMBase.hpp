@@ -146,7 +146,7 @@ namespace ESMC {
                                                     const ExprTypeRef& ActMType);
 
             vector<LTSAssignRef> RebaseUpdates(const vector<ExpT>& ParamInst,
-                                               const vector<LTSAssignRef>& Updates);
+                                               const vector<LTSAssignRef>& Updates) const;
             vector<LTSAssignRef> MsgTransformUpdates(const vector<LTSAssignRef>& Updates,
                                                      const string& MessageName,
                                                      const ExprTypeRef& MessageType);

@@ -57,6 +57,8 @@ namespace ESMC {
         using ESMC::MC::StateVecPrinter;
         using ESMC::MC::ProductState;
         using ESMC::MC::ProcessIndexSet;
+        using ESMC::LTS::ChannelEFSM;
+        using ESMC::LTS::LTSAssignRef;
 
         extern const u32 MaxExplicitSize;
 
@@ -174,17 +176,24 @@ namespace ESMC {
             u32 Offset;
             u32 ElemSize;
             u32 Capacity;
-            u32 BufferSize;
-            vector<u32> LastPermutation;
-            vector<u32> IdentityPermutation;
+            u32 PermVecOffset;
+            vector<u08> LastPermutation;
+            vector<u08> IdentityPermutation;
+            ChannelEFSM* ChanEFSM;
+            u32 InstanceID;
 
         public:
             ChanBufferSorter(u32 Offset, const ExprTypeRef& ChanBufferType,
-                             u32 Capacity);
+                             u32 Capacity, u32 PermVecOffset,
+                             ChannelEFSM* ChanEFSM, u32 InstanceID);
             ~ChanBufferSorter();
 
-            void Sort(StateVec* OutStateVector, bool RememberPerm = false);
-            const vector<u32>& GetLastPermutation() const;
+            void Sort(StateVec* OutStateVector, bool RememberPerm);
+            void ApplyPermutation(StateVec* OutStateVector, const vector<u08>& PermVec);
+            const vector<u08>& GetLastPermutation() const;
+            u32 GetCapacity() const;
+            u32 GetPermVecOffset() const;
+            vector<LTSAssignRef> GetUpdatesForPermutation(const vector<u08>& PermVec) const;
         };
 
         class Canonicalizer
@@ -193,7 +202,9 @@ namespace ESMC {
             vector<PermuterBase*> Permuters;
             vector<ChanBufferSorter*> Sorters;
             PermutationSet* PermSet;
+            PermutationSet* SortPermSet;
             StateVecPrinter* Printer;
+            mutable vector<u08> LastSortPermutation;
 
         public:
             Canonicalizer(const LabelledTS* TheLTS, StateVecPrinter* Printer);
@@ -203,11 +214,16 @@ namespace ESMC {
             StateVec* ApplyPermutation(const StateVec* InputVector, u32 PermID) const;
             ProductState* ApplyPermutation(const ProductState* InputPS, u32 PermID,
                                            const ProcessIndexSet* ProcIdxSet) const;
+            ProductState* ApplyPermutation(const ProductState* InputPS, u32 PermID,
+                                           u32 SortPermID, const ProcessIndexSet* ProcIdxSet) const;
             StateVec* ApplyInvPermutation(const StateVec* InputVector, u32 PermID) const;
-            StateVec* SortChans(const StateVec* InputVector) const;
+            StateVec* SortChans(const StateVec* InputVector, bool RememberPerm, u32& PermID) const;
+            StateVec* ApplySortPermutation(const StateVec* InputVector, u32 PermID) const;
             PermutationSet* GetPermSet() const;
+            PermutationSet* GetSortPermSet() const;
             bool StatesEquivalent(const StateVec* SV1, const StateVec* SV2) const;
             StateVecPrinter* GetPrinter() const;
+            vector<LTSAssignRef> GetChanUpdatesForPermutation(u32 PermIdx) const;
         };
 
     } /* end namespace Symm */

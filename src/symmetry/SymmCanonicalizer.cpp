@@ -41,6 +41,7 @@
 
 #include "../expr/ExprTypes.hpp"
 #include "../uflts/LabelledTS.hpp"
+#include "../uflts/LTSChannelEFSM.hpp"
 #include "../uflts/LTSExtensions.hpp"
 #include "../utils/SizeUtils.hpp"
 #include "../utils/CombUtils.hpp"
@@ -49,6 +50,7 @@
 #include "../mc/Compiler.hpp"
 #include "../mc/AQStructure.hpp"
 #include "../mc/IndexSet.hpp"
+#include "../uflts/LTSAssign.hpp"
 
 #include "SymmCanonicalizer.hpp"
 
@@ -357,8 +359,10 @@ namespace ESMC {
         }
 
         ChanBufferSorter::ChanBufferSorter(u32 Offset, const ExprTypeRef& ChanBufferType,
-                                           u32 Capacity)
-            : Offset(Offset), Capacity(Capacity)
+                                           u32 Capacity, u32 PermVecOffset,
+                                           ChannelEFSM* ChanEFSM, u32 InstanceID)
+            : Offset(Offset), Capacity(Capacity), PermVecOffset(PermVecOffset),
+              ChanEFSM(ChanEFSM), InstanceID(InstanceID)
         {
             auto TypeAsArray = ChanBufferType->As<ExprArrayType>();
             if (TypeAsArray == nullptr) {
@@ -370,9 +374,7 @@ namespace ESMC {
             ElemSize = ValueType->GetByteSize();
             ElemSize = Align(ElemSize, ElemSize);
 
-            // Index type cannot be symmetric here
-            BufferSize = IndexType->GetCardinality();
-            for (u32 i = 0; i < BufferSize; ++i) {
+            for (u32 i = 0; i < Capacity; ++i) {
                 LastPermutation.push_back(i);
             }
             IdentityPermutation = LastPermutation;
@@ -426,9 +428,48 @@ namespace ESMC {
             return;
         }
 
-        const vector<u32>& ChanBufferSorter::GetLastPermutation() const
+        const vector<u08>& ChanBufferSorter::GetLastPermutation() const
         {
             return LastPermutation;
+        }
+
+        u32 ChanBufferSorter::GetCapacity() const
+        {
+            return Capacity;
+        }
+
+        u32 ChanBufferSorter::GetPermVecOffset() const
+        {
+            return PermVecOffset;
+        }
+
+        void ChanBufferSorter::ApplyPermutation(StateVec* OutStateVector,
+                                                const vector<u08>& PermVec)
+        {
+            u08* BasePtr = OutStateVector->GetStateBuffer();
+            auto WorkingVec = OutStateVector->Clone();
+            u08* WorkBasePtr = WorkingVec->GetStateBuffer();
+
+            for (u32 i = 0; i < Capacity; ++i) {
+                u32 j = i + PermVecOffset;
+                u32 CurPutPos = PermVec[j];
+                const u08* SrcPtr = (WorkBasePtr + Offset + (ElemSize * i));
+                u08* DstPtr = (BasePtr + Offset + (ElemSize * CurPutPos));
+                memcpy(DstPtr, SrcPtr, ElemSize);
+            }
+
+            WorkingVec->Recycle();
+            return;
+        }
+
+        vector<LTSAssignRef>
+        ChanBufferSorter::GetUpdatesForPermutation(const vector<u08>& PermVec) const
+        {
+            vector<u08> SubPermVec(Capacity);
+            for (u32 i = 0; i < Capacity; ++i) {
+                SubPermVec[i] = PermVec[PermVecOffset + i];
+            }
+            return ChanEFSM->GetUpdatesForPermutation(SubPermVec, InstanceID);
         }
 
         Canonicalizer::Canonicalizer(const LabelledTS* TheLTS,
@@ -449,20 +490,34 @@ namespace ESMC {
             // Assumption: All expressions have been
             // compiled and therefore have offsets attached
             auto const& ChansToSort = TheLTS->GetChanBuffersToSort();
-            for (auto const& ChanVarCount : ChansToSort) {
-                auto const& ChanVar = ChanVarCount.first;
-                auto const& CountExp = ChanVarCount.second;
+            vector<u32> ChanTypeSizes;
+            i64 PermutationSize = 1;
+            for (auto const& ChanBufferExp : ChansToSort) {
+                auto Capacity = get<0>(ChanBufferExp)->GetCapacity();
+                ChanTypeSizes.push_back(Capacity);
+                PermutationSize *= Factorial(Capacity);
+            }
+            SortPermSet = new PermutationSet(ChanTypeSizes, (PermutationSize > MaxExplicitSize));
+
+            u32 RunningOffset = 0;
+            for (auto const& ChanBufferExp : ChansToSort) {
+                auto const& ChanVar = get<1>(ChanBufferExp);
+                auto const& CountExp = get<0>(ChanBufferExp)->GetCapacity();
                 u32 Offset = ChanVar->ExtensionData.Offset;
                 Sorters.push_back(new ChanBufferSorter(Offset, ChanVar->GetType(),
-                                                       CountExp));
+                                                       CountExp, RunningOffset,
+                                                       get<0>(ChanBufferExp),
+                                                       get<2>(ChanBufferExp)));
+                RunningOffset += CountExp;
             }
+            LastSortPermutation = vector<u08>(RunningOffset, 0);
 
             // Create the permutation set
             auto const& SymmTypes = TheLTS->GetUsedSymmTypes();
             // We can be assured that the symmtypes are in the order
             // of their computed type offsets
             vector<u32> TypeSizes(SymmTypes.size());
-            i64 PermutationSize = 1;
+            PermutationSize = 1;
             for (auto const& SymmType : SymmTypes) {
                 u32 CurTypeSize = SymmType->As<ExprSymmetricType>()->GetCardinalityNoUndef();
                 TypeSizes[SymmType->GetExtension<LTSTypeExtensionT>()->TypeID] = CurTypeSize;
@@ -481,6 +536,7 @@ namespace ESMC {
                 delete Sorter;
             }
             delete PermSet;
+            delete SortPermSet;
         }
 
         StateVec* Canonicalizer::Canonicalize(const StateVec* InputVector,
@@ -511,7 +567,7 @@ namespace ESMC {
                 }
 
                 for (auto Sorter : Sorters) {
-                    Sorter->Sort(WorkingStateVec);
+                    Sorter->Sort(WorkingStateVec, false);
                 }
 
                 if (BestStateVec->Compare(*WorkingStateVec) > 0) {
@@ -553,7 +609,7 @@ namespace ESMC {
                 Permuter->Permute(InputVector, Retval, Perm);
             }
             for (auto const& Sorter : Sorters) {
-                Sorter->Sort(Retval);
+                Sorter->Sort(Retval, false);
             }
             return Retval;
         }
@@ -567,8 +623,26 @@ namespace ESMC {
 
             auto PermSV = ApplyPermutation(InputSV, PermID);
             auto ThePermIt = PermSet->GetIterator(PermID);
-            auto ThePerm = ThePermIt.GetPerm();
+            auto const& ThePerm = ThePermIt.GetPerm();
             auto PermTracked = ProcIdxSet->Permute(InputTracked, ThePerm);
+            return new ProductState(PermSV, InputPS->GetMonitorState(),
+                                    PermTracked, 0);
+        }
+
+        ProductState* Canonicalizer::ApplyPermutation(const ProductState* InputPS,
+                                                      u32 PermID, u32 SortPermID,
+                                                      const ProcessIndexSet* ProcIdxSet) const
+        {
+            auto InputSV = InputPS->GetSVPtr();
+            auto InputTracked = InputPS->GetIndexID();
+
+            auto PermSV = ApplyPermutation(InputSV, PermID);
+            auto const& SortPerm = SortPermSet->GetIterator(SortPermID).GetPerm();
+            for (auto const& Sorter : Sorters) {
+                Sorter->ApplyPermutation(PermSV, SortPerm);
+            }
+            auto AppliedPerm = PermSet->GetIterator(PermID).GetPerm();
+            auto const& PermTracked = ProcIdxSet->Permute(InputTracked, AppliedPerm);
             return new ProductState(PermSV, InputPS->GetMonitorState(),
                                     PermTracked, 0);
         }
@@ -581,16 +655,30 @@ namespace ESMC {
                 Permuter->Permute(InputVector, Retval, Perm);
             }
             for (auto const& Sorter : Sorters) {
-                Sorter->Sort(Retval);
+                Sorter->Sort(Retval, false);
             }
             return Retval;
         }
 
-        StateVec* Canonicalizer::SortChans(const StateVec* InputVector) const
+        StateVec* Canonicalizer::SortChans(const StateVec* InputVector,
+                                           bool RememberPerm, u32& PermID) const
         {
             auto Retval = InputVector->Clone();
+            u32 PermOffset = 0;
             for (auto Sorter : Sorters) {
-                Sorter->Sort(Retval);
+                Sorter->Sort(Retval, RememberPerm);
+                if (RememberPerm) {
+                    const u32 CurPermSize = Sorter->GetCapacity();
+                    auto const& CurPerm = Sorter->GetLastPermutation();
+                    for (u32 i = 0; i < CurPermSize; ++i) {
+                        LastSortPermutation[PermOffset + i] = CurPerm[i];
+                    }
+                    PermOffset += Sorter->GetCapacity();
+                }
+            }
+
+            if (RememberPerm) {
+                PermID = SortPermSet->GetIndexForPerm(LastSortPermutation);
             }
             return Retval;
         }
@@ -598,6 +686,11 @@ namespace ESMC {
         PermutationSet* Canonicalizer::GetPermSet() const
         {
             return PermSet;
+        }
+
+        PermutationSet* Canonicalizer::GetSortPermSet() const
+        {
+            return SortPermSet;
         }
 
         // Check if SV1 and SV2 are equivalent modulo some permutation
@@ -615,6 +708,18 @@ namespace ESMC {
         StateVecPrinter* Canonicalizer::GetPrinter() const
         {
             return Printer;
+        }
+
+        vector<LTSAssignRef> Canonicalizer::GetChanUpdatesForPermutation(u32 PermIdx) const
+        {
+            vector<LTSAssignRef> Retval;
+            auto const& Permutation = SortPermSet->GetIterator(PermIdx).GetPerm();
+            for (auto const& Sorter : Sorters) {
+                auto&& CurUpdates = Sorter->GetUpdatesForPermutation(Permutation);
+                Retval.insert(Retval.end(), CurUpdates.begin(), CurUpdates.end());
+            }
+
+            return Retval;
         }
 
     } /* end namespace Symm */

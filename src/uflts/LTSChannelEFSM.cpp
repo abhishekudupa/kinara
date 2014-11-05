@@ -114,6 +114,11 @@ namespace ESMC {
             // Nothing here
         }
 
+        u32 ChannelEFSM::GetCapacity() const
+        {
+            return Capacity;
+        }
+
         void ChannelEFSM::FreezeStates()
         {
             throw ESMCError((string)"ChannelEFSM::FreezeStates() should not be called");
@@ -671,6 +676,41 @@ namespace ESMC {
             throw ESMCError((string)"ChannelEFSM::AddInternalTransitions() should not be called");
         }
 
+        vector<LTSAssignRef>
+        ChannelEFSM::GetUpdatesForPermutation(const vector<u08>& Permutation,
+                                              u32 InstanceID) const
+        {
+            auto Mgr = TheLTS->GetMgr();
+            if (Ordered) {
+                throw InternalError((string)"Cannot call ChannelEFSM::GetUpdatesForPermutation() " +
+                                    "on an ordered channel.\nAt: " + __FILE__ + ":" +
+                                    to_string(__LINE__));
+            }
+
+            if (Permutation.size() != Capacity) {
+                throw InternalError((string)"ChannelEFSM::GetUpdatesForPermutation() called " +
+                                    "with wrong type of permutation vector. Channel size is " +
+                                    to_string(Capacity) + " and permutation vector has " +
+                                    to_string(Permutation.size()) + " elements.\nAt: " +
+                                    __FILE__ + ":" + to_string(__LINE__));
+            }
+
+            vector<LTSAssignRef> Updates;
+            for (u32 i = 0; i < Capacity; ++i) {
+                if (i == Permutation[i]) {
+                    continue;
+                }
+                auto LHS = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp,
+                                         Mgr->MakeVal(to_string(i), IndexType));
+                auto RHS = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp,
+                                         Mgr->MakeVal(to_string(Permutation[i]), IndexType));
+                Updates.push_back(new LTSAssignSimple(LHS, RHS));
+            }
+
+            auto const& ParamInst = ParamInsts[InstanceID];
+            auto&& RebasedUpdates = RebaseUpdates(ParamInst, Updates);
+            return ExpandUpdates(RebasedUpdates);
+        }
 
     } /* end namespace LTS */
 } /* end namespace ESMC */
