@@ -201,10 +201,10 @@ namespace ESMC {
             //    DoUnwoundBFS)
             // 2. The inverse permutation along the path is returned in InvPermAlongPathOut
             static inline const ProductState*
-            DoUnwoundBFS(const ProductState* Root,
+            DoUnwoundBFS(const ProductState* CanonicalRoot,
                          const LTSChecker* Checker,
                          u32& InvPermAlongPathOut,
-                         u32& InvSortPermAlongPathOut,
+                         u32& InvSortPermForRoot,
                          const function<bool(u32, const ProductState*)>& MatchPred,
                          vector<PSTraceElemT>& PathElems,
                          const unordered_set<const ProductState*>& Bounds);

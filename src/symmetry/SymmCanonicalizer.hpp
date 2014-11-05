@@ -179,6 +179,7 @@ namespace ESMC {
             u32 PermVecOffset;
             vector<u08> LastPermutation;
             vector<u08> IdentityPermutation;
+            vector<u08> ScratchPermutation;
             ChannelEFSM* ChanEFSM;
             u32 InstanceID;
 
@@ -211,14 +212,17 @@ namespace ESMC {
             ~Canonicalizer();
 
             StateVec* Canonicalize(const StateVec* InputVector, u32& PermID) const;
+            StateVec* SortChans(const StateVec* InputVector, bool RememberPerm, u32& PermID) const;
+
             StateVec* ApplyPermutation(const StateVec* InputVector, u32 PermID) const;
             ProductState* ApplyPermutation(const ProductState* InputPS, u32 PermID,
                                            const ProcessIndexSet* ProcIdxSet) const;
-            ProductState* ApplyPermutation(const ProductState* InputPS, u32 PermID,
-                                           u32 SortPermID, const ProcessIndexSet* ProcIdxSet) const;
-            StateVec* ApplyInvPermutation(const StateVec* InputVector, u32 PermID) const;
-            StateVec* SortChans(const StateVec* InputVector, bool RememberPerm, u32& PermID) const;
-            StateVec* ApplySortPermutation(const StateVec* InputVector, u32 PermID) const;
+
+            void ApplySort(StateVec* InputVector, u32 SortPermID) const;
+            void ApplySort(ProductState* InputPS, u32 SortPermID) const;
+            void Sort(StateVec* InputVector) const;
+            void Sort(ProductState* InputPS) const;
+
             PermutationSet* GetPermSet() const;
             PermutationSet* GetSortPermSet() const;
             bool StatesEquivalent(const StateVec* SV1, const StateVec* SV2) const;

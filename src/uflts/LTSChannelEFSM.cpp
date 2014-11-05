@@ -701,9 +701,10 @@ namespace ESMC {
                     continue;
                 }
                 auto LHS = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp,
-                                         Mgr->MakeVal(to_string(i), IndexType));
-                auto RHS = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp,
                                          Mgr->MakeVal(to_string(Permutation[i]), IndexType));
+                auto RHS = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp,
+                                         Mgr->MakeVal(to_string(i), IndexType));
+
                 Updates.push_back(new LTSAssignSimple(LHS, RHS));
             }
 

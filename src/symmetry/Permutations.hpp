@@ -174,8 +174,6 @@ namespace ESMC {
             vector<u32> CachedIndices;
             vector<u08> CachedPerm;
 
-            inline void GetPermForIndex(u32 Index);
-            inline void GetPermForIndex(u32 Index, vector<u08>& OutVec) const;
 
         public:
             PermutationSet(const vector<u32>& DomainSizes, bool Compact);
@@ -191,6 +189,9 @@ namespace ESMC {
 
             const iterator& Begin() const;
             const iterator& End() const;
+
+            void GetPermForIndex(u32 Index);
+            void GetPermForIndex(u32 Index, vector<u08>& OutVec) const;
 
             u32 GetIndexForPerm(const vector<u08>& Perm) const;
 

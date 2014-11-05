@@ -112,6 +112,8 @@ namespace ESMC {
 
                 auto NextUnwoundState = TheCanonicalizer->ApplyPermutation(NextPermState,
                                                                            InvPermAlongPath);
+                u32 Dummy;
+                TheCanonicalizer->SortChans(NextUnwoundState, false, Dummy);
                 // cout << "Unwound State:" << endl;
                 // cout << "-------------------------------------------" << endl;
                 // Printer->PrintState(NextUnwoundState, cout);
@@ -232,6 +234,7 @@ namespace ESMC {
             return UnwoundOrigin;
         }
 
+        // InvPermAlongPathOut is only a return value
         inline const ProductState*
         TraceBase::UnwindPermPath(PSPermPath* PermPath, LTSChecker* Checker,
                                   vector<PSTraceElemT>& PathElems,
@@ -244,12 +247,12 @@ namespace ESMC {
             auto Monitor = ThePS->GetMonitor();
             auto ProcIdxSet = Monitor->GetIndexSet();
 
+            auto InvPermAlongPath = 0;
             auto CurUnwoundState = TheCanonicalizer->ApplyPermutation(Origin,
-                                                                      InvPermAlongPathOut,
+                                                                      InvPermAlongPath,
                                                                       ProcIdxSet);
             auto UnwoundOrigin = CurUnwoundState;
             auto const& PPathElems = PermPath->GetPathElems();
-            u32 InvPermAlongPath = InvPermAlongPathOut;
             auto PermSet = TheCanonicalizer->GetPermSet();
 
             for (auto Edge : PPathElems) {
@@ -262,6 +265,9 @@ namespace ESMC {
                 auto NextUnwoundPS = TheCanonicalizer->ApplyPermutation(NextPermPS,
                                                                         InvPermAlongPath,
                                                                         ProcIdxSet);
+                u32 Dummy;
+                TheCanonicalizer->SortChans(const_cast<StateVec*>(NextUnwoundPS->GetSVPtr()),
+                                            false, Dummy);
                 // find out which command takes us here
                 bool FoundCmd = false;
                 ProductState* NextUnsortedPS = nullptr;
@@ -342,10 +348,10 @@ namespace ESMC {
         }
 
         inline const ProductState*
-        TraceBase::DoUnwoundBFS(const ProductState* Root,
+        TraceBase::DoUnwoundBFS(const ProductState* CanonicalRoot,
                                 const LTSChecker* Checker,
                                 u32& InvPermAlongPathOut,
-                                u32& InvSortPermAlongPathOut,
+                                u32& InvSortPermForRoot,
                                 const function<bool(u32, const ProductState*)>& MatchPred,
                                 vector<PSTraceElemT>& PathElems,
                                 const unordered_set<const ProductState*>& Bounds)
@@ -364,9 +370,8 @@ namespace ESMC {
             Detail::UnwoundPredMapT PredMap;
 
             auto InvPermAlongPath = InvPermAlongPathOut;
-            auto InvSortPermAlongPath = InvSortPermAlongPathOut;
-            auto OriginPair = make_pair(Root, InvPermAlongPath);
-            auto OriginTuple = make_tuple(Root, InvPermAlongPath, InvSortPermAlongPath);
+            auto OriginPair = make_pair(CanonicalRoot, InvPermAlongPath);
+            auto OriginTuple = make_tuple(CanonicalRoot, InvPermAlongPath, InvSortPermForRoot);
             VisitedStates.insert(OriginPair);
             BFSQueue.push_back(OriginTuple);
 
@@ -379,12 +384,13 @@ namespace ESMC {
 
                 auto CurPermPS = get<0>(CurTuple);
                 auto CurPermIndex = get<1>(CurTuple);
-                auto CurSortPermIndex = get<2>(CurTuple);
+                auto CurSortPermIdx = get<2>(CurTuple);
 
                 auto CurUnsortedPS = TheCanonicalizer->ApplyPermutation(CurPermPS,
                                                                         CurPermIndex,
-                                                                        CurSortPermIndex,
                                                                         ProcIdxSet);
+                TheCanonicalizer->Sort(CurUnsortedPS);
+                TheCanonicalizer->ApplySort(CurUnsortedPS, CurSortPermIdx);
 
                 auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurPermPS));
 
@@ -411,6 +417,10 @@ namespace ESMC {
                     auto NextUnwoundPS = TheCanonicalizer->ApplyPermutation(NextPermPS,
                                                                             NextPermIndex,
                                                                             ProcIdxSet);
+                    u32 Dummy;
+                    auto NextSortedSV = TheCanonicalizer->SortChans(NextUnwoundPS->GetSVPtr(),
+                                                                    false, Dummy);
+
                     // Find out which command takes us from the current
                     // unwound product state to the next unwound product
                     // state
@@ -429,21 +439,23 @@ namespace ESMC {
                         u32 SortPermIdx;
                         auto SortedCandidateSV = TheCanonicalizer->SortChans(CandidateSV, true,
                                                                              SortPermIdx);
-                        if (SortedCandidateSV->Equals(*(NextUnwoundPS->GetSVPtr()))) {
+                        if (SortedCandidateSV->Equals(*NextSortedSV)) {
                             FoundCmd = true;
-                            SortedCandidateSV->Recycle();
+                            // SortedCandidateSV->Recycle();
                             auto InvSortPermIdx =
                                 SortPermSet->GetIteratorForInv(SortPermIdx).GetIndex();
-                            auto NextSortPermIt = SortPermSet->Compose(CurSortPermIndex,
-                                                                       InvSortPermIdx);
-                            auto NextSortPermIdx = NextSortPermIt.GetIndex();
+                            // I need to apply the inverse permutation first,
+                            // followed by a sort, followd by the inverse sort
+                            // to get my true predecessor
 
                             auto NextUnsortedPS = new ProductState(CandidateSV,
                                                                    NextUnwoundPS->GetMonitorState(),
                                                                    NextUnwoundPS->GetIndexID(), 0);
 
+                            SortedCandidateSV->Recycle();
+
                             auto NextTuple = make_tuple(NextPermPS, NextPermIndex,
-                                                        NextSortPermIdx);
+                                                        InvSortPermIdx);
                             PredMap[NextTuple] = make_pair(i, CurTuple);
                             BFSQueue.push_back(NextTuple);
 
@@ -460,7 +472,7 @@ namespace ESMC {
                             SortedCandidateSV->Recycle();
                             CandidateSV->Recycle();
                         }
-                    }
+                    } // End iterating over commands
 
                     // Delete the unwound product state, we'll recreate it
                     // later anyway
@@ -476,12 +488,12 @@ namespace ESMC {
                     if (ReachedTarget) {
                         break;
                     }
-                }
+                } // End iterating over edges
 
                 // Delete the current unwound product state as well
                 CurUnsortedPS->GetSVPtr()->Recycle();
                 delete CurUnsortedPS;
-            }
+            } // End BFS
 
             // We now need to assemble a path from the predecessors
             auto CurTuple = TargetPSPerm;
@@ -490,10 +502,12 @@ namespace ESMC {
             auto CurPerm = get<1>(CurTuple);
             auto CurSortPerm = get<2>(CurTuple);
 
-            auto CurUnsortedPS = TheCanonicalizer->ApplyPermutation(CurPermPS, CurPerm,
-                                                                    CurSortPerm, ProcIdxSet);
+            auto CurUnsortedPS = TheCanonicalizer->ApplyPermutation(CurPermPS, CurPerm, ProcIdxSet);
+            TheCanonicalizer->Sort(CurUnsortedPS);
+            TheCanonicalizer->ApplySort(CurUnsortedPS, CurSortPerm);
+
             InvPermAlongPathOut = CurPerm;
-            InvSortPermAlongPathOut = CurSortPerm;
+            InvSortPermForRoot = CurSortPerm;
 
             vector<PSTraceElemT> RTraceElems;
             while (it != PredMap.end()) {
@@ -506,8 +520,9 @@ namespace ESMC {
                 auto PredSortPerm = get<2>(PredStatePerm);
 
                 auto UnsortedPredPS = TheCanonicalizer->ApplyPermutation(PredPermPS, PredPerm,
-                                                                         PredSortPerm,
                                                                          ProcIdxSet);
+                TheCanonicalizer->Sort(UnsortedPredPS);
+                TheCanonicalizer->ApplySort(UnsortedPredPS, PredSortPerm);
 
                 RTraceElems.push_back(PSTraceElemT(GuardedCmds[CmdID], CurUnsortedPS));
                 it = PredMap.find(PredStatePerm);
@@ -731,7 +746,7 @@ namespace ESMC {
                 auto LastPair = PathSoFar.back();
                 auto LastPS = LastPair.second;
                 u32 FinalPermID;
-                auto SortedSV = TheCanonicalizer->SortChans(LastPS->GetSVPtr(), false, FinalPermID);
+                auto SortedSV = TheCanonicalizer->SortChans(LastPS->GetSVPtr(), true, FinalPermID);
                 if (SortedSV->Equals(*(StartOfLoop->GetSVPtr())) &&
                     StartOfLoop->GetMonitorState() == LastPS->GetMonitorState() &&
                     StartOfLoop->GetIndexID() == LastPS->GetIndexID()) {
@@ -965,7 +980,9 @@ namespace ESMC {
             sstr << "-----------------------------------------------------" << endl << endl;
 
             auto PrevState = InitialState;
-            for (auto const& TraceElem : StemPath) {
+            const u32 NumStemSteps = StemPath.size();
+            for (u32 i = 0; i < NumStemSteps; ++i) {
+                auto const& TraceElem = StemPath[i];
                 auto const& MsgType = TraceElem.first->GetMsgType();
                 auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
                 if (Verbosity < 1) {
@@ -976,11 +993,26 @@ namespace ESMC {
                     sstr << "Fired Guarded Command:" << endl;
                     sstr << TraceElem.first->ToString() << endl;
                 }
-                sstr << "Obtained next state (delta from previous state):" << endl;
-                sstr << "-----------------------------------------------------" << endl;
-                Printer->PrintState(TraceElem.second, PrevState, ThePS, sstr);
-                sstr << "-----------------------------------------------------" << endl << endl;
-                PrevState = TraceElem.second;
+                if (i != NumStemSteps - 1) {
+                    sstr << "Obtained next state (delta from previous state):" << endl;
+                    sstr << "-----------------------------------------------------" << endl;
+                    Printer->PrintState(TraceElem.second, PrevState, ThePS, sstr);
+                    sstr << "-----------------------------------------------------" << endl << endl;
+                    PrevState = TraceElem.second;
+                } else {
+                    sstr << "Obtained first state of loop (delta from previous state):" << endl;
+                    sstr << "-----------------------------------------------------" << endl;
+                    Printer->PrintState(TraceElem.second, PrevState, ThePS, sstr);
+                    sstr << "-----------------------------------------------------" << endl << endl;
+                    PrevState = TraceElem.second;
+                    sstr << "Note that the following permutation on the channels have "
+                         << "been applied to get the first state of loop from the stem:" << endl;
+                    sstr << "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-" << endl << endl;
+                    for (auto const& Update : StemSortPermutation) {
+                        sstr << Update->ToString() << endl;
+                    }
+                    sstr << "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-" << endl << endl;
+                }
             }
 
             sstr << "First state of the loop (in full), which is same as last state of "
@@ -1012,6 +1044,15 @@ namespace ESMC {
             sstr << "-----------------------------------------------------" << endl;
             Printer->PrintState(PrevState, ThePS, sstr);
             sstr << "-----------------------------------------------------" << endl << endl;
+            sstr << "Note that the following permutation on the channels have "
+                 << "been applied to get to the loop back state from the previous "
+                 << "state in the loop:" << endl;
+            sstr << "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-" << endl << endl;
+            for (auto const& Update : LoopSortPermutation) {
+                sstr << Update->ToString() << endl;
+            }
+            sstr << "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-" << endl << endl;
+
             return sstr.str();
         }
 

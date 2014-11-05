@@ -343,7 +343,7 @@ int main()
     auto Trace = Checker->CheckLiveness("FGZero");
 
     if (Trace != nullptr) {
-        cout << Trace->ToString() << endl;
+        cout << Trace->ToString(1) << endl;
         // cout << TraceAnalyses::WeakestPreconditionForLiveness(TheLTS, Monitor, Trace->As<LivenessViolation>()) << endl;
         delete Trace;
     }

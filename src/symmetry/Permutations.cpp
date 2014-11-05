@@ -375,7 +375,7 @@ namespace ESMC {
             }
         }
 
-        inline void PermutationSet::GetPermForIndex(u32 Index)
+        void PermutationSet::GetPermForIndex(u32 Index)
         {
             if (Index == CachedIdx) {
                 return;
@@ -401,7 +401,7 @@ namespace ESMC {
             return;
         }
 
-        inline void PermutationSet::GetPermForIndex(u32 Index, vector<u08> &OutVec) const
+        void PermutationSet::GetPermForIndex(u32 Index, vector<u08> &OutVec) const
         {
             if (Index == CachedIdx) {
                 OutVec = CachedPerm;

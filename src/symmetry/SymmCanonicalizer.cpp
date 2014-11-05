@@ -378,6 +378,7 @@ namespace ESMC {
                 LastPermutation.push_back(i);
             }
             IdentityPermutation = LastPermutation;
+            ScratchPermutation = LastPermutation;
         }
 
         ChanBufferSorter::~ChanBufferSorter()
@@ -421,6 +422,14 @@ namespace ESMC {
                     if (RememberPerm) {
                         swap(LastPermutation[i], LastPermutation[MinIndex]);
                     }
+                }
+            }
+
+            // Fixup the permutation to mean what we want it to mean
+            if (RememberPerm) {
+                swap(ScratchPermutation, LastPermutation);
+                for (u32 i = 0; i < Capacity; ++i) {
+                    LastPermutation[ScratchPermutation[i]] = i;
                 }
             }
 
@@ -608,9 +617,6 @@ namespace ESMC {
             for (auto Permuter : Permuters) {
                 Permuter->Permute(InputVector, Retval, Perm);
             }
-            for (auto const& Sorter : Sorters) {
-                Sorter->Sort(Retval, false);
-            }
             return Retval;
         }
 
@@ -629,35 +635,29 @@ namespace ESMC {
                                     PermTracked, 0);
         }
 
-        ProductState* Canonicalizer::ApplyPermutation(const ProductState* InputPS,
-                                                      u32 PermID, u32 SortPermID,
-                                                      const ProcessIndexSet* ProcIdxSet) const
+        void Canonicalizer::ApplySort(StateVec* InputVector, u32 SortPermID) const
         {
-            auto InputSV = InputPS->GetSVPtr();
-            auto InputTracked = InputPS->GetIndexID();
-
-            auto PermSV = ApplyPermutation(InputSV, PermID);
-            auto const& SortPerm = SortPermSet->GetIterator(SortPermID).GetPerm();
+            auto const& Perm = SortPermSet->GetIterator(SortPermID).GetPerm();
             for (auto const& Sorter : Sorters) {
-                Sorter->ApplyPermutation(PermSV, SortPerm);
+                Sorter->ApplyPermutation(InputVector, Perm);
             }
-            auto AppliedPerm = PermSet->GetIterator(PermID).GetPerm();
-            auto const& PermTracked = ProcIdxSet->Permute(InputTracked, AppliedPerm);
-            return new ProductState(PermSV, InputPS->GetMonitorState(),
-                                    PermTracked, 0);
         }
 
-        StateVec* Canonicalizer::ApplyInvPermutation(const StateVec* InputVector, u32 PermID) const
+        void Canonicalizer::ApplySort(ProductState* InputPS, u32 SortPermID) const
         {
-            auto Retval = InputVector->Clone();
-            auto Perm = PermSet->GetIteratorForInv(PermID);
-            for (auto Permuter : Permuters) {
-                Permuter->Permute(InputVector, Retval, Perm);
-            }
+            ApplySort(const_cast<StateVec*>(InputPS->GetSVPtr()), SortPermID);
+        }
+
+        void Canonicalizer::Sort(StateVec* InputVector) const
+        {
             for (auto const& Sorter : Sorters) {
-                Sorter->Sort(Retval, false);
+                Sorter->Sort(InputVector, false);
             }
-            return Retval;
+        }
+
+        void Canonicalizer::Sort(ProductState* InputPS) const
+        {
+            Sort(const_cast<StateVec*>(InputPS->GetSVPtr()));
         }
 
         StateVec* Canonicalizer::SortChans(const StateVec* InputVector,
