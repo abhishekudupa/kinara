@@ -1517,25 +1517,25 @@ int main()
 
     // These lines below check a property that is false
 
-    // auto BugMon = Monitor = Checker->MakeStateBuchiMonitor("FGShared", CacheParams, TrueExp);
-    // BugMon->AddState("Initial", true, true);
-    // BugMon->AddState("OtherState", false, false);
-    // BugMon->FreezeStates();
+    auto BugMon = Monitor = Checker->MakeStateBuchiMonitor("FGShared", CacheParams, TrueExp);
+    BugMon->AddState("Initial", true, true);
+    BugMon->AddState("OtherState", false, false);
+    BugMon->FreezeStates();
 
-    // BugMon->AddTransition("Initial", "Initial", MonCacheDotStateNEQS);
-    // BugMon->AddTransition("Initial", "OtherState", MonCacheDotStateEQS);
-    // BugMon->AddTransition("OtherState", "OtherState", MonCacheDotStateEQS);
-    // BugMon->AddTransition("OtherState", "Initial", MonCacheDotStateNEQS);
+    BugMon->AddTransition("Initial", "Initial", MonCacheDotStateNEQS);
+    BugMon->AddTransition("Initial", "OtherState", MonCacheDotStateEQS);
+    BugMon->AddTransition("OtherState", "OtherState", MonCacheDotStateEQS);
+    BugMon->AddTransition("OtherState", "Initial", MonCacheDotStateNEQS);
 
-    // BugMon->Freeze();
+    BugMon->Freeze();
 
-    // cout << "Checking Liveness Property \"FGShared\"" << endl;
-    // LiveTrace = Checker->CheckLiveness("FGShared");
+    cout << "Checking Liveness Property \"FGShared\"" << endl;
+    LiveTrace = Checker->CheckLiveness("FGShared");
 
-    // if (LiveTrace != nullptr) {
-    //     cout << LiveTrace->ToString() << endl << endl;
-    //     delete LiveTrace;
-    // }
+    if (LiveTrace != nullptr) {
+        cout << LiveTrace->ToString() << endl << endl;
+        delete LiveTrace;
+    }
 
     delete Checker;
 }

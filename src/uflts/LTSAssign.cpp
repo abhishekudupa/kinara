@@ -149,7 +149,7 @@ namespace ESMC {
                         NewRHS = Mgr->MakeExpr(LTSOps::OpIndex, RHS, IndexExp);
                     }
 
-                    auto NewAsgn = new LTSAssignSimple(NewLHS, NewRHS);
+                    LTSAssignRef NewAsgn = new LTSAssignSimple(NewLHS, NewRHS);
                     auto&& Expansions = NewAsgn->ExpandNonScalarUpdates();
                     Retval.insert(Retval.end(), Expansions.begin(), Expansions.end());
                 }

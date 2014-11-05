@@ -514,6 +514,10 @@ namespace ESMC {
                 CurUnsortedPS = UnsortedPredPS;
             }
 
+            // delete the origin
+            CurUnsortedPS->GetSVPtr()->Recycle();
+            delete CurUnsortedPS;
+
             PathElems.clear();
             PathElems.insert(PathElems.end(), RTraceElems.rbegin(), RTraceElems.rend());
             return get<0>(TargetPSPerm);
@@ -805,6 +809,8 @@ namespace ESMC {
             auto SortedEndOfPath = new ProductState(SortedSV, OldEndOfPath->GetMonitorState(),
                                                     OldEndOfPath->GetIndexID(), 0);
             OldEndOfPath->GetSVPtr()->Recycle();
+            delete OldEndOfPath;
+
             LoopBack.push_back(PSTraceElemT(OldEndOfPathPair.first, SortedEndOfPath));
             auto&& LoopPermUpdates = TheCanonicalizer->GetChanUpdatesForPermutation(FinalPermID);
 
