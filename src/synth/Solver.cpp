@@ -424,6 +424,23 @@ namespace ESMC {
             UpdateCommands();
         }
 
+        void Solver::UnveilNonCompletionGuardOp(i64 Op)
+        {
+            UnveiledGuardOps.insert(Op);
+            InterpretedOps.insert(Op);
+            CreateGuardIndicator(Op);
+            UpdateCommands();
+        }
+
+        void Solver::UnveilNonCompletionOp(i64 Op)
+        {
+            // TODO putting it in GuardOps,
+            // perhaps a common unveiled ops set should be added.
+            UnveiledGuardOps.insert(Op);
+            InterpretedOps.insert(Op);
+            UpdateCommands();
+        }
+
         void Solver::MakeAssertion(const ExpT& Pred)
         {
             CurrentAssertions.insert(Pred);
@@ -838,6 +855,11 @@ namespace ESMC {
                 auto ModelValue = TPAsZ3->Evaluate(AppExp);
                 cout << "-> " << ModelValue << endl;
             }
+        }
+
+        ExpT Solver::Evaluate(const ExpT& Input)
+        {
+            return TPAsZ3->Evaluate(Input);
         }
 
         void Solver::PrintSolution()

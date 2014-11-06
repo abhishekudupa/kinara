@@ -1,20 +1,24 @@
-// Dijkstra4Synth.cpp ---
-
-// Code:
+// Dijkstra4Ring.cpp ---
 /*
 
 The goal of this model is to synthesize a predicate for legitimate states.
 
-With no other constraints, the synthesized legitimacy predicate is trivial:
-for example, it characterizes all but one state as legitimate.
+This Dijkstra model includes a ring monitor.
+The ring monitor find executions with cycles on which a legitimate state is not visited.
+Synthesizing against that monitor results in legitimate states that fall on a ring.
 
-In order to synthesize more "interesting" legitimacy predicates this model
-imposes an upper bound on the number of legitimate states.
+Compared to Dijkstra4Synth, this computes a non-trivial legitimate predicate without requiring
+bounds on the number of legitimate states.
+On the other hand, it results in a state blow up (with 5 processes, it should take between one
+and two minutes) since the ring monitor non-deterministally snapshots the values of the state
+variables at a legitimate state.
 
-for number of processes = 3, the minimum number of legitimate states is 8.
-for number of processes = 4, the minimum number of legitimate states is 12.
 
 */
+// Code:
+
+// We model and verify the 4-state self-stabilizing protocol presented in Dijkstra's
+// original paper on the topic.
 
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string/predicate.hpp>
@@ -45,6 +49,7 @@ using namespace Synth;
 
 // for number of processes = 3, the minimum number of legitimate states is 8.
 // for number of processes = 4, the minimum number of legitimate states is 12.
+// for number of processes = 5, the minimum number of legitimate states is 16.
 const size_t NumProcesses = 3;
 
 
@@ -55,6 +60,12 @@ vector<ExpT> Guards;
 
 ExprTypeRef LegitimateAnnouncement;
 ExprTypeRef IllegitimateAnnouncement;
+
+ExpT Legitimacy;
+
+i64 LegitimacyOp;
+
+ExpT Prop3;
 
 void DeclareMsgs(LabelledTS* TheLTS)
 {
@@ -78,7 +89,9 @@ void DeclareMsgs(LabelledTS* TheLTS)
 
 // Processes
 vector<GeneralEFSM*> Proc;
-IncompleteEFSM* ShadowMonitor;
+GeneralEFSM* ShadowMonitor;
+GeneralEFSM* RingMonitor;
+
 
 void DeclareProc0(LabelledTS* TheLTS)
 {
@@ -251,7 +264,7 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
 void DeclareProcN(LabelledTS* TheLTS)
 {
     assert(TheLTS != nullptr && Proc.size() + 1 == NumProcesses);
-    size_t i = Proc.size();
+    size_t i = NumProcesses - 1;
     cout << __LOGSTR__ << "Declaring process " << i << "." << endl;
     string ProcName = string("Proc") + to_string(i);
 
@@ -314,8 +327,9 @@ void DeclareShadowMonitor(LabelledTS* TheLTS)
 {
     assert(TheLTS != nullptr && ShadowMonitor == nullptr);
 
-    ShadowMonitor = TheLTS->MakeEFSM<IncompleteEFSM>("ShadowMonitor", {},
-                                                     TheLTS->MakeTrue(), LTSFairnessType::None);
+    auto Mgr = TheLTS->MakeTrue()->GetMgr();
+    ShadowMonitor = TheLTS->MakeGenEFSM("ShadowMonitor", {},
+                                        TheLTS->MakeTrue(), LTSFairnessType::None);
     ShadowMonitor->AddState("Legitimate");
     ShadowMonitor->AddState("Illegitimate");
     ShadowMonitor->AddState("Transient");
@@ -327,14 +341,19 @@ void DeclareShadowMonitor(LabelledTS* TheLTS)
     }
     auto LegitimateAnnouncementDeclaration = ShadowMonitor->AddOutputMsg(LegitimateAnnouncement, {});
     auto IllegitimateAnnouncementDeclaration = ShadowMonitor->AddOutputMsg(IllegitimateAnnouncement, {});
+
     ShadowMonitor->FreezeVars();
 
+    vector<ExpT> DataVariables;
+    vector<ExpT> UpVariables;
     for (size_t i = 0; i < NumProcesses; ++i) {
         auto Datai = TheLTS->MakeVar("Data" + to_string(i), TheLTS->MakeBoolType());
+        DataVariables.push_back(Datai);
         auto Write = TheLTS->MakeVar("Write", WriteMsgs[i]);
         auto DataAccess = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
         auto WriteData = TheLTS->MakeOp(LTSOps::OpField, Write, DataAccess);
         auto Upi = TheLTS->MakeVar("Up" + to_string(i), TheLTS->MakeBoolType());
+        UpVariables.push_back(Upi);
         auto UpAccess = TheLTS->MakeVar("Up", TheLTS->MakeFieldAccessType());
         auto WriteUp = TheLTS->MakeOp(LTSOps::OpField, Write, UpAccess);
         vector<LTSAssignRef> Updates { new LTSAssignSimple(Datai, WriteData),
@@ -347,15 +366,138 @@ void DeclareShadowMonitor(LabelledTS* TheLTS)
                                           "Write", WriteMsgs[i], {});
     }
 
-    ShadowMonitor->MarkAllStatesComplete();
-    ShadowMonitor->MarkStateIncomplete("Transient");
-    ShadowMonitor->IgnoreAllMsgsOnState("Transient");
-    ShadowMonitor->HandleMsgOnState(LegitimateAnnouncementDeclaration, "Transient");
-    ShadowMonitor->HandleMsgOnState(IllegitimateAnnouncementDeclaration, "Transient");
+    vector<ExpT> Args = DataVariables;
+    Args.insert(Args.end(), UpVariables.begin(), UpVariables.end());
+    vector<ExprTypeRef> ArgTypes;
+    transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
+              [&](ExpT Arg) {return Arg->GetType();});
+    auto LegitimacyGuardOp = Mgr->MakeUninterpretedFunction("LegitimacyGuard",
+                                                            ArgTypes,
+                                                            TheLTS->MakeBoolType());
+
+    auto LegitimacyGuardExp = TheLTS->MakeOp(LegitimacyGuardOp, Args);
+    Legitimacy = LegitimacyGuardExp;
+    LegitimacyOp = LegitimacyGuardOp;
+    auto IllegitimacyGuardExp = TheLTS->MakeOp(LTSOps::OpNOT, LegitimacyGuardExp);
+
+    ShadowMonitor->AddOutputTransition("Transient", "Legitimate",
+                                       LegitimacyGuardExp, {},
+                                       "Legitimate", LegitimateAnnouncement, {});
+
+    ShadowMonitor->AddOutputTransition("Transient", "Illegitimate",
+                                       IllegitimacyGuardExp, {},
+                                       "Illegitimate", IllegitimateAnnouncement, {});
+    vector<vector<ExpT>> DataElems;
     for (size_t i = 0; i < NumProcesses; ++i) {
-        ShadowMonitor->MarkVariableReadOnly("Data" + to_string(i));
-        ShadowMonitor->MarkVariableReadOnly("Up" + to_string(i));
+        DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
     }
+    vector<vector<ExpT>> UpElems;
+    for (size_t i = 0; i < NumProcesses; ++i) {
+        UpElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
+    }
+
+    auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
+    vector<ExpT> Prop3GuardConjuncts;
+    for (auto Guard: Guards) {
+        vector<ExpT> GuardDisjuncts;
+        for (auto DataVal : DataCombinations) {
+            auto&& UpCombinations = CrossProduct<ExpT>(UpElems.begin(), UpElems.end());
+            for (auto UpVal : UpCombinations) {
+                MgrT::SubstMapT Valuation;
+                for (u32 i = 0; i < DataVal.size(); ++i) {
+                    Valuation[TheLTS->MakeVar("Data" + to_string(i), TheLTS->MakeBoolType())] = DataVal[i];
+                }
+                for (u32 i = 0; i < UpVal.size(); ++i) {
+                    Valuation[TheLTS->MakeVar("Up" + to_string(i), TheLTS->MakeBoolType())] = UpVal[i];
+                }
+                auto StateLegitimate = Mgr->TermSubstitute(Valuation, Legitimacy);
+                auto GuardEnabled = Mgr->TermSubstitute(Valuation, Guard);
+                GuardDisjuncts.push_back(TheLTS->MakeOp(LTSOps::OpAND, StateLegitimate, GuardEnabled));
+            }
+        }
+        Prop3GuardConjuncts.push_back(TheLTS->MakeOp(LTSOps::OpOR, GuardDisjuncts));
+    }
+    Prop3 = TheLTS->MakeOp(LTSOps::OpAND, Prop3GuardConjuncts);
+}
+
+void DeclareRingMonitor(LabelledTS* TheLTS)
+{
+    assert(TheLTS != nullptr && RingMonitor == nullptr);
+
+    RingMonitor = TheLTS->MakeGenEFSM("RingMonitor", {},
+                                      TheLTS->MakeTrue(), LTSFairnessType::None);
+
+    RingMonitor->AddState("Initial");
+    RingMonitor->AddState("Snapshot");
+    RingMonitor->AddState("Last");
+    RingMonitor->FreezeStates();
+    for (size_t i = 0; i < NumProcesses; ++i) {
+        RingMonitor->AddInputMsg(WriteMsgs[i], {});
+        RingMonitor->AddVariable("Data" + to_string(i), TheLTS->MakeBoolType());
+        RingMonitor->AddVariable("Up" + to_string(i), TheLTS->MakeBoolType());
+        RingMonitor->AddVariable("SnapshotData" + to_string(i), TheLTS->MakeBoolType());
+        RingMonitor->AddVariable("SnapshotUp" + to_string(i), TheLTS->MakeBoolType());
+    }
+    auto LegitimateAnnouncementDeclaration = RingMonitor->AddInputMsg(LegitimateAnnouncement, {});
+
+    RingMonitor->FreezeVars();
+
+    for (size_t i = 0; i < NumProcesses; ++i) {
+        auto Datai = TheLTS->MakeVar("Data" + to_string(i), TheLTS->MakeBoolType());
+        auto Write = TheLTS->MakeVar("Write", WriteMsgs[i]);
+        auto DataAccess = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
+        auto WriteData = TheLTS->MakeOp(LTSOps::OpField, Write, DataAccess);
+        auto Upi = TheLTS->MakeVar("Up" + to_string(i), TheLTS->MakeBoolType());
+        auto UpAccess = TheLTS->MakeVar("Up", TheLTS->MakeFieldAccessType());
+        auto WriteUp = TheLTS->MakeOp(LTSOps::OpField, Write, UpAccess);
+        vector<LTSAssignRef> Updates { new LTSAssignSimple(Datai, WriteData),
+                new LTSAssignSimple(Upi, WriteUp) };
+        RingMonitor->AddInputTransition("Initial", "Initial",
+                                        TheLTS->MakeTrue(), Updates,
+                                        "Write", WriteMsgs[i], {});
+        RingMonitor->AddInputTransition("Snapshot", "Snapshot",
+                                        TheLTS->MakeTrue(), Updates,
+                                        "Write", WriteMsgs[i], {});
+        RingMonitor->AddInputTransition("Last", "Last",
+                                        TheLTS->MakeTrue(), Updates,
+                                        "Write", WriteMsgs[i], {});
+
+    }
+    RingMonitor->AddInputTransition("Initial", "Initial",
+                                    TheLTS->MakeTrue(), {},
+                                    "Snapshot", LegitimateAnnouncement, {});
+    vector<ExpT> SnapshotNEQStateDisjuncts;
+    vector<ExpT> SnapshotEQStateConjuncts;
+    vector<LTSAssignRef> Updates;
+    for (u32 i = 0; i < NumProcesses; ++i) {
+        auto Datai = TheLTS->MakeVar("Data" + to_string(i), TheLTS->MakeBoolType());
+        auto Upi = TheLTS->MakeVar("Up" + to_string(i), TheLTS->MakeBoolType());
+        auto SnapshotDatai = TheLTS->MakeVar("SnapshotData" + to_string(i), TheLTS->MakeBoolType());
+        auto SnapshotUpi = TheLTS->MakeVar("SnapshotUp" + to_string(i), TheLTS->MakeBoolType());
+        Updates.push_back(new LTSAssignSimple(SnapshotDatai, Datai));
+        Updates.push_back(new LTSAssignSimple(SnapshotUpi, Upi));
+        auto DataSnapshotEQState_i = TheLTS->MakeOp(LTSOps::OpEQ, SnapshotDatai, Datai);
+        auto UpSnapshotEQState_i = TheLTS->MakeOp(LTSOps::OpEQ, SnapshotUpi, Upi);
+        auto SnapshotEQState_i = TheLTS->MakeOp(LTSOps::OpAND, DataSnapshotEQState_i, UpSnapshotEQState_i);
+        auto SnapshotNEQState_i = TheLTS->MakeOp(LTSOps::OpNOT, SnapshotEQState_i);
+        SnapshotEQStateConjuncts.push_back(SnapshotEQState_i);
+        SnapshotNEQStateDisjuncts.push_back(SnapshotNEQState_i);
+    }
+    auto SnapshotEQState = TheLTS->MakeOp(LTSOps::OpAND, SnapshotEQStateConjuncts);
+    auto SnapshotNEQState = TheLTS->MakeOp(LTSOps::OpOR, SnapshotNEQStateDisjuncts);
+
+    RingMonitor->AddInputTransition("Initial", "Snapshot",
+                                    TheLTS->MakeTrue(), Updates,
+                                    "Snapshot", LegitimateAnnouncement, {});
+    RingMonitor->AddInputTransition("Snapshot", "Snapshot",
+                                    SnapshotNEQState, {},
+                                    "Ignore", LegitimateAnnouncement, {});
+    RingMonitor->AddInputTransition("Snapshot", "Last",
+                                    SnapshotEQState, {},
+                                    "Success", LegitimateAnnouncement, {});
+    RingMonitor->AddInputTransition("Last", "Last",
+                                    TheLTS->MakeTrue(), {},
+                                    "Ignore", LegitimateAnnouncement, {});
 }
 
 void DeclareSafetyConcreteMonitor(LabelledTS* TheLTS)
@@ -394,6 +536,7 @@ void DeclareAutomata(LabelledTS* TheLTS)
     DeclareProcN(TheLTS);
     DeclareShadowMonitor(TheLTS);
     DeclareSafetyConcreteMonitor(TheLTS);
+    DeclareRingMonitor(TheLTS);
     TheLTS->FreezeAutomata();
 
     cout << __LOGSTR__ << "Freezing automata done." << endl;
@@ -483,6 +626,32 @@ void DeclareAutomata(LabelledTS* TheLTS)
                 InitUpdates.push_back(new LTSAssignSimple(ShadowUpi, UpVal[i]));
             }
 
+            // Initialize Ring Monitor
+            auto RingMonitorType = TheLTS->GetEFSMType("RingMonitor");
+            auto RingMonitorStateVar = TheLTS->MakeVar("RingMonitor", RingMonitorType);
+            auto RingMonitorState = TheLTS->MakeOp(LTSOps::OpField, RingMonitorStateVar, TheLTS->MakeVar("state", TheLTS->MakeFieldAccessType()));
+            auto RingMonitorInitialState = TheLTS->MakeVal("Initial", RingMonitorState->GetType());
+            InitUpdates.push_back(new LTSAssignSimple(RingMonitorState, RingMonitorInitialState));
+            for (size_t i = 0; i < NumProcesses; ++i) {
+                auto RingDatai = TheLTS->MakeOp(LTSOps::OpField,
+                                                RingMonitorStateVar,
+                                                TheLTS->MakeVar("Data" + to_string(i), FAType));
+                auto RingUpi = TheLTS->MakeOp(LTSOps::OpField,
+                                              RingMonitorStateVar,
+                                              TheLTS->MakeVar("Up" + to_string(i), FAType));
+                auto RingSnapshotDatai = TheLTS->MakeOp(LTSOps::OpField,
+                                                        RingMonitorStateVar,
+                                                        TheLTS->MakeVar("SnapshotData" + to_string(i), FAType));
+                auto RingSnapshotUpi = TheLTS->MakeOp(LTSOps::OpField,
+                                                      RingMonitorStateVar,
+                                                      TheLTS->MakeVar("SnapshotUp" + to_string(i), FAType));
+
+                InitUpdates.push_back(new LTSAssignSimple(RingDatai, DataVal[i]));
+                InitUpdates.push_back(new LTSAssignSimple(RingUpi, UpVal[i]));
+                InitUpdates.push_back(new LTSAssignSimple(RingSnapshotDatai, DataVal[i]));
+                InitUpdates.push_back(new LTSAssignSimple(RingSnapshotUpi, UpVal[i]));
+            }
+
             // Initialize Safety Monitor
             auto SafetyMonitorType = TheLTS->GetEFSMType("SafetyMonitor");
             auto SafetyMonitorStateVar = TheLTS->MakeVar("SafetyMonitor", SafetyMonitorType);
@@ -500,8 +669,32 @@ void DeclareAutomata(LabelledTS* TheLTS)
     TheLTS->AddInitStates(InitStates);
 }
 
+void DeclareRingLivenessMonitor(LabelledTS* TheLTS, LTSChecker* Checker)
+{
+    auto Monitor = Checker->MakeStateBuchiMonitor("Ring",
+                                                  {}, TheLTS->MakeTrue());
+    Monitor->AddState("Initial", true, false);
+    Monitor->AddState("SnapshotTaken", false, true);
+    Monitor->AddState("SnapshotSeenAgain", false, false);
+    Monitor->FreezeStates();
 
-void DeclareLivenessMonitor(LabelledTS* TheLTS, LTSChecker* Checker)
+    auto RingMonitorType = TheLTS->GetEFSMType("RingMonitor");
+    auto RingMonitorStateVar = TheLTS->MakeVar("RingMonitor", RingMonitorType);
+    auto RingMonitorState = TheLTS->MakeOp(LTSOps::OpField, RingMonitorStateVar, TheLTS->MakeVar("state", TheLTS->MakeFieldAccessType()));
+    auto RingMonitorSnapshotState = TheLTS->MakeVal("Snapshot", RingMonitorState->GetType());
+    auto RingMonitorStateEQSnapshotState = TheLTS->MakeOp(LTSOps::OpEQ, RingMonitorState, RingMonitorSnapshotState);
+    auto RingMonitorStateNEQSnapshotState = TheLTS->MakeOp(LTSOps::OpNOT, RingMonitorStateEQSnapshotState);
+
+    Monitor->AddTransition("Initial", "SnapshotTaken", RingMonitorStateEQSnapshotState);
+    Monitor->AddTransition("Initial", "Initial", RingMonitorStateNEQSnapshotState);
+    Monitor->AddTransition("SnapshotTaken", "SnapshotTaken", RingMonitorStateEQSnapshotState);
+    Monitor->AddTransition("SnapshotTaken", "SnapshotSeenAgain", RingMonitorStateNEQSnapshotState);
+    Monitor->AddTransition("SnapshotSeenAgain", "SnapshotSeenAgain", TheLTS->MakeTrue());
+    Monitor->Freeze();
+}
+
+
+void DeclareLegitLivenessMonitor(LabelledTS* TheLTS, LTSChecker* Checker)
 {
     auto Monitor = Checker->MakeStateBuchiMonitor("InfinitelyIllegitimate",
                                                   {}, TheLTS->MakeTrue());
@@ -562,140 +755,32 @@ int main()
 
     auto Checker = new LTSChecker(TheLTS);
 
-    DeclareLivenessMonitor(TheLTS, Checker);
+    DeclareLegitLivenessMonitor(TheLTS, Checker);
+    DeclareRingLivenessMonitor(TheLTS, Checker);
 
     auto TheSolver = new Solver(Checker);
 
-    auto ShadowMonitorType = TheLTS->GetEFSMType("ShadowMonitor");
-    auto ShadowMonitorStateVar = TheLTS->MakeVar("ShadowMonitor", ShadowMonitorType);
-    auto ShadowMonitorState = TheLTS->MakeOp(LTSOps::OpField, ShadowMonitorStateVar, TheLTS->MakeVar("state", TheLTS->MakeFieldAccessType()));
-    auto ShadowMonitorIllegitimateState = TheLTS->MakeVal("Illegitimate",
-                                                          ShadowMonitorState->GetType());
-    auto ShadowMonitorLegitimateState = TheLTS->MakeVal("Legitimate",
-                                                        ShadowMonitorState->GetType());
-    auto HasUF = [&] (const ExpBaseT* Exp) -> bool
-        {
-            auto ExpAsOpExp = Exp->As<OpExpression>();
-            if (ExpAsOpExp != nullptr) {
-                auto Code = ExpAsOpExp->GetOpCode();
-                return (Code >= LTSOps::UFOffset);
-            }
-            return false;
-        };
+    TheSolver->UnveilNonCompletionGuardOp(LegitimacyOp);
 
-    auto ShadowIllegitimateTransition =
-        ShadowMonitor->GetOutputTransitionsOnMsg(IllegitimateAnnouncement)[0];
-    auto Guard = ShadowIllegitimateTransition->GetGuard();
-    auto UFFunctionsInGuard = Guard->GetMgr()->Gather(Guard, HasUF);
-    auto UFGuard = *(UFFunctionsInGuard.begin());
-    auto UFGuardOpCode = UFGuard->As<OpExpression>()->GetOpCode();
-    TheSolver->UnveilGuardOp(UFGuardOpCode);
-
-    for (auto Transition : ShadowMonitor->GetOutputTransitionsOnMsg(LegitimateAnnouncement)) {
-        ////////////////////////////////////////////////////////////
-        // Enforce number of legitimate states is less than ...
-        ////////////////////////////////////////////////////////////
-        auto Guard = Transition->GetGuard();
-        auto UFFunctionsInGuard = Guard->GetMgr()->Gather(Guard, HasUF);
-        auto UFGuard = *(UFFunctionsInGuard.begin());
-        auto UFGuardOpCode = UFGuard->As<OpExpression>()->GetOpCode();
-
-        vector<vector<ExpT>> DataElems;
-
-        DataElems.clear();
-        for (size_t i = 0; i < 2 * NumProcesses - 2; ++i) {
-            DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
-        }
-        auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
-        int CandidateStateCounter = 1;
-        vector<ExpT> Indicators;
-        for (auto DataVal : DataCombinations) {
-            vector<ExpT> ActualArguments;
-            int DataCombinationIndex = 0;
-            for (auto Arg : UFGuard->As<OpExpression>()->GetChildren()) {
-                auto ArgField = Arg->As<OpExpression>()->GetChildren()[1];
-                auto ArgName = ArgField->As<VarExpression>()->GetVarName();
-                if (ArgName ==  "Up0") {
-                    ActualArguments.push_back(TheLTS->MakeTrue());
-                } else if (ArgName == ("Up" + to_string(NumProcesses - 1))) {
-                    ActualArguments.push_back(TheLTS->MakeFalse());
-                } else {
-                    ActualArguments.push_back(DataVal[DataCombinationIndex]);
-                    DataCombinationIndex++;
-                }
-            }
-            auto ZeroOneType = TheLTS->MakeRangeType(0, 1);
-            cout << "Creating indicator variable with index " << CandidateStateCounter << endl;
-            auto IndicatorVariable = TheLTS->MakeVar("LegitimateIndicator" + to_string(CandidateStateCounter),
-                                                     ZeroOneType);
-            ExpT LegitimateStatePredicate = TheLTS->MakeOp(UFGuardOpCode, ActualArguments);
-            auto IndicatorVariableEQOne = TheLTS->MakeOp(LTSOps::OpEQ, IndicatorVariable,
-                                                         TheLTS->MakeVal("1", ZeroOneType));
-            TheSolver->MakeAssertion(TheLTS->MakeOp(LTSOps::OpIMPLIES,
-                                                    LegitimateStatePredicate,
-                                                    IndicatorVariableEQOne));
-            Indicators.push_back(IndicatorVariable);
-            CandidateStateCounter++;
-        }
-        auto IndicatorSum = TheLTS->MakeOp(LTSOps::OpADD, Indicators);
-        auto NumIndicatorsType = TheLTS->MakeRangeType(0, Indicators.size());
-
-        int NumLegitimateStates = 1;
-        if (NumProcesses == 3) {
-            NumLegitimateStates = 8;
-        } else if (NumProcesses == 4) {
-            NumLegitimateStates = 12;
-        } else if (NumProcesses == 5) {
-            NumLegitimateStates = 16;
-        }
-        ExpT NumLegitimateStatesExp = TheLTS->MakeVal(to_string(NumLegitimateStates),
-                                                      NumIndicatorsType);
-        TheSolver->MakeAssertion(TheLTS->MakeOp(LTSOps::OpLE,
-                                                IndicatorSum,
-                                                NumLegitimateStatesExp));
-        ////////////////////////////////////////////////////////////
-
-
-        ////////////////////////////////////////////////////////////
-        // Enforce Legitimate transition goes to legitimate state
-        ////////////////////////////////////////////////////////////
-        auto StateUpdate = Transition->GetUpdates()[0];
-        auto StateUpdateExpression = StateUpdate->GetRHS();
-        auto UFOpCode = StateUpdateExpression->As<OpExpression>()->GetOpCode();
-        DataElems.clear();
-        for (size_t i = 0; i < 2 * NumProcesses; ++i) {
-            DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
-        }
-        DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
-        for (auto DataVal : DataCombinations) {
-            auto StateUpdateExp = TheLTS->MakeOp(UFOpCode, DataVal);
-            auto StateUpdateExpEQLegitimateState = TheLTS->MakeOp(LTSOps::OpEQ, StateUpdateExp, ShadowMonitorLegitimateState);
-            TheSolver->MakeAssertion(StateUpdateExpEQLegitimateState);
-        }
-        ////////////////////////////////////////////////////////////
-    }
-
-    for (auto Transition : ShadowMonitor->GetOutputTransitionsOnMsg(IllegitimateAnnouncement)) {
-        ////////////////////////////////////////////////////////////
-        // Enforce Illegitimate transition goes to illegitimate state
-        ////////////////////////////////////////////////////////////
-        auto StateUpdate = Transition->GetUpdates()[0];
-        auto StateUpdateExpression = StateUpdate->GetRHS();
-        auto UFOpCode = StateUpdateExpression->As<OpExpression>()->GetOpCode();
-        vector<vector<ExpT>> DataElems;
-        for (size_t i = 0; i < 2 * NumProcesses; ++i) {
-            DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
-        }
-        auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
-        for (auto DataVal : DataCombinations) {
-            auto StateUpdateExp = TheLTS->MakeOp(UFOpCode, DataVal);
-            auto StateUpdateExpEQIllegitimateState = TheLTS->MakeOp(LTSOps::OpEQ, StateUpdateExp, ShadowMonitorIllegitimateState);
-            TheSolver->MakeAssertion(StateUpdateExpEQIllegitimateState);
-        }
-        ////////////////////////////////////////////////////////////
-    }
+    TheSolver->MakeAssertion(Prop3);
 
     TheSolver->Solve();
+
+    u32 NumberOfLegitimateStates = 0;
+    vector<vector<ExpT>> DataElems;
+    for (size_t i = 0; i < 2 * NumProcesses; ++i) {
+        DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
+    }
+    auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
+    for (auto DataCombination : DataCombinations) {
+        auto LegitimacyOnState = TheLTS->MakeOp(LegitimacyOp, DataCombination);
+        auto Result = TheSolver->Evaluate(LegitimacyOnState);
+        if (Result == TheLTS->MakeTrue()) {
+            NumberOfLegitimateStates++;
+        }
+    }
+
+    cout << "# of legitimate states: " << NumberOfLegitimateStates << endl;
 
     delete Checker;
 
@@ -704,4 +789,4 @@ int main()
 }
 
 //
-// Dijkstra4.cpp ends here
+// Dijkstra4Ring.cpp ends here

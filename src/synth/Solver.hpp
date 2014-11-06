@@ -168,10 +168,12 @@ namespace ESMC {
             // fixed interpretation.
             void MakeAssertion(const ExpT& Pred);
             void UnveilGuardOp(i64 Op);
+            void UnveilNonCompletionGuardOp(i64 Op);
+            void UnveilNonCompletionOp(i64 Op);
             void Solve();
             void PrintUFModel(i64 UFCode);
             void PrintSolution();
-
+            ExpT Evaluate(const ExpT& Input);
             void PrintOneUFFinalSolution(const vector<const UFInterpreter*>& Interps,
                                          ostream& Out);
             void PrintFinalSolution(ostream& Out);

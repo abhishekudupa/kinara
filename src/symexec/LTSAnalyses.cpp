@@ -651,8 +651,6 @@ namespace ESMC {
                  ++it) {
                 GCmdRef GuardedCommand = it->first;
 
-                cout << "checking guarded command in loop" << endl;
-                cout << GuardedCommand->ToString() << endl;
                 const vector<LTSAssignRef>& Updates = GuardedCommand->GetLoweredUpdates();
 
                 MgrT::SubstMapT SubstMapForTransition;
@@ -689,8 +687,6 @@ namespace ESMC {
                  it != StemGuardedCommandsAndMonitorGuards.rend();
                  ++it) {
                 GCmdRef GuardedCommand = it->first;
-                cout << "checking guarded command in stem" << endl;
-                cout << GuardedCommand->ToString() << endl;
 
                 const vector<LTSAssignRef>& Updates = GuardedCommand->GetLoweredUpdates();
                 MgrT::SubstMapT SubstMapForTransition;

@@ -328,41 +328,6 @@ void DeclareShadowMonitor(LabelledTS* TheLTS)
                                           "Write", WriteMsgs[i], {});
     }
 
-    ////////////////////////////////////////////////////////////
-    // Old Way to compute Guards
-    ////////////////////////////////////////////////////////////
-    // vector<ExpT> Guards;
-    // // D0 = D1 and not Up1
-    // auto Data0 = TheLTS->MakeVar("Data0", TheLTS->MakeBoolType());
-    // auto Data1 = TheLTS->MakeVar("Data1", TheLTS->MakeBoolType());
-    // auto Up1 = TheLTS->MakeVar("Up1", TheLTS->MakeBoolType());
-    // auto Data0EqData1 = TheLTS->MakeOp(LTSOps::OpEQ, Data0, Data1);
-    // auto NotUp1 = TheLTS->MakeOp(LTSOps::OpNOT, Up1);
-    // auto Guard0 = TheLTS->MakeOp(LTSOps::OpAND, Data0EqData1, NotUp1);
-    // Guards.push_back(Guard0);
-    // for (size_t i = 1; i + 1 < NumProcesses; ++i) {
-    //     // 1: Datai != Dataim1
-    //     // 2: Datai = Dataip1 and Upi and not Upip1
-    //     auto Dataim1 = TheLTS->MakeVar("Data" + to_string(i - 1), TheLTS->MakeBoolType());
-    //     auto Datai = TheLTS->MakeVar("Data" + to_string(i), TheLTS->MakeBoolType());
-    //     auto Dataip1 = TheLTS->MakeVar("Data" + to_string(i + 1), TheLTS->MakeBoolType());
-    //     auto Upi = TheLTS->MakeVar("Up" + to_string(i), TheLTS->MakeBoolType());
-    //     auto Upip1 = TheLTS->MakeVar("Up" + to_string(i + 1), TheLTS->MakeBoolType());
-    //     auto DataiEqDataim1 = TheLTS->MakeOp(LTSOps::OpEQ, Datai, Dataim1);
-    //     auto Guardi1 = TheLTS->MakeOp(LTSOps::OpNOT, DataiEqDataim1);
-    //     auto DataiEqDataip1 = TheLTS->MakeOp(LTSOps::OpEQ, Datai, Dataip1);
-    //     auto NotUpip1 = TheLTS->MakeOp(LTSOps::OpNOT, Upip1);
-    //     auto Guardi2 = TheLTS->MakeOp(LTSOps::OpAND, {DataiEqDataip1, Upi, NotUpip1});
-    //     Guards.push_back(Guardi1);
-    //     Guards.push_back(Guardi2);
-    // }
-    // auto DataN = TheLTS->MakeVar("Data" + to_string(NumProcesses - 1), TheLTS->MakeBoolType());
-    // auto DataNm1 = TheLTS->MakeVar("Data" + to_string(NumProcesses - 2), TheLTS->MakeBoolType());
-    // auto DataNEqDataNm1 = TheLTS->MakeOp(LTSOps::OpEQ, DataN, DataNm1);
-    // auto GuardN = TheLTS->MakeOp(LTSOps::OpNOT, DataNEqDataNm1);
-    // Guards.push_back(GuardN);
-    ////////////////////////////////////////////////////////////
-
     auto Phi = TheLTS->MakeFalse();
     for (size_t i = 0; i < Guards.size(); ++i) {
         // Create conjunction of the following:
@@ -617,12 +582,3 @@ int main()
 
 //
 // Dijkstra4.cpp ends here
-
-
-
-
-
-
-
-
-
