@@ -166,7 +166,8 @@ namespace ESMC {
             void PrintUFModel(i64 UFCode);
             void PrintSolution();
 
-            void PrintOneUFFinalSolution(const UFInterpreter* Interp, ostream& Out);
+            void PrintOneUFFinalSolution(const vector<const UFInterpreter*>& Interps,
+                                         ostream& Out);
             void PrintFinalSolution(ostream& Out);
         };
 

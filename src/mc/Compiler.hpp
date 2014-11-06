@@ -453,7 +453,7 @@ namespace ESMC {
         {
         private:
             vector<RValueInterpreter*> RegisteredInterps;
-            unordered_map<i64, const UFInterpreter*> UFInterpreters;
+            unordered_map<i64, vector<const UFInterpreter*>> UFInterpreters;
 
             inline bool HasMsgLValue(const ExpT& Exp, LabelledTS* TheLTS);
 
@@ -469,7 +469,7 @@ namespace ESMC {
             void UpdateModel(const Z3Model& Model,
                              const unordered_set<i64>& InterpretedOps,
                              const unordered_map<i64, ExpT>& IndicatorExps);
-            const unordered_map<i64, const UFInterpreter*>& GetUFInterpreters() const;
+            const unordered_map<i64, vector<const UFInterpreter*>>& GetUFInterpreters() const;
         };
 
     } /* end namespace MC */

@@ -662,14 +662,12 @@ namespace ESMC {
 
                 // all good. extract a model
                 auto const& Model = TPAsZ3->GetModel();
-
-                PrintSolution();
-
+                // PrintSolution();
                 Compiler->UpdateModel(Model, InterpretedOps, IndicatorExps);
 
                 // Okay, we're good to model check now
                 Checker->ClearAQS();
-                auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, 1);
+                auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, 8);
                 if (!Safe) {
                     HandleSafetyViolations();
                     continue;
@@ -803,28 +801,35 @@ namespace ESMC {
             }
         }
 
-        void Solver::PrintOneUFFinalSolution(const UFInterpreter* Interp, ostream& Out)
+        void Solver::PrintOneUFFinalSolution(const vector<const UFInterpreter*>& Interps,
+                                             ostream& Out)
         {
-            auto OpExp = Interp->GetExp();
-            auto OpExpAsOp = OpExp->As<OpExpression>();
             auto Mgr = TheLTS->GetMgr();
-            auto const& EvalMap = Interp->GetEvalMap();
-
-            if (EvalMap.size() == 0 || !Interp->IsEnabled()) {
-                return;
-            }
 
             auto FuncType =
-                Mgr->LookupUninterpretedFunction(OpExpAsOp->GetOpCode())->As<ExprFuncType>();
+                Mgr->LookupUninterpretedFunction(Interps[0]->GetOpCode())->As<ExprFuncType>();
             auto const& DomTypes = FuncType->GetArgTypes();
             const u32 DomSize = DomTypes.size();
             auto const& RangeType = FuncType->GetFuncType();
             auto const& FuncName = FuncType->GetName();
 
+            UFInterpreter::EvalMapT CombinedEvalMap;
+            for (auto const* Interp : Interps) {
+                auto const& EvalMap = Interp->GetEvalMap();
+                if (!Interp->IsEnabled() || EvalMap.size() == 0) {
+                    continue;
+                }
+                CombinedEvalMap.insert(EvalMap.begin(), EvalMap.end());
+            }
+
+            if (CombinedEvalMap.size() == 0) {
+                return;
+            }
+
             Out << "Model for uninterpreted function \"" << FuncName << "\" -> {" << endl;
             string IndentString = "    ";
 
-            for (auto const& EvalPoint : EvalMap) {
+            for (auto const& EvalPoint : CombinedEvalMap) {
                 Out << IndentString;
                 auto const& Point = EvalPoint.first;
                 auto const& Value = EvalPoint.second;
@@ -845,16 +850,14 @@ namespace ESMC {
         {
             auto const& AllOpToInterp = Checker->Compiler->GetUFInterpreters();
             for (auto Op : InterpretedOps) {
-                const UFInterpreter* OpInterp = nullptr;
                 auto it = AllOpToInterp.find(Op);
                 if (it != AllOpToInterp.end()) {
-                    OpInterp = it->second;
+                    PrintOneUFFinalSolution(it->second, Out);
                 } else {
                     throw InternalError((string)"Weird op with code: " + to_string(Op) +
                                         " which shouldn't really exist!\nAt: " + __FILE__ +
                                         ":" + to_string(__LINE__));
                 }
-                PrintOneUFFinalSolution(OpInterp, Out);
             }
         }
 

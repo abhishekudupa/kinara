@@ -1145,12 +1145,7 @@ namespace ESMC {
             if (Interp->Is<UFInterpreter>()) {
                 auto AsUFInterp = Interp->SAs<UFInterpreter>();
                 auto OpCode = AsUFInterp->GetOpCode();
-                if (UFInterpreters.find(OpCode) != UFInterpreters.end()) {
-                    throw InternalError((string)"Attempted to add more than one interpreter " +
-                                        "for an uninterpreted function.\nAt: " + __FILE__ +
-                                        ":" + to_string(__LINE__));
-                }
-                UFInterpreters[OpCode] = AsUFInterp;
+                UFInterpreters[OpCode].push_back(AsUFInterp);
             }
         }
 
@@ -1272,7 +1267,7 @@ namespace ESMC {
             }
         }
 
-        const unordered_map<i64, const UFInterpreter*>&
+        const unordered_map<i64, vector<const UFInterpreter*>>&
         LTSCompiler::GetUFInterpreters() const
         {
             return UFInterpreters;
