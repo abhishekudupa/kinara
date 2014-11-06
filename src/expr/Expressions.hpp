@@ -540,9 +540,11 @@ namespace ESMC {
             typedef Expr<E, S> ExpT;
             typedef ExprI<E, S> IExpT;
 
-            typedef unordered_map<ExpT, ExpT,
-                                  ExpressionPtrHasher,
-                                  ExpressionPtrEquals> SubstMapT;
+            // typedef unordered_map<ExpT, ExpT,
+            //                       ExpressionPtrHasher,
+            //                       ExpressionPtrEquals> SubstMapT;
+
+            typedef unordered_map<ExpT, ExpT, ExpressionPtrHasher> SubstMapT;
 
             typedef RefCache<ExpressionBase<E, S>, ExpressionPtrHasher,
                              ExpressionPtrEquals, CSmartPtr> ExpCacheT;

@@ -214,14 +214,9 @@ int main()
     TheLTS->FreezeMsgs();
 
     // The request channel from cache to directory
-    // auto ReqChannelEFSM = TheLTS->MakeChannel("ReqChannel",
-    //                                           { CacheParam, DirParam, AddressParam },
-    //                                           TrueExp, NumCaches, false, false, false,
-    //                                           false, LTSFairnessType::None);
-
     auto ReqChannelEFSM = TheLTS->MakeChannel("ReqChannel",
                                               { CacheParam, DirParam, AddressParam },
-                                              TrueExp, 1, false, false, false,
+                                              TrueExp, NumCaches, false, false, false,
                                               false, LTSFairnessType::None);
 
     ReqChannelEFSM->AddMsg(GetXMsgType, { CacheParam, DirParam, AddressParam },
@@ -234,14 +229,9 @@ int main()
     ReqChannelEFSM->Freeze();
 
     // The response channel INTO each cache
-    // auto RspChannelEFSM = TheLTS->MakeChannel("RspChannel",
-    //                                           { CacheParam, DirParam, AddressParam },
-    //                                           TrueExp, NumCaches, false, false, false,
-    //                                           false, LTSFairnessType::None);
-
     auto RspChannelEFSM = TheLTS->MakeChannel("RspChannel",
                                               { CacheParam, DirParam, AddressParam },
-                                              TrueExp, 1, false, false, false,
+                                              TrueExp, NumCaches, false, false, false,
                                               false, LTSFairnessType::None);
 
     RspChannelEFSM->AddMsg(WBAckMsgType, { CacheParam, DirParam, AddressParam },

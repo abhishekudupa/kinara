@@ -148,8 +148,8 @@ namespace ESMC {
             cout << "Handling one safety violation, computing shortest path... ";
             flush(cout);
 
-            // auto PPath = AQS->FindShortestPath(ErrorState, CostFunction);
-            auto PPath = AQS->FindPath(ErrorState);
+            auto PPath = AQS->FindShortestPath(ErrorState, CostFunction);
+            // auto PPath = AQS->FindPath(ErrorState);
 
             cout << "Done!" << endl << "Unwinding trace... ";
             flush(cout);
