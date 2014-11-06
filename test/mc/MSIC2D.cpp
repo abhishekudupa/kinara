@@ -807,14 +807,6 @@ int main()
                                    { CacheParam1, CacheParam, DirParam, AddressParam });
     Updates.clear();
 
-    CacheEFSM->AddOutputTransition("C_IS_UNBLOCK", "C_IS_DONE", TrueExp,
-                                   Updates, "OutMsg", UnblockSMsgType, CacheParams);
-
-    Updates.push_back(new LTSAssignSimple(LDAckMsgOutDotLoadedValue, CacheDataExp));
-    CacheEFSM->AddOutputTransition("C_IS_DONE", "C_S", TrueExp, Updates,
-                                   "OutMsg", LDAckMsgType, CacheParams);
-    Updates.clear();
-
     // C_II on WBAckMsg'
     CacheEFSM->AddInputTransition("C_II", "C_II_SENDACK", TrueExp, Updates, "InMsg",
                                   TheLTS->GetNamedType("WBAckMsgType'"), CacheParams);
@@ -1087,14 +1079,14 @@ int main()
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, DirActiveIDExp, CacheParam);
     Updates.push_back(new LTSAssignSimple(DirNumSharersExp,
                                           TheLTS->MakeVal("0", NumSharersType)));
-    Updates.push_back(new LTSAssignParam({ CacheParam2 }, TrueExp,
-                                         TheLTS->MakeOp(LTSOps::OpIndex,
-                                                        DirSharersExp, CacheParam2),
-                                         TheLTS->MakeFalse()));
-    Updates.push_back(new LTSAssignSimple(DirActiveIDExp,
-                                          TheLTS->MakeVal("clear", CacheIDType)));
-    Updates.push_back(new LTSAssignSimple(DirOwnerExp,
-                                          TheLTS->MakeVal("clear", CacheIDType)));
+    // Updates.push_back(new LTSAssignParam({ CacheParam2 }, TrueExp,
+    //                                      TheLTS->MakeOp(LTSOps::OpIndex,
+    //                                                     DirSharersExp, CacheParam2),
+    //                                      TheLTS->MakeFalse()));
+    // Updates.push_back(new LTSAssignSimple(DirActiveIDExp,
+    //                                       TheLTS->MakeVal("clear", CacheIDType)));
+    // Updates.push_back(new LTSAssignSimple(DirOwnerExp,
+    //                                       TheLTS->MakeVal("clear", CacheIDType)));
 
     DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_M_WB", "D_I",
                                   Guard, Updates, "OutMsg", WBAckMsgType,
@@ -1516,26 +1508,25 @@ int main()
     }
 
     // These lines below check a property that is false
+    // auto BugMon = Monitor = Checker->MakeStateBuchiMonitor("FGShared", CacheParams, TrueExp);
+    // BugMon->AddState("Initial", true, true);
+    // BugMon->AddState("OtherState", false, false);
+    // BugMon->FreezeStates();
 
-    auto BugMon = Monitor = Checker->MakeStateBuchiMonitor("FGShared", CacheParams, TrueExp);
-    BugMon->AddState("Initial", true, true);
-    BugMon->AddState("OtherState", false, false);
-    BugMon->FreezeStates();
+    // BugMon->AddTransition("Initial", "Initial", MonCacheDotStateNEQS);
+    // BugMon->AddTransition("Initial", "OtherState", MonCacheDotStateEQS);
+    // BugMon->AddTransition("OtherState", "OtherState", MonCacheDotStateEQS);
+    // BugMon->AddTransition("OtherState", "Initial", MonCacheDotStateNEQS);
 
-    BugMon->AddTransition("Initial", "Initial", MonCacheDotStateNEQS);
-    BugMon->AddTransition("Initial", "OtherState", MonCacheDotStateEQS);
-    BugMon->AddTransition("OtherState", "OtherState", MonCacheDotStateEQS);
-    BugMon->AddTransition("OtherState", "Initial", MonCacheDotStateNEQS);
+    // BugMon->Freeze();
 
-    BugMon->Freeze();
+    // cout << "Checking Liveness Property \"FGShared\"" << endl;
+    // LiveTrace = Checker->CheckLiveness("FGShared");
 
-    cout << "Checking Liveness Property \"FGShared\"" << endl;
-    LiveTrace = Checker->CheckLiveness("FGShared");
-
-    if (LiveTrace != nullptr) {
-        cout << LiveTrace->ToString() << endl << endl;
-        delete LiveTrace;
-    }
+    // if (LiveTrace != nullptr) {
+    //     cout << LiveTrace->ToString() << endl << endl;
+    //     delete LiveTrace;
+    // }
 
     delete Checker;
 }

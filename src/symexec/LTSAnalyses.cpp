@@ -531,61 +531,53 @@ namespace ESMC {
                                            SafetyViolation* Trace,
                                            ExpT InitialPredicate)
         {
-            auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
             auto TheLTS = TheSolver->TheLTS;
             ExpT Phi = InitialPredicate;
             auto Mgr = Phi->GetMgr();
             const vector<TraceElemT>& TraceElements = Trace->GetTraceElems();
-            for (auto it = TraceElements.rbegin(); it != TraceElements.rend(); ++it) {
-                GCmdRef guarded_command = it->first;
-                const vector<LTSAssignRef>& updates = guarded_command->GetLoweredUpdates();
+            for (auto TraceIterator = TraceElements.rbegin();
+                 TraceIterator != TraceElements.rend(); ++TraceIterator) {
+                auto const& Cmd = TraceIterator->first;
+                const vector<LTSAssignRef>& Updates = Cmd->GetLoweredUpdates();
 
                 MgrT::SubstMapT SubstMapForTransition;
 
-                for (auto it = updates.rbegin();
-                     it != updates.rend(); ++it) {
+                for (auto UpdateIterator = Updates.rbegin();
+                     UpdateIterator != Updates.rend(); ++UpdateIterator) {
 
-                    auto it2 = SubstMapForTransition.find((*it)->GetLHS());
+                    auto it = SubstMapForTransition.find((*UpdateIterator)->GetLHS());
 
-                    if (it2 != SubstMapForTransition.end()) {
+                    if (it != SubstMapForTransition.end()) {
                         MgrT::SubstMapT LocalSubst;
-                        LocalSubst[(*it)->GetLHS()] = (*it)->GetRHS();
-                        auto NewSubst = Mgr->TermSubstitute(LocalSubst, it2->second);
-                        SubstMapForTransition[it2->first] = NewSubst;
+                        LocalSubst[(*UpdateIterator)->GetLHS()] = (*UpdateIterator)->GetRHS();
+                        auto NewSubst = Mgr->TermSubstitute(LocalSubst, it->second);
+                        SubstMapForTransition[it->first] = NewSubst;
                     } else {
-                        SubstMapForTransition[(*it)->GetLHS()] = (*it)->GetRHS();
+                        SubstMapForTransition[(*UpdateIterator)->GetLHS()] =
+                            (*UpdateIterator)->GetRHS();
                     }
                 }
 
-                const ExpT& guard = guarded_command->GetLoweredGuard();
+                auto const& Guard = Cmd->GetLoweredGuard();
 
                 Phi = Mgr->TermSubstitute(SubstMapForTransition, Phi);
-                Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, guard, Phi);
+                Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, Guard, Phi);
                 Phi = Mgr->Simplify(Phi);
             }
+
             vector<ExpT> Retval;
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
 
             for (auto const& InitState : InitStateGenerators) {
                 MgrT::SubstMapT InitStateSubstMap;
-                for (auto update: InitState) {
-                    auto LHS = update->GetLHS();
-                    auto RHS = update->GetRHS();
+                for (auto const& Update : InitState) {
+                    auto LHS = Update->GetLHS();
+                    auto RHS = Update->GetRHS();
                     InitStateSubstMap[LHS] = RHS;
                 }
                 auto NewPhi = Mgr->TermSubstitute(InitStateSubstMap, Phi);
                 NewPhi = Mgr->Simplify(NewPhi);
-                if (NewPhi == Mgr->MakeFalse()) {
-                    continue;
-                }
-                auto TPRes = TP->CheckSat(NewPhi, true);
-                if (TPRes == TPResult::SATISFIABLE) {
-                    Retval.push_back(NewPhi);
-                } else if (TPRes == TPResult::UNKNOWN) {
-                    throw IncompleteTheoryException(NewPhi);
-                } else {
-                    continue;
-                }
+                Retval.push_back(NewPhi);
             }
             return Retval;
         }
@@ -597,7 +589,6 @@ namespace ESMC {
             auto TheLTS = TheSolver->TheLTS;
             auto Mgr = TheLTS->GetMgr();
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
-            auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
             MgrT::SubstMapT LoopValues;
             for (auto StateVariable: TheLTS->GetStateVectorVars()) {
                 for (auto Exp: GetAllScalarLeaves(StateVariable)) {

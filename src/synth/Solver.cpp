@@ -126,6 +126,8 @@ namespace ESMC {
         inline void Solver::CheckedAssert(const ExpT& Assertion)
         {
             if (AssertedConstraints.find(Assertion) != AssertedConstraints.end()) {
+                cout << "Not asserting previously asserted constraint:" << endl
+                     << Assertion->ToString() << endl;
                 return;
             }
 
@@ -155,6 +157,8 @@ namespace ESMC {
             flush(cout);
 
             auto Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
+            cout << "Trace:" << endl << endl;
+            cout << Trace->ToString(1) << endl << endl;
 
             cout << "Done!" << endl
                  << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
@@ -466,6 +470,8 @@ namespace ESMC {
             flush(cout);
 
             auto Trace = TraceBase::MakeDeadlockViolation(PPath, Checker);
+            cout << "Trace:" << endl << endl;
+            cout << Trace->ToString(1) << endl << endl;
 
             cout << "Done!" << endl
                  << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
@@ -511,6 +517,8 @@ namespace ESMC {
             } else {
                 GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
             }
+
+            cout << "GoodExp = " << GoodExp->ToString() << endl;
 
             cout << "Done!" << endl << "Computing weakest pre... ";
             flush(cout);
@@ -667,7 +675,7 @@ namespace ESMC {
 
                 // Okay, we're good to model check now
                 Checker->ClearAQS();
-                auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, 8);
+                auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, 16);
                 if (!Safe) {
                     HandleSafetyViolations();
                     continue;

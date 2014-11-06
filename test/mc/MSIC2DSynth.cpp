@@ -1,8 +1,8 @@
-// MSI.cpp ---
+// MSIC2DSynth.cpp ---
 //
-// Filename: MSI.cpp
+// Filename: MSIC2DSynth.cpp
 // Author: Abhishek Udupa
-// Created: Wed Sep. 24 10:51:04 2014 (-0400)
+// Created: Thu Nov  6 12:08:45 2014 (-0500)
 //
 //
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -167,6 +167,19 @@ int main()
     auto DataMsgC2COutDotData = TheLTS->MakeOp(LTSOps::OpField, DataMsgC2COut,
                                                TheLTS->MakeVar("Data", FAType));
     MessageFields.clear();
+
+    MessageFields.push_back(make_pair("Data", ValueType));
+    auto DataMsgC2DType = TheLTS->MakeMsgTypes({ CacheParam, DirParam, AddressParam },
+                                               TrueExp, "DataMsgC2DType", MessageFields, true);
+    auto DataMsgC2DIn = TheLTS->MakeVar("InMsg", TheLTS->GetNamedType("DataMsgC2DType'"));
+    auto DataMsgC2DOut = TheLTS->MakeVar("OutMsg", TheLTS->GetNamedType("DataMsgC2DType"));
+    auto DataMsgC2DInDotData = TheLTS->MakeOp(LTSOps::OpField, DataMsgC2DIn,
+                                              TheLTS->MakeVar("Data", FAType));
+    auto DataMsgC2DOutDotData = TheLTS->MakeOp(LTSOps::OpField, DataMsgC2DOut,
+                                               TheLTS->MakeVar("Data", FAType));
+
+    MessageFields.clear();
+
     auto LDMsgType = TheLTS->MakeMsgTypes({ CacheParam, DirParam, AddressParam },
                                           TrueExp, "LDMsgType", MessageFields, false);
 
@@ -233,7 +246,6 @@ int main()
                                               { CacheParam, DirParam, AddressParam },
                                               TrueExp, NumCaches, false, false, false,
                                               false, LTSFairnessType::None);
-
     RspChannelEFSM->AddMsg(WBAckMsgType, { CacheParam, DirParam, AddressParam },
                            LTSFairnessType::Strong);
     RspChannelEFSM->AddMsg(DataMsgD2CType, { CacheParam, DirParam, AddressParam },
@@ -249,12 +261,15 @@ int main()
     // The unblock channel INTO each directory
     auto UnblockChannelEFSM = TheLTS->MakeChannel("UnblockChannel",
                                                   { DirParam, AddressParam },
-                                                  TrueExp, 1, false, false, false,
+                                                  TrueExp, 2, false, false, false,
                                                   false, LTSFairnessType::None);
     UnblockChannelEFSM->AddMsgs({ CacheParam }, TrueExp, UnblockSMsgType,
                                 { CacheParam, DirParam, AddressParam },
                                 LTSFairnessType::Strong, LossDupFairnessType::None);
     UnblockChannelEFSM->AddMsgs({ CacheParam }, TrueExp, UnblockXMsgType,
+                                { CacheParam, DirParam, AddressParam },
+                                LTSFairnessType::Strong, LossDupFairnessType::None);
+    UnblockChannelEFSM->AddMsgs({ CacheParam }, TrueExp, DataMsgC2DType,
                                 { CacheParam, DirParam, AddressParam },
                                 LTSFairnessType::Strong, LossDupFairnessType::None);
 
@@ -393,10 +408,8 @@ int main()
 
     EnvEFSM->Freeze();
 
-    auto CacheEFSM =
-        TheLTS->MakeEFSM<IncompleteEFSM>("Cache",
-            { CacheParam, DirParam, AddressParam },
-            TrueExp, LTSFairnessType::Strong);
+    auto CacheEFSM = TheLTS->MakeEFSM<IncompleteEFSM>("Cache", { CacheParam, DirParam, AddressParam },
+                                                      TrueExp, LTSFairnessType::Strong);
 
     CacheEFSM->AddState("C_I");
     CacheEFSM->AddState("C_I_LD");
@@ -415,6 +428,7 @@ int main()
     CacheEFSM->AddState("C_M_ST");
     CacheEFSM->AddState("C_M_EV");
     CacheEFSM->AddState("C_M_FWDS");
+    CacheEFSM->AddState("C_M_FWDS_C2D");
     CacheEFSM->AddState("C_M_FWDX");
 
     CacheEFSM->AddState("C_IM");
@@ -457,8 +471,8 @@ int main()
 
     CacheEFSM->AddInputMsg(TheLTS->GetNamedType("FwdGetSMsgType'"),
                            CacheParams);
-    auto FwdGetXInMsgDecl = CacheEFSM->AddInputMsg(TheLTS->GetNamedType("FwdGetXMsgType'"),
-                                                   CacheParams);
+    CacheEFSM->AddInputMsg(TheLTS->GetNamedType("FwdGetXMsgType'"),
+                                              CacheParams);
     CacheEFSM->AddInputMsgs({ CacheParam1 }, CacheNEQCache1,
                             TheLTS->GetNamedType("InvAckMsgType'"),
                             { CacheParam1, CacheParam, DirParam, AddressParam });
@@ -472,7 +486,7 @@ int main()
 
     CacheEFSM->AddOutputMsg(LDAckMsgType, CacheParams);
     CacheEFSM->AddOutputMsg(STAckMsgType, CacheParams);
-    CacheEFSM->AddOutputMsg(EVAckMsgType, CacheParams);
+    auto EVAckMsgDecl = CacheEFSM->AddOutputMsg(EVAckMsgType, CacheParams);
 
     CacheEFSM->AddOutputMsg(UnblockSMsgType, CacheParams);
     CacheEFSM->AddOutputMsg(UnblockXMsgType, CacheParams);
@@ -487,6 +501,7 @@ int main()
     CacheEFSM->AddOutputMsgs({ CacheParam1 }, CacheNEQCache1,
                              DataMsgC2CType,
                              { CacheParam, CacheParam1, DirParam, AddressParam });
+    CacheEFSM->AddOutputMsg(DataMsgC2DType, CacheParams);
 
     // Cache transitions
 
@@ -513,6 +528,7 @@ int main()
                                    "OutMsg", EVAckMsgType, CacheParams);
 
     // FwdGetX on I
+    // Candidate for completion
     Updates.push_back(new LTSAssignSimple(CacheFwdToCacheExp, FwdGetXMsgInDotRequester));
     CacheEFSM->AddInputTransition("C_I", "C_I_FWD", TrueExp, Updates,
                                   "InMsg", TheLTS->GetNamedType("FwdGetXMsgType'"),
@@ -609,10 +625,16 @@ int main()
     Updates.push_back(new LTSAssignSimple(CacheFwdToCacheExp,
                                           TheLTS->MakeVal("clear", CacheIDType)));
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheFwdToCacheExp, CacheParam1);
-    CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1, "C_M_FWDS", "C_S",
+    CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1, "C_M_FWDS", "C_M_FWDS_C2D",
                                     Guard, Updates, "OutMsg", DataMsgC2CType,
                                     { CacheParam, CacheParam1, DirParam, AddressParam },
                                     LTSFairnessType::None, SplatFairnessType::None, "");
+    Updates.clear();
+
+    Updates.push_back(new LTSAssignSimple(DataMsgC2DOutDotData, CacheDataExp));
+    CacheEFSM->AddOutputTransition("C_M_FWDS_C2D", "C_S", TrueExp,
+                                   Updates, "OutMsg", DataMsgC2DType, CacheParams);
+
     Updates.clear();
 
     // M on FwdGetX
@@ -787,14 +809,6 @@ int main()
                                    { CacheParam1, CacheParam, DirParam, AddressParam });
     Updates.clear();
 
-    // CacheEFSM->AddOutputTransition("C_IS_UNBLOCK", "C_IS_DONE", TrueExp,
-    //                                Updates, "OutMsg", UnblockSMsgType, CacheParams);
-
-    // Updates.push_back(new LTSAssignSimple(LDAckMsgOutDotLoadedValue, CacheDataExp));
-    // CacheEFSM->AddOutputTransition("C_IS_DONE", "C_S", TrueExp, Updates,
-    //                                "OutMsg", LDAckMsgType, CacheParams);
-    // Updates.clear();
-
     // C_II on WBAckMsg'
     CacheEFSM->AddInputTransition("C_II", "C_II_SENDACK", TrueExp, Updates, "InMsg",
                                   TheLTS->GetNamedType("WBAckMsgType'"), CacheParams);
@@ -823,14 +837,18 @@ int main()
     CacheEFSM->AddInputTransition("C_II", "C_II_SENDACK", TrueExp, Updates, "InMsg",
                                   TheLTS->GetNamedType("FwdGetSMsgType'"), CacheParams);
 
-    CacheEFSM->AddOutputTransition("C_II_SENDACK", "C_I", TrueExp, Updates,
-                                   "OutMsg", EVAckMsgType, CacheParams);
+    // Candidate for completion
+    // CacheEFSM->AddOutputTransition("C_II_SENDACK", "C_I", TrueExp, Updates,
+    //                                "OutMsg", EVAckMsgType, CacheParams);
 
     auto CacheAsInc = CacheEFSM->SAs<IncompleteEFSM>();
     CacheAsInc->MarkAllStatesComplete();
     CacheAsInc->MarkStateIncomplete("C_S_ST");
     CacheAsInc->IgnoreAllMsgsOnState("C_S_ST");
     CacheAsInc->HandleMsgOnState(GetXMsgDecl, "C_S_ST");
+    CacheAsInc->MarkStateIncomplete("C_II_SENDACK");
+    CacheAsInc->IgnoreAllMsgsOnState("C_II_SENDACK");
+    CacheAsInc->HandleMsgOnState(EVAckMsgDecl, "C_II_SENDACK");
 
     // Done!
     CacheEFSM->Freeze();
@@ -892,9 +910,9 @@ int main()
     DirEFSM->AddInputMsgs({ CacheParam }, TrueExp,
                           TheLTS->GetNamedType("UnblockXMsgType'"), CacheParams);
 
-    DirEFSM->AddInputMsgs({ CacheParam, CacheParam1 }, CacheNEQCache1,
-                          TheLTS->GetNamedType("DataMsgC2CType'"),
-                          { CacheParam1, CacheParam, DirParam, AddressParam });
+    DirEFSM->AddInputMsgs({ CacheParam }, TrueExp,
+                          TheLTS->GetNamedType("DataMsgC2DType'"),
+                          { CacheParam, DirParam, AddressParam });
 
     DirEFSM->AddOutputMsgs({ CacheParam }, TrueExp, FwdGetXMsgType, CacheParams);
     DirEFSM->AddOutputMsgs({ CacheParam }, TrueExp, FwdGetSMsgType, CacheParams);
@@ -1168,13 +1186,13 @@ int main()
 
     Updates.clear();
 
-    // DataMsgC2C on BUSY
-    Updates.push_back(new LTSAssignSimple(DirDataExp, DataMsgC2CInDotData));
+    // DataMsgC2D on BUSY
+    Updates.push_back(new LTSAssignSimple(DirDataExp, DataMsgC2DInDotData));
     // Updates.push_back(new LTSAssignSimple(DirActiveIDExp, TheLTS->MakeVal("clear", CacheIDType)));
-    DirEFSM->AddInputTransitions({ CacheParam, CacheParam1 }, CacheNEQCache1,
-                                 "D_BUSY", "D_BUSY", TrueExp, Updates, "InMsg",
-                                 TheLTS->GetNamedType("DataMsgC2CType'"),
-                                 { CacheParam1, CacheParam, DirParam, AddressParam });
+    DirEFSM->AddInputTransitions({ CacheParam }, TrueExp,
+                                 "D_BUSY", "D_S", TrueExp, Updates, "InMsg",
+                                 TheLTS->GetNamedType("DataMsgC2DType'"),
+                                 { CacheParam, DirParam, AddressParam });
     Updates.clear();
 
     // Transitions on BUSY_DATA
@@ -1192,12 +1210,13 @@ int main()
                                  { CacheParam, DirParam, AddressParam });
     Updates.clear();
 
-    Updates.push_back(new LTSAssignSimple(DirDataExp, DataMsgC2CInDotData));
-    DirEFSM->AddInputTransitions({ CacheParam, CacheParam1 }, CacheNEQCache1,
+    // audupa: changed to c2d 10/06
+    Updates.push_back(new LTSAssignSimple(DirDataExp, DataMsgC2DInDotData));
+    DirEFSM->AddInputTransitions({ CacheParam }, TrueExp,
                                  "D_BUSY_DATA", "D_BUSY", TrueExp, Updates,
                                  "InMsg",
-                                 TheLTS->GetNamedType("DataMsgC2CType'"),
-                                 { CacheParam1, CacheParam, DirParam, AddressParam });
+                                 TheLTS->GetNamedType("DataMsgC2DType'"),
+                                 { CacheParam, DirParam, AddressParam });
     Updates.clear();
 
     // WBMsg on BUSY_DATA
@@ -1229,6 +1248,7 @@ int main()
                                           TheLTS->MakeVal("clear", CacheIDType)));
     Updates.push_back(new LTSAssignSimple(DirNumSharersExp,
                                           TheLTS->MakeVal("0", NumSharersType)));
+
     // Updates.push_back(new LTSAssignSimple(DirActiveIDExp, TheLTS->MakeVal("clear", CacheIDType)));
     // Move to D_M_WB, because we still need to send a an ack
     DirEFSM->AddInputTransitions({ CacheParam }, TrueExp, "D_PENDING_UNBLOCK_E",
@@ -1382,9 +1402,6 @@ int main()
     TheLTS->AddInitStates(InitStates);
     TheLTS->Freeze();
 
-    cout << CacheEFSM->ToString() << endl;
-    cout << DirEFSM->ToString() << endl;
-
     auto const& StateVectorVars = TheLTS->GetStateVectorVars();
 
     cout << "LTS Vars:" << endl;
@@ -1487,7 +1504,6 @@ int main()
     Monitor->AddTransition("Accepting", "Accepting", MonCacheDotStateNEQM);
     Monitor->Freeze();
 
-    // Attempt synthesis
     auto TheSolver = new Solver(Checker);
     TheSolver->Solve();
 
@@ -1496,4 +1512,4 @@ int main()
 }
 
 //
-// MSI.cpp ends here
+// MSIC2DSynth.cpp ends here

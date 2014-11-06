@@ -113,7 +113,7 @@ namespace ESMC {
                 auto NextUnwoundState = TheCanonicalizer->ApplyPermutation(NextPermState,
                                                                            InvPermAlongPath);
                 u32 Dummy;
-                TheCanonicalizer->SortChans(NextUnwoundState, false, Dummy);
+                TheCanonicalizer->Sort(NextUnwoundState);
                 // cout << "Unwound State:" << endl;
                 // cout << "-------------------------------------------" << endl;
                 // Printer->PrintState(NextUnwoundState, cout);
@@ -131,7 +131,6 @@ namespace ESMC {
                     if (CandidateState == nullptr) {
                         continue;
                     }
-                    u32 Dummy;
                     auto SortedCandidateState = TheCanonicalizer->SortChans(CandidateState,
                                                                             false, Dummy);
 
@@ -148,82 +147,8 @@ namespace ESMC {
                     }
                 }
                 if (!FoundCmd) {
-                    ostringstream sstr;
-                    sstr << "Unable to find a command to compute next unwound state" << endl;
-                    sstr << "Origin:" << endl;
-                    sstr << "------------------------------------------------" << endl;
-                    Checker->Printer->PrintState(UnwoundOrigin, sstr);
-                    sstr << "------------------------------------------------" << endl;
-                    const StateVec* CurState = UnwoundOrigin;
-
-                    for (auto const& PathElem : PathElems) {
-                        auto NextState = PathElem.second;
-                        sstr << "Fired Command:" << endl << PathElem.first->ToString()
-                             << endl << "to get next state:" << endl;
-                        sstr << "------------------------------------------------" << endl;
-                        Checker->Printer->PrintState(NextState, CurState, sstr);
-                        sstr << "------------------------------------------------" << endl;
-                        CurState = NextState;
-                    }
-
-                    sstr << "Could not find a command that takes me from state:" << endl;
-                    sstr << "------------------------------------------------" << endl;
-                    Checker->Printer->PrintState(CurUnwoundState, sstr);
-                    sstr << "------------------------------------------------" << endl;
-
-                    sstr << "to the next unwound state:" << endl;
-                    sstr << "------------------------------------------------" << endl;
-                    Checker->Printer->PrintState(NextUnwoundState, CurUnwoundState, sstr);
-                    sstr << "------------------------------------------------" << endl;
-
-                    for (auto const& Cmd : GuardedCommands) {
-                        bool Exception;
-                        auto CandNext = TryExecuteCommand(Cmd, CurUnwoundState, Exception);
-                        if (CandNext == nullptr) {
-                            continue;
-                        }
-                        u32 Dummy;
-                        auto SortedCand = TheCanonicalizer->SortChans(CandNext, false,
-                                                                      Dummy);
-                        CandNext->Recycle();
-                        sstr << "Firing command:" << endl << Cmd->ToString() << endl
-                             << "yields diff (from desired state):" << endl;
-                        sstr << "------------------------------------------------" << endl;
-                        Checker->Printer->PrintState(SortedCand, NextUnwoundState, sstr);
-                        sstr << "------------------------------------------------" << endl;
-                        sstr << "and yields diff (from current unwound state):" << endl;
-                        sstr << "------------------------------------------------" << endl;
-                        Checker->Printer->PrintState(SortedCand, CurUnwoundState, sstr);
-                        sstr << "------------------------------------------------" << endl;
-                        SortedCand->Recycle();
-                    }
-
-                    sstr << "The permuted path up until (including) the failure state:" << endl;
-                    sstr << "Permuted Origin:" << endl;
-                    sstr << "------------------------------------------------" << endl;
-                    Checker->Printer->PrintState(PermPath->GetOrigin(), sstr);
-                    sstr << "------------------------------------------------" << endl;
-                    auto CurPermState = PermPath->GetOrigin();
-                    auto const& PPathElems = PermPath->GetPathElems();
-                    for (auto const& PPathElem : PPathElems) {
-                        auto State = PPathElem->GetTarget();
-                        auto CmdIdx = PPathElem->GetGCmdIndex();
-                        auto const& Cmd = GuardedCommands[CmdIdx];
-
-                        sstr << "Fired Command:" << endl << Cmd->ToString()
-                             << endl << "with permutation " << PPathElem->GetPermutation()
-                             << " to get next permuted state:" << endl;
-                        sstr << "------------------------------------------------" << endl;
-                        Checker->Printer->PrintState(State, CurPermState, sstr);
-                        sstr << "------------------------------------------------" << endl;
-                        CurPermState = State;
-                        if (State == NextPermState) {
-                            break;
-                        }
-                    }
-
-
-                    throw InternalError(sstr.str() + "\nAt: " + __FILE__ + ":" +
+                    throw InternalError((string)"Could not find a command to compute the " +
+                                        "next unwound state\nAt: " + __FILE__ + ":" +
                                         to_string(__LINE__));
                 }
 
@@ -265,9 +190,7 @@ namespace ESMC {
                 auto NextUnwoundPS = TheCanonicalizer->ApplyPermutation(NextPermPS,
                                                                         InvPermAlongPath,
                                                                         ProcIdxSet);
-                u32 Dummy;
-                TheCanonicalizer->SortChans(const_cast<StateVec*>(NextUnwoundPS->GetSVPtr()),
-                                            false, Dummy);
+                TheCanonicalizer->Sort(NextUnwoundPS);
                 // find out which command takes us here
                 bool FoundCmd = false;
                 ProductState* NextUnsortedPS = nullptr;
