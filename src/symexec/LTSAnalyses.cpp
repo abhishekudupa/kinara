@@ -355,6 +355,13 @@ namespace ESMC {
                 Phi = Mgr->Simplify(Phi);
             }
 
+            MgrT::SubstMapT StemSortMap;
+            auto StemSortAssignments = Trace->GetStemSortPermutation();
+            for (auto SortAssignment : StemSortAssignments) {
+                StemSortMap[SortAssignment->GetLHS()] = SortAssignment->GetRHS();
+            }
+            Phi = Mgr->TermSubstitute(StemSortMap, Phi);
+
             for (auto it = StemGuardedCommandsAndMonitorGuards.rbegin();
                  it != StemGuardedCommandsAndMonitorGuards.rend();
                  ++it) {
@@ -610,6 +617,14 @@ namespace ESMC {
                                                   VarDifferentLoopValue,
                                                   InitialCondition);
             }
+
+            MgrT::SubstMapT LoopSortMap;
+            auto LoopSortAssignments = Trace->GetLoopSortPermutation();
+            for (auto SortAssignment : LoopSortAssignments) {
+                LoopSortMap[SortAssignment->GetLHS()] = SortAssignment->GetRHS();
+            }
+            InitialCondition = Mgr->TermSubstitute(LoopSortMap, InitialCondition);
+
             vector<PSTraceElemT> Loop = Trace->GetLoop();
             vector<PSTraceElemT> Stem = Trace->GetStem();
             auto LastStem = Stem.back();
@@ -671,6 +686,13 @@ namespace ESMC {
                 Phi = Mgr->Simplify(Phi);
             }
             Phi = Mgr->TermSubstitute(InvertLoopValues, Phi);
+
+            MgrT::SubstMapT StemSortMap;
+            auto StemSortAssignments = Trace->GetStemSortPermutation();
+            for (auto SortAssignment : StemSortAssignments) {
+                StemSortMap[SortAssignment->GetLHS()] = SortAssignment->GetRHS();
+            }
+            Phi = Mgr->TermSubstitute(StemSortMap, Phi);
 
             for (auto it = StemGuardedCommandsAndMonitorGuards.rbegin();
                  it != StemGuardedCommandsAndMonitorGuards.rend();
