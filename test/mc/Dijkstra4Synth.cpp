@@ -34,7 +34,7 @@ using namespace Synth;
 
 // for number of processes = 3, the minimum number of legitimate states is 8.
 // for number of processes = 4, the minimum number of legitimate states is 12.
-const size_t NumProcesses = 3;
+const size_t NumProcesses = 5;
 
 
 // Messages
@@ -518,7 +518,6 @@ vector<unordered_map<string, ExpT>> GetValidStatesMap(LabelledTS* TheLTS) {
         DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
     }
     auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
-    int CandidateStateCounter = 1;
     vector<ExpT> Indicators;
     for (auto DataCombination : DataCombinations) {
         unordered_map<string, ExpT> ValidState;
@@ -635,6 +634,8 @@ int main()
             NumLegitimateStates = 8;
         } else if (NumProcesses == 4) {
             NumLegitimateStates = 12;
+        } else if (NumProcesses == 5) {
+            NumLegitimateStates = 16;
         }
         ExpT NumLegitimateStatesExp = TheLTS->MakeVal(to_string(NumLegitimateStates),
                                                       NumIndicatorsType);
@@ -685,70 +686,7 @@ int main()
 
     TheSolver->Solve();
 
-    // TheSolver->PrintSolution();
-
-    for (auto ValidState : GetValidStatesMap(TheLTS)) {
-        for (auto NameValue : ValidState) {
-            cout << NameValue.first << " : " << NameValue.second << endl;
-        }
-    }
-
-    auto Proc0 = TheLTS->GetEFSMs([&](const EFSMBase* EFSM)
-                                  {return EFSM->GetName() == "Proc0";})[0];
-
-    auto Proc0Type = TheLTS->GetEFSMType("Proc0");
-    auto Proc0StateVar = TheLTS->MakeVar("Proc0", Proc0Type);
-    auto Mgr = Proc0StateVar->GetMgr();
-    for (auto OutputMsg : Proc0->GetOutputs()) {
-        for (auto Transition : Proc0->GetOutputTransitionsOnMsg(OutputMsg)) {
-            cout << Transition->ToString() << endl;
-            auto Guard = Transition->GetGuard();
-            for (auto ValidState : GetValidStatesMap(TheLTS)) {
-                MgrT::SubstMapT ValidStateMap;
-                auto StateVariable = TheLTS->MakeOp(LTSOps::OpField,
-                                                    Proc0StateVar,
-                                                    TheLTS->MakeVar("state",
-                                                                    TheLTS->MakeFieldAccessType()));
-                ValidStateMap[StateVariable] = TheLTS->MakeVal("TheState", StateVariable->GetType());
-                for (auto NameValue : ValidState) {
-                    auto Name = NameValue.first;
-                    if (Name != "Up0" && Name != "Up1" && Name != "Data0" && Name != "Data1") {
-                        continue;
-                    }
-                    cout << NameValue.first << " : " << NameValue.second << endl;
-
-                    auto Variable = TheLTS->MakeOp(LTSOps::OpField, Proc0StateVar,
-                                                   TheLTS->MakeVar(NameValue.first,
-                                                                   TheLTS->MakeFieldAccessType()));
-                    ValidStateMap[Variable] = NameValue.second;
-                }
-                auto GuardResult = Mgr->TermSubstitute(ValidStateMap, Guard);
-                cout << GuardResult << endl;
-                cout << Mgr->Simplify(GuardResult) << endl;
-            }
-        }
-    }
-
-    for (auto Var : TheLTS->GetStateVectorVars()) {
-        cout << Var << endl;
-        for (auto ScalarTerm : GetScalarTerms(Var)) {
-            cout << ScalarTerm << endl;
-        }
-    }
-
-    for (auto ValidState : GetValidStatesMap(TheLTS)) {
-        for (auto NameValue : ValidState) {
-            cout << NameValue.first << " : " << NameValue.second << endl;
-        }
-    }
-
-    // Check that every legitimate state is deterministic
-
-    // Get all valid initial states
-
-    // Check that every deterministic state is illegitimate
-
-
+    TheSolver->PrintSolution();
 
     delete Checker;
 
