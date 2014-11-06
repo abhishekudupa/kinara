@@ -75,10 +75,10 @@ int main()
     //                                 "Arrive", Msgs["Arrive"], {}, set<string>());
 
 
-    auto TargetFloorGTCurrentFloor = TheLTS->MakeOp(LTSOps::OpGT, TargetFloor, CurrentFloor);
-    Controller->AddOutputTransition("CheckRequest", "SentUp",
-                                   TargetFloorGTCurrentFloor, {},
-                                    "Up", Msgs["Up"], {}, set<string>());
+    // auto TargetFloorGTCurrentFloor = TheLTS->MakeOp(LTSOps::OpGT, TargetFloor, CurrentFloor);
+    // Controller->AddOutputTransition("CheckRequest", "SentUp",
+    //                                TargetFloorGTCurrentFloor, {},
+    //                                 "Up", Msgs["Up"], {}, set<string>());
 
     auto TargetFloorLTCurrentFloor = TheLTS->MakeOp(LTSOps::OpLT, TargetFloor, CurrentFloor);
     Controller->AddOutputTransition("CheckRequest", "SentDown",
@@ -325,7 +325,3 @@ int main()
     delete Checker;
     delete TheSolver;
 }
-
-
-
-

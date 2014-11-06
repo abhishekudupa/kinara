@@ -600,6 +600,7 @@ namespace ESMC {
 
             GuardMutualExclusiveSets[GuardOp].insert(CoveredPred);
             GuardOpToExp[GuardOp] = GuardExp;
+            AllOpToExp[GuardOp] = GuardExp;
 
             return GuardExp;
         }
@@ -870,6 +871,7 @@ namespace ESMC {
                                                                LValue->GetType());
                 auto UpdateExp = Mgr->MakeExpr(UpdateOp, DomainTermVec);
                 GuardOpToUpdates[GuardOp].insert(UpdateExp);
+                AllOpToExp[UpdateOp] = UpdateExp;
 
                 cout << "Made update exp for term " << LValue->ToString()
                      << ":" << endl << UpdateExp->ToString() << endl;

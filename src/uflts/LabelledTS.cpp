@@ -392,6 +392,7 @@ namespace ESMC {
                                                 IncEFSM->GuardMutualExclusiveSets.end());
                 GuardOpToUpdates.insert(IncEFSM->GuardOpToUpdates.begin(),
                                         IncEFSM->GuardOpToUpdates.end());
+                AllOpToExp.insert(IncEFSM->AllOpToExp.begin(), IncEFSM->AllOpToExp.end());
                 auto& LHS = GuardOpToUpdateSymmetryConstraints;
                 auto const& RHS = IncEFSM->GuardOpToUpdateSymmetryConstraints;
                 LHS.insert(RHS.begin(), RHS.end());

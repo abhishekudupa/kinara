@@ -693,8 +693,8 @@ namespace ESMC {
                     continue;
                 } else {
                     cout << "Found Correct Completion!" << endl;
-                    cout << "With Bound = " << Bound << ", Model: " << endl;
-                    cout << Model.ToString() << endl;
+                    cout << "With Bound = " << Bound << ", Model:" << endl;
+                    PrintFinalSolution(cout);
                     return;
                 }
             }
@@ -800,6 +800,61 @@ namespace ESMC {
                         }
                     }
                 }
+            }
+        }
+
+        void Solver::PrintOneUFFinalSolution(const UFInterpreter* Interp, ostream& Out)
+        {
+            auto OpExp = Interp->GetExp();
+            auto OpExpAsOp = OpExp->As<OpExpression>();
+            auto Mgr = TheLTS->GetMgr();
+            auto const& EvalMap = Interp->GetEvalMap();
+
+            if (EvalMap.size() == 0 || !Interp->IsEnabled()) {
+                return;
+            }
+
+            auto FuncType =
+                Mgr->LookupUninterpretedFunction(OpExpAsOp->GetOpCode())->As<ExprFuncType>();
+            auto const& DomTypes = FuncType->GetArgTypes();
+            const u32 DomSize = DomTypes.size();
+            auto const& RangeType = FuncType->GetFuncType();
+            auto const& FuncName = FuncType->GetName();
+
+            Out << "Model for uninterpreted function \"" << FuncName << "\" -> {" << endl;
+            string IndentString = "    ";
+
+            for (auto const& EvalPoint : EvalMap) {
+                Out << IndentString;
+                auto const& Point = EvalPoint.first;
+                auto const& Value = EvalPoint.second;
+
+                for (u32 i = 0; i < DomSize; ++i) {
+                    auto const& Val = DomTypes[i]->SAs<ExprScalarType>()->ValToConst(Point[i]);
+                    Out << Val << " ";
+                }
+
+                auto const& Val = RangeType->SAs<ExprScalarType>()->ValToConst(Value);
+                Out << "-> " << Val << endl;
+            }
+
+            Out << "}" << endl << endl;
+        }
+
+        void Solver::PrintFinalSolution(ostream& Out)
+        {
+            auto const& AllOpToInterp = Checker->Compiler->GetUFInterpreters();
+            for (auto Op : InterpretedOps) {
+                const UFInterpreter* OpInterp = nullptr;
+                auto it = AllOpToInterp.find(Op);
+                if (it != AllOpToInterp.end()) {
+                    OpInterp = it->second;
+                } else {
+                    throw InternalError((string)"Weird op with code: " + to_string(Op) +
+                                        " which shouldn't really exist!\nAt: " + __FILE__ +
+                                        ":" + to_string(__LINE__));
+                }
+                PrintOneUFFinalSolution(OpInterp, Out);
             }
         }
 

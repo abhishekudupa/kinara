@@ -201,12 +201,15 @@ namespace ESMC {
 
         class UFInterpreter : public RValueInterpreter
         {
+        public:
+            typedef unordered_map<vector<i64>, i64,
+                                  Detail::ValueVecHasher> EvalMapT;
+
         private:
             vector<RValueInterpreter*> ArgInterps;
             mutable vector<i64> SubEvals;
             const u32 NumArgInterps;
-            mutable unordered_map<vector<i64>, i64,
-                                  Detail::ValueVecHasher> EvalMap;
+            mutable EvalMapT EvalMap;
             mutable Z3Model Model;
             mutable bool Enabled;
             i64 MyOpCode;
@@ -224,6 +227,8 @@ namespace ESMC {
             virtual void UpdateModel(const Z3Model& Model,
                                      const unordered_set<i64>& InterpretedOps,
                                      const unordered_map<i64, ExpT>& IndicatorExps) const override;
+            const EvalMapT& GetEvalMap() const;
+            i64 GetOpCode() const;
             bool IsEnabled() const;
         };
 
@@ -448,6 +453,7 @@ namespace ESMC {
         {
         private:
             vector<RValueInterpreter*> RegisteredInterps;
+            unordered_map<i64, const UFInterpreter*> UFInterpreters;
 
             inline bool HasMsgLValue(const ExpT& Exp, LabelledTS* TheLTS);
 
@@ -463,6 +469,7 @@ namespace ESMC {
             void UpdateModel(const Z3Model& Model,
                              const unordered_set<i64>& InterpretedOps,
                              const unordered_map<i64, ExpT>& IndicatorExps);
+            const unordered_map<i64, const UFInterpreter*>& GetUFInterpreters() const;
         };
 
     } /* end namespace MC */

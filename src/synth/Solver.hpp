@@ -161,14 +161,13 @@ namespace ESMC {
             // and marks the appropriate set of commands as having a
             // fixed interpretation.
             void MakeAssertion(const ExpT& Pred);
-
             void UnveilGuardOp(i64 Op);
-
             void Solve();
-
             void PrintUFModel(i64 UFCode);
-
             void PrintSolution();
+
+            void PrintOneUFFinalSolution(const UFInterpreter* Interp, ostream& Out);
+            void PrintFinalSolution(ostream& Out);
         };
 
     } /* end namespace Synth */

@@ -539,6 +539,7 @@ namespace ESMC {
                                         const unordered_set<i64>& InterpretedOps,
                                         const unordered_map<i64, ExpT>& IndicatorExps) const
         {
+            EvalMap.clear();
             if (InterpretedOps.find(MyOpCode) == InterpretedOps.end()) {
                 Enabled = false;
             } else {
@@ -556,17 +557,31 @@ namespace ESMC {
                     }
                     if (ResAsConst->GetConstValue() != "0") {
                         Enabled = true;
-                        EvalMap.clear();
                         this->Model = Model;
                     } else {
                         Enabled = false;
                     }
                 } else {
-                    EvalMap.clear();
                     this->Model = Model;
                     Enabled = true;
                 }
             }
+        }
+
+        const UFInterpreter::EvalMapT&
+        UFInterpreter::GetEvalMap() const
+        {
+            return EvalMap;
+        }
+
+        i64 UFInterpreter::GetOpCode() const
+        {
+            return MyOpCode;
+        }
+
+        bool UFInterpreter::IsEnabled() const
+        {
+            return Enabled;
         }
 
         OpInterpreter::OpInterpreter(const vector<RValueInterpreter*>& SubInterps,
@@ -1127,6 +1142,16 @@ namespace ESMC {
         void LTSCompiler::RegisterInterp(RValueInterpreter *Interp)
         {
             RegisteredInterps.push_back(Interp);
+            if (Interp->Is<UFInterpreter>()) {
+                auto AsUFInterp = Interp->SAs<UFInterpreter>();
+                auto OpCode = AsUFInterp->GetOpCode();
+                if (UFInterpreters.find(OpCode) != UFInterpreters.end()) {
+                    throw InternalError((string)"Attempted to add more than one interpreter " +
+                                        "for an uninterpreted function.\nAt: " + __FILE__ +
+                                        ":" + to_string(__LINE__));
+                }
+                UFInterpreters[OpCode] = AsUFInterp;
+            }
         }
 
         void LTSCompiler::CompileExp(const ExpT& Exp, LabelledTS* TheLTS)
@@ -1245,6 +1270,12 @@ namespace ESMC {
             for (auto const& Interp : RegisteredInterps) {
                 Interp->UpdateModel(Model, InterpretedOps, IndicatorExps);
             }
+        }
+
+        const unordered_map<i64, const UFInterpreter*>&
+        LTSCompiler::GetUFInterpreters() const
+        {
+            return UFInterpreters;
         }
 
     } /* end namespace */

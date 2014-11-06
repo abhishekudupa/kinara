@@ -155,6 +155,7 @@ namespace ESMC {
 
         class RValueInterpreter;
         class LValueInterpreter;
+        class UFInterpreter;
         class AQStructure;
         template <typename STATETYPE>
         class AnnotatedEdge;
