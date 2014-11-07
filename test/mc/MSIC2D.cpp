@@ -865,7 +865,8 @@ int main()
 
     DirEFSM->AddState("D_BUSY_DATA");
 
-    DirEFSM->AddState("D_PENDING_UNBLOCK_E");
+    // audupa: removed pending unblock, 11/07/2014
+    // DirEFSM->AddState("D_PENDING_UNBLOCK_E");
 
     DirEFSM->FreezeStates();
 
@@ -1099,11 +1100,12 @@ int main()
     Updates.push_back(new LTSAssignSimple(DirDataExp, WBMsgInDotData));
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheParam, DirActiveIDExp);
 
-    DirEFSM->AddInputTransitions({ CacheParam }, TrueExp, "D_BUSY",
-                                 "D_PENDING_UNBLOCK_E", Guard, Updates,
-                                 "InMsg",
-                                 TheLTS->GetNamedType("WBMsgType'"),
-                                 CacheParams);
+    // audupa: removed pending unblock e state 11/07/2014
+    // DirEFSM->AddInputTransitions({ CacheParam }, TrueExp, "D_BUSY",
+    //                              "D_PENDING_UNBLOCK_E", Guard, Updates,
+    //                              "InMsg",
+    //                              TheLTS->GetNamedType("WBMsgType'"),
+    //                              CacheParams);
     Guard = TheLTS->MakeOp(LTSOps::OpNOT, Guard);
     Updates.push_back(new LTSAssignSimple(TheLTS->MakeOp(LTSOps::OpIndex,
                                                          DirSharersExp,
@@ -1199,6 +1201,7 @@ int main()
     Updates.clear();
 
     // audupa: changed to c2d 10/06
+    // DataMsgC2D' on BUSY_DATA
     Updates.push_back(new LTSAssignSimple(DirDataExp, DataMsgC2DInDotData));
     DirEFSM->AddInputTransitions({ CacheParam }, TrueExp,
                                  "D_BUSY_DATA", "D_BUSY", TrueExp, Updates,
@@ -1210,12 +1213,16 @@ int main()
     // WBMsg on BUSY_DATA
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheParam, DirActiveIDExp);
     Updates.push_back(new LTSAssignSimple(DirDataExp, WBMsgInDotData));
-    DirEFSM->AddInputTransitions({ CacheParam }, TrueExp, "D_BUSY_DATA",
-                                 "D_PENDING_UNBLOCK_E", Guard, Updates,
-                                 "InMsg",
-                                 TheLTS->GetNamedType("WBMsgType'"),
-                                 { CacheParam, DirParam, AddressParam });
 
+    // Ignore if it comes from ActiveID, we'll handle it later
+    // DirEFSM->AddInputTransitions({ CacheParam }, TrueExp, "D_BUSY_DATA",
+    //                              "D_BUSY", Guard, Updates,
+    //                              "InMsg",
+    //                              TheLTS->GetNamedType("WBMsgType'"),
+    //                              { CacheParam, DirParam, AddressParam });
+
+    // Handle if it's not from ActiveID, we essentially handle this
+    // as D_BUSY_WB, by sending data to the requesting cache
     Guard = TheLTS->MakeOp(LTSOps::OpNOT, Guard);
     Updates.push_back(new LTSAssignSimple(TheLTS->MakeOp(LTSOps::OpIndex, DirSharersExp,
                                                          CacheParam),
@@ -1228,22 +1235,23 @@ int main()
     Updates.clear();
 
     // UnblockEMsg on PENDING_UNBLOCK_E
-    Updates.push_back(new LTSAssignParam({ CacheParam2 }, TrueExp,
-                                         TheLTS->MakeOp(LTSOps::OpIndex, DirSharersExp,
-                                                        CacheParam2),
-                                         TheLTS->MakeFalse()));
-    Updates.push_back(new LTSAssignSimple(DirOwnerExp,
-                                          TheLTS->MakeVal("clear", CacheIDType)));
-    Updates.push_back(new LTSAssignSimple(DirNumSharersExp,
-                                          TheLTS->MakeVal("0", NumSharersType)));
+    // Updates.push_back(new LTSAssignParam({ CacheParam2 }, TrueExp,
+    //                                      TheLTS->MakeOp(LTSOps::OpIndex, DirSharersExp,
+    //                                                     CacheParam2),
+    //                                      TheLTS->MakeFalse()));
+    // Updates.push_back(new LTSAssignSimple(DirOwnerExp,
+    //                                       TheLTS->MakeVal("clear", CacheIDType)));
+    // Updates.push_back(new LTSAssignSimple(DirNumSharersExp,
+    //                                       TheLTS->MakeVal("0", NumSharersType)));
 
-    // Updates.push_back(new LTSAssignSimple(DirActiveIDExp, TheLTS->MakeVal("clear", CacheIDType)));
-    // Move to D_M_WB, because we still need to send a an ack
-    DirEFSM->AddInputTransitions({ CacheParam }, TrueExp, "D_PENDING_UNBLOCK_E",
-                                 "D_M_WB", TrueExp, Updates, "InMsg",
-                                 TheLTS->GetNamedType("UnblockXMsgType'"),
-                                 { CacheParam, DirParam, AddressParam });
-    Updates.clear();
+    // audupa: Removed PENDING_UNBLOCK_E 11/07/2014
+    // // Updates.push_back(new LTSAssignSimple(DirActiveIDExp, TheLTS->MakeVal("clear", CacheIDType)));
+    // // Move to D_M_WB, because we still need to send a an ack
+    // DirEFSM->AddInputTransitions({ CacheParam }, TrueExp, "D_PENDING_UNBLOCK_E",
+    //                              "D_M_WB", TrueExp, Updates, "InMsg",
+    //                              TheLTS->GetNamedType("UnblockXMsgType'"),
+    //                              { CacheParam, DirParam, AddressParam });
+    // Updates.clear();
 
     TheLTS->FreezeAutomata();
 

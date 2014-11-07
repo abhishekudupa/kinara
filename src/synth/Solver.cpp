@@ -925,7 +925,15 @@ namespace ESMC {
             auto const& DomTypes = FuncType->GetArgTypes();
             const u32 DomSize = DomTypes.size();
             auto const& RangeType = FuncType->GetFuncType();
-            auto const& FuncName = FuncType->GetName();
+            // auto const& FuncName = FuncType->GetName();
+            auto const& AllOpToExp = TheLTS->AllOpToExp;
+            auto it = AllOpToExp.find(Interps[0]->GetOpCode());
+            if (it == AllOpToExp.end()) {
+                throw InternalError((string)"Could not resolve Op: " +
+                                    to_string(Interps[0]->GetOpCode()) + " to and expression!\n" +
+                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
+            }
+            auto AppExp = it->second;
 
             UFInterpreter::EvalMapT CombinedEvalMap;
             for (auto const* Interp : Interps) {
@@ -940,7 +948,8 @@ namespace ESMC {
                 return;
             }
 
-            Out << "Model for uninterpreted function \"" << FuncName << "\" -> {" << endl;
+            Out << "Model for uninterpreted function:" << endl
+                << AppExp->ToString() << " -> {" << endl;
             string IndentString = "    ";
 
             for (auto const& EvalPoint : CombinedEvalMap) {
