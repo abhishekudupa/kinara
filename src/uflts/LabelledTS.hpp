@@ -134,6 +134,7 @@ namespace ESMC {
             unordered_map<i64, set<ExpT>> GuardMutualExclusiveSets;
             unordered_map<i64, set<ExpT>> GuardOpToUpdates;
             unordered_map<i64, set<ExpT>> GuardOpToUpdateSymmetryConstraints;
+            unordered_map<i64, ExpT> StateUpdateOpToExp;
             unordered_map<i64, ExpT> AllOpToExp;
 
             // Interface only for friends

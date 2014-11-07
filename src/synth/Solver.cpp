@@ -126,89 +126,19 @@ namespace ESMC {
         inline void Solver::CheckedAssert(const ExpT& Assertion)
         {
             if (AssertedConstraints.find(Assertion) != AssertedConstraints.end()) {
-                cout << "Not asserting previously asserted constraint:" << endl
-                     << Assertion->ToString() << endl;
+                // cout << "Not asserting previously asserted constraint:" << endl
+                //      << Assertion->ToString() << endl;
                 return;
             }
 
             AssertedConstraints.insert(Assertion);
-            cout << "Asserting: " << Assertion->ToString() << endl;
+            // cout << "Asserting: " << Assertion->ToString() << endl;
             TP->Assert(Assertion, true);
         }
 
         Solver::~Solver()
         {
             // Nothing here
-        }
-
-        inline void Solver::HandleOneSafetyViolation(const StateVec* ErrorState,
-                                                     const ExpT& BlownInvariant)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            auto AQS = Checker->AQS;
-
-            cout << "Handling one safety violation, computing shortest path... ";
-            flush(cout);
-
-            auto PPath = AQS->FindShortestPath(ErrorState, CostFunction);
-            // auto PPath = AQS->FindPath(ErrorState);
-
-            cout << "Done!" << endl << "Unwinding trace... ";
-            flush(cout);
-
-            auto Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
-            cout << "Trace:" << endl << endl;
-            cout << Trace->ToString(1) << endl << endl;
-
-            cout << "Done!" << endl
-                 << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
-                 << "Finding invariant that was blown... ";
-            flush(cout);
-
-            auto LastState = Trace->GetTraceElems().back().second;
-
-            auto ActualBlownInvariant = BlownInvariant;
-            // Find out the invariant blown on the last state of trace now
-            if (BlownInvariant != Checker->TheLTS->InvariantExp) {
-                auto const& BoundsInvariants = Checker->BoundsInvariants;
-
-                bool FoundBlown = false;
-                for (auto const& Invar : BoundsInvariants) {
-                    // cout << "Evaluating invariant: " << Invar->ToString() << endl;
-                    auto Interp = Invar->ExtensionData.Interp;
-                    auto Res = Interp->Evaluate(LastState);
-                    if (Res == UndefValue) {
-                        continue;
-                    } else if (Res == 0) {
-                        FoundBlown = true;
-                        ActualBlownInvariant = Invar;
-                    }
-                }
-
-                if (!FoundBlown) {
-                    ostringstream sstr;
-                    Checker->Printer->PrintState(LastState, sstr);
-                    throw InternalError((string)"Could not find the bounds invariant that was " +
-                                        "blown in call to Solver::HandleOneSafetyViolation()\n" +
-                                        "The State:\n" + sstr.str() + "\nCould not find bounds " +
-                                        "invariant that was blown for the state listed above.\n" +
-                                        "At: " + __FILE__ + ":" + to_string(__LINE__));
-                }
-            }
-
-            cout << "Done!" << endl << "Blown Invariant: " << endl
-                 << ActualBlownInvariant->ToString() << endl << "Computing weakest pre... ";
-            flush(cout);
-
-            auto&& WPConditions =
-                TraceAnalyses::WeakestPrecondition(this, Trace, ActualBlownInvariant);
-            for (auto const& Pred : WPConditions) {
-                cout << "Asserting Safety Pre:" << endl
-                     << Pred->ToString() << endl << endl;
-                MakeAssertion(Mgr->Simplify(Pred));
-            }
-
-            delete Trace;
         }
 
         inline void Solver::CreateMutualExclusionConstraint(const ExpT& GuardExp1,
@@ -252,7 +182,7 @@ namespace ESMC {
             }
             auto QBody = Mgr->BoundSubstitute(SubstMap, MutexExp);
             auto Constraint = Mgr->MakeForAll(QVarTypes, QBody);
-            CheckedAssert(Constraint);
+            CurrentAssertions.insert(Constraint);
         }
 
         inline void Solver::CreateGuardIndicator(i64 GuardOp)
@@ -282,17 +212,67 @@ namespace ESMC {
                                                        Mgr->MakeVal("1", IndicatorType)));
             cout << "Asserting Indicator Implication:" << endl
                  << Implies->ToString() << endl << endl;
-            CheckedAssert(Implies);
+            CurrentAssertions.insert(Implies);
+        }
+
+        inline void Solver::MakeStateIdenticalConstraints(const ExpT& Exp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto ExpAsOp = Exp->As<OpExpression>();
+            assert(ExpAsOp != nullptr);
+            auto const& Args = GetOpArgs(Exp);
+
+            vector<ExprTypeRef> ArgTypes;
+            transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
+                      [&] (const ExpT& Exp) -> ExprTypeRef
+                      {
+                          return Exp->GetType();
+                      });
+
+            vector<ExprTypeRef> QVarTypes = ArgTypes;
+            QVarTypes.insert(QVarTypes.end(), ArgTypes.begin(), ArgTypes.end());
+            const u32 NumArgs = ArgTypes.size();
+
+            MgrT::SubstMapT Subst1;
+            MgrT::SubstMapT Subst2;
+            for (u32 i = 0; i < NumArgs; ++i) {
+                auto BoundVarExp = Mgr->MakeBoundVar(ArgTypes[i], NumArgs - i - 1);
+                Subst1[Args[i]] = BoundVarExp;
+            }
+
+            for (u32 i = 0; i < NumArgs; ++i) {
+                auto BoundVarExp = Mgr->MakeBoundVar(ArgTypes[i], (2 * NumArgs) - i - 1);
+                Subst2[Args[i]] = BoundVarExp;
+            }
+
+            auto App1 = Mgr->BoundSubstitute(Subst1, Exp);
+            auto App2 = Mgr->BoundSubstitute(Subst2, Exp);
+
+            auto Body = Mgr->MakeExpr(LTSOps::OpEQ, App1, App2);
+
+            auto Constraint = Mgr->MakeForAll(QVarTypes, Body);
+            cout << "State Variable Identical Constraint:" << endl
+                 << Constraint->ToString() << endl << endl;
+            CurrentAssertions.insert(Constraint);
         }
 
         inline void Solver::CreateUpdateIndicator(i64 UpdateOp)
         {
             auto Mgr = TheLTS->GetMgr();
             auto const& UpdateOpToLValue = TheLTS->UpdateOpToUpdateLValue;
+            auto const& StateUpdateOpToExp = TheLTS->StateUpdateOpToExp;
 
             auto it = UpdateOpToLValue.find(UpdateOp);
             if (it == UpdateOpToLValue.end()) {
-                // This must be an exempt lvalue
+                // This must be an exempt lvalue, but it could be a state
+                // variable
+                auto it2 = StateUpdateOpToExp.find(UpdateOp);
+                if (it2 == StateUpdateOpToExp.end()) {
+                    return;
+                }
+
+                // This is a state variable. Constrain to be identical
+                MakeStateIdenticalConstraints(it2->second);
                 return;
             }
 
@@ -334,7 +314,7 @@ namespace ESMC {
                                                           Mgr->MakeVal("1", IndicatorType)));
             cout << "Asserting Update Indicator Implication:" << endl
                  << ImpliesExp->ToString() << endl << endl;
-            CheckedAssert(ImpliesExp);
+            CurrentAssertions.insert(ImpliesExp);
         }
 
         inline void Solver::UpdateCommands()
@@ -385,7 +365,7 @@ namespace ESMC {
             auto it = GuardSymmetryConstraints.find(Op);
             if (it != GuardSymmetryConstraints.end()) {
                 for (auto const& Constraint : it->second) {
-                    CheckedAssert(Constraint);
+                    CurrentAssertions.insert(Constraint);
                 }
             }
 
@@ -414,7 +394,7 @@ namespace ESMC {
             auto it3 = GuardOpToUpdateSymmetryConstraints.find(Op);
             if (it3 != GuardOpToUpdateSymmetryConstraints.end()) {
                 for (auto const& Constraint : it3->second) {
-                    CheckedAssert(Constraint);
+                    CurrentAssertions.insert(Constraint);
                 }
             }
 
@@ -446,7 +426,7 @@ namespace ESMC {
 
         void Solver::MakeAssertion(const ExpT& Pred)
         {
-            CheckedAssert(Pred);
+            CurrentAssertions.insert(Pred);
             auto&& SynthOps = GetSynthOps(Pred);
             for (auto const& Op : SynthOps) {
                 if (UnveiledGuardOps.find(Op) != UnveiledGuardOps.end()) {
@@ -456,27 +436,96 @@ namespace ESMC {
             }
         }
 
+        inline void Solver::HandleOneSafetyViolation(const StateVec* ErrorState,
+                                                     const ExpT& BlownInvariant)
+        {
+            auto AQS = Checker->AQS;
+
+            // cout << "Handling one safety violation, computing shortest path... ";
+            // flush(cout);
+
+            auto PPath = AQS->FindShortestPath(ErrorState, CostFunction);
+            // auto PPath = AQS->FindPath(ErrorState);
+
+            // cout << "Done!" << endl << "Unwinding trace... ";
+            // flush(cout);
+
+            auto Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
+            // cout << "Trace:" << endl << endl;
+            // cout << Trace->ToString(1) << endl << endl;
+
+            // cout << "Done!" << endl
+            //      << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
+            //      << "Finding invariant that was blown... ";
+            // flush(cout);
+
+            auto LastState = Trace->GetTraceElems().back().second;
+
+            auto ActualBlownInvariant = BlownInvariant;
+            // Find out the invariant blown on the last state of trace now
+            if (BlownInvariant != Checker->TheLTS->InvariantExp) {
+                auto const& BoundsInvariants = Checker->BoundsInvariants;
+
+                bool FoundBlown = false;
+                for (auto const& Invar : BoundsInvariants) {
+                    // cout << "Evaluating invariant: " << Invar->ToString() << endl;
+                    auto Interp = Invar->ExtensionData.Interp;
+                    auto Res = Interp->Evaluate(LastState);
+                    if (Res == UndefValue) {
+                        continue;
+                    } else if (Res == 0) {
+                        FoundBlown = true;
+                        ActualBlownInvariant = Invar;
+                    }
+                }
+
+                if (!FoundBlown) {
+                    ostringstream sstr;
+                    Checker->Printer->PrintState(LastState, sstr);
+                    throw InternalError((string)"Could not find the bounds invariant that was " +
+                                        "blown in call to Solver::HandleOneSafetyViolation()\n" +
+                                        "The State:\n" + sstr.str() + "\nCould not find bounds " +
+                                        "invariant that was blown for the state listed above.\n" +
+                                        "At: " + __FILE__ + ":" + to_string(__LINE__));
+                }
+            }
+
+            // cout << "Done!" << endl << "Blown Invariant: " << endl
+            //      << ActualBlownInvariant->ToString() << endl << "Computing weakest pre... ";
+            // flush(cout);
+
+            auto&& WPConditions =
+                TraceAnalyses::WeakestPrecondition(this, Trace, ActualBlownInvariant);
+            for (auto const& Pred : WPConditions) {
+                // cout << "Obtained Safety Pre:" << endl
+                //      << Pred->ToString() << endl << endl;
+                MakeAssertion(Pred);
+            }
+
+            delete Trace;
+        }
+
         inline void Solver::HandleOneDeadlockViolation(const StateVec* ErrorState)
         {
             auto Mgr = TheLTS->GetMgr();
             auto AQS = Checker->AQS;
 
-            cout << "Handling one deadlock violation, computing shortest path... ";
-            flush(cout);
+            // cout << "Handling one deadlock violation, computing shortest path... ";
+            // flush(cout);
 
             auto PPath = AQS->FindShortestPath(ErrorState, CostFunction);
 
-            cout << "Done!" << endl << "Unwinding trace... ";
-            flush(cout);
+            // cout << "Done!" << endl << "Unwinding trace... ";
+            // flush(cout);
 
             auto Trace = TraceBase::MakeDeadlockViolation(PPath, Checker);
-            cout << "Trace:" << endl << endl;
-            cout << Trace->ToString(1) << endl << endl;
+            // cout << "Trace:" << endl << endl;
+            // cout << Trace->ToString(1) << endl << endl;
 
-            cout << "Done!" << endl
-                 << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
-                 << "Computing Disjuncts... ";
-            flush(cout);
+            // cout << "Done!" << endl
+            //      << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
+            //      << "Computing Disjuncts... ";
+            // flush(cout);
 
             // cout << "The Deadlock Trace:" << endl << Trace->ToString() << endl << endl
             //      << "The Error State:" << endl;
@@ -518,23 +567,22 @@ namespace ESMC {
                 GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
             }
 
-            cout << "GoodExp = " << GoodExp->ToString() << endl;
-
-            cout << "Done!" << endl << "Computing weakest pre... ";
-            flush(cout);
+            // cout << "Done!" << endl << "Computing weakest pre... ";
+            // flush(cout);
 
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this,
                                                    Trace->As<SafetyViolation>(),
                                                    GoodExp);
 
+
             for (auto const& Pred : WPConditions) {
-                cout << "Asserting Pre:" << endl << Pred->ToString() << endl << endl;
+                // cout << "Obtained Pre:" << endl << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
 
-            cout << "Done!" << endl;
-            flush(cout);
+            // cout << "Done!" << endl;
+            // flush(cout);
 
             delete Trace;
         }
@@ -543,32 +591,33 @@ namespace ESMC {
         {
             auto const& ErrorStates = Checker->GetAllErrorStates();
             auto const& DeadlockFreeInvar = Checker->DeadlockFreeInvariant;
-
-            u32 NumDeadlocks = 0;
-            u32 i = 0;
+            const u32 NumTotalErrors = ErrorStates.size();
             set<ExpT> BlownInvariantsCovered;
-            cout << "Found " << ErrorStates.size() << " error states in all!" << endl;
+            cout << "Found " << NumTotalErrors << " error states in all!" << endl;
+            cout << "Building constraints for " << NumTotalErrors
+                 << " errors..." << endl;
+            cout << "   % complete";
+            u32 NumErrorsHandled = 0;
+            u32 PercentComplete = 0;
             for (auto const& ErrorState : ErrorStates) {
                 auto SVPtr = ErrorState.first;
                 auto const& BlownInvariant = ErrorState.second;
-                bool IsDeadlock = (BlownInvariant == DeadlockFreeInvar);
-                if (IsDeadlock &&
-                    NumDeadlocks++ < 8) {
+                if (BlownInvariant == DeadlockFreeInvar) {
                     HandleOneDeadlockViolation(SVPtr);
-                    ++i;
-                } else if (!IsDeadlock) {
-                    if (BlownInvariantsCovered.find(BlownInvariant) !=
-                        BlownInvariantsCovered.end()) {
-                        continue;
-                    }
-                    ++i;
-                    BlownInvariantsCovered.insert(BlownInvariant);
+                } else {
                     HandleOneSafetyViolation(SVPtr, BlownInvariant);
                 }
-                if (i > 16) {
-                    break;
+                NumErrorsHandled++;
+                auto NewPercentComplete = (NumErrorsHandled * 100) / NumTotalErrors;
+                if (NewPercentComplete != PercentComplete) {
+                    PercentComplete = NewPercentComplete;
+                    cout << "\b\b\b\b\b\b\b\b\b\b\b\b\b" << setw(3)
+                         << setfill('0') << PercentComplete << "% complete";
+                    flush(cout);
                 }
             }
+
+            cout << endl << " Done!" << endl << endl;
         }
 
         inline void Solver::HandleLivenessViolation(const LivenessViolation* Trace,
@@ -576,7 +625,7 @@ namespace ESMC {
         {
             auto Predicate =
                 TraceAnalyses::WeakestPreconditionForLiveness(this, Monitor, Trace);
-            cout << "Asserting predicate for liveness violation:" << endl
+            cout << "Obtained predicate for liveness violation:" << endl
                  << Predicate->ToString() << endl << endl;
             MakeAssertion(Predicate);
             delete Trace;
@@ -586,11 +635,16 @@ namespace ESMC {
         {
             auto Mgr = TheLTS->GetMgr();
             vector<ExpT> Summands;
+            ExpT SumExp = nullptr;
+
+            // Sum over ALL the indicators
             for (auto const& IndexExp : IndicatorExps) {
                 Summands.push_back(IndexExp.second);
             }
+            for (auto const& IndexExp : UpdateIndicatorExps) {
+                Summands.push_back(IndexExp.second);
+            }
 
-            ExpT SumExp = ExpT::NullPtr;
             if (Summands.size() == 0) {
                 return;
             } else if (Summands.size() == 1) {
@@ -601,30 +655,57 @@ namespace ESMC {
 
             auto BoundExp = Mgr->MakeVal(to_string(Bound),
                                          Mgr->MakeType<ExprRangeType>(0, Bound));
-            auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundExp);
-            cout << "Asserting Bounds Constraint:" << endl
-                 << EQExp->ToString() << endl << endl;
-            TP->Assert(EQExp, true);
-
-            // Now make the bounds constraint for the update
-            Summands.clear();
-            for (auto const& IndexExp : UpdateIndicatorExps) {
-                Summands.push_back(IndexExp.second);
-            }
-            SumExp = ExpT::NullPtr;
-            if (Summands.size() == 0) {
-                return;
-            } else if (Summands.size() == 1) {
-                SumExp = Summands[0];
-            } else {
-                SumExp = Mgr->MakeExpr(LTSOps::OpADD, Summands);
-            }
-            BoundExp = Mgr->MakeVal(to_string(UpdateBound),
-                                    Mgr->MakeType<ExprRangeType>(0, UpdateBound));
             auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, SumExp, BoundExp);
-            cout << "Asserting Update Bounds Constraint:" << endl
+            cout << "Asserting Bounds Constraint: " << endl
                  << LEExp->ToString() << endl << endl;
             TP->Assert(LEExp, true);
+
+
+            // for (auto const& IndexExp : IndicatorExps) {
+            //     Summands.push_back(IndexExp.second);
+            // }
+
+            // if (Summands.size() == 0) {
+            //     return;
+            // } else if (Summands.size() == 1) {
+            //     SumExp = Summands[0];
+            // } else {
+            //     SumExp = Mgr->MakeExpr(LTSOps::OpADD, Summands);
+            // }
+
+            // auto BoundExp = Mgr->MakeVal(to_string(Bound),
+            //                              Mgr->MakeType<ExprRangeType>(0, Bound));
+            // auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundExp);
+            // cout << "Asserting Bounds Constraint:" << endl
+            //      << EQExp->ToString() << endl << endl;
+            // TP->Assert(EQExp, true);
+
+            // // Now make the bounds constraint for the update
+            // Summands.clear();
+            // for (auto const& IndexExp : UpdateIndicatorExps) {
+            //     Summands.push_back(IndexExp.second);
+            // }
+            // SumExp = ExpT::NullPtr;
+            // if (Summands.size() == 0) {
+            //     return;
+            // } else if (Summands.size() == 1) {
+            //     SumExp = Summands[0];
+            // } else {
+            //     SumExp = Mgr->MakeExpr(LTSOps::OpADD, Summands);
+            // }
+            // BoundExp = Mgr->MakeVal(to_string(UpdateBound),
+            //                         Mgr->MakeType<ExprRangeType>(0, UpdateBound));
+            // auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, SumExp, BoundExp);
+            // cout << "Asserting Update Bounds Constraint:" << endl
+            //      << LEExp->ToString() << endl << endl;
+            // TP->Assert(LEExp, true);
+        }
+
+        inline void Solver::AssertCurrentConstraints()
+        {
+            for (auto const& Pred : CurrentAssertions) {
+                CheckedAssert(Pred);
+            }
         }
 
         // Algorithm:
@@ -648,25 +729,38 @@ namespace ESMC {
         //       continue
         void Solver::Solve()
         {
+            bool FirstIteration = true;
             while (Bound <= LimitOnBound) {
+
+                // Assert any constraints we might have
+                // from the previous iteration
+                AssertCurrentConstraints();
+                CurrentAssertions.clear();
 
                 TP->Push();
                 AssertBoundsConstraint();
                 auto TPRes = TP->CheckSat();
                 TP->Pop();
 
+                // if (TPRes == TPResult::UNSATISFIABLE) {
+                //     if (UpdateBound < Bound * UpdateBoundsMultiplier) {
+                //         ++UpdateBound;
+                //     } else {
+                //         UpdateBound = 0;
+                //         ++Bound;
+                //     }
+                //     continue;
+                // } else if (TPRes == TPResult::UNKNOWN) {
+                //     throw ESMCError((string)"Could not solve constraints!");
+                // }
+
+                // for unified bounds
                 if (TPRes == TPResult::UNSATISFIABLE) {
-                    if (UpdateBound < Bound * UpdateBoundsMultiplier) {
-                        ++UpdateBound;
-                    } else {
-                        UpdateBound = 0;
-                        ++Bound;
-                    }
+                    ++Bound;
                     continue;
                 } else if (TPRes == TPResult::UNKNOWN) {
                     throw ESMCError((string)"Could not solve constraints!");
                 }
-
 
                 // all good. extract a model
                 auto const& Model = TPAsZ3->GetModel();
@@ -675,7 +769,19 @@ namespace ESMC {
 
                 // Okay, we're good to model check now
                 Checker->ClearAQS();
-                auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, 16);
+                u32 CExBound = 0;
+                if (FirstIteration) {
+                    CExBound = UINT32_MAX;
+                    FirstIteration = false;
+                } else {
+                    CExBound = 8;
+                }
+                auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, CExBound);
+
+                cout << "Model Used:" << endl;
+                PrintFinalSolution(cout);
+                cout << "End of model" << endl << endl;
+
                 if (!Safe) {
                     HandleSafetyViolations();
                     continue;

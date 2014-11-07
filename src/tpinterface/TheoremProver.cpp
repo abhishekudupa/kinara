@@ -244,6 +244,9 @@ namespace ESMC {
 
         TPResult Z3TheoremProver::CheckSat() const
         {
+            auto ASTVec = Z3_solver_get_assertions(*Ctx, Solver);
+            cout << "Checking SAT with " << Z3_ast_vector_size(*Ctx, ASTVec)
+                 << " assertions" << endl;
             auto Res = Z3_solver_check(*Ctx, Solver);
             if (Res == Z3_L_FALSE) {
                 LastSolveResult = TPResult::UNSATISFIABLE;

@@ -38,6 +38,7 @@
 // Code:
 
 #include "../hash/SpookyHash.hpp"
+#include <random>
 
 #include "Z3Objects.hpp"
 
@@ -56,6 +57,10 @@ namespace ESMC {
             auto Cfg = Z3_mk_config();
             Z3_set_param_value(Cfg, "MODEL", "true");
             Z3_set_param_value(Cfg, "MODEL_COMPLETION", "true");
+            random_device rd;
+            auto Seed = rd() % (1 << 30);
+            cout << "Z3 Random Seed: " << Seed << endl << endl;
+            Z3_set_param_value(Cfg, "RANDOM_SEED", to_string(Seed).c_str());
             Ctx = Z3_mk_context_rc(Cfg);
             Z3_del_config(Cfg);
         }

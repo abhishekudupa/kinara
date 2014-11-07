@@ -1754,8 +1754,15 @@ namespace ESMC {
                     delete[] ConstFuncs;
                     delete[] ConstTests;
 
-                } else if (Type->template Is<ExprRecordType>()) {
-                    auto TypeAsRec = Type->SAs<ExprRecordType>();
+                } else if (Type->template Is<ExprRecordType>() ||
+                           Type->template Is<ExprParametricType>()) {
+                    const ExprRecordType* TypeAsRec = nullptr;
+                    if (Type->template Is<ExprRecordType>()) {
+                        TypeAsRec = Type->SAs<ExprRecordType>();
+                    } else {
+                        TypeAsRec =
+                            Type->SAs<ExprParametricType>()->GetBaseType()->SAs<ExprRecordType>();
+                    }
                     auto const& Members = TypeAsRec->GetMemberVec();
                     const u32 NumFields = Members.size();
 

@@ -393,6 +393,8 @@ namespace ESMC {
                 GuardOpToUpdates.insert(IncEFSM->GuardOpToUpdates.begin(),
                                         IncEFSM->GuardOpToUpdates.end());
                 AllOpToExp.insert(IncEFSM->AllOpToExp.begin(), IncEFSM->AllOpToExp.end());
+                StateUpdateOpToExp.insert(IncEFSM->StateUpdateOpToExp.begin(),
+                                          IncEFSM->StateUpdateOpToExp.end());
                 auto& LHS = GuardOpToUpdateSymmetryConstraints;
                 auto const& RHS = IncEFSM->GuardOpToUpdateSymmetryConstraints;
                 LHS.insert(RHS.begin(), RHS.end());
@@ -1082,11 +1084,12 @@ namespace ESMC {
                         auto UpdateAsParam = Update->As<LTSAssignParam>();
                         auto const& AsgnParams = UpdateAsParam->GetParams();
                         auto const& AsgnConstraint = UpdateAsParam->GetConstraint();
+                        auto SubstAsgnConstraint = Mgr->Substitute(SubstMap, AsgnConstraint);
 
                         CheckUpdates({ Update }, SymTab, Mgr, false, "");
 
                         auto&& AsgnParamInsts = InstantiateParams(AsgnParams,
-                                                                  AsgnConstraint, Mgr);
+                                                                  SubstAsgnConstraint, Mgr);
                         const u32 NumAsgnParams = AsgnParams.size();
 
                         for (auto& AsgnParamInst : AsgnParamInsts) {

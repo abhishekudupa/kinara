@@ -567,10 +567,14 @@ namespace ESMC {
                                               const string& NameSuffix)
         {
             auto Mgr = TheLTS->GetMgr();
-            vector<ExpT> DomainTermVec(DomainTerms.begin(), DomainTerms.end());
+            auto LocalDomainTerms = DomainTerms;
+            FilterTerms(LocalDomainTerms, TheLTS->MakeBoolType());
+            vector<ExpT> DomainTermVec(LocalDomainTerms.begin(),
+                                       LocalDomainTerms.end());
+
             vector<ExprTypeRef> DomainTypes;
 
-            for_each(DomainTerms.begin(), DomainTerms.end(),
+            for_each(LocalDomainTerms.begin(), LocalDomainTerms.end(),
                      [&] (const ExpT& DomainTerm) -> void
                      {
                          DomainTypes.push_back(DomainTerm->GetType());
@@ -896,6 +900,8 @@ namespace ESMC {
 
                 if (LValue != TheLTS->MakeVar("state", StateType)) {
                     UpdateOpToUpdateLValue[UpdateOp] = make_pair(UpdateExp, LValue);
+                } else {
+                    StateUpdateOpToExp[UpdateOp] = UpdateExp;
                 }
             }
 
@@ -1033,7 +1039,6 @@ namespace ESMC {
                                                          const ExpT& CoveredPred)
         {
             auto&& DomainTerms = GetDomainTerms(DomainVars);
-            FilterTerms(DomainTerms, TheLTS->MakeBoolType());
 
             auto const& MsgType = MsgDecl->GetMessageType();
             ExprTypeRef ActMsgType = ExprTypeRef::NullPtr;

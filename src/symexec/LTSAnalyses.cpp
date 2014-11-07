@@ -526,7 +526,7 @@ namespace ESMC {
             return enabled;
         }
 
-        vector<ExpT>
+        FastExpSetT
         TraceAnalyses::WeakestPrecondition(Solver* TheSolver,
                                            SafetyViolation* Trace,
                                            ExpT InitialPredicate)
@@ -565,7 +565,7 @@ namespace ESMC {
                 Phi = Mgr->Simplify(Phi);
             }
 
-            vector<ExpT> Retval;
+            FastExpSetT Retval;
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
 
             for (auto const& InitState : InitStateGenerators) {
@@ -577,7 +577,7 @@ namespace ESMC {
                 }
                 auto NewPhi = Mgr->TermSubstitute(InitStateSubstMap, Phi);
                 NewPhi = Mgr->Simplify(NewPhi);
-                Retval.push_back(NewPhi);
+                Retval.insert(NewPhi);
             }
             return Retval;
         }

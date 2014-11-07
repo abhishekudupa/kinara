@@ -111,6 +111,9 @@ namespace ESMC {
 
         private:
             static const string BoundsVarPrefix;
+
+            // Assertions in the current iteration
+            FastExpSetT CurrentAssertions;
             TPRef TP;
             LabelledTS* TheLTS;
             LTSCompiler* Compiler;
@@ -139,6 +142,9 @@ namespace ESMC {
             u32 UpdateBound;
 
             inline void CheckedAssert(const ExpT& Assertion);
+            inline void AssertCurrentConstraints();
+
+            inline void MakeStateIdenticalConstraints(const ExpT& Exp);
 
             inline void CreateGuardIndicator(i64 GuardOp);
             inline void CreateUpdateIndicator(i64 UpdateOp);

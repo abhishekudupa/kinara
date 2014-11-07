@@ -146,9 +146,9 @@ namespace ESMC {
             static ExpT
             AutomataStatesCondition(LabelledTS* TheLTS, const StateVec* StateVector);
 
-            static vector<ExpT> WeakestPrecondition(Solver* TheSolver,
-                                                    SafetyViolation* Trace,
-                                                    ExpT InitialPredicate);
+            static FastExpSetT WeakestPrecondition(Solver* TheSolver,
+                                                   SafetyViolation* Trace,
+                                                   ExpT InitialPredicate);
 
             static ExpT WeakestPrecondition(ExpT InitialPhi,
                                             TraceBase* Trace);

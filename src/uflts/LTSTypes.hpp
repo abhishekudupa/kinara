@@ -118,6 +118,7 @@ namespace ESMC {
         typedef Exprs::QuantifiedExpressionBase<LTSExtensionT, LTSTermSemanticizer> QExpT;
         typedef Exprs::EQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> EQExpT;
         typedef Exprs::AQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> AQExpT;
+        typedef unordered_set<ExpT, Exprs::ExpressionPtrHasher> FastExpSetT;
 
         // types
         typedef Exprs::ExprBoolType ExprBoolType;

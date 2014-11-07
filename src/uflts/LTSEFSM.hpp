@@ -96,6 +96,7 @@ namespace ESMC {
             unordered_map<i64, set<ExpT>> GuardOpToUpdates;
             unordered_map<i64, set<ExpT>> GuardOpToUpdateSymmetryConstraints;
             unordered_map<string, set<ExpT>> AddedTransitionsByState;
+            unordered_map<i64, ExpT> StateUpdateOpToExp;
             unordered_map<i64, ExpT> AllOpToExp;
 
             map<string, set<SymmMsgDeclRef>> BlockedCompletions;
