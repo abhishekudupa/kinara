@@ -1543,33 +1543,33 @@ int main()
     auto Checker = new LTSChecker(TheLTS);
 
     // Create the liveness monitors
-
     auto Monitor = Checker->MakeStateBuchiMonitor("LDLiveness", CacheParams, TrueExp);
     Monitor->AddState("Initial", true, false);
     Monitor->AddState("Accepting", false, true);
 
     Monitor->FreezeStates();
-    auto MonCacheDotState = Monitor->MakeOp(LTSOps::OpIndex,
-                                            Monitor->MakeVar("Cache", CacheType),
-                                            CacheParam);
-    MonCacheDotState = Monitor->MakeOp(LTSOps::OpIndex, MonCacheDotState,
-                                       DirParam);
-    MonCacheDotState = Monitor->MakeOp(LTSOps::OpIndex, MonCacheDotState,
-                                       AddressParam);
-    MonCacheDotState = Monitor->MakeOp(LTSOps::OpField, MonCacheDotState,
-                                       TheLTS->MakeVar("state", FAType));
 
-    auto MonCacheDotStateEQIS = Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
-                                                Monitor->MakeVal("C_IS",
-                                                                 MonCacheDotState->GetType()));
-    auto MonCacheDotStateEQS = Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
-                                               Monitor->MakeVal("C_S",
-                                                                MonCacheDotState->GetType()));
-    auto MonCacheDotStateNEQS = Monitor->MakeOp(LTSOps::OpNOT, MonCacheDotStateEQS);
+    auto MonEnvDotState = Monitor->MakeOp(LTSOps::OpIndex,
+                                          Monitor->MakeVar("Environment", EnvType),
+                                          CacheParam);
+    MonEnvDotState = Monitor->MakeOp(LTSOps::OpIndex, MonEnvDotState,
+                                     DirParam);
+    MonEnvDotState = Monitor->MakeOp(LTSOps::OpIndex, MonEnvDotState,
+                                     AddressParam);
+    MonEnvDotState = Monitor->MakeOp(LTSOps::OpField, MonEnvDotState,
+                                     TheLTS->MakeVar("state", FAType));
+
+    auto MonEnvDotStateEQPendingLD = Monitor->MakeOp(LTSOps::OpEQ, MonEnvDotState,
+                                                     Monitor->MakeVal("PendingLDState",
+                                                                      MonEnvDotState->GetType()));
+    auto MonEnvDotStateEQInitial = Monitor->MakeOp(LTSOps::OpEQ, MonEnvDotState,
+                                                   Monitor->MakeVal("InitialState",
+                                                                    MonEnvDotState->GetType()));
+    auto MonEnvDotStateNEQInitial = Monitor->MakeOp(LTSOps::OpNOT, MonEnvDotStateEQInitial);
 
     Monitor->AddTransition("Initial", "Initial", TrueExp);
-    Monitor->AddTransition("Initial", "Accepting", MonCacheDotStateEQIS);
-    Monitor->AddTransition("Accepting", "Accepting", MonCacheDotStateNEQS);
+    Monitor->AddTransition("Initial", "Accepting", MonEnvDotStateEQPendingLD);
+    Monitor->AddTransition("Accepting", "Accepting", MonEnvDotStateNEQInitial);
     Monitor->Freeze();
 
 
@@ -1578,33 +1578,30 @@ int main()
     Monitor->AddState("Accepting", false, true);
 
     Monitor->FreezeStates();
-    MonCacheDotState = Monitor->MakeOp(LTSOps::OpIndex,
-                                       Monitor->MakeVar("Cache", CacheType),
-                                       CacheParam);
-    MonCacheDotState = Monitor->MakeOp(LTSOps::OpIndex, MonCacheDotState,
-                                       DirParam);
-    MonCacheDotState = Monitor->MakeOp(LTSOps::OpIndex, MonCacheDotState,
-                                       AddressParam);
-    MonCacheDotState = Monitor->MakeOp(LTSOps::OpField, MonCacheDotState,
-                                       TheLTS->MakeVar("state", FAType));
 
-    auto MonCacheDotStateEQIM = Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
-                                                    Monitor->MakeVal("C_IM",
-                                                                     MonCacheDotState->GetType()));
-    auto MonCacheDotStateEQSM =  Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
-                                                    Monitor->MakeVal("C_SM",
-                                                                     MonCacheDotState->GetType()));
-    auto MonCacheDotStateEQSMIM = Monitor->MakeOp(LTSOps::OpOR, MonCacheDotStateEQSM,
-                                                  MonCacheDotStateEQIM);
-
-    auto MonCacheDotStateNEQM = Monitor->MakeOp(LTSOps::OpEQ, MonCacheDotState,
-                                                Monitor->MakeVal("C_M",
-                                                                 MonCacheDotState->GetType()));
-    MonCacheDotStateNEQM = Monitor->MakeOp(LTSOps::OpNOT, MonCacheDotStateNEQM);
+    auto MonEnvDotStateEQPendingST = Monitor->MakeOp(LTSOps::OpEQ, MonEnvDotState,
+                                                     Monitor->MakeVal("PendingSTState",
+                                                                      MonEnvDotState->GetType()));
 
     Monitor->AddTransition("Initial", "Initial", TrueExp);
-    Monitor->AddTransition("Initial", "Accepting", MonCacheDotStateEQSMIM);
-    Monitor->AddTransition("Accepting", "Accepting", MonCacheDotStateNEQM);
+    Monitor->AddTransition("Initial", "Accepting", MonEnvDotStateEQPendingST);
+    Monitor->AddTransition("Accepting", "Accepting", MonEnvDotStateNEQInitial);
+    Monitor->Freeze();
+
+
+    Monitor = Checker->MakeStateBuchiMonitor("EVLiveness", CacheParams, TrueExp);
+    Monitor->AddState("Initial", true, false);
+    Monitor->AddState("Accepting", false, true);
+
+    Monitor->FreezeStates();
+
+    auto MonEnvDotStateEQPendingEV = Monitor->MakeOp(LTSOps::OpEQ, MonEnvDotState,
+                                                     Monitor->MakeVal("PendingEVState",
+                                                                      MonEnvDotState->GetType()));
+
+    Monitor->AddTransition("Initial", "Initial", TrueExp);
+    Monitor->AddTransition("Initial", "Accepting", MonEnvDotStateEQPendingEV);
+    Monitor->AddTransition("Accepting", "Accepting", MonEnvDotStateNEQInitial);
     Monitor->Freeze();
 
     auto TheSolver = new Solver(Checker);
