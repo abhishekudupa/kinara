@@ -1388,6 +1388,55 @@ int main()
     InitStates.push_back(new LTSInitState({ ValueParam }, TrueExp, InitUpdates));
 
     TheLTS->AddInitStates(InitStates);
+
+    // Invariant that at most one cache is in M
+    auto CacheIndex1 = TheLTS->MakeBoundVar(0, CacheIDType);
+    auto CacheIndex2 = TheLTS->MakeBoundVar(1, CacheIDType);
+    auto DirIndex1 = TheLTS->MakeBoundVar(2, DirIDType);
+    auto DirIndex2 = TheLTS->MakeBoundVar(3, DirIDType);
+    auto AddressIndex1 = TheLTS->MakeBoundVar(4, AddressType);
+    auto AddressIndex2 = TheLTS->MakeBoundVar(5, AddressType);
+
+    vector<ExprTypeRef> InvQVarTypes = { AddressType, AddressType, DirIDType,
+                                         DirIDType, CacheIDType, CacheIDType };
+
+    auto CacheExp1 = TheLTS->MakeVar("Cache", CacheType);
+    CacheExp1 = TheLTS->MakeOp(LTSOps::OpIndex, CacheExp1, CacheIndex1);
+    CacheExp1 = TheLTS->MakeOp(LTSOps::OpIndex, CacheExp1, DirIndex1);
+    CacheExp1 = TheLTS->MakeOp(LTSOps::OpIndex, CacheExp1, AddressIndex1);
+    auto Cache1DotState = TheLTS->MakeOp(LTSOps::OpField, CacheExp1,
+                                         TheLTS->MakeVar("state", FAType));
+    auto CacheExp2 = TheLTS->MakeVar("Cache", CacheType);
+    CacheExp2 = TheLTS->MakeOp(LTSOps::OpIndex, CacheExp2, CacheIndex2);
+    CacheExp2 = TheLTS->MakeOp(LTSOps::OpIndex, CacheExp2, DirIndex2);
+    CacheExp2 = TheLTS->MakeOp(LTSOps::OpIndex, CacheExp2, AddressIndex2);
+    auto Cache2DotState = TheLTS->MakeOp(LTSOps::OpField, CacheExp2,
+                                         TheLTS->MakeVar("state", FAType));
+
+    auto IndicesEQ1 = TheLTS->MakeOp(LTSOps::OpEQ, CacheIndex1, CacheIndex2);
+    auto IndicesEQ2 = TheLTS->MakeOp(LTSOps::OpEQ, DirIndex1, DirIndex2);
+    auto IndicesEQ3 = TheLTS->MakeOp(LTSOps::OpEQ, AddressIndex1, AddressIndex2);
+
+    auto IndicesEQ = TheLTS->MakeOp(LTSOps::OpAND, { IndicesEQ1, IndicesEQ2, IndicesEQ3 });
+    auto IndicesNEQ = TheLTS->MakeOp(LTSOps::OpNOT, IndicesEQ);
+    auto Cache1DotStateEQM = TheLTS->MakeOp(LTSOps::OpEQ, Cache1DotState,
+                                            TheLTS->MakeVal("C_M", Cache1DotState->GetType()));
+    auto Cache2DotStateNEQM = TheLTS->MakeOp(LTSOps::OpEQ, Cache2DotState,
+                                            TheLTS->MakeVal("C_M", Cache1DotState->GetType()));
+    Cache2DotStateNEQM = TheLTS->MakeOp(LTSOps::OpNOT, Cache2DotStateNEQM);
+
+    auto Cache2DotStateNEQS = TheLTS->MakeOp(LTSOps::OpEQ, Cache2DotState,
+                                            TheLTS->MakeVal("C_S", Cache1DotState->GetType()));
+    Cache2DotStateNEQS = TheLTS->MakeOp(LTSOps::OpNOT, Cache2DotStateNEQS);
+
+    auto Cache2DotStateConstraint = TheLTS->MakeOp(LTSOps::OpAND, Cache2DotStateNEQS,
+                                                   Cache2DotStateNEQM);
+    auto ImpliesExp = TheLTS->MakeOp(LTSOps::OpAND, IndicesNEQ, Cache1DotStateEQM);
+    ImpliesExp = TheLTS->MakeOp(LTSOps::OpIMPLIES, ImpliesExp, Cache2DotStateConstraint);
+
+    auto StateInvar = TheLTS->MakeForAll(InvQVarTypes, ImpliesExp);
+    TheLTS->AddInvariant(StateInvar);
+
     TheLTS->Freeze();
 
     auto const& StateVectorVars = TheLTS->GetStateVectorVars();
@@ -1490,13 +1539,22 @@ int main()
     Monitor->AddTransition("Accepting", "Accepting", MonEnvDotStateNEQInitial);
     Monitor->Freeze();
 
-    bool Status = Checker->BuildAQS();
+    bool Status = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, 1);
 
     if (!Status) {
         cout << "Bug in AQS" << endl;
+
+        auto const& ErrorStates = Checker->GetAllErrorStates();
+        for (auto const& ErrorState : ErrorStates) {
+            auto Trace = Checker->MakeTraceToError(ErrorState.first);
+            cout << Trace->ToString() << endl;
+            delete Trace;
+        }
+
         delete Checker;
         exit(1);
     }
+
     cout << "Checking Liveness Property \"LDLiveness\"..." << endl;
     auto LiveTrace = Checker->CheckLiveness("LDLiveness");
 
