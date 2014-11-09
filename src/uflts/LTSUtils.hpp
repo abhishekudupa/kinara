@@ -743,6 +743,18 @@ namespace ESMC {
             }
         }
 
+        static inline ExpT MakeSum(const vector<ExpT>& Summands,
+                                   MgrT* Mgr, const ExprTypeRef& Type)
+        {
+            if (Summands.size() == 0) {
+                return Mgr->MakeVal("0", Type);
+            } else if (Summands.size() == 1) {
+                return Summands[0];
+            } else {
+                return Mgr->MakeExpr(LTSOps::OpADD, Summands);
+            }
+        }
+
         static inline ExpT GetBaseLValue(const ExpT& Exp)
         {
             auto ExpAsVar = Exp->As<VarExpression>();

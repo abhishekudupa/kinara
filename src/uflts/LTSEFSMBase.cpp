@@ -70,6 +70,15 @@ namespace ESMC {
             return MessageType;
         }
 
+        const ExprTypeRef& SymmetricMessageDecl::GetBaseMessageType() const
+        {
+            if (MessageType->Is<ExprRecordType>()) {
+                return MessageType;
+            } else {
+                return MessageType->SAs<ExprParametricType>()->GetBaseType();
+            }
+        }
+
         const vector<ExpT>& SymmetricMessageDecl::GetNewParams() const
         {
             return NewParams;

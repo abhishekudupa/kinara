@@ -104,6 +104,10 @@ namespace ESMC {
             set<string> ReadOnlyVars;
             map<string, ExprTypeRef> UpdateableVariables;
             map<string, ExprTypeRef> AllVariables;
+            map<pair<string, SymmMsgDeclRef>, set<string>> VarDeps;
+            map<pair<string, SymmMsgDeclRef>, set<string>> VarMsgFieldDeps;
+            map<pair<string, SymmMsgDeclRef>, set<string>> OutMsgFieldDeps;
+
             UIDGenerator GuardUFUIDGen;
             UIDGenerator UpdateUFUIDGen;
 
@@ -152,9 +156,14 @@ namespace ESMC {
                                   const ExpT& CoveredPredicate,
                                   const string& NameSuffix);
 
+            inline set<ExpT> GetDomainTermsForUpdate(const ExpT& LValueTerm,
+                                                     const set<ExpT>& DomainTerms,
+                                                     const SymmMsgDeclRef& MsgDecl);
+
             inline vector<LTSAssignRef> MakeUpdates(i64 GuardOp,
                                                     const set<ExpT>& DomainTerms,
-                                                    const string& string);
+                                                    const string& NameSuffix,
+                                                    const SymmMsgDeclRef& MsgDecl);
 
             inline void CompleteOneInputTransition(const string& InitStateName,
                                                    const SymmMsgDeclRef& MsgDecl,
@@ -201,6 +210,15 @@ namespace ESMC {
             void MarkVariableReadOnly(const string& VarName);
             void MarkAllVariablesReadOnly();
             void MarkVariableWriteable(const string& VarName);
+
+            void SetVariableDepsOnMsg(const string& VarName,
+                                      const SymmMsgDeclRef& MsgDecl,
+                                      const set<string>& DepVars,
+                                      const set<string>& MessageFieldName);
+
+            void SetOutMsgFieldDeps(const SymmMsgDeclRef& OutMsgDecl,
+                                    const string& FieldName,
+                                    const set<string>& DepVars);
 
             // override freeze to add additional transitions
             // and such

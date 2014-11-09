@@ -189,30 +189,85 @@ namespace ESMC {
         {
             auto Mgr = TheLTS->GetMgr();
 
-            auto IndicatorUID = IndicatorUIDGenerator.GetUID();
-            string IndicatorVarName = (string)"__indicator_" + to_string(IndicatorUID);
+            // audupa: Changed indicators to represent HOW MANY
+            // points the guard evaluates to true at 11/09/2014
+
             auto FuncType = Mgr->LookupUninterpretedFunction(GuardOp)->As<ExprFuncType>();
-            IndicatorVarName += (string)"_" + FuncType->GetName();
-            auto const& DomainTypes = FuncType->GetArgTypes();
-            vector<ExpT> BoundArgs;
+            auto DomainTypes = FuncType->GetArgTypes();
+            vector<vector<string>> DomainElems;
             const u32 NumDomainTypes = DomainTypes.size();
-            for (u32 i = 0; i < NumDomainTypes; ++i) {
-                auto BoundVar = Mgr->MakeBoundVar(DomainTypes[i], NumDomainTypes - i - 1);
-                BoundArgs.push_back(BoundVar);
+            transform(DomainTypes.begin(), DomainTypes.end(), back_inserter(DomainElems),
+                      [&] (const ExprTypeRef& Type) -> vector<string>
+                      {
+                          return Type->GetElements();
+                      });
+
+            auto&& DomainCP = CrossProduct<string>(DomainElems.begin(), DomainElems.end());
+            vector<ExpT> PointIndicators;
+            for (auto const& DomainTuple : DomainCP) {
+                vector<ExpT> AppArgs(NumDomainTypes);
+                for (u32 i = 0; i < NumDomainTypes; ++i) {
+                    AppArgs[i] = Mgr->MakeVal(DomainTuple[i], DomainTypes[i]);
+                }
+                auto AppExp = Mgr->MakeExpr(GuardOp, AppArgs);
+                auto IndicatorVarName = (string)"__guard_point_indicator_" +
+                    to_string(GuardPointUIDGenerator.GetUID());
+                auto IndicatorVar = Mgr->MakeVar(IndicatorVarName,
+                                                 Mgr->MakeType<ExprRangeType>(0, 1));
+                PointIndicators.push_back(IndicatorVar);
+                auto OneExp = Mgr->MakeVal("1", Mgr->MakeType<ExprRangeType>(0, 1));
+                auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES,
+                                                AppExp,
+                                                Mgr->MakeExpr(LTSOps::OpEQ,
+                                                              IndicatorVar,
+                                                              OneExp));
+
+                cout << "Asserting Guard Point Constraint:" << endl
+                     << ImpliesExp->ToString() << endl << endl;
+                CurrentAssertions.insert(ImpliesExp);
             }
-            auto AppExp = Mgr->MakeExpr(GuardOp, BoundArgs);
-            auto ExistsExp = Mgr->MakeExists(DomainTypes, AppExp);
-            auto IndicatorType = Mgr->MakeType<ExprRangeType>(0, 1);
 
-            auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
-            IndicatorExps[GuardOp] = IndicatorVar;
+            auto SumExp = MakeSum(PointIndicators, Mgr,
+                                  Mgr->MakeType<ExprRangeType>(0, PointIndicators.size()));
+            auto SumIndicatorVarName = (string)"__guard_indicator_" +
+                to_string(IndicatorUIDGenerator.GetUID());
+            auto SumIndicatorVar =
+                Mgr->MakeVar(SumIndicatorVarName,
+                             Mgr->MakeType<ExprRangeType>(0,
+                                                          PointIndicators.size()));
+            auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumIndicatorVar, SumExp);
+            IndicatorExps[GuardOp] = SumIndicatorVar;
 
-            auto Implies = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
-                                         Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
-                                                       Mgr->MakeVal("1", IndicatorType)));
-            cout << "Asserting Indicator Implication:" << endl
-                 << Implies->ToString() << endl << endl;
-            CurrentAssertions.insert(Implies);
+            cout << "Asserting Guard Indicator Constraint:" << endl
+                 << EQExp->ToString() << endl << endl;
+            CurrentAssertions.insert(EQExp);
+
+            // audupa: Original guard indicator code
+
+            // auto IndicatorUID = IndicatorUIDGenerator.GetUID();
+            // string IndicatorVarName = (string)"__indicator_" + to_string(IndicatorUID);
+            // auto FuncType = Mgr->LookupUninterpretedFunction(GuardOp)->As<ExprFuncType>();
+            // IndicatorVarName += (string)"_" + FuncType->GetName();
+            // auto const& DomainTypes = FuncType->GetArgTypes();
+            // vector<ExpT> BoundArgs;
+            // const u32 NumDomainTypes = DomainTypes.size();
+            // for (u32 i = 0; i < NumDomainTypes; ++i) {
+            //     auto BoundVar = Mgr->MakeBoundVar(DomainTypes[i], NumDomainTypes - i - 1);
+            //     BoundArgs.push_back(BoundVar);
+            // }
+            // auto AppExp = Mgr->MakeExpr(GuardOp, BoundArgs);
+            // auto ExistsExp = Mgr->MakeExists(DomainTypes, AppExp);
+            // auto IndicatorType = Mgr->MakeType<ExprRangeType>(0, 1);
+
+            // auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
+            // IndicatorExps[GuardOp] = IndicatorVar;
+
+            // auto Implies = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
+            //                              Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
+            //                                            Mgr->MakeVal("1", IndicatorType)));
+            // cout << "Asserting Indicator Implication:" << endl
+            //      << Implies->ToString() << endl << endl;
+            // CurrentAssertions.insert(Implies);
         }
 
         inline void Solver::MakeStateIdenticalConstraints(const ExpT& Exp)

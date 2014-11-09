@@ -137,6 +137,7 @@ namespace ESMC {
             Z3Ctx Ctx;
             UIDGenerator IndicatorUIDGenerator;
             UIDGenerator UpdateIndicatorUIDGenerator;
+            UIDGenerator GuardPointUIDGenerator;
             // How many updates per allowed transition?
             u32 UpdateBoundsMultiplier;
             u32 UpdateBound;

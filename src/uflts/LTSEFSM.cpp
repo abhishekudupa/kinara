@@ -803,10 +803,94 @@ namespace ESMC {
             return Retval;
         }
 
+        inline set<ExpT>
+        IncompleteEFSM::GetDomainTermsForUpdate(const ExpT& LValueTerm,
+                                                const set<ExpT>& DomainTerms,
+                                                const SymmMsgDeclRef& MsgDecl)
+        {
+            auto BaseLVal = GetBaseLValue(LValueTerm);
+            auto BaseLValAsVar = BaseLVal->As<VarExpression>();
+            auto const& LValVarName = BaseLValAsVar->GetVarName();
+            set<ExpT> Retval;
+
+            if (LValVarName == "OutMsg") {
+                auto LValAsOp = LValueTerm->As<OpExpression>();
+                auto FieldVar = LValAsOp->GetChildren()[1];
+                auto const& FieldName = FieldVar->As<VarExpression>()->GetVarName();
+
+                auto it = OutMsgFieldDeps.find(make_pair(FieldName, MsgDecl));
+                if (it == OutMsgFieldDeps.end()) {
+                    return DomainTerms;
+                } else {
+                    for (auto const& DomainTerm : DomainTerms) {
+                        auto BaseVar = GetBaseLValue(DomainTerm);
+                        auto BaseAsVar = BaseVar->As<VarExpression>();
+                        auto LocalParams = Params;
+                        auto const& NewParams = MsgDecl->GetNewParams();
+                        LocalParams.insert(LocalParams.end(), NewParams.begin(), NewParams.end());
+                        if (find(LocalParams.begin(), LocalParams.end(), BaseVar) !=
+                            LocalParams.end()) {
+                            Retval.insert(DomainTerm);
+                        } else {
+                            auto const& BaseVarName = BaseAsVar->GetVarName();
+                            if (it->second.find(BaseVarName) != it->second.end()) {
+                                Retval.insert(DomainTerm);
+                            }
+                        }
+                    }
+                    return Retval;
+                }
+            } else {
+                set<string> MyVarDeps;
+                set<string> MyMsgFieldDeps;
+                auto it = VarDeps.find(make_pair(LValVarName, MsgDecl));
+                auto it2 = VarMsgFieldDeps.find(make_pair(LValVarName, MsgDecl));
+                if (it2 == VarMsgFieldDeps.end() && it == VarDeps.end()) {
+                        return DomainTerms;
+                }
+                if (it2 != VarMsgFieldDeps.end()) {
+                    MyMsgFieldDeps = it2->second;
+                }
+                if (it != VarDeps.end()) {
+                    MyVarDeps = it->second;
+                }
+
+                for (auto const& DomainTerm : DomainTerms) {
+                    auto BaseVar = GetBaseLValue(DomainTerm);
+                    auto BaseAsVar = BaseVar->As<VarExpression>();
+                    auto const& BaseVarName = BaseAsVar->GetVarName();
+                    string MsgFieldName;
+                    if (BaseVarName == "InMsg") {
+                        auto TermAsOp = DomainTerm->As<OpExpression>();
+                        auto const& FieldVar = TermAsOp->GetChildren()[1]->As<VarExpression>();
+                        MsgFieldName = FieldVar->GetVarName();
+                    }
+
+                    auto LocalParams = Params;
+                    auto const& NewParams = MsgDecl->GetNewParams();
+                    LocalParams.insert(LocalParams.end(), NewParams.begin(), NewParams.end());
+                    if (find(LocalParams.begin(), LocalParams.end(), BaseVar) !=
+                        LocalParams.end()) {
+                        Retval.insert(DomainTerm);
+                    } else {
+                        if (MyVarDeps.find(BaseVarName) != MyVarDeps.end()) {
+                            Retval.insert(DomainTerm);
+                        }
+                        if (MyMsgFieldDeps.find(MsgFieldName) != MyMsgFieldDeps.end()) {
+                            Retval.insert(DomainTerm);
+                        }
+                    }
+                }
+
+                return Retval;
+            }
+        }
+
         inline vector<LTSAssignRef>
         IncompleteEFSM::MakeUpdates(i64 GuardOp,
                                     const set<ExpT>& DomainTerms,
-                                    const string& NameSuffix)
+                                    const string& NameSuffix,
+                                    const SymmMsgDeclRef& MsgDecl)
         {
             auto Mgr = TheLTS->GetMgr();
             vector<LTSAssignRef> Retval;
@@ -835,7 +919,8 @@ namespace ESMC {
             LValueTerms.insert(TheLTS->MakeVar("state", StateType));
 
             for (auto const& LValue : LValueTerms) {
-                auto LocalDomTerms = DomainTerms;
+
+                auto&& LocalDomTerms = GetDomainTermsForUpdate(LValue, DomainTerms, MsgDecl);
                 FilterTerms(LocalDomTerms, LValue->GetType());
 
                 if (LValue->GetType()->Is<ExprSymmetricType>()) {
@@ -898,7 +983,11 @@ namespace ESMC {
 
                 Retval.push_back(new LTSAssignSimple(LValue, UpdateExp));
 
-                if (LValue != TheLTS->MakeVar("state", StateType)) {
+                auto BaseLValue = GetBaseLValue(LValue);
+                auto BaseLValueVarName = BaseLValue->SAs<VarExpression>()->GetVarName();
+                if (AllVariables.find(BaseLValueVarName) == AllVariables.end()) {
+                    continue;
+                } else if (LValue != TheLTS->MakeVar("state", StateType)) {
                     UpdateOpToUpdateLValue[UpdateOp] = make_pair(UpdateExp, LValue);
                 } else {
                     StateUpdateOpToExp[UpdateOp] = UpdateExp;
@@ -957,7 +1046,7 @@ namespace ESMC {
             DomainTerms = GetDomainTerms(LocalDomVars);
 
             // Make the updates
-            auto&& Updates = MakeUpdates(GuardOp, DomainTerms, NameSuffix);
+            auto&& Updates = MakeUpdates(GuardOp, DomainTerms, NameSuffix, MsgDecl);
 
             auto const& NewParams = MsgDecl->GetNewParams();
 
@@ -1059,7 +1148,7 @@ namespace ESMC {
 
             UpdateableVariables["OutMsg"] = MsgType;
 
-            auto&& Updates = MakeUpdates(GuardOp, DomainTerms, NameSuffix);
+            auto&& Updates = MakeUpdates(GuardOp, DomainTerms, NameSuffix, MsgDecl);
 
             UpdateableVariables.erase("OutMsg");
 
@@ -1278,6 +1367,76 @@ namespace ESMC {
             }
             ReadOnlyVars.erase(VarName);
             UpdateableVariables[VarName] = STEntry->GetType();
+        }
+
+        void IncompleteEFSM::SetVariableDepsOnMsg(const string& VarName,
+                                                  const SymmMsgDeclRef& MsgDecl,
+                                                  const set<string>& DepVars,
+                                                  const set<string>& MessageFieldNames)
+        {
+            if (AllVariables.find(VarName) == AllVariables.end()) {
+                throw ESMCError((string)"EFSM \"" + Name + "\" has no variable named \"" +
+                                VarName + "\", but SetVariableDepsOnMsg called on it!");
+            }
+
+            if (find(SymmetricMessages.begin(), SymmetricMessages.end(), MsgDecl) ==
+                SymmetricMessages.end()) {
+                throw ESMCError((string)"Invalid message decl on SetVariableDepsOnMsg()");
+            }
+
+            for (auto const& DepVar : DepVars) {
+                if (AllVariables.find(DepVar) == AllVariables.end()) {
+                    throw ESMCError((string)"EFSM \"" + Name + "\" has no variable named \"" +
+                                    DepVar + "\", but SetVariableDepsOnMsg called on it!");
+                }
+            }
+
+            VarDeps[make_pair(VarName, MsgDecl)] = DepVars;
+
+            if (MessageFieldNames.size() > 0 && MsgDecl->IsOutput()) {
+                throw ESMCError((string)"Message field dep specified for EFSM, but the " +
+                                "message associated with dependency is an output message");
+            }
+
+            auto BaseType = MsgDecl->GetBaseMessageType();
+            auto BaseAsRec = BaseType->SAs<ExprRecordType>();
+
+            auto const& FieldMap = BaseAsRec->GetMemberMap();
+            for (auto const& MessageFieldName : MessageFieldNames) {
+                if (FieldMap.find(MessageFieldName) == FieldMap.end()) {
+                    throw ESMCError((string)"Message type named \"" + BaseAsRec->GetName() + "\"" +
+                                    " does not have a field called \"" + MessageFieldName + "\"");
+                }
+            }
+            VarMsgFieldDeps[make_pair(VarName, MsgDecl)] = MessageFieldNames;
+        }
+
+        void IncompleteEFSM::SetOutMsgFieldDeps(const SymmMsgDeclRef& OutMsgDecl,
+                                                const string& FieldName,
+                                                const set<string>& DepVars)
+        {
+            auto BaseType = OutMsgDecl->GetBaseMessageType();
+            auto BaseAsRec = BaseType->SAs<ExprRecordType>();
+
+            if (find(SymmetricMessages.begin(), SymmetricMessages.end(), OutMsgDecl) ==
+                SymmetricMessages.end() || !OutMsgDecl->IsOutput()) {
+                throw ESMCError((string)"Invalid message decl on SetVariableDepsOnMsg()");
+            }
+
+            for (auto const& DepVar : DepVars) {
+                if (AllVariables.find(DepVar) == AllVariables.end()) {
+                    throw ESMCError((string)"EFSM \"" + Name + "\" has no variable named \"" +
+                                    DepVar + "\", but SetVariableDepsOnMsg called on it!");
+                }
+            }
+
+            auto const& FieldMap = BaseAsRec->GetMemberMap();
+            if (FieldMap.find(FieldName) == FieldMap.end()) {
+                throw ESMCError((string)"Message type named \"" + BaseAsRec->GetName() + "\"" +
+                                " does not have a field called \"" + FieldName + "\"");
+            }
+
+            OutMsgFieldDeps[make_pair(FieldName, OutMsgDecl)] = DepVars;
         }
 
     } /* end namespace LTS */

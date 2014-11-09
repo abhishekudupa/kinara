@@ -69,6 +69,7 @@ namespace ESMC {
             virtual ~SymmetricMessageDecl();
 
             const ExprTypeRef& GetMessageType() const;
+            const ExprTypeRef& GetBaseMessageType() const;
             const vector<ExpT>& GetNewParams() const;
             const ExpT& GetConstraint() const;
             const vector<ExpT>& GetMessageParams() const;

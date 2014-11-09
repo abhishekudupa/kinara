@@ -668,14 +668,14 @@ int main()
     Updates.clear();
 
     // audupa: removed for synthesis
-    // Updates.push_back(new LTSAssignSimple(CacheFwdToCacheExp,
-    //                                       TheLTS->MakeVal("clear", CacheIDType)));
-    // Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheFwdToCacheExp, CacheParam1);
-    // CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1, "C_IM_FWD", "C_IM",
-    //                                 Guard, Updates, "OutMsg", InvAckMsgType,
-    //                                 { CacheParam, CacheParam1, DirParam, AddressParam },
-    //                                 LTSFairnessType::None, SplatFairnessType::None, "");
-    // Updates.clear();
+    Updates.push_back(new LTSAssignSimple(CacheFwdToCacheExp,
+                                          TheLTS->MakeVal("clear", CacheIDType)));
+    Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheFwdToCacheExp, CacheParam1);
+    CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1, "C_IM_FWD", "C_IM",
+                                    Guard, Updates, "OutMsg", InvAckMsgType,
+                                    { CacheParam, CacheParam1, DirParam, AddressParam },
+                                    LTSFairnessType::None, SplatFairnessType::None, "");
+    Updates.clear();
 
     // C_IM on DataMsgC2C'
     Updates.push_back(new LTSAssignSimple(CacheDataExp, CachePendingWriteExp));
@@ -843,8 +843,8 @@ int main()
                                   TheLTS->GetNamedType("FwdGetSMsgType'"), CacheParams);
 
     // audupa: Removed for synthesis
-    // CacheEFSM->AddOutputTransition("C_II_SENDACK", "C_I", TrueExp, Updates,
-    //                                "OutMsg", EVAckMsgType, CacheParams);
+    CacheEFSM->AddOutputTransition("C_II_SENDACK", "C_I", TrueExp, Updates,
+                                   "OutMsg", EVAckMsgType, CacheParams);
 
     auto CacheAsInc = CacheEFSM->SAs<IncompleteEFSM>();
     CacheAsInc->MarkAllStatesComplete();
@@ -856,21 +856,21 @@ int main()
     CacheAsInc->SetVariableDepsOnMsg("PendingWrite", GetXMsgDecl, { "PendingWrite" }, {});
     CacheAsInc->SetVariableDepsOnMsg("AckCounter", GetXMsgDecl, { "AckCounter" }, {});
 
-    CacheAsInc->MarkStateIncomplete("C_II_SENDACK");
-    CacheAsInc->IgnoreAllMsgsOnState("C_II_SENDACK");
-    CacheAsInc->HandleMsgOnState(EVAckMsgDecl, "C_II_SENDACK");
-    CacheAsInc->SetVariableDepsOnMsg("Data", EVAckMsgDecl, { "Data" }, {});
-    CacheAsInc->SetVariableDepsOnMsg("FwdToCache", EVAckMsgDecl, { "FwdToCache" }, {});
-    CacheAsInc->SetVariableDepsOnMsg("PendingWrite", EVAckMsgDecl, { "PendingWrite" }, {});
-    CacheAsInc->SetVariableDepsOnMsg("AckCounter", EVAckMsgDecl, { "AckCounter" }, {});
+    // CacheAsInc->MarkStateIncomplete("C_II_SENDACK");
+    // CacheAsInc->IgnoreAllMsgsOnState("C_II_SENDACK");
+    // CacheAsInc->HandleMsgOnState(EVAckMsgDecl, "C_II_SENDACK");
+    // CacheAsInc->SetVariableDepsOnMsg("Data", EVAckMsgDecl, { "Data" }, {});
+    // CacheAsInc->SetVariableDepsOnMsg("FwdToCache", EVAckMsgDecl, { "FwdToCache" }, {});
+    // CacheAsInc->SetVariableDepsOnMsg("PendingWrite", EVAckMsgDecl, { "PendingWrite" }, {});
+    // CacheAsInc->SetVariableDepsOnMsg("AckCounter", EVAckMsgDecl, { "AckCounter" }, {});
 
-    CacheAsInc->MarkStateIncomplete("C_IM_FWD");
-    CacheAsInc->IgnoreAllMsgsOnState("C_IM_FWD");
-    CacheAsInc->HandleMsgOnState(InvAckDeclOut, "C_IM_FWD");
-    CacheAsInc->SetVariableDepsOnMsg("Data", InvAckDeclOut, { "Data" }, {});
-    CacheAsInc->SetVariableDepsOnMsg("FwdToCache", InvAckDeclOut, { "FwdToCache" }, {});
-    CacheAsInc->SetVariableDepsOnMsg("PendingWrite", InvAckDeclOut, { "PendingWrite" }, {});
-    CacheAsInc->SetVariableDepsOnMsg("AckCounter", InvAckDeclOut, { "AckCounter" }, {});
+    // CacheAsInc->MarkStateIncomplete("C_IM_FWD");
+    // CacheAsInc->IgnoreAllMsgsOnState("C_IM_FWD");
+    // CacheAsInc->HandleMsgOnState(InvAckDeclOut, "C_IM_FWD");
+    // CacheAsInc->SetVariableDepsOnMsg("Data", InvAckDeclOut, { "Data" }, {});
+    // CacheAsInc->SetVariableDepsOnMsg("FwdToCache", InvAckDeclOut, { "FwdToCache" }, {});
+    // CacheAsInc->SetVariableDepsOnMsg("PendingWrite", InvAckDeclOut, { "PendingWrite" }, {});
+    // CacheAsInc->SetVariableDepsOnMsg("AckCounter", InvAckDeclOut, { "AckCounter" }, {});
 
     // CacheAsInc->MarkStateIncomplete("C_SM_FWD");
     // CacheAsInc->IgnoreAllMsgsOnState("C_SM_FWD");
