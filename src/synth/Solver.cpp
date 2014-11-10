@@ -449,6 +449,7 @@ namespace ESMC {
             auto it3 = GuardOpToUpdateSymmetryConstraints.find(Op);
             if (it3 != GuardOpToUpdateSymmetryConstraints.end()) {
                 for (auto const& Constraint : it3->second) {
+                    cout << Constraint->ToString() << endl;
                     CurrentAssertions.insert(Constraint);
                 }
             }

@@ -888,6 +888,7 @@ namespace ESMC {
 
         inline vector<LTSAssignRef>
         IncompleteEFSM::MakeUpdates(i64 GuardOp,
+                                    const string& InitStateName,
                                     const set<ExpT>& DomainTerms,
                                     const string& NameSuffix,
                                     const SymmMsgDeclRef& MsgDecl)
@@ -985,12 +986,44 @@ namespace ESMC {
 
                 auto BaseLValue = GetBaseLValue(LValue);
                 auto BaseLValueVarName = BaseLValue->SAs<VarExpression>()->GetVarName();
-                if (AllVariables.find(BaseLValueVarName) == AllVariables.end()) {
+                if (AllVariables.find(BaseLValueVarName) == AllVariables.end() &&
+                    LValue != TheLTS->MakeVar("state", StateType)) {
                     continue;
                 } else if (LValue != TheLTS->MakeVar("state", StateType)) {
                     UpdateOpToUpdateLValue[UpdateOp] = make_pair(UpdateExp, LValue);
                 } else {
                     StateUpdateOpToExp[UpdateOp] = UpdateExp;
+                    // also constrain the possible range if applicable
+                    auto nsit = NextStatesOnTransition.find(make_pair(InitStateName, MsgDecl));
+                    if (nsit != NextStatesOnTransition.end()) {
+                        auto CandidateNS = nsit->second;
+                        auto const& UpdateArgs = GetOpArgs(UpdateExp);
+                        vector<ExprTypeRef> UpdateArgTypes;
+                        transform(UpdateArgs.begin(), UpdateArgs.end(),
+                                  back_inserter(UpdateArgTypes),
+                                  [&] (const ExpT& Exp) -> ExprTypeRef
+                                  {
+                                      return Exp->GetType();
+                                  });
+                        const u32 NumUpdateArgs = UpdateArgs.size();
+                        MgrT::SubstMapT SubstMap;
+                        for (u32 i = 0; i < NumUpdateArgs; ++i) {
+                            SubstMap[UpdateArgs[i]] = Mgr->MakeBoundVar(UpdateArgTypes[i],
+                                                                        NumUpdateArgs - i - 1);
+                        }
+                        auto Body = Mgr->BoundSubstitute(SubstMap, UpdateExp);
+
+                        vector<ExpT> Disjuncts;
+                        for (auto const& NextState : CandidateNS) {
+                            auto BodyEQTarget = Mgr->MakeExpr(LTSOps::OpEQ, Body,
+                                                              Mgr->MakeVal(NextState, StateType));
+                            Disjuncts.push_back(BodyEQTarget);
+                        }
+
+                        auto FinalBody = MakeDisjunction(Disjuncts, Mgr);
+                        auto FinalQExpr = Mgr->MakeForAll(UpdateArgTypes, FinalBody);
+                        GuardOpToUpdateSymmetryConstraints[GuardOp].insert(FinalQExpr);
+                    }
                 }
             }
 
@@ -1046,7 +1079,7 @@ namespace ESMC {
             DomainTerms = GetDomainTerms(LocalDomVars);
 
             // Make the updates
-            auto&& Updates = MakeUpdates(GuardOp, DomainTerms, NameSuffix, MsgDecl);
+            auto&& Updates = MakeUpdates(GuardOp, InitStateName, DomainTerms, NameSuffix, MsgDecl);
 
             auto const& NewParams = MsgDecl->GetNewParams();
 
@@ -1148,7 +1181,7 @@ namespace ESMC {
 
             UpdateableVariables["OutMsg"] = MsgType;
 
-            auto&& Updates = MakeUpdates(GuardOp, DomainTerms, NameSuffix, MsgDecl);
+            auto&& Updates = MakeUpdates(GuardOp, InitStateName, DomainTerms, NameSuffix, MsgDecl);
 
             UpdateableVariables.erase("OutMsg");
 
@@ -1438,6 +1471,34 @@ namespace ESMC {
 
             OutMsgFieldDeps[make_pair(FieldName, OutMsgDecl)] = DepVars;
         }
+
+        void IncompleteEFSM::SetNextStatesOnTransition(const string& StateName,
+                                                       const SymmMsgDeclRef& MsgDecl,
+                                                       const set<string>& NextStateNames)
+        {
+            auto it = States.find(StateName);
+            if (it == States.end()) {
+                throw ESMCError((string)"No state called \"" + StateName + "\" exists " +
+                                "in EFSM named \"" + Name + "\" in call to " +
+                                "IncompleteEFSM::SetNextStatesOnTransition()");
+            }
+            if (find(SymmetricMessages.begin(), SymmetricMessages.end(), MsgDecl) ==
+                SymmetricMessages.end()) {
+                throw ESMCError((string)"Invalid message decl in call to " +
+                                "IncompleteEFSM::SetNextStatesOnTransition()");
+            }
+            for (auto const& NextState : NextStateNames) {
+                auto it2 = States.find(NextState);
+                if (it2 == States.end()) {
+                    throw ESMCError((string)"No state called \"" + NextState + "\" exists " +
+                                    "in EFSM named \"" + Name + "\" in call to " +
+                                    "IncompleteEFSM::SetNextStatesOnTransition()");
+                }
+            }
+
+            NextStatesOnTransition[make_pair(StateName, MsgDecl)] = NextStateNames;
+        }
+
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

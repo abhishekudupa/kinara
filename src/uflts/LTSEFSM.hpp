@@ -107,6 +107,7 @@ namespace ESMC {
             map<pair<string, SymmMsgDeclRef>, set<string>> VarDeps;
             map<pair<string, SymmMsgDeclRef>, set<string>> VarMsgFieldDeps;
             map<pair<string, SymmMsgDeclRef>, set<string>> OutMsgFieldDeps;
+            map<pair<string, SymmMsgDeclRef>, set<string>> NextStatesOnTransition;
 
             UIDGenerator GuardUFUIDGen;
             UIDGenerator UpdateUFUIDGen;
@@ -161,6 +162,7 @@ namespace ESMC {
                                                      const SymmMsgDeclRef& MsgDecl);
 
             inline vector<LTSAssignRef> MakeUpdates(i64 GuardOp,
+                                                    const string& InitStateName,
                                                     const set<ExpT>& DomainTerms,
                                                     const string& NameSuffix,
                                                     const SymmMsgDeclRef& MsgDecl);
@@ -219,6 +221,10 @@ namespace ESMC {
             void SetOutMsgFieldDeps(const SymmMsgDeclRef& OutMsgDecl,
                                     const string& FieldName,
                                     const set<string>& DepVars);
+
+            void SetNextStatesOnTransition(const string& StateName,
+                                           const SymmMsgDeclRef& MsgDecl,
+                                           const set<string>& NextStateNames);
 
             // override freeze to add additional transitions
             // and such
