@@ -35,18 +35,23 @@ PROJECT_MODULES= \
 
 
 PROJECT_EXECUTABLES=esmc
-esmc_SYS_LIBS=z3 rt boost_system
+esmc_LINK_LIBS_COMMON=z3 rt boost_system
+esmc_LINK_LIBS_LTO=esmc
+
 esmc_DEP_LIBS=esmc
 esmc_EXT_LIBS=boost z3
-libboost_FULL_PATH=$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/install.ph
-libboost_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/boost-local/
-libz3_FULL_PATH=$(PROJECT_ROOT)/thirdparty/z3-4.3.1/install/libz3.so
-libz3_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/z3-4.3.1/
-esmc_OBJS=main.o
+
 esmc_LIB_PATHS= \
 	$(PROJECT_ROOT)/thirdparty/z3-4.3.1/install \
 	$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/lib \
 	$(PROJECT_ROOT)/lib/$(BUILD_SUFFIX)
+
+esmc_OBJS=main.o
+
+libboost_FULL_PATH=$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/install.ph
+libboost_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/boost-local/
+libz3_FULL_PATH=$(PROJECT_ROOT)/thirdparty/z3-4.3.1/install/libz3.so
+libz3_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/z3-4.3.1/
 
 PROJECT_LIBS=esmc
 
