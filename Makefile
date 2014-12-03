@@ -58,7 +58,6 @@ PROJECT_LIBS=esmc
 libesmc_OBJS= \
 	AQStructure.o \
 	Compiler.o \
-	ExprTypes.o \
 	IndexSet.o \
 	LabelledTS.o \
 	LTSAnalyses.o \
@@ -73,6 +72,7 @@ libesmc_OBJS= \
 	LTSState.o \
 	LTSTermSemanticizer.o \
 	LTSTransitions.o \
+	LTSTypes.o \
 	LTSUtils.o \
 	OmegaAutomaton.o \
 	Permutations.o \

@@ -37,7 +37,7 @@
 
 // Code:
 
-#include "../expr/ExprTypes.hpp"
+#include "../uflts/LTSTypes.hpp"
 
 #include "SymbolTable.hpp"
 

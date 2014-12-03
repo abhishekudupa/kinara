@@ -55,8 +55,6 @@
 #include "../containers/RefCache.hpp"
 #include "../utils/UIDGenerator.hpp"
 
-#include "ExprTypes.hpp"
-
 // This classes in this file are heavily templatized
 // to allow for flexibility via arbitrary extension objects
 
@@ -184,7 +182,7 @@ namespace ESMC {
         private:
             ExprMgr<E, S>* Mgr;
             mutable bool HashValid;
-            mutable ExprTypeRef ExpType;
+            mutable S<E>::TypeT ExpType;
 
         public:
             mutable E ExtensionData;
@@ -1362,7 +1360,8 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline void Gatherer<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+        inline void
+        Gatherer<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
         {
             ExpressionVisitorBase<E, S>::VisitEQuantifiedExpression(Exp);
             if (Pred(Exp)) {
@@ -1371,7 +1370,8 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline void Gatherer<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+        inline void
+        Gatherer<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
         {
             ExpressionVisitorBase<E, S>::VisitAQuantifiedExpression(Exp);
             if (Pred(Exp)) {
@@ -1381,7 +1381,8 @@ namespace ESMC {
 
         template <typename E, template <typename> class S>
         inline typename Gatherer<E, S>::ExpSetT
-        Gatherer<E, S>::Do(const ExpT& Exp, const function<bool (const ExpressionBase<E, S> *)>& Pred)
+        Gatherer<E, S>::Do(const ExpT& Exp,
+                           const function<bool (const ExpressionBase<E, S> *)>& Pred)
         {
             Gatherer<E, S> TheGatherer(Pred);
             Exp->Accept(&TheGatherer);
@@ -2004,7 +2005,8 @@ namespace ESMC {
 
         template <typename E, template <typename> class S>
         inline i32
-        QuantifiedExpressionBase<E, S>::CompareInternal(const QuantifiedExpressionBase<E, S>* Other) const
+        QuantifiedExpressionBase<E, S>::CompareInternal(const QuantifiedExpressionBase<E, S>*
+                                                        Other) const
         {
             if (QVarTypes.size() < Other->QVarTypes.size()) {
                 return -1;

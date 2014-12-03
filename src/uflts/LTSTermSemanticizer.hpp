@@ -60,10 +60,10 @@
 #include "../utils/UIDGenerator.hpp"
 #include "../expr/SemanticizerUtils.hpp"
 #include "../expr/Expressions.hpp"
-#include "../expr/ExprTypes.hpp"
 #include "../tpinterface/Z3Objects.hpp"
 #include "../utils/CombUtils.hpp"
 
+#include "LTSTypes.hpp"
 
 namespace ESMC {
     namespace LTS {

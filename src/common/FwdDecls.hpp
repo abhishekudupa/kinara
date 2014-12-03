@@ -89,13 +89,26 @@ namespace ESMC {
         // Expression Visitors
         template <typename E, template <typename> class S> class ExpressionVisitorBase;
 
-        class ExprTypeBase;
-        class ExprFuncType;
-
-        typedef CSmartPtr<ExprTypeBase> ExprTypeRef;
     } /* end namespace Exprs */
 
     namespace LTS {
+
+        class TypeBase;
+        class FuncType;
+        class ScalarType;
+        class BoolType;
+        class IntType;
+        class RangeType;
+        class EnumType;
+        class SymmetricType;
+        class RecordType;
+        class ArrayType;
+        class UnionType;
+        class ParametricType;
+        class FieldAccessType;
+
+        typedef CSmartPtr<TypeBase> TypeRef;
+
 
         class LabelledTS;
         class EFSMBase;

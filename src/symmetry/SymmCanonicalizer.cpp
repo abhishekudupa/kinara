@@ -39,7 +39,7 @@
 
 #include <string.h>
 
-#include "../expr/ExprTypes.hpp"
+#include "../uflts/LTSTypes.hpp"
 #include "../uflts/LabelledTS.hpp"
 #include "../uflts/LTSChannelEFSM.hpp"
 #include "../uflts/LTSExtensions.hpp"

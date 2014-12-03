@@ -41,7 +41,6 @@
 #define ESMC_LTS_EXTENSIONS_HPP_
 
 #include "../common/FwdDecls.hpp"
-#include "../expr/ExprTypes.hpp"
 
 // moved this single definition into a separate
 // header file to eliminate circular deps.

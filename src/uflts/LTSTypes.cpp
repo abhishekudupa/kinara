@@ -1,6 +1,6 @@
-// ExprTypes.cpp ---
+// LTSTypes.cpp ---
 //
-// Filename: ExprTypes.cpp
+// Filename: LTSTypes.cpp
 // Author: Abhishek Udupa
 // Created: Thu Jul 24 15:10:36 2014 (-0400)
 //
@@ -37,7 +37,7 @@
 
 // Code:
 
-#include "ExprTypes.hpp"
+#include "LTSTypes.hpp"
 #include "../utils/UIDGenerator.hpp"
 #include "../utils/SizeUtils.hpp"
 
@@ -48,32 +48,32 @@
 #include <boost/lexical_cast.hpp>
 
 namespace ESMC {
-    namespace Exprs {
+    namespace LTS {
 
-        UIDGenerator ExprTypeBase::ExprTypeUIDGen(1);
+        UIDGenerator TypeBase::ExprTypeUIDGen(1);
 
-        ExprTypeExtensionBase::ExprTypeExtensionBase()
+        TypeExtensionBase::TypeExtensionBase()
         {
             // Nothing here
         }
 
-        ExprTypeExtensionBase::~ExprTypeExtensionBase()
+        TypeExtensionBase::~TypeExtensionBase()
         {
             // Nothing here
         }
 
-        ExprTypeBase::ExprTypeBase()
+        TypeBase::TypeBase()
             : TypeID(-1), HashValid(false), LastExtension(nullptr)
         {
             // Nothing here
         }
 
-        ExprTypeBase::~ExprTypeBase()
+        TypeBase::~TypeBase()
         {
             PurgeAllExtensions();
         }
 
-        u64 ExprTypeBase::Hash() const
+        u64 TypeBase::Hash() const
         {
             if (HashValid) {
                 return HashCode;
@@ -84,28 +84,28 @@ namespace ESMC {
             }
         }
 
-        bool ExprTypeBase::Equals(const ExprTypeBase& Other) const
+        bool TypeBase::Equals(const TypeBase& Other) const
         {
             return (this->Compare(Other) == 0);
         }
 
-        bool ExprTypeBase::LT(const ExprTypeBase& Other) const
+        bool TypeBase::LT(const TypeBase& Other) const
         {
             return (this->Compare(Other) < 0);
         }
 
-        i64 ExprTypeBase::GetTypeID() const
+        i64 TypeBase::GetTypeID() const
         {
             return TypeID;
         }
 
-        i64 ExprTypeBase::SetTypeID() const
+        i64 TypeBase::SetTypeID() const
         {
             TypeID = ExprTypeUIDGen.GetUID();
             return TypeID;
         }
 
-        i64 ExprTypeBase::GetOrSetTypeID() const
+        i64 TypeBase::GetOrSetTypeID() const
         {
             if (TypeID == -1) {
                 return SetTypeID();
@@ -114,76 +114,76 @@ namespace ESMC {
             }
         }
 
-        ExprScalarType::ExprScalarType()
-            : ExprTypeBase()
+        ScalarType::ScalarType()
+            : TypeBase()
         {
             // Nothing here
         }
 
-        ExprScalarType::~ExprScalarType()
+        ScalarType::~ScalarType()
         {
             // Nothing here
         }
 
-        ExprBoolType::ExprBoolType()
-            : ExprScalarType()
+        BoolType::BoolType()
+            : ScalarType()
         {
             // Nothing here
         }
 
-        ExprBoolType::~ExprBoolType()
+        BoolType::~BoolType()
         {
             // Nothing here
         }
 
-        string ExprBoolType::ToString() const
+        string BoolType::ToString() const
         {
             return "(BoolType)";
         }
 
-        i32 ExprBoolType::Compare(const ExprTypeBase& Other) const
+        i32 BoolType::Compare(const TypeBase& Other) const
         {
-            if (Other.As<ExprBoolType>() == nullptr) {
+            if (Other.As<BoolType>() == nullptr) {
                 return -1;
             } else {
                 return 0;
             }
         }
 
-        vector<string> ExprBoolType::GetElements() const
+        vector<string> BoolType::GetElements() const
         {
             vector<string> Retval = { "true", "false" };
             return Retval;
         }
 
-        vector<string> ExprBoolType::GetElementsNoUndef() const
+        vector<string> BoolType::GetElementsNoUndef() const
         {
             vector<string> Retval = { "true", "false" };
             return Retval;
         }
 
-        void ExprBoolType::ComputeHashValue() const
+        void BoolType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, "BoolType");
         }
 
-        u32 ExprBoolType::GetByteSize() const
+        u32 BoolType::GetByteSize() const
         {
             return 1;
         }
 
-        u32 ExprBoolType::GetCardinality() const
+        u32 BoolType::GetCardinality() const
         {
             return 2;
         }
 
-        u32 ExprBoolType::GetCardinalityNoUndef() const
+        u32 BoolType::GetCardinalityNoUndef() const
         {
             return 2;
         }
 
-        i64 ExprBoolType::ConstToVal(const string& ConstVal) const
+        i64 BoolType::ConstToVal(const string& ConstVal) const
         {
             if (ConstVal == "true") {
                 return 1;
@@ -192,7 +192,7 @@ namespace ESMC {
             }
         }
 
-        string ExprBoolType::ValToConst(i64 Val) const
+        string BoolType::ValToConst(i64 Val) const
         {
             if (Val == 0) {
                 return "false";
@@ -201,46 +201,46 @@ namespace ESMC {
             }
         }
 
-        string ExprBoolType::GetClearValue() const
+        string BoolType::GetClearValue() const
         {
             return "false";
         }
 
-        ExprIntType::ExprIntType()
-            : ExprScalarType()
+        IntType::IntType()
+            : ScalarType()
         {
             // Nothing here
         }
 
-        ExprIntType::~ExprIntType()
+        IntType::~IntType()
         {
             // Nothing here
         }
 
-        void ExprIntType::ComputeHashValue() const
+        void IntType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, "IntType");
         }
 
-        string ExprIntType::ToString() const
+        string IntType::ToString() const
         {
             return "(IntType)";
         }
 
-        i32 ExprIntType::Compare(const ExprTypeBase& Other) const
+        i32 IntType::Compare(const TypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
 
-            if (OtherAsPtr->As<ExprBoolType>() != nullptr) {
+            if (OtherAsPtr->As<BoolType>() != nullptr) {
                 return 1;
             }
 
-            auto OtherAsInt = OtherAsPtr->As<ExprIntType>();
+            auto OtherAsInt = OtherAsPtr->As<IntType>();
             if (OtherAsInt == nullptr) {
                 return -1;
             } else {
-                auto OtherAsRange = OtherAsPtr->As<ExprRangeType>();
+                auto OtherAsRange = OtherAsPtr->As<RangeType>();
                 if (OtherAsRange != nullptr) {
                     return -1;
                 } else {
@@ -249,50 +249,50 @@ namespace ESMC {
             }
         }
 
-        vector<string> ExprIntType::GetElements() const
+        vector<string> IntType::GetElements() const
         {
             throw ESMCError((string)"Cannot GetElements() on unbounded type IntType");
         }
 
-        vector<string> ExprIntType::GetElementsNoUndef() const
+        vector<string> IntType::GetElementsNoUndef() const
         {
             return GetElements();
         }
 
-        u32 ExprIntType::GetByteSize() const
+        u32 IntType::GetByteSize() const
         {
-            throw InternalError((string)"ExprIntType::GetByteSize() should never have been " +
+            throw InternalError((string)"IntType::GetByteSize() should never have been " +
                                 "called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
         }
 
-        u32 ExprIntType::GetCardinality() const
+        u32 IntType::GetCardinality() const
         {
             throw ESMCError((string)"Cannot get cardinality of unbounded type IntType");
         }
 
-        u32 ExprIntType::GetCardinalityNoUndef() const
+        u32 IntType::GetCardinalityNoUndef() const
         {
             throw ESMCError((string)"Cannot get cardinality of unbounded type IntType");
         }
 
-        i64 ExprIntType::ConstToVal(const string& ConstVal) const
+        i64 IntType::ConstToVal(const string& ConstVal) const
         {
             return boost::lexical_cast<i64>(ConstVal);
         }
 
-        string ExprIntType::ValToConst(i64 Val) const
+        string IntType::ValToConst(i64 Val) const
         {
             return to_string(Val);
         }
 
-        string ExprIntType::GetClearValue() const
+        string IntType::GetClearValue() const
         {
             return "0";
         }
 
         // Inclusive range
-        ExprRangeType::ExprRangeType(i64 RangeLow, i64 RangeHigh)
-            : ExprIntType(),
+        RangeType::RangeType(i64 RangeLow, i64 RangeHigh)
+            : IntType(),
               RangeLow(RangeLow), RangeHigh(RangeHigh),
               Size(RangeHigh - RangeLow + 1)
         {
@@ -301,56 +301,56 @@ namespace ESMC {
             }
         }
 
-        ExprRangeType::~ExprRangeType()
+        RangeType::~RangeType()
         {
             // Nothing here
         }
 
-        i64 ExprRangeType::GetLow() const
+        i64 RangeType::GetLow() const
         {
             return RangeLow;
         }
 
-        i64 ExprRangeType::GetHigh() const
+        i64 RangeType::GetHigh() const
         {
             return RangeHigh;
         }
 
-        u64 ExprRangeType::GetSize() const
+        u64 RangeType::GetSize() const
         {
             return Size;
         }
 
-        void ExprRangeType::ComputeHashValue() const
+        void RangeType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, RangeLow);
             boost::hash_combine(HashCode, RangeHigh);
         }
 
-        u32 ExprRangeType::GetByteSize() const
+        u32 RangeType::GetByteSize() const
         {
             return BytesForRange(RangeHigh - RangeLow + 1);
         }
 
-        string ExprRangeType::ToString() const
+        string RangeType::ToString() const
         {
             return ((string)"(Range [" + to_string(RangeLow) +
                     "-" + to_string(RangeHigh) + "])");
         }
 
-        i32 ExprRangeType::Compare(const ExprTypeBase& Other) const
+        i32 RangeType::Compare(const TypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
 
-            if (OtherAsPtr->As<ExprBoolType>() != nullptr) {
+            if (OtherAsPtr->As<BoolType>() != nullptr) {
                 return 1;
             }
 
-            auto OtherAsRange = OtherAsPtr->As<ExprRangeType>();
+            auto OtherAsRange = OtherAsPtr->As<RangeType>();
 
             if (OtherAsRange == nullptr) {
-                if (OtherAsPtr->As<ExprIntType>() != nullptr) {
+                if (OtherAsPtr->As<IntType>() != nullptr) {
                     return 1;
                 } else {
                     return -1;
@@ -372,7 +372,7 @@ namespace ESMC {
             }
         }
 
-        vector<string> ExprRangeType::GetElements() const
+        vector<string> RangeType::GetElements() const
         {
             vector<string> Retval;
             for(i64 i = RangeLow; i <= RangeHigh; ++i) {
@@ -381,61 +381,61 @@ namespace ESMC {
             return Retval;
         }
 
-        vector<string> ExprRangeType::GetElementsNoUndef() const
+        vector<string> RangeType::GetElementsNoUndef() const
         {
             return GetElements();
         }
 
-        u32 ExprRangeType::GetCardinality() const
+        u32 RangeType::GetCardinality() const
         {
             return (RangeHigh - RangeLow + 1);
         }
 
-        u32 ExprRangeType::GetCardinalityNoUndef() const
+        u32 RangeType::GetCardinalityNoUndef() const
         {
             return (RangeHigh - RangeLow + 1);
         }
 
-        i64 ExprRangeType::ConstToVal(const string& ConstVal) const
+        i64 RangeType::ConstToVal(const string& ConstVal) const
         {
             return boost::lexical_cast<i64>(ConstVal);
         }
 
-        string ExprRangeType::ValToConst(i64 Val) const
+        string RangeType::ValToConst(i64 Val) const
         {
             return to_string(Val);
         }
 
-        string ExprRangeType::GetClearValue() const
+        string RangeType::GetClearValue() const
         {
             return to_string(RangeLow);
         }
 
-        ExprEnumType::ExprEnumType(const string& Name,
-                                   const set<string>& Members)
-            : ExprScalarType(), Name(Name), Members(Members),
+        EnumType::EnumType(const string& Name,
+                           const set<string>& Members)
+            : ScalarType(), Name(Name), Members(Members),
               MemberVec(Members.begin(), Members.end())
         {
             // Nothing here
         }
 
-        ExprEnumType::~ExprEnumType()
+        EnumType::~EnumType()
         {
             // Nothing here
         }
 
-        const string& ExprEnumType::GetName() const
+        const string& EnumType::GetName() const
         {
             return Name;
         }
 
-        const set<string>& ExprEnumType::GetMembers() const
+        const set<string>& EnumType::GetMembers() const
         {
             return Members;
         }
 
         // We handle both qualified and unqualified enum names here
-        bool ExprEnumType::IsMember(const string& MemberName) const
+        bool EnumType::IsMember(const string& MemberName) const
         {
             vector<string> SplitVec;
             boost::algorithm::split(SplitVec, MemberName,
@@ -466,7 +466,7 @@ namespace ESMC {
             }
         }
 
-        u32 ExprEnumType::GetMemberIdx(const string& MemberName) const
+        u32 EnumType::GetMemberIdx(const string& MemberName) const
         {
             vector<string> SplitVec;
             boost::algorithm::split(SplitVec, MemberName,
@@ -477,7 +477,7 @@ namespace ESMC {
                 auto EnumName = boost::algorithm::trim_copy(SplitVec[0]);
                 if (EnumName != Name) {
                     throw ESMCError((string)"Invalid Enum Member Index requested \"" +
-                       MemberName + "\"");
+                                    MemberName + "\"");
                 } else {
                     auto MemberName = boost::algorithm::trim_copy(SplitVec[1]);
                     for (u32 i = 0; i < MemberVec.size(); ++i) {
@@ -504,7 +504,7 @@ namespace ESMC {
             }
         }
 
-        string ExprEnumType::ToString() const
+        string EnumType::ToString() const
         {
             ostringstream sstr;
             sstr << "(Enum " << Name << " (";
@@ -520,7 +520,7 @@ namespace ESMC {
             return sstr.str();
         }
 
-        void ExprEnumType::ComputeHashValue() const
+        void EnumType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, Name);
@@ -529,33 +529,33 @@ namespace ESMC {
             }
         }
 
-        u32 ExprEnumType::GetByteSize() const
+        u32 EnumType::GetByteSize() const
         {
             return BytesForRange(Members.size());
         }
 
-        u32 ExprEnumType::GetCardinality() const
+        u32 EnumType::GetCardinality() const
         {
             return Members.size();
         }
 
-        u32 ExprEnumType::GetCardinalityNoUndef() const
+        u32 EnumType::GetCardinalityNoUndef() const
         {
             return Members.size();
         }
 
-        i32 ExprEnumType::Compare(const ExprTypeBase& Other) const
+        i32 EnumType::Compare(const TypeBase& Other) const
         {
             auto OtherPtr = &Other;
-            if (OtherPtr->As<ExprBoolType>() != nullptr ||
-                OtherPtr->As<ExprIntType>() != nullptr ||
-                OtherPtr->As<ExprRangeType>() != nullptr) {
+            if (OtherPtr->As<BoolType>() != nullptr ||
+                OtherPtr->As<IntType>() != nullptr ||
+                OtherPtr->As<RangeType>() != nullptr) {
                 return 1;
             }
-            if (OtherPtr->As<ExprEnumType>() == nullptr) {
+            if (OtherPtr->As<EnumType>() == nullptr) {
                 return -1;
             }
-            auto OtherAsEnum = OtherPtr->SAs<ExprEnumType>();
+            auto OtherAsEnum = OtherPtr->SAs<EnumType>();
 
             if (OtherAsEnum->Name > Name) {
                 return -1;
@@ -566,33 +566,33 @@ namespace ESMC {
             }
         }
 
-        vector<string> ExprEnumType::GetElements() const
+        vector<string> EnumType::GetElements() const
         {
             return (vector<string>(Members.begin(), Members.end()));
         }
 
-        vector<string> ExprEnumType::GetElementsNoUndef() const
+        vector<string> EnumType::GetElementsNoUndef() const
         {
             return GetElements();
         }
 
-        i64 ExprEnumType::ConstToVal(const string& ConstVal) const
+        i64 EnumType::ConstToVal(const string& ConstVal) const
         {
             return GetMemberIdx(ConstVal);
         }
 
-        string ExprEnumType::ValToConst(i64 Val) const
+        string EnumType::ValToConst(i64 Val) const
         {
             return MemberVec[Val];
         }
 
-        string ExprEnumType::GetClearValue() const
+        string EnumType::GetClearValue() const
         {
             return MemberVec[0];
         }
 
-        ExprSymmetricType::ExprSymmetricType(const string& Name, u32 Size)
-            : ExprScalarType(), Name(Name), Size(Size), Members(Size + 1)
+        SymmetricType::SymmetricType(const string& Name, u32 Size)
+            : ScalarType(), Name(Name), Size(Size), Members(Size + 1)
         {
             Members[0] = Name + "::undef";
             MemberSet.insert(Members[0]);
@@ -604,38 +604,38 @@ namespace ESMC {
             MembersNoUndef = vector<string>(next(Members.begin()), Members.end());
         }
 
-        ExprSymmetricType::~ExprSymmetricType()
+        SymmetricType::~SymmetricType()
         {
             // Nothing here
         }
 
-        const string& ExprSymmetricType::GetName() const
+        const string& SymmetricType::GetName() const
         {
             return Name;
         }
 
-        u32 ExprSymmetricType::GetSize() const
+        u32 SymmetricType::GetSize() const
         {
             return Size;
         }
 
-        const vector<string>& ExprSymmetricType::GetMembers() const
+        const vector<string>& SymmetricType::GetMembers() const
         {
             return Members;
         }
 
-        const string& ExprSymmetricType::GetMember(u32 Index) const
+        const string& SymmetricType::GetMember(u32 Index) const
         {
             assert (Index < Members.size());
             return Members[Index];
         }
 
-        const bool ExprSymmetricType::IsMember(const string& Value) const
+        const bool SymmetricType::IsMember(const string& Value) const
         {
             return (MemberSet.find(Value) != MemberSet.end());
         }
 
-        u32 ExprSymmetricType::GetMemberIdx(const string& MemberName) const
+        u32 SymmetricType::GetMemberIdx(const string& MemberName) const
         {
             for (u32 i = 0; i < Members.size(); ++i) {
                 if (Members[i] == MemberName) {
@@ -646,54 +646,54 @@ namespace ESMC {
                             MemberName + "\"");
         }
 
-        void ExprSymmetricType::SetIndex(u32 Index) const
+        void SymmetricType::SetIndex(u32 Index) const
         {
             this->Index = Index;
         }
 
-        u32 ExprSymmetricType::GetIndex() const
+        u32 SymmetricType::GetIndex() const
         {
             return Index;
         }
 
-        string ExprSymmetricType::ToString() const
+        string SymmetricType::ToString() const
         {
             return (string)"(SymType " + Name + " " +
                 to_string(Size) + ")";
         }
 
-        void ExprSymmetricType::ComputeHashValue() const
+        void SymmetricType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, Name);
             boost::hash_combine(HashCode, Size);
         }
 
-        u32 ExprSymmetricType::GetByteSize() const
+        u32 SymmetricType::GetByteSize() const
         {
             return BytesForRange(Members.size());
         }
 
-        u32 ExprSymmetricType::GetCardinality() const
+        u32 SymmetricType::GetCardinality() const
         {
             return MemberSet.size();
         }
 
-        u32 ExprSymmetricType::GetCardinalityNoUndef() const
+        u32 SymmetricType::GetCardinalityNoUndef() const
         {
             return MembersNoUndef.size();
         }
 
-        i32 ExprSymmetricType::Compare(const ExprTypeBase& Other) const
+        i32 SymmetricType::Compare(const TypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            if (OtherAsPtr->As<ExprBoolType>() != nullptr ||
-                OtherAsPtr->As<ExprIntType>() != nullptr ||
-                OtherAsPtr->As<ExprRangeType>() != nullptr ||
-                OtherAsPtr->As<ExprEnumType>() != nullptr) {
+            if (OtherAsPtr->As<BoolType>() != nullptr ||
+                OtherAsPtr->As<IntType>() != nullptr ||
+                OtherAsPtr->As<RangeType>() != nullptr ||
+                OtherAsPtr->As<EnumType>() != nullptr) {
                 return 1;
             }
-            auto OtherAsSym = OtherAsPtr->As<ExprSymmetricType>();
+            auto OtherAsSym = OtherAsPtr->As<SymmetricType>();
             if (OtherAsSym == nullptr) {
                 return -1;
             }
@@ -705,33 +705,33 @@ namespace ESMC {
             return 0;
         }
 
-        vector<string> ExprSymmetricType::GetElements() const
+        vector<string> SymmetricType::GetElements() const
         {
             return Members;
         }
 
-        vector<string> ExprSymmetricType::GetElementsNoUndef() const
+        vector<string> SymmetricType::GetElementsNoUndef() const
         {
             return MembersNoUndef;
         }
 
-        i64 ExprSymmetricType::ConstToVal(const string& ConstVal) const
+        i64 SymmetricType::ConstToVal(const string& ConstVal) const
         {
             return (GetMemberIdx(ConstVal));
         }
 
-        string ExprSymmetricType::ValToConst(i64 Val) const
+        string SymmetricType::ValToConst(i64 Val) const
         {
             return Members[Val];
         }
 
-        string ExprSymmetricType::GetClearValue() const
+        string SymmetricType::GetClearValue() const
         {
             return (Name + "::undef");
         }
 
         static inline string MangleName(const string& Name,
-                                        const vector<ExprTypeRef>& Args)
+                                        const vector<TypeRef>& Args)
         {
             string Retval = Name;
             for (auto const& Arg : Args) {
@@ -740,50 +740,50 @@ namespace ESMC {
             return Retval;
         }
 
-        ExprFuncType::ExprFuncType(const string& Name,
-                                 const vector<ExprTypeRef>& ArgTypes,
-                                 const ExprTypeRef& FuncType)
-            : ExprTypeBase(),
-              Name(Name), MangledName(MangleName(Name, ArgTypes)),
-              ArgTypes(ArgTypes), FuncType(FuncType)
+        FuncType::FuncType(const string& Name,
+                           const vector<TypeRef>& DomainTypes,
+                           const TypeRef& RangeType)
+            : TypeBase(),
+              Name(Name), MangledName(MangleName(Name, DomainTypes)),
+              ArgTypes(DomainTypes), EvalType(RangeType)
         {
-            for(auto const& Arg : ArgTypes) {
-                if (Arg->As<ExprFuncType>() != nullptr) {
+            for(auto const& Arg : DomainTypes) {
+                if (Arg->As<FuncType>() != nullptr) {
                     throw ESMCError("Function types cannot have function types as params");
                 }
-                if (!Arg->Is<ExprScalarType>()) {
+                if (!Arg->Is<ScalarType>()) {
                     throw ESMCError((string)"Only function types with scalar domain types " +
                                     "are currenly supported");
                 }
             }
         }
 
-        ExprFuncType::~ExprFuncType()
+        FuncType::~FuncType()
         {
             // Nothing here
         }
 
-        const string& ExprFuncType::GetName() const
+        const string& FuncType::GetName() const
         {
             return Name;
         }
 
-        const string& ExprFuncType::GetMangledName() const
+        const string& FuncType::GetMangledName() const
         {
             return MangledName;
         }
 
-        const vector<ExprTypeRef>& ExprFuncType::GetArgTypes() const
+        const vector<TypeRef>& FuncType::GetArgTypes() const
         {
             return ArgTypes;
         }
 
-        const ExprTypeRef& ExprFuncType::GetFuncType() const
+        const TypeRef& FuncType::GetEvalType() const
         {
-            return FuncType;
+            return EvalType;
         }
 
-        void ExprFuncType::ComputeHashValue() const
+        void FuncType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, Name);
@@ -792,7 +792,7 @@ namespace ESMC {
             }
         }
 
-        string ExprFuncType::ToString() const
+        string FuncType::ToString() const
         {
             string Retval = (string)"(Func " + Name + " ";
             for (auto const& Arg : ArgTypes) {
@@ -802,18 +802,18 @@ namespace ESMC {
             return Retval;
         }
 
-        i32 ExprFuncType::Compare(const ExprTypeBase& Other) const
+        i32 FuncType::Compare(const TypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            if (OtherAsPtr->As<ExprBoolType>() != nullptr ||
-                OtherAsPtr->As<ExprIntType>() != nullptr ||
-                OtherAsPtr->As<ExprRangeType> () != nullptr ||
-                OtherAsPtr->As<ExprEnumType>() != nullptr ||
-                OtherAsPtr->As<ExprSymmetricType>() != nullptr) {
+            if (OtherAsPtr->As<BoolType>() != nullptr ||
+                OtherAsPtr->As<IntType>() != nullptr ||
+                OtherAsPtr->As<RangeType> () != nullptr ||
+                OtherAsPtr->As<EnumType>() != nullptr ||
+                OtherAsPtr->As<SymmetricType>() != nullptr) {
                 return 1;
             }
 
-            auto OtherAsFunc = OtherAsPtr->As<ExprFuncType>();
+            auto OtherAsFunc = OtherAsPtr->As<FuncType>();
 
             if (OtherAsFunc == nullptr) {
                 return -1;
@@ -840,17 +840,17 @@ namespace ESMC {
             }
         }
 
-        vector<string> ExprFuncType::GetElements() const
+        vector<string> FuncType::GetElements() const
         {
             throw ESMCError((string)"Cannot GetElements() of a function type");
         }
 
-        vector<string> ExprFuncType::GetElementsNoUndef() const
+        vector<string> FuncType::GetElementsNoUndef() const
         {
             throw ESMCError((string)"Cannot GetElements() of a function type");
         }
 
-        u32 ExprFuncType::GetByteSize() const
+        u32 FuncType::GetByteSize() const
         {
             // We return the byte size of the range multiplied
             // by the product of the domains
@@ -861,98 +861,98 @@ namespace ESMC {
             return Retval;
         }
 
-        string ExprFuncType::GetClearValue() const
+        string FuncType::GetClearValue() const
         {
-            throw ESMCError((string)"ExprFuncType::GetClearValue() should never have " +
+            throw ESMCError((string)"FuncType::GetClearValue() should never have " +
                             "been called");
         }
 
-        u32 ExprFuncType::GetCardinality() const
+        u32 FuncType::GetCardinality() const
         {
             throw ESMCError((string)"Cannot GetCardinality() of a function type");
         }
 
-        u32 ExprFuncType::GetCardinalityNoUndef() const
+        u32 FuncType::GetCardinalityNoUndef() const
         {
             throw ESMCError((string)"Cannot GetCardinality() of a function type");
         }
 
-        ExprArrayType::ExprArrayType(const ExprTypeRef& IndexType,
-                                   const ExprTypeRef& ValueType)
-            : ExprTypeBase(), IndexType(IndexType), ValueType(ValueType)
+        ArrayType::ArrayType(const TypeRef& IndexType,
+                             const TypeRef& ValueType)
+            : TypeBase(), IndexType(IndexType), ValueType(ValueType)
         {
-            if (IndexType->As<ExprFuncType>() != nullptr ||
-                ValueType->As<ExprFuncType>() != nullptr ||
-                IndexType->As<ExprScalarType>() == nullptr ||
-                ValueType->As<ExprParametricType>() != nullptr ||
-                ValueType->As<ExprFieldAccessType>() != nullptr) {
+            if (IndexType->As<FuncType>() != nullptr ||
+                ValueType->As<FuncType>() != nullptr ||
+                IndexType->As<ScalarType>() == nullptr ||
+                ValueType->As<ParametricType>() != nullptr ||
+                ValueType->As<FieldAccessType>() != nullptr) {
                 throw ESMCError((string)"Array indices and values cannot be functions, " +
                                 "further, indices must be scalar and values cannot be " +
                                 "field access types or parametric types");
             }
         }
 
-        ExprArrayType::~ExprArrayType()
+        ArrayType::~ArrayType()
         {
             // Nothing here
         }
 
-        const ExprTypeRef& ExprArrayType::GetIndexType() const
+        const TypeRef& ArrayType::GetIndexType() const
         {
             return IndexType;
         }
 
-        const ExprTypeRef& ExprArrayType::GetValueType() const
+        const TypeRef& ArrayType::GetValueType() const
         {
             return ValueType;
         }
 
-        u32 ExprArrayType::GetOffset(u32 ElemIdx) const
+        u32 ArrayType::GetOffset(u32 ElemIdx) const
         {
             auto ElemSize = ValueType->GetByteSize();
             ElemSize = Align(ElemSize, ElemSize);
             return (ElemSize * ElemIdx);
         }
 
-        ExprTypeRef ExprArrayType::GetBaseValueType() const
+        TypeRef ArrayType::GetBaseValueType() const
         {
             auto Retval = ValueType;
-            while (Retval->Is<ExprArrayType>()) {
-                Retval = Retval->SAs<ExprArrayType>()->GetValueType();
+            while (Retval->Is<ArrayType>()) {
+                Retval = Retval->SAs<ArrayType>()->GetValueType();
             }
             return Retval;
         }
 
-        u32 ExprArrayType::GetLevelsOfIndex() const
+        u32 ArrayType::GetLevelsOfIndex() const
         {
             u32 Retval = 1;
             auto ValType = ValueType;
-            while (ValType->Is<ExprArrayType>()) {
+            while (ValType->Is<ArrayType>()) {
                 Retval++;
-                ValType = ValType->SAs<ExprArrayType>()->GetValueType();
+                ValType = ValType->SAs<ArrayType>()->GetValueType();
             }
             return Retval;
         }
 
-        string ExprArrayType::ToString() const
+        string ArrayType::ToString() const
         {
             return ((string)"(Array " + IndexType->ToString() + " -> " +
                     ValueType->ToString() + ")");
         }
 
-        i32 ExprArrayType::Compare(const ExprTypeBase& Other) const
+        i32 ArrayType::Compare(const TypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            if (OtherAsPtr->As<ExprBoolType>() != nullptr ||
-                OtherAsPtr->As<ExprIntType>() != nullptr ||
-                OtherAsPtr->As<ExprRangeType>() != nullptr ||
-                OtherAsPtr->As<ExprEnumType>() != nullptr ||
-                OtherAsPtr->As<ExprSymmetricType>() != nullptr ||
-                OtherAsPtr->As<ExprFuncType>() != nullptr) {
+            if (OtherAsPtr->As<BoolType>() != nullptr ||
+                OtherAsPtr->As<IntType>() != nullptr ||
+                OtherAsPtr->As<RangeType>() != nullptr ||
+                OtherAsPtr->As<EnumType>() != nullptr ||
+                OtherAsPtr->As<SymmetricType>() != nullptr ||
+                OtherAsPtr->As<FuncType>() != nullptr) {
                 return 1;
             }
 
-            auto OtherAsArr = OtherAsPtr->As<ExprArrayType>();
+            auto OtherAsArr = OtherAsPtr->As<ArrayType>();
 
             if (OtherAsArr == nullptr) {
                 return -1;
@@ -965,60 +965,60 @@ namespace ESMC {
             return ValueType->Compare(*(OtherAsArr->ValueType));
         }
 
-        vector<string> ExprArrayType::GetElements() const
+        vector<string> ArrayType::GetElements() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
-        vector<string> ExprArrayType::GetElementsNoUndef() const
+        vector<string> ArrayType::GetElementsNoUndef() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
-        void ExprArrayType::ComputeHashValue() const
+        void ArrayType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, IndexType->Hash());
             boost::hash_combine(HashCode, ValueType->Hash());
         }
 
-        u32 ExprArrayType::GetByteSize() const
+        u32 ArrayType::GetByteSize() const
         {
             u32 Retval = ValueType->GetByteSize();
             Retval = Align(Retval, Retval);
             return (Retval * IndexType->GetElementsNoUndef().size());
         }
 
-        u32 ExprArrayType::GetCardinality() const
+        u32 ArrayType::GetCardinality() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
-        u32 ExprArrayType::GetCardinalityNoUndef() const
+        u32 ArrayType::GetCardinalityNoUndef() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
-        string ExprArrayType::GetClearValue() const
+        string ArrayType::GetClearValue() const
         {
-            throw ESMCError((string)"ExprArrayType::GetClearValue() should never have " +
+            throw ESMCError((string)"ArrayType::GetClearValue() should never have " +
                             "been called");
         }
 
-        ExprRecordType::ExprRecordType(const string& Name,
-                                       const vector<pair<string, ExprTypeRef>>& Members)
-            : ExprTypeBase(), Name(Name), MemberVec(Members),
+        RecordType::RecordType(const string& Name,
+                               const vector<pair<string, TypeRef>>& Members)
+            : TypeBase(), Name(Name), MemberVec(Members),
               ContainsUnboundedType(false), FieldOffsetsComputed(false)
         {
             for (auto const& NTPair : Members) {
-                if (NTPair.second->As<ExprFuncType>() != nullptr ||
-                    NTPair.second->As<ExprFieldAccessType>() != nullptr ||
-                    NTPair.second->As<ExprParametricType>() != nullptr) {
+                if (NTPair.second->As<FuncType>() != nullptr ||
+                    NTPair.second->As<FieldAccessType>() != nullptr ||
+                    NTPair.second->As<ParametricType>() != nullptr) {
                     throw ESMCError((string)"Record members cannot be functions types or " +
                                     "field access types, or parametric types");
                 }
-                if (NTPair.second->As<ExprIntType>() != nullptr &&
-                    NTPair.second->As<ExprRangeType>() == nullptr) {
+                if (NTPair.second->As<IntType>() != nullptr &&
+                    NTPair.second->As<RangeType>() == nullptr) {
                     ContainsUnboundedType = true;
                 }
             }
@@ -1032,11 +1032,11 @@ namespace ESMC {
             }
         }
 
-        void ExprRecordType::ComputeFieldOffsets() const
+        void RecordType::ComputeFieldOffsets() const
         {
             for (auto const& NTPair : MemberVec) {
-                if (NTPair.second->As<ExprIntType>() != nullptr &&
-                    NTPair.second->As<ExprRangeType>() == nullptr) {
+                if (NTPair.second->As<IntType>() != nullptr &&
+                    NTPair.second->As<RangeType>() == nullptr) {
                     ContainsUnboundedType = true;
                 }
             }
@@ -1052,44 +1052,44 @@ namespace ESMC {
             FieldOffsetsComputed = true;
         }
 
-        ExprRecordType::ExprRecordType()
-            : ExprTypeBase(), ContainsUnboundedType(false),
+        RecordType::RecordType()
+            : TypeBase(), ContainsUnboundedType(false),
               FieldOffsetsComputed(false)
         {
             // Nothing here
         }
 
-        ExprRecordType::~ExprRecordType()
+        RecordType::~RecordType()
         {
             // Nothing here
         }
 
-        const string& ExprRecordType::GetName() const
+        const string& RecordType::GetName() const
         {
             return Name;
         }
 
-        const map<string, ExprTypeRef>& ExprRecordType::GetMemberMap() const
+        const map<string, TypeRef>& RecordType::GetMemberMap() const
         {
             return MemberMap;
         }
 
-        const vector<pair<string, ExprTypeRef>>&
-        ExprRecordType::GetMemberVec() const
+        const vector<pair<string, TypeRef>>&
+            RecordType::GetMemberVec() const
         {
             return MemberVec;
         }
 
-        const ExprTypeRef& ExprRecordType::GetTypeForMember(const string& MemberName) const
+        const TypeRef& RecordType::GetTypeForMember(const string& MemberName) const
         {
             auto it = MemberMap.find(MemberName);
             if (it == MemberMap.end()) {
-                return ExprTypeRef::NullPtr;
+                return TypeRef::NullPtr;
             }
             return it->second;
         }
 
-        u32 ExprRecordType::GetFieldIdx(const string& FieldName) const
+        u32 RecordType::GetFieldIdx(const string& FieldName) const
         {
             for (u32 i = 0; i < MemberVec.size(); ++i) {
                 if (MemberVec[i].first == FieldName) {
@@ -1100,7 +1100,7 @@ namespace ESMC {
                             FieldName + "\"");
         }
 
-        u32 ExprRecordType::GetFieldOffset(const string& FieldName) const
+        u32 RecordType::GetFieldOffset(const string& FieldName) const
         {
             if (ContainsUnboundedType) {
                 throw ESMCError((string)"Record type \"" + Name + "\" contains " +
@@ -1118,7 +1118,7 @@ namespace ESMC {
             return it->second;
         }
 
-        string ExprRecordType::ToString() const
+        string RecordType::ToString() const
         {
             string Retval;
             Retval += "(Rec " + Name + "(";
@@ -1134,20 +1134,20 @@ namespace ESMC {
             return Retval;
         }
 
-        i32 ExprRecordType::Compare(const ExprTypeBase& Other) const
+        i32 RecordType::Compare(const TypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            if (OtherAsPtr->As<ExprBoolType>() != nullptr ||
-                OtherAsPtr->As<ExprIntType>() != nullptr ||
-                OtherAsPtr->As<ExprRangeType>() != nullptr ||
-                OtherAsPtr->As<ExprEnumType>() != nullptr ||
-                OtherAsPtr->As<ExprSymmetricType>() != nullptr ||
-                OtherAsPtr->As<ExprFuncType> () != nullptr ||
-                OtherAsPtr->As<ExprArrayType> () != nullptr) {
+            if (OtherAsPtr->As<BoolType>() != nullptr ||
+                OtherAsPtr->As<IntType>() != nullptr ||
+                OtherAsPtr->As<RangeType>() != nullptr ||
+                OtherAsPtr->As<EnumType>() != nullptr ||
+                OtherAsPtr->As<SymmetricType>() != nullptr ||
+                OtherAsPtr->As<FuncType> () != nullptr ||
+                OtherAsPtr->As<ArrayType> () != nullptr) {
                 return 1;
             }
 
-            auto OtherAsRec = OtherAsPtr->As<ExprRecordType>();
+            auto OtherAsRec = OtherAsPtr->As<RecordType>();
             if (OtherAsRec == nullptr) {
                 return -1;
             }
@@ -1161,34 +1161,34 @@ namespace ESMC {
             }
         }
 
-        vector<string> ExprRecordType::GetElements() const
+        vector<string> RecordType::GetElements() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
-        vector<string> ExprRecordType::GetElementsNoUndef() const
+        vector<string> RecordType::GetElementsNoUndef() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
-        u32 ExprRecordType::GetCardinality() const
+        u32 RecordType::GetCardinality() const
         {
             throw ESMCError((string)"Cannot get cardinality of non-scalar type");
         }
 
-        u32 ExprRecordType::GetCardinalityNoUndef() const
+        u32 RecordType::GetCardinalityNoUndef() const
         {
             throw ESMCError((string)"Cannot get cardinality of non-scalar type");
         }
 
-        void ExprRecordType::ComputeHashValue() const
+        void RecordType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, Name);
             boost::hash_combine(HashCode, MemberVec.size());
         }
 
-        u32 ExprRecordType::GetByteSize() const
+        u32 RecordType::GetByteSize() const
         {
             u32 Retval = 0;
             for (auto const& Member : MemberVec) {
@@ -1200,52 +1200,52 @@ namespace ESMC {
             return Align(Retval, 4);
         }
 
-        string ExprRecordType::GetClearValue() const
+        string RecordType::GetClearValue() const
         {
-            throw ESMCError((string)"ExprRecordType::GetClearValue() should never " +
+            throw ESMCError((string)"RecordType::GetClearValue() should never " +
                             "have been called");
         }
 
-        ExprParametricType::ExprParametricType(const ExprTypeRef& BaseType,
-                                               const vector<ExprTypeRef>& ParameterTypes)
-            : ExprTypeBase(), BaseType(BaseType), ParameterTypes(ParameterTypes)
+        ParametricType::ParametricType(const TypeRef& BaseType,
+                                       const vector<TypeRef>& ParameterTypes)
+            : TypeBase(), BaseType(BaseType), ParameterTypes(ParameterTypes)
         {
-            if (!BaseType->Is<ExprRecordType>()) {
+            if (!BaseType->Is<RecordType>()) {
                 throw ESMCError((string)"Only record types " +
                                 "can currently be parametrized");
             }
 
             for (auto const& ParameterType : ParameterTypes) {
-                if (ParameterType->As<ExprEnumType>() == nullptr &&
-                    ParameterType->As<ExprRangeType>() == nullptr &&
-                    ParameterType->As<ExprSymmetricType>() == nullptr) {
+                if (ParameterType->As<EnumType>() == nullptr &&
+                    ParameterType->As<RangeType>() == nullptr &&
+                    ParameterType->As<SymmetricType>() == nullptr) {
                     throw ESMCError((string)"Parameteric types must have enum, range " +
                                     "or symmetric types as type parameters");
                 }
             }
         }
 
-        ExprParametricType::~ExprParametricType()
+        ParametricType::~ParametricType()
         {
             // Nothing here
         }
 
-        const ExprTypeRef& ExprParametricType::GetBaseType() const
+        const TypeRef& ParametricType::GetBaseType() const
         {
             return BaseType;
         }
 
-        const vector<ExprTypeRef>& ExprParametricType::GetParameterTypes() const
+        const vector<TypeRef>& ParametricType::GetParameterTypes() const
         {
             return ParameterTypes;
         }
 
-        const string& ExprParametricType::GetName() const
+        const string& ParametricType::GetName() const
         {
-            return BaseType->SAs<ExprRecordType>()->GetName();
+            return BaseType->SAs<RecordType>()->GetName();
         }
 
-        void ExprParametricType::ComputeHashValue() const
+        void ParametricType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, BaseType->Hash());
@@ -1254,7 +1254,7 @@ namespace ESMC {
             }
         }
 
-        string ExprParametricType::ToString() const
+        string ParametricType::ToString() const
         {
             string Retval = "(ParamType ";
             for (auto const& ParameterType : ParameterTypes) {
@@ -1264,22 +1264,22 @@ namespace ESMC {
             return Retval;
         }
 
-        i32 ExprParametricType::Compare(const ExprTypeBase& Other) const
+        i32 ParametricType::Compare(const TypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
 
-            if (OtherAsPtr->As<ExprBoolType>() != nullptr ||
-                OtherAsPtr->As<ExprIntType>() != nullptr ||
-                OtherAsPtr->As<ExprRangeType>() != nullptr ||
-                OtherAsPtr->As<ExprEnumType>() != nullptr ||
-                OtherAsPtr->As<ExprSymmetricType>() != nullptr ||
-                OtherAsPtr->As<ExprFuncType>() != nullptr ||
-                OtherAsPtr->As<ExprArrayType>() != nullptr ||
-                OtherAsPtr->As<ExprRecordType>() != nullptr) {
+            if (OtherAsPtr->As<BoolType>() != nullptr ||
+                OtherAsPtr->As<IntType>() != nullptr ||
+                OtherAsPtr->As<RangeType>() != nullptr ||
+                OtherAsPtr->As<EnumType>() != nullptr ||
+                OtherAsPtr->As<SymmetricType>() != nullptr ||
+                OtherAsPtr->As<FuncType>() != nullptr ||
+                OtherAsPtr->As<ArrayType>() != nullptr ||
+                OtherAsPtr->As<RecordType>() != nullptr) {
                 return 1;
             }
 
-            auto OtherAsPar = OtherAsPtr->As<ExprParametricType>();
+            auto OtherAsPar = OtherAsPtr->As<ParametricType>();
 
             if (OtherAsPar == nullptr) {
                 return -1;
@@ -1307,130 +1307,130 @@ namespace ESMC {
             }
         }
 
-        vector<string> ExprParametricType::GetElements() const
+        vector<string> ParametricType::GetElements() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
-        vector<string> ExprParametricType::GetElementsNoUndef() const
+        vector<string> ParametricType::GetElementsNoUndef() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
-        u32 ExprParametricType::GetCardinality() const
+        u32 ParametricType::GetCardinality() const
         {
             throw ESMCError((string)"Cannot get cardinality of non-scalar type");
         }
 
-        u32 ExprParametricType::GetCardinalityNoUndef() const
+        u32 ParametricType::GetCardinalityNoUndef() const
         {
             throw ESMCError((string)"Cannot get cardinality of non-scalar type");
         }
 
-        u32 ExprParametricType::GetByteSize() const
+        u32 ParametricType::GetByteSize() const
         {
-            throw InternalError((string)"ExprParametricType::GetByteSize() should never " +
+            throw InternalError((string)"ParametricType::GetByteSize() should never " +
                                 "have been called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
         }
 
-        string ExprParametricType::GetClearValue() const
+        string ParametricType::GetClearValue() const
         {
-            throw ESMCError((string)"ExprParametricType::GetClearValue() should never " +
+            throw ESMCError((string)"ParametricType::GetClearValue() should never " +
                             "have been called");
         }
 
-        ExprFieldAccessType::ExprFieldAccessType()
-            : ExprTypeBase()
+        FieldAccessType::FieldAccessType()
+            : TypeBase()
         {
             // Nothing here
         }
 
-        ExprFieldAccessType::~ExprFieldAccessType()
+        FieldAccessType::~FieldAccessType()
         {
             // Nothing here
         }
 
-        void ExprFieldAccessType::ComputeHashValue() const
+        void FieldAccessType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, "FieldAccessType");
         }
 
-        i32 ExprFieldAccessType::Compare(const ExprTypeBase& Other) const
+        i32 FieldAccessType::Compare(const TypeBase& Other) const
         {
-            if (Other.As<ExprBoolType>() != nullptr ||
-                Other.As<ExprIntType>() != nullptr ||
-                Other.As<ExprRangeType>() != nullptr ||
-                Other.As<ExprEnumType> () != nullptr ||
-                Other.As<ExprSymmetricType>() != nullptr ||
-                Other.As<ExprFuncType> () != nullptr ||
-                Other.As<ExprArrayType>() != nullptr ||
-                Other.As<ExprRecordType>() != nullptr ||
-                Other.As<ExprParametricType>() != nullptr) {
+            if (Other.As<BoolType>() != nullptr ||
+                Other.As<IntType>() != nullptr ||
+                Other.As<RangeType>() != nullptr ||
+                Other.As<EnumType> () != nullptr ||
+                Other.As<SymmetricType>() != nullptr ||
+                Other.As<FuncType> () != nullptr ||
+                Other.As<ArrayType>() != nullptr ||
+                Other.As<RecordType>() != nullptr ||
+                Other.As<ParametricType>() != nullptr) {
                 return 1;
             }
 
-            if (Other.As<ExprFieldAccessType>() == nullptr) {
+            if (Other.As<FieldAccessType>() == nullptr) {
                 return -1;
             } else {
                 return 0;
             }
         }
 
-        vector<string> ExprFieldAccessType::GetElements() const
+        vector<string> FieldAccessType::GetElements() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
-        vector<string> ExprFieldAccessType::GetElementsNoUndef() const
+        vector<string> FieldAccessType::GetElementsNoUndef() const
         {
             throw ESMCError((string)"Cannot get elements of non-scalar type");
         }
 
-        u32 ExprFieldAccessType::GetCardinality() const
+        u32 FieldAccessType::GetCardinality() const
         {
             throw ESMCError((string)"Cannot get cardinality of non-scalar type");
         }
 
-        u32 ExprFieldAccessType::GetCardinalityNoUndef() const
+        u32 FieldAccessType::GetCardinalityNoUndef() const
         {
             throw ESMCError((string)"Cannot get cardinality of non-scalar type");
         }
 
-        string ExprFieldAccessType::ToString() const
+        string FieldAccessType::ToString() const
         {
             return "(FieldAccessType)";
         }
 
-        u32 ExprFieldAccessType::GetByteSize() const
+        u32 FieldAccessType::GetByteSize() const
         {
-            throw InternalError((string)"ExprFieldAccessType::GetByteSize() should never " +
+            throw InternalError((string)"FieldAccessType::GetByteSize() should never " +
                                 "have been called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
         }
 
-        string ExprFieldAccessType::GetClearValue() const
+        string FieldAccessType::GetClearValue() const
         {
-            throw InternalError((string)"ExprFieldAccessType::GetClearValue() " +
+            throw InternalError((string)"FieldAccessType::GetClearValue() " +
                                 "should never have been called");
         }
 
-        ExprUnionType::ExprUnionType(const string& Name,
-                                         const set<ExprTypeRef>& MemberTypes,
-                                         const ExprTypeRef& TypeIDFieldType)
-            : ExprRecordType(), MemberTypes(MemberTypes),
+        UnionType::UnionType(const string& Name,
+                             const set<TypeRef>& MemberTypes,
+                             const TypeRef& TypeIDFieldType)
+            : RecordType(), MemberTypes(MemberTypes),
               TypeIDFieldType(TypeIDFieldType)
         {
             this->Name = Name;
             // Sanity checks
-            if (!TypeIDFieldType->Is<ExprRangeType>()) {
-                throw ESMCError((string)"ExprUnionType must be instantiated with a " +
+            if (!TypeIDFieldType->Is<RangeType>()) {
+                throw ESMCError((string)"UnionType must be instantiated with a " +
                                 "subrange type for TypeIDFieldType");
             }
 
-            auto TypeIDTypeAsRange = TypeIDFieldType->As<ExprRangeType>();
+            auto TypeIDTypeAsRange = TypeIDFieldType->As<RangeType>();
             auto Low = TypeIDTypeAsRange->GetLow();
             if (Low != 0) {
-                throw ESMCError((string)"Subrange type for ExprUnionType must have low at 0");
+                throw ESMCError((string)"Subrange type for UnionType must have low at 0");
             }
 
             const u32 MaxNumTypes = TypeIDTypeAsRange->GetHigh();
@@ -1442,14 +1442,14 @@ namespace ESMC {
             u32 NumTypesSeen = 1;
             // Find the maximum number of occurences of each type
             // in each member type
-            map<ExprTypeRef, u32> MaxOccCount;
+            map<TypeRef, u32> MaxOccCount;
 
             for (auto const& MemberType : MemberTypes) {
-                auto MemberTypeAsRec = MemberType->As<ExprRecordType>();
+                auto MemberTypeAsRec = MemberType->As<RecordType>();
                 if (MemberTypeAsRec == nullptr) {
                     throw ESMCError((string)"Only record types can be members of Message types");
                 }
-                map<ExprTypeRef, u32> CurOccCount;
+                map<TypeRef, u32> CurOccCount;
                 auto const& MemberVec = MemberTypeAsRec->GetMemberVec();
 
                 for (auto const& Member : MemberVec) {
@@ -1485,7 +1485,7 @@ namespace ESMC {
 
             // We now have a list of fields we need in the message type
             u32 FieldID = 0;
-            map<pair<ExprTypeRef, u32>, string> TypeCountToField;
+            map<pair<TypeRef, u32>, string> TypeCountToField;
             for (auto const TypeCount : MaxOccCount) {
                 for (u32 i = 0; i < TypeCount.second; ++i) {
                     string MemberName = ((string)"Field_" + to_string(FieldID++));
@@ -1498,8 +1498,8 @@ namespace ESMC {
             // Construct the mapping from record fields to my fields and vice-versa
             for (auto const& MemberType : MemberTypes) {
                 auto MemID = MemberTypeToID[MemberType];
-                map<ExprTypeRef, u32> OccCounts;
-                auto const& MemVec = MemberType->SAs<ExprRecordType>()->GetMemberVec();
+                map<TypeRef, u32> OccCounts;
+                auto const& MemVec = MemberType->SAs<RecordType>()->GetMemberVec();
                 for (auto const& Mem : MemVec) {
                     if (OccCounts.find(Mem.second) == OccCounts.end()) {
                         OccCounts[Mem.second] = 0;
@@ -1511,51 +1511,51 @@ namespace ESMC {
             }
         }
 
-        ExprUnionType::~ExprUnionType()
+        UnionType::~UnionType()
         {
             // Nothing here
         }
 
-        const set<ExprTypeRef>& ExprUnionType::GetMemberTypes() const
+        const set<TypeRef>& UnionType::GetMemberTypes() const
         {
             return MemberTypes;
         }
 
-        const map<ExprTypeRef, u32>& ExprUnionType::GetMemberTypeToID() const
+        const map<TypeRef, u32>& UnionType::GetMemberTypeToID() const
         {
             return MemberTypeToID;
         }
 
-        const map<u32, ExprTypeRef>& ExprUnionType::GetIDToMemberType() const
+        const map<u32, TypeRef>& UnionType::GetIDToMemberType() const
         {
             return IDToMemberType;
         }
 
-        const map<u32, map<string, string>>& ExprUnionType::GetMemberFieldToField() const
+        const map<u32, map<string, string>>& UnionType::GetMemberFieldToField() const
         {
             return MemberFieldToField;
         }
 
-        const map<u32, map<string, string>>& ExprUnionType::GetFieldToMemberField() const
+        const map<u32, map<string, string>>& UnionType::GetFieldToMemberField() const
         {
             return FieldToMemberField;
         }
 
-        const string& ExprUnionType::GetTypeIDFieldName() const
+        const string& UnionType::GetTypeIDFieldName() const
         {
             return TypeIDFieldName;
         }
 
-        const ExprTypeRef& ExprUnionType::GetTypeIDFieldType() const
+        const TypeRef& UnionType::GetTypeIDFieldType() const
         {
             return TypeIDFieldType;
         }
 
-        const u32 ExprUnionType::GetTypeIDForMemberType(const ExprTypeRef& MemType) const
+        const u32 UnionType::GetTypeIDForMemberType(const TypeRef& MemType) const
         {
-            auto TypeAsRec = MemType->As<ExprRecordType>();
+            auto TypeAsRec = MemType->As<RecordType>();
             if (TypeAsRec == nullptr) {
-                TypeAsRec = MemType->As<ExprParametricType>()->GetBaseType()->As<ExprRecordType>();
+                TypeAsRec = MemType->As<ParametricType>()->GetBaseType()->As<RecordType>();
             }
             auto it = MemberTypeToID.find(TypeAsRec);
             if (it == MemberTypeToID.end()) {
@@ -1565,7 +1565,7 @@ namespace ESMC {
             return it->second;
         }
 
-        const ExprTypeRef& ExprUnionType::GetMemberTypeForTypeID(u32 TypeID) const
+        const TypeRef& UnionType::GetMemberTypeForTypeID(u32 TypeID) const
         {
             auto it = IDToMemberType.find(TypeID);
             if (it == IDToMemberType.end()) {
@@ -1575,14 +1575,14 @@ namespace ESMC {
             return it->second;
         }
 
-        const string& ExprUnionType::MapFromMemberField(const ExprTypeRef& MemberType,
-                                                          const string& FieldName) const
+        const string& UnionType::MapFromMemberField(const TypeRef& MemberType,
+                                                    const string& FieldName) const
         {
 
-            auto TypeAsRec = MemberType->As<ExprRecordType>();
+            auto TypeAsRec = MemberType->As<RecordType>();
             if (TypeAsRec == nullptr) {
                 TypeAsRec =
-                    MemberType->As<ExprParametricType>()->GetBaseType()->As<ExprRecordType>();
+                    MemberType->As<ParametricType>()->GetBaseType()->As<RecordType>();
             }
 
             auto it = MemberTypeToID.find(TypeAsRec);
@@ -1600,8 +1600,8 @@ namespace ESMC {
             return it2->second;
         }
 
-        const string& ExprUnionType::MapToMemberField(u32 TypeID,
-                                                        const string& FieldName) const
+        const string& UnionType::MapToMemberField(u32 TypeID,
+                                                  const string& FieldName) const
         {
             auto it = FieldToMemberField.find(TypeID);
             if (it == FieldToMemberField.end()) {
@@ -1617,7 +1617,7 @@ namespace ESMC {
             return it2->second;
         }
 
-        void ExprUnionType::ComputeHashValue() const
+        void UnionType::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, Name);
@@ -1626,24 +1626,24 @@ namespace ESMC {
             }
         }
 
-        i32 ExprUnionType::Compare(const ExprTypeBase& Other) const
+        i32 UnionType::Compare(const TypeBase& Other) const
         {
-            if (Other.As<ExprBoolType>() != nullptr ||
-                Other.As<ExprIntType>() != nullptr ||
-                Other.As<ExprRangeType>() != nullptr ||
-                Other.As<ExprEnumType> () != nullptr ||
-                Other.As<ExprSymmetricType>() != nullptr ||
-                Other.As<ExprFuncType> () != nullptr ||
-                Other.As<ExprArrayType>() != nullptr ||
-                Other.As<ExprParametricType>() != nullptr ||
-                Other.As<ExprFieldAccessType>() != nullptr) {
+            if (Other.As<BoolType>() != nullptr ||
+                Other.As<IntType>() != nullptr ||
+                Other.As<RangeType>() != nullptr ||
+                Other.As<EnumType> () != nullptr ||
+                Other.As<SymmetricType>() != nullptr ||
+                Other.As<FuncType> () != nullptr ||
+                Other.As<ArrayType>() != nullptr ||
+                Other.As<ParametricType>() != nullptr ||
+                Other.As<FieldAccessType>() != nullptr) {
                 return 1;
             }
-            if (Other.As<ExprRecordType>() != nullptr &&
-                Other.As<ExprUnionType>() == nullptr) {
+            if (Other.As<RecordType>() != nullptr &&
+                Other.As<UnionType>() == nullptr) {
                 return 1;
             }
-            auto OtherAsMsg = Other.As<ExprUnionType>();
+            auto OtherAsMsg = Other.As<UnionType>();
             if (OtherAsMsg == nullptr) {
                 return -1;
             }
@@ -1657,9 +1657,9 @@ namespace ESMC {
             }
         }
 
-        string ExprUnionType::GetClearValue() const
+        string UnionType::GetClearValue() const
         {
-            throw ESMCError((string)"ExprUnionType::GetClearValue() should never " +
+            throw ESMCError((string)"UnionType::GetClearValue() should never " +
                             "have been called");
         }
 
@@ -1667,4 +1667,4 @@ namespace ESMC {
 } /* end namespace ESMC */
 
 //
-// ExprTypes.cpp ends here
+// LTSTypes.cpp ends here
