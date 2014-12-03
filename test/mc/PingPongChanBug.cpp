@@ -71,7 +71,7 @@ int main()
 
     int MaxValue = 1;
     // Add the message types
-    vector<pair<string, ExprTypeRef>> MsgFields;
+    vector<pair<string, TypeRef>> MsgFields;
     auto RangeType = TheLTS->MakeRangeType(0, MaxValue);
     MsgFields.push_back(make_pair("Data", RangeType));
 

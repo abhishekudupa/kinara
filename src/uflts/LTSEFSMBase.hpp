@@ -40,7 +40,7 @@
 #if !defined ESMC_LTS_EFSM_BASE_HPP_
 #define ESMC_LTS_EFSM_BASE_HPP_
 
-#include "LTSTypes.hpp"
+#include "LTSDecls.hpp"
 #include "LTSState.hpp"
 #include "SymbolTable.hpp"
 
@@ -54,22 +54,22 @@ namespace ESMC {
         class SymmetricMessageDecl : public RefCountable
         {
         private:
-            ExprTypeRef MessageType;
+            TypeRef MessageType;
             vector<ExpT> NewParams;
             ExpT Constraint;
             vector<ExpT> MessageParams;
             bool Input;
 
         public:
-            SymmetricMessageDecl(const ExprTypeRef& MessageType,
+            SymmetricMessageDecl(const TypeRef& MessageType,
                                  const vector<ExpT>& NewParams,
                                  const ExpT& Constraint,
                                  const vector<ExpT>& MessageParams,
                                  bool Input);
             virtual ~SymmetricMessageDecl();
 
-            const ExprTypeRef& GetMessageType() const;
-            const ExprTypeRef& GetBaseMessageType() const;
+            const TypeRef& GetMessageType() const;
+            const TypeRef& GetBaseMessageType() const;
             const vector<ExpT>& GetNewParams() const;
             const ExpT& GetConstraint() const;
             const vector<ExpT>& GetMessageParams() const;
@@ -88,7 +88,7 @@ namespace ESMC {
             bool VarsFrozen;
             bool EFSMFrozen;
             // State variable type
-            ExprTypeRef StateVarType;
+            TypeRef StateVarType;
             // SubstMap to rebase expressions
             // to use the state var fields
             map<vector<ExpT>, MgrT::SubstMapT> RebaseSubstMaps;
@@ -106,8 +106,8 @@ namespace ESMC {
             map<string, set<string>> UserToInternalFairness;
 
             // Inputs and outputs per instance
-            map<vector<ExpT>, set<ExprTypeRef>> Inputs;
-            map<vector<ExpT>, set<ExprTypeRef>> Outputs;
+            map<vector<ExpT>, set<TypeRef>> Inputs;
+            map<vector<ExpT>, set<TypeRef>> Outputs;
             vector<SymmMsgDeclRef> SymmetricMessages;
 
             ExpT ErrorCondition;
@@ -120,37 +120,37 @@ namespace ESMC {
             void AssertEFSMFrozen() const;
             void AssertEFSMNotFrozen() const;
 
-            void AssertInput(const vector<ExpT>& ParamInst, const ExprTypeRef& MessageType) const;
-            void AssertOutput(const vector<ExpT>& ParamInst, const ExprTypeRef& MessageType) const;
+            void AssertInput(const vector<ExpT>& ParamInst, const TypeRef& MessageType) const;
+            void AssertOutput(const vector<ExpT>& ParamInst, const TypeRef& MessageType) const;
 
-            void CheckMsgType(const ExprTypeRef& Type) const;
+            void CheckMsgType(const TypeRef& Type) const;
             void CheckFairnessSets(const set<string>& FairnessSetNames) const;
 
-            ExprTypeRef InstantiateMessageType(const vector<ExpT>& Params,
+            TypeRef InstantiateMessageType(const vector<ExpT>& Params,
                                                const MgrT::SubstMapT& SubstMap,
-                                               const ExprTypeRef& MsgType);
+                                               const TypeRef& MsgType);
 
-            SymmMsgDeclRef AddMsg(const ExprTypeRef& MsgType,
+            SymmMsgDeclRef AddMsg(const TypeRef& MsgType,
                                   const vector<ExpT>& Params,
                                   bool IsInput);
 
             SymmMsgDeclRef AddMsgs(const vector<ExpT>& NewParams,
                                    const ExpT& Constraint,
-                                   const ExprTypeRef& MsgType,
+                                   const TypeRef& MsgType,
                                    const vector<ExpT>& Params,
                                    bool IsInput);
 
             vector<LTSAssignRef> InstantiateUpdates(const MgrT::SubstMapT& ParamSubst,
                                                     const vector<LTSAssignRef>& Updates,
                                                     const string& MessageName,
-                                                    const ExprTypeRef& MessageType,
-                                                    const ExprTypeRef& ActMType);
+                                                    const TypeRef& MessageType,
+                                                    const TypeRef& ActMType);
 
             vector<LTSAssignRef> RebaseUpdates(const vector<ExpT>& ParamInst,
                                                const vector<LTSAssignRef>& Updates) const;
             vector<LTSAssignRef> MsgTransformUpdates(const vector<LTSAssignRef>& Updates,
                                                      const string& MessageName,
-                                                     const ExprTypeRef& MessageType);
+                                                     const TypeRef& MessageType);
             vector<LTSAssignRef> SimplifyUpdates(const vector<LTSAssignRef>& Updates);
 
             // For internal use. e.g. in the case of channels
@@ -161,8 +161,8 @@ namespace ESMC {
                                           const ExpT& Guard,
                                           const vector<LTSAssignRef>& Updates,
                                           const string& MessageName,
-                                          const ExprTypeRef& MessageType,
-                                          const ExprTypeRef& ActMType,
+                                          const TypeRef& MessageType,
+                                          const TypeRef& ActMType,
                                           const LTSSymbTransRef& SymbTrans);
 
             void AddOutputTransForInstance(u32 InstanceID,
@@ -171,8 +171,8 @@ namespace ESMC {
                                            const ExpT& Guard,
                                            const vector<LTSAssignRef>& Updates,
                                            const string& MessageName,
-                                           const ExprTypeRef& MessageType,
-                                           const ExprTypeRef& ActMType,
+                                           const TypeRef& MessageType,
+                                           const TypeRef& ActMType,
                                            const set<string>& AddToFairnessSets,
                                            const LTSSymbTransRef& SymbTrans);
 
@@ -192,14 +192,14 @@ namespace ESMC {
 
             // Methods not intended to be overridden.
             // This helps preserve the structure of the EFSM
-            set<ExprTypeRef> GetInputs() const;
-            set<ExprTypeRef> GetInputsForInstance(u32 InstanceID) const;
+            set<TypeRef> GetInputs() const;
+            set<TypeRef> GetInputsForInstance(u32 InstanceID) const;
 
-            set<ExprTypeRef> GetOutputs() const;
-            set<ExprTypeRef> GetOutputsForInstance(u32 InstanceID) const;
+            set<TypeRef> GetOutputs() const;
+            set<TypeRef> GetOutputsForInstance(u32 InstanceID) const;
 
-            vector<LTSTransRef> GetOutputTransitionsOnMsg(const ExprTypeRef& MsgType) const;
-            vector<vector<LTSTransRef>> GetInputTransitionsOnMsg(const ExprTypeRef& MsgType) const;
+            vector<LTSTransRef> GetOutputTransitionsOnMsg(const TypeRef& MsgType) const;
+            vector<vector<LTSTransRef>> GetInputTransitionsOnMsg(const TypeRef& MsgType) const;
             vector<LTSTransRef> GetInternalTransitions() const;
 
             virtual void AddState(const string& StateName,
@@ -220,30 +220,30 @@ namespace ESMC {
             virtual void FreezeVars();
             virtual void Freeze();
 
-            virtual SymmMsgDeclRef AddInputMsg(const ExprTypeRef& MessageType,
+            virtual SymmMsgDeclRef AddInputMsg(const TypeRef& MessageType,
                                                const vector<ExpT>& Params = vector<ExpT>());
 
             virtual SymmMsgDeclRef AddInputMsgs(const vector<ExpT>& NewParams,
                                                 const ExpT& Constraint,
-                                                const ExprTypeRef& MessageType,
+                                                const TypeRef& MessageType,
                                                 const vector<ExpT>& MessageParams);
 
-            virtual SymmMsgDeclRef AddOutputMsg(const ExprTypeRef& MessageType,
+            virtual SymmMsgDeclRef AddOutputMsg(const TypeRef& MessageType,
                                                 const vector<ExpT>& Params = vector<ExpT>());
 
             virtual SymmMsgDeclRef AddOutputMsgs(const vector<ExpT>& NewParams,
                                                  const ExpT& Constraint,
-                                                 const ExprTypeRef& MessageType,
+                                                 const TypeRef& MessageType,
                                                  const vector<ExpT>& MEssageParams);
 
-            virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType);
+            virtual void AddVariable(const string& VarName, const TypeRef& VarType);
 
             virtual void AddInputTransition(const string& InitState,
                                             const string& FinalState,
                                             const ExpT& Guard,
                                             const vector<LTSAssignRef>& Updates,
                                             const string& MessageName,
-                                            const ExprTypeRef& MessageType,
+                                            const TypeRef& MessageType,
                                             const vector<ExpT>& MessageParams,
                                             bool Tentative = false);
 
@@ -252,7 +252,7 @@ namespace ESMC {
                                             const ExpT& Guard,
                                             const vector<LTSAssignRef>& Updates,
                                             const string& MessageName,
-                                            const ExprTypeRef& MessageType,
+                                            const TypeRef& MessageType,
                                             const vector<ExpT>& MessageParams,
                                             bool Tentative = false);
 
@@ -263,7 +263,7 @@ namespace ESMC {
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
-                                             const ExprTypeRef& MessageType,
+                                             const TypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
                                              bool Tentative = false);
 
@@ -274,7 +274,7 @@ namespace ESMC {
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
-                                             const ExprTypeRef& MessageType,
+                                             const TypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
                                              bool Tentative = false);
 
@@ -283,7 +283,7 @@ namespace ESMC {
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
-                                             const ExprTypeRef& MessageType,
+                                             const TypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
                                              const set<string>& AddToFairnessSets =
                                              set<string>(),
@@ -294,7 +294,7 @@ namespace ESMC {
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
-                                             const ExprTypeRef& MessageType,
+                                             const TypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
                                              const set<string>& AddToFairnessSets =
                                              set<string>(),
@@ -307,7 +307,7 @@ namespace ESMC {
                                               const ExpT& Guard,
                                               const vector<LTSAssignRef>& Updates,
                                               const string& MessageName,
-                                              const ExprTypeRef& MessageType,
+                                              const TypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
                                               LTSFairnessType FairnessKind,
                                               SplatFairnessType SplatFairness,
@@ -321,7 +321,7 @@ namespace ESMC {
                                               const ExpT& Guard,
                                               const vector<LTSAssignRef>& Updates,
                                               const string& MessageName,
-                                              const ExprTypeRef& MessageType,
+                                              const TypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
                                               LTSFairnessType FairnessKind,
                                               SplatFairnessType SplatFairness,

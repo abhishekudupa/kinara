@@ -54,12 +54,12 @@ const size_t NumProcesses = 3;
 
 
 // Messages
-vector<ExprTypeRef> WriteMsgs;
+vector<TypeRef> WriteMsgs;
 
 vector<ExpT> Guards;
 
-ExprTypeRef LegitimateAnnouncement;
-ExprTypeRef IllegitimateAnnouncement;
+TypeRef LegitimateAnnouncement;
+TypeRef IllegitimateAnnouncement;
 
 ExpT Legitimacy;
 
@@ -74,7 +74,7 @@ void DeclareMsgs(LabelledTS* TheLTS)
 
     auto BoolType = TheLTS->MakeBoolType();
     for (size_t i = 0; i < NumProcesses; i++) {
-        vector<pair<string, ExprTypeRef>> fields { make_pair(string("Data"), BoolType),
+        vector<pair<string, TypeRef>> fields { make_pair(string("Data"), BoolType),
                                                    make_pair(string("Up"), BoolType) };
         string MsgName = string("Write") + to_string(i);
         WriteMsgs.push_back(TheLTS->MakeMsgType(MsgName, fields));
@@ -368,7 +368,7 @@ void DeclareShadowMonitor(LabelledTS* TheLTS)
 
     vector<ExpT> Args = DataVariables;
     Args.insert(Args.end(), UpVariables.begin(), UpVariables.end());
-    vector<ExprTypeRef> ArgTypes;
+    vector<TypeRef> ArgTypes;
     transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
               [&](ExpT Arg) {return Arg->GetType();});
     auto LegitimacyGuardOp = Mgr->MakeUninterpretedFunction("LegitimacyGuard",

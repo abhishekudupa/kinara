@@ -49,7 +49,7 @@
 namespace ESMC {
     namespace MC {
 
-        using LTS::ExprTypeRef;
+        using LTS::TypeRef;
         using LTS::ExpT;
         using Symm::PermutationSet;
         using LTS::LTSTypeExtensionT;
@@ -154,7 +154,7 @@ namespace ESMC {
                 for (u32 i = 0; i < IndexVectorSize; ++i) {
                     auto CurExp = ParamInst[i]->As<Exprs::ConstExpression>();
                     auto const& CurVal = CurExp->GetConstValue();
-                    auto const& CurType = CurExp->GetConstType()->As<Exprs::ExprScalarType>();
+                    auto const& CurType = CurExp->GetConstType()->As<LTS::ScalarType>();
 
                     auto IndexVal = CurType->ConstToVal(CurVal) - 1;
                     CurIV[i] = (u08)IndexVal;

@@ -92,7 +92,7 @@ int main()
                                                                        CacheParam1));
 
     // Message types
-    vector<pair<string, ExprTypeRef>> MessageFields;
+    vector<pair<string, TypeRef>> MessageFields;
     auto GetXMsgType = TheLTS->MakeMsgTypes({ CacheParam, DirParam, AddressParam },
                                             TrueExp, "GetXMsgType", MessageFields, true);
     auto GetSMsgType = TheLTS->MakeMsgTypes({ CacheParam, DirParam, AddressParam },

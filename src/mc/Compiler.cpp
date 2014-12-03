@@ -75,7 +75,7 @@ namespace ESMC {
             if (Exp->ExtensionData.Offset != -1) {
                 return;
             }
-            if (Exp->GetVarType()->Is<ExprFieldAccessType>()) {
+            if (Exp->GetVarType()->Is<FieldAccessType>()) {
                 return;
             }
             throw InternalError((string)"Variable without offset encountered: " +
@@ -99,7 +99,7 @@ namespace ESMC {
 
             auto Type = Exp->GetConstType();
             auto const& ConstVal = Exp->GetConstValue();
-            auto Val = Type->As<ExprScalarType>()->ConstToVal(ConstVal);
+            auto Val = Type->As<ScalarType>()->ConstToVal(ConstVal);
             Exp->ExtensionData.ConstVal = Val;
             Exp->ExtensionData.ConstCompiled = true;
         }
@@ -133,13 +133,13 @@ namespace ESMC {
             if (OpCode == LTSOps::OpIndex) {
                 if (Children[0]->ExtensionData.Offset != -1 &&
                     Children[1]->Is<ConstExpression>()) {
-                    auto ArrayType = Children[0]->GetType()->As<ExprArrayType>();
-                    auto IndexType = ArrayType->GetIndexType();
-                    auto ValueType = ArrayType->GetValueType();
+                    auto ArrType = Children[0]->GetType()->As<ArrayType>();
+                    auto IndexType = ArrType->GetIndexType();
+                    auto ValueType = ArrType->GetValueType();
                     auto ValueSize = ValueType->GetByteSize();
                     ValueSize = Align(ValueSize, ValueSize);
 
-                    if (IndexType->Is<ExprSymmetricType>()) {
+                    if (IndexType->Is<SymmetricType>()) {
                         Exp->ExtensionData.Offset =
                             Children[0]->ExtensionData.Offset +
                             (ValueSize * (Children[1]->ExtensionData.ConstVal - 1));
@@ -155,7 +155,7 @@ namespace ESMC {
             if (OpCode == LTSOps::OpField) {
                 auto ChildAsVar = Children[1]->As<VarExpression>();
                 auto const& FieldName = ChildAsVar->GetVarName();
-                auto RecType = Children[0]->GetType()->As<ExprRecordType>();
+                auto RecType = Children[0]->GetType()->As<RecordType>();
                 Exp->ExtensionData.FieldOffset = RecType->GetFieldOffset(FieldName);
 
                 if (Children[0]->ExtensionData.Offset != -1) {
@@ -209,7 +209,7 @@ namespace ESMC {
                 return;
             }
 
-            if (Exp->GetType()->Is<ExprFieldAccessType>()) {
+            if (Exp->GetType()->Is<FieldAccessType>()) {
                 return;
             }
 
@@ -299,7 +299,7 @@ namespace ESMC {
                     throw InternalError((string)"Expected an LValueInterpreter.\nAt: " +
                                         __FILE__ + ":" + to_string(__LINE__));
                 }
-                auto const& RecType = Children[0]->GetType()->SAs<ExprRecordType>();
+                auto const& RecType = Children[0]->GetType()->SAs<RecordType>();
                 auto const& FieldName = Children[1]->SAs<VarExpression>()->GetVarName();
                 auto FieldOffset = RecType->GetFieldOffset(FieldName);
 
@@ -330,15 +330,15 @@ namespace ESMC {
             : RValueInterpreter(Exp)
         {
             auto const& Type  = Exp->GetType();
-            Scalar = Type->Is<ExprScalarType>();
+            Scalar = Type->Is<ScalarType>();
             if (!Scalar) {
                 Size = 0;
                 High = INT64_MAX;
                 Low = INT64_MIN;
             } else {
                 Size = Type->GetByteSize();
-                if (Type->Is<ExprRangeType>()) {
-                    auto TypeAsRange = Type->SAs<ExprRangeType>();
+                if (Type->Is<RangeType>()) {
+                    auto TypeAsRange = Type->SAs<RangeType>();
                     Low = TypeAsRange->GetLow();
                     High = TypeAsRange->GetHigh();
                 } else {
@@ -467,8 +467,8 @@ namespace ESMC {
               Enabled(false), MyOpCode(Exp->As<OpExpression>()->GetOpCode())
         {
             auto const& ExpType = Exp->GetType();
-            if (ExpType->Is<ExprRangeType>()) {
-                auto ExpAsRange = ExpType->SAs<ExprRangeType>();
+            if (ExpType->Is<RangeType>()) {
+                auto ExpAsRange = ExpType->SAs<RangeType>();
                 Low = ExpAsRange->GetLow();
                 High = ExpAsRange->GetHigh();
             } else {
@@ -497,7 +497,7 @@ namespace ESMC {
 
             for (u32 i = 0; i < NumArgInterps; ++i) {
                 auto CurInterp = ArgInterps[i];
-                auto ArgType = CurInterp->GetExp()->GetType()->As<Exprs::ExprScalarType>();
+                auto ArgType = CurInterp->GetExp()->GetType()->As<ScalarType>();
                 auto AppArgExp = Mgr->MakeVal(ArgType->ValToConst(SubEvals[i]),
                                               CurInterp->GetExp()->GetType());
                 AppArgExps.push_back(AppArgExp);
@@ -514,7 +514,7 @@ namespace ESMC {
                                 "result in a constant valued interpretation.\nTerm:\n" +
                                 ConcAppExp->ToString() + "\nEvaluation:\n" + EvalExp->ToString());
             }
-            auto RangeType = EvalExp->GetType()->As<Exprs::ExprScalarType>();
+            auto RangeType = EvalExp->GetType()->As<ScalarType>();
             auto Val = RangeType->ConstToVal(EvalAsConst->GetConstValue());
 
             // cache the result
@@ -968,11 +968,11 @@ namespace ESMC {
             : LValueInterpreter(Exp),
               ArrayInterp(ArrayInterp), IndexInterp(IndexInterp)
         {
-            auto const& ArrayType = ArrayInterp->GetExp()->GetType();
+            auto const& ArrType = ArrayInterp->GetExp()->GetType();
 
-            ElemSize = ArrayType->SAs<ExprArrayType>()->GetValueType()->GetByteSize();
+            ElemSize = ArrType->SAs<ArrayType>()->GetValueType()->GetByteSize();
             ElemSize = Align(ElemSize, ElemSize);
-            IndexSymmetric = IndexInterp->GetExp()->GetType()->Is<ExprSymmetricType>();
+            IndexSymmetric = IndexInterp->GetExp()->GetType()->Is<SymmetricType>();
         }
 
         IndexInterpreter::~IndexInterpreter()

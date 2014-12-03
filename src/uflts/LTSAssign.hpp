@@ -42,7 +42,7 @@
 
 #include "../containers/RefCountable.hpp"
 
-#include "LTSTypes.hpp"
+#include "LTSDecls.hpp"
 
 namespace ESMC {
     namespace LTS {

@@ -115,7 +115,7 @@ void InitializeAutomata(LabelledTS* TheLTS)
     TheLTS->Freeze();
 }
 
-void AddUserAutomaton(LabelledTS* TheLTS, map<string, ExprTypeRef>& MsgTypes, int TopFloor)
+void AddUserAutomaton(LabelledTS* TheLTS, map<string, TypeRef>& MsgTypes, int TopFloor)
 {
     auto User = TheLTS->MakeGenEFSM("User", vector<ExpT>(), TheLTS->MakeTrue(), LTSFairnessType::None);
     User->AddState("InitialState");
@@ -142,7 +142,7 @@ void AddUserAutomaton(LabelledTS* TheLTS, map<string, ExprTypeRef>& MsgTypes, in
     User->AddInputTransition("WaitingState", "InitialState", TheLTS->MakeTrue(), vector<LTSAssignRef>(), "Arrive", MsgTypes["Arrive"], {});
 }
 
-void AddControllerAutomaton(LabelledTS* TheLTS, map<string, ExprTypeRef>& MsgTypes, int TopFloor)
+void AddControllerAutomaton(LabelledTS* TheLTS, map<string, TypeRef>& MsgTypes, int TopFloor)
 {
     set<string> EmptyFairnessSets;
     auto FAType = TheLTS->MakeFieldAccessType();
@@ -212,7 +212,7 @@ void AddControllerAutomaton(LabelledTS* TheLTS, map<string, ExprTypeRef>& MsgTyp
     Controller->SAs<IncompleteEFSM>()->MarkVariableReadOnly("TargetFloor");
 }
 
-void AddElevatorAutomaton(LabelledTS* TheLTS, map<string, ExprTypeRef>& MsgTypes, int TopFloor)
+void AddElevatorAutomaton(LabelledTS* TheLTS, map<string, TypeRef>& MsgTypes, int TopFloor)
 {
     set<string> EmptyFairnessSets;
     auto FloorType = TheLTS->MakeRangeType(1, TopFloor + 1);
@@ -274,7 +274,7 @@ void AddElevatorAutomaton(LabelledTS* TheLTS, map<string, ExprTypeRef>& MsgTypes
     Elevator->AddOutputTransition("ReceiveDownState", "InitialState", TheLTS->MakeTrue(), {}, "DownAck", DownAckMsgType, {});
 }
 
-void AddLivenessAutomaton(LabelledTS* TheLTS, map<string, ExprTypeRef>& MsgTypes, int TopFloor)
+void AddLivenessAutomaton(LabelledTS* TheLTS, map<string, TypeRef>& MsgTypes, int TopFloor)
 {
     auto LivenessMonitor = TheLTS->MakeGenEFSM("LivenessMonitor", vector<ExpT>(), TheLTS->MakeTrue(), LTSFairnessType::None);
     LivenessMonitor->AddState("InitialState");
@@ -335,7 +335,7 @@ int main()
     int TopFloor = TOPFLOOR;
     auto TheLTS = new LabelledTS();
 
-    map<string, ExprTypeRef> MsgTypes;
+    map<string, TypeRef> MsgTypes;
 
     set<string> EmptyFairnessSets;
     auto FloorType = TheLTS->MakeRangeType(1, TopFloor + 1);

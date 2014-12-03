@@ -52,7 +52,7 @@ namespace ESMC {
         using LTS::SymbolTable;
         using LTS::LabelledTS;
         using LTS::ExpT;
-        using LTS::ExprTypeRef;
+        using LTS::TypeRef;
         using Symm::PermutationSet;
 
         inline void BuchiAutomatonBase::AssertStatesFrozen() const
@@ -218,7 +218,7 @@ namespace ESMC {
 
             auto Mgr = TheLTS->GetMgr();
 
-            if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
+            if (!Guard->GetType()->Is<BooleanType>()) {
                 throw ESMCError((string)"Guards for Buchi Automaton transitions " +
                                 "must be Boolean valued");
             }
@@ -264,35 +264,35 @@ namespace ESMC {
             }
         }
 
-        ExpT StateBuchiAutomaton::MakeVar(const string& Name, const ExprTypeRef& Type)
+        ExpT StateBuchiAutomaton::MakeVar(const string& Name, const TypeRef& Type)
         {
             auto Retval = TheLTS->MakeVar(Name, Type);
             LTS::CheckExpr(Retval, SymTab, TheLTS->GetMgr());
             return Retval;
         }
 
-        ExpT StateBuchiAutomaton::MakeBoundVar(i64 Idx, const ExprTypeRef& Type)
+        ExpT StateBuchiAutomaton::MakeBoundVar(i64 Idx, const TypeRef& Type)
         {
             return TheLTS->MakeBoundVar(Idx, Type);
         }
 
-        ExpT StateBuchiAutomaton::MakeVal(const string& Value, const ExprTypeRef& Type)
+        ExpT StateBuchiAutomaton::MakeVal(const string& Value, const TypeRef& Type)
         {
             return TheLTS->MakeVal(Value, Type);
         }
 
-        ExpT StateBuchiAutomaton::MakeExists(const vector<ExprTypeRef>& QVarTypes,
+        ExpT StateBuchiAutomaton::MakeExists(const vector<TypeRef>& QVarTypes,
                                              const ExpT& Body)
         {
             return TheLTS->MakeExists(QVarTypes, Body);
         }
 
-        ExpT StateBuchiAutomaton::MakeForAll(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body)
+        ExpT StateBuchiAutomaton::MakeForAll(const vector<TypeRef>& QVarTypes, const ExpT& Body)
         {
             return TheLTS->MakeForAll(QVarTypes, Body);
         }
 
-        const ExprTypeRef& StateBuchiAutomaton::GetNamedType(const string& TypeName)
+        const TypeRef& StateBuchiAutomaton::GetNamedType(const string& TypeName)
         {
             return TheLTS->GetNamedType(TypeName);
         }

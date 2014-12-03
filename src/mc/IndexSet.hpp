@@ -44,14 +44,14 @@
 #include <unordered_map>
 #include <sparse_hash_set>
 
-#include "../uflts/LTSTypes.hpp"
+#include "../uflts/LTSDecls.hpp"
 
 #include "../common/FwdDecls.hpp"
 
 namespace ESMC {
     namespace MC {
 
-        using LTS::ExprTypeRef;
+        using LTS::TypeRef;
         using LTS::ExpT;
         using LTS::LabelledTS;
         using Symm::PermutationSet;

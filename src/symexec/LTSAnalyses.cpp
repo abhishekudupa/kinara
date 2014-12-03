@@ -44,7 +44,7 @@
 #include "../uflts/LabelledTS.hpp"
 #include "../uflts/LTSAssign.hpp"
 #include "../uflts/LTSEFSMBase.hpp"
-#include "../uflts/LTSTypes.hpp"
+#include "../uflts/LTSDecls.hpp"
 #include "../uflts/LTSTransitions.hpp"
 #include "../uflts/LTSUtils.hpp"
 #include "../mc/AQStructure.hpp"
@@ -53,6 +53,7 @@
 #include "../mc/Trace.hpp"
 #include "../synth/Solver.hpp"
 #include "../tpinterface/TheoremProver.hpp"
+#include "../uflts/LTSFairnessSet.hpp"
 
 namespace ESMC {
     namespace Analyses {
@@ -68,10 +69,10 @@ namespace ESMC {
                 auto Exp = ExpressionsToCheck.back();
                 ExpressionsToCheck.pop_back();
                 auto ExpType = Exp->GetType();
-                if (ExpType->Is<ExprScalarType>()) {
+                if (ExpType->Is<ScalarType>()) {
                     Retval.push_back(Exp);
-                } else if (ExpType->Is<ExprArrayType>()) {
-                    auto ExpTypeAsArrayType = ExpType->As<ExprArrayType>();
+                } else if (ExpType->Is<ArrayType>()) {
+                    auto ExpTypeAsArrayType = ExpType->As<ArrayType>();
                     auto IndexType = ExpTypeAsArrayType->GetIndexType();
                     for (auto Element: IndexType->GetElementsNoUndef()) {
                         auto ArrayElement =
@@ -80,9 +81,9 @@ namespace ESMC {
                                                     Exp->GetMgr()->MakeVal(Element, IndexType));
                         ExpressionsToCheck.push_back(ArrayElement);
                     }
-                } else if (ExpType->Is<ExprRecordType>()) {
-                    auto ExpTypeAsRecordType = ExpType->As<ExprRecordType>();
-                    auto FAType = Exp->GetMgr()->MakeType<ExprFieldAccessType>();
+                } else if (ExpType->Is<RecordType>()) {
+                    auto ExpTypeAsRecordType = ExpType->As<RecordType>();
+                    auto FAType = Exp->GetMgr()->MakeType<FieldAccessType>();
                     for (auto NameType: ExpTypeAsRecordType->GetMemberMap()) {
                         auto MemberName = NameType.first;
                         auto MemberType = NameType.second;
@@ -470,7 +471,7 @@ namespace ESMC {
                                                   TheLTS->MakeVar("state", FAType));
                     auto Interpreter = EFSMDotState->ExtensionData.Interp;
                     i64 StateValue = Interpreter->Evaluate(StateVector);
-                    auto EFSMDotStateAsEnum = EFSMDotState->GetType()->As<ExprEnumType>();
+                    auto EFSMDotStateAsEnum = EFSMDotState->GetType()->As<EnumType>();
                     auto EFSMParamInst = make_pair(EFSM, ParamInst);
                     Retval[EFSMParamInst] = EFSMDotStateAsEnum->ValToConst(StateValue);
                 }
@@ -498,7 +499,7 @@ namespace ESMC {
                                                   TheLTS->MakeVar("state", FAType));
                     auto Interpreter = EFSMDotState->ExtensionData.Interp;
                     i64 StateValue = Interpreter->Evaluate(StateVector);
-                    auto EFSMDotStateAsEnum = EFSMDotState->GetType()->As<ExprEnumType>();
+                    auto EFSMDotStateAsEnum = EFSMDotState->GetType()->As<EnumType>();
                     string StateName = EFSMDotStateAsEnum->ValToConst(StateValue);
                     auto State = TheLTS->MakeVal(StateName, EFSMDotState->GetType());
                     auto StateCondition = TheLTS->MakeOp(LTSOps::OpEQ, EFSMDotState, State);

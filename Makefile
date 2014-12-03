@@ -69,10 +69,10 @@ libesmc_OBJS= \
 	LTSEFSMBase.o \
 	LTSExtensions.o \
 	LTSFairnessSet.o \
+	LTSSemTypes.o \
 	LTSState.o \
 	LTSTermSemanticizer.o \
 	LTSTransitions.o \
-	LTSTypes.o \
 	LTSUtils.o \
 	OmegaAutomaton.o \
 	Permutations.o \

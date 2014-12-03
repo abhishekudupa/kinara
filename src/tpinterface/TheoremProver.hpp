@@ -47,7 +47,7 @@
 
 #include "../common/FwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
-#include "../uflts/LTSTypes.hpp"
+#include "../uflts/LTSDecls.hpp"
 #include "../uflts/LTSTermSemanticizer.hpp"
 #include "../containers/SmartPtr.hpp"
 

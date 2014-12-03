@@ -1,6 +1,6 @@
-// LTSTypes.hpp ---
+// LTSSemTypes.hpp ---
 //
-// Filename: LTSTypes.hpp
+// Filename: LTSSemTypes.hpp
 // Author: Abhishek Udupa
 // Created: Thu Jul 24 10:44:06 2014 (-0400)
 //
@@ -37,8 +37,8 @@
 
 // Code:
 
-#if !defined ESMC_LTS_TYPES_HPP_
-#define ESMC_LTS_TYPES_HPP_
+#if !defined ESMC_LTS_SEM_TYPES_HPP_
+#define ESMC_LTS_SEM_TYPES_HPP_
 
 #include "../common/FwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
@@ -94,10 +94,10 @@ namespace ESMC {
         {
         private:
             mutable i64 TypeID;
-            static UIDGenerator ExprTypeUIDGen;
+            static UIDGenerator TypeUIDGen;
             mutable bool HashValid;
-            mutable list<ExprTypeExtensionBase*> Extensions;
-            mutable ExprTypeExtensionBase* LastExtension;
+            mutable list<TypeExtensionBase*> Extensions;
+            mutable TypeExtensionBase* LastExtension;
 
         protected:
             mutable u64 HashCode;
@@ -109,7 +109,7 @@ namespace ESMC {
             virtual ~TypeBase();
 
             virtual string ToString() const = 0;
-            virtual i32 Compare(const ExprTypeBase& Other) const = 0;
+            virtual i32 Compare(const TypeBase& Other) const = 0;
             virtual vector<string> GetElements() const = 0;
             virtual vector<string> GetElementsNoUndef() const = 0;
             virtual u32 GetByteSize() const = 0;
@@ -118,8 +118,8 @@ namespace ESMC {
             virtual string GetClearValue() const = 0;
 
             u64 Hash() const;
-            bool Equals(const ExprTypeBase& Other) const;
-            bool LT(const ExprTypeBase& Other) const;
+            bool Equals(const TypeBase& Other) const;
+            bool LT(const TypeBase& Other) const;
 
             i64 GetTypeID() const;
             i64 SetTypeID() const;
@@ -196,7 +196,7 @@ namespace ESMC {
             template <typename T>
             void PurgeExtensionsOfType() const
             {
-                vector<list<ExprTypeExtensionBase*>::iterator> ToDelete;
+                vector<list<TypeExtensionBase*>::iterator> ToDelete;
 
                 for(auto it = Extensions.begin(); it != Extensions.end(); ++it) {
                     if ((*it)->Is<T>()) {
@@ -230,17 +230,17 @@ namespace ESMC {
             virtual string ValToConst(i64 Val) const = 0;
         };
 
-        class BoolType : public ScalarType
+        class BooleanType : public ScalarType
         {
         protected:
             virtual void ComputeHashValue() const override;
 
         public:
-            BoolType();
-            virtual ~BoolType();
+            BooleanType();
+            virtual ~BooleanType();
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
@@ -255,17 +255,17 @@ namespace ESMC {
 
         // A generic int type, can be converted to
         // any kind of subrange type.
-        class IntType : public ScalarType
+        class IntegerType : public ScalarType
         {
         protected:
             virtual void ComputeHashValue() const override;
 
         public:
-            IntType();
-            virtual ~IntType();
+            IntegerType();
+            virtual ~IntegerType();
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElementsNoUndef() const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
@@ -277,7 +277,7 @@ namespace ESMC {
             virtual string GetClearValue() const override;
         };
 
-        class RangeType : public IntType
+        class RangeType : public IntegerType
         {
         private:
             i64 RangeLow;
@@ -296,7 +296,7 @@ namespace ESMC {
             u64 GetSize() const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
@@ -330,7 +330,7 @@ namespace ESMC {
             u32 GetMemberIdx(const string& MemberName) const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
@@ -374,7 +374,7 @@ namespace ESMC {
             u32 GetIndex() const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
@@ -408,7 +408,7 @@ namespace ESMC {
             const string& GetMangledName() const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
@@ -429,7 +429,7 @@ namespace ESMC {
         public:
             ArrayType(const TypeRef& IndexType,
                       const TypeRef& ValueType);
-            virtual ~ExprArrayType();
+            virtual ~ArrayType();
 
             const TypeRef& GetIndexType() const;
             const TypeRef& GetValueType() const;
@@ -438,7 +438,7 @@ namespace ESMC {
             u32 GetLevelsOfIndex() const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
@@ -460,7 +460,7 @@ namespace ESMC {
         protected:
             virtual void ComputeHashValue() const;
             // For use in subclasses, viz the ExprMessageType
-            ExprRecordType();
+            RecordType();
 
         private:
             void ComputeFieldOffsets() const;
@@ -479,7 +479,7 @@ namespace ESMC {
             u32 GetFieldIdx(const string& FieldName) const;
 
             virtual string ToString() const;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
@@ -510,7 +510,7 @@ namespace ESMC {
             const string& GetName() const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
@@ -530,7 +530,7 @@ namespace ESMC {
             virtual ~FieldAccessType();
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
@@ -575,14 +575,14 @@ namespace ESMC {
             const string& MapToMemberField(u32 TypeID,
                                            const string& FieldName) const;
 
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             string GetClearValue() const override;
         };
 
         class TypePtrHasher
         {
         public:
-            // inline u64 operator () (const ExprTypeBase* Type) const
+            // inline u64 operator () (const TypeBase* Type) const
             // {
             //     return Type->Hash();
             // }
@@ -596,8 +596,8 @@ namespace ESMC {
         class TypePtrEquals
         {
         public:
-            // inline bool operator () (const ExprTypeBase* Type1,
-            //                          const ExprTypeBase* Type2) const
+            // inline bool operator () (const TypeBase* Type1,
+            //                          const TypeBase* Type2) const
             // {
             //     return Type1->Equals(*Type2);
             // }
@@ -612,8 +612,8 @@ namespace ESMC {
         class TypePtrCompare
         {
         public:
-            // inline bool operator () (const ExprTypeBase* Type1,
-            //                          const ExprTypeBase* Type2) const
+            // inline bool operator () (const TypeBase* Type1,
+            //                          const TypeBase* Type2) const
             // {
             //     return Type1->LT(*Type2);
             // }
@@ -633,22 +633,22 @@ namespace ESMC {
                 return true;
             }
 
-            if (LHS->Is<ExprIntType>() &&
-                RHS->Is<ExprRangeType>()) {
+            if (LHS->Is<IntegerType>() &&
+                RHS->Is<RangeType>()) {
                 return true;
             }
 
-            if (RHS->Is<ExprIntType>() &&
-                LHS->Is<ExprRangeType>()) {
+            if (RHS->Is<IntegerType>() &&
+                LHS->Is<RangeType>()) {
                 return true;
             }
             return false;
         }
 
-    } /* end namespace Exprs */
+    } /* end namespace LTS */
 } /* end namespace ESMC */
 
-#endif /* ESMC_LTS_TYPES_HPP_ */
+#endif /* ESMC_LTS_SEM_TYPES_HPP_ */
 
 //
-// LTSTypes.hpp ends here
+// LTSSemTypes.hpp ends here

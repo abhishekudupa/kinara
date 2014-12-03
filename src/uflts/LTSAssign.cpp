@@ -83,9 +83,9 @@ namespace ESMC {
         {
             vector<LTSAssignRef> Retval;
             auto Mgr = LHS->GetMgr();
-            auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+            auto FAType = Mgr->MakeType<FieldAccessType>();
 
-            if (LHS->GetType()->Is<ExprScalarType>()) {
+            if (LHS->GetType()->Is<ScalarType>()) {
                 if (RHS->Is<ConstExpression>()) {
                     auto RHSAsConst = RHS->SAs<ConstExpression>();
                     auto const& ConstVal = RHSAsConst->GetConstValue();
@@ -102,8 +102,8 @@ namespace ESMC {
             }
 
 
-            if (LHS->GetType()->Is<ExprRecordType>()) {
-                auto TypeAsRec = LHS->GetType()->SAs<ExprRecordType>();
+            if (LHS->GetType()->Is<RecordType>()) {
+                auto TypeAsRec = LHS->GetType()->SAs<RecordType>();
                 auto const& Fields = TypeAsRec->GetMemberVec();
                 for (auto const& Field : Fields) {
 
@@ -114,7 +114,7 @@ namespace ESMC {
                                                 Mgr->MakeVar(FieldName, FAType));
                     ExpT NewRHS = ExpT::NullPtr;
                     if (RHS->Is<ConstExpression>()) {
-                        if (!FieldType->Is<ExprScalarType>()) {
+                        if (!FieldType->Is<ScalarType>()) {
                             NewRHS = Mgr->MakeVal("clear", FieldType);
                         } else {
                             NewRHS = Mgr->MakeVal(FieldType->GetClearValue(), FieldType);
@@ -128,8 +128,8 @@ namespace ESMC {
                     auto&& Expansions = NewAsgn->ExpandNonScalarUpdates();
                     Retval.insert(Retval.end(), Expansions.begin(), Expansions.end());
                 }
-            } else if (LHS->GetType()->Is<ExprArrayType>()) {
-                auto TypeAsArray = LHS->GetType()->SAs<ExprArrayType>();
+            } else if (LHS->GetType()->Is<ArrayType>()) {
+                auto TypeAsArray = LHS->GetType()->SAs<ArrayType>();
                 auto const& IndexType = TypeAsArray->GetIndexType();
                 auto const& ValueType = TypeAsArray->GetValueType();
                 auto const& IndexElems = IndexType->GetElementsNoUndef();
@@ -140,7 +140,7 @@ namespace ESMC {
 
                     ExpT NewRHS = ExpT::NullPtr;
                     if (RHS->Is<ConstExpression>()) {
-                        if (!ValueType->Is<ExprScalarType>()) {
+                        if (!ValueType->Is<ScalarType>()) {
                             NewRHS = Mgr->MakeVal("clear", ValueType);
                         } else {
                             NewRHS = Mgr->MakeVal(ValueType->GetClearValue(), ValueType);
@@ -170,7 +170,7 @@ namespace ESMC {
         {
             // If the RHS is an expression of a symmetric type,
             // make sure that it does not refer to any of the params
-            if (LHS->GetType()->Is<ExprSymmetricType>()) {
+            if (LHS->GetType()->Is<SymmetricType>()) {
                 if (RHS->Is<Exprs::ConstExpression>()) {
                     if (RHS->SAs<Exprs::ConstExpression>()->GetConstValue() != "clear") {
                         throw ESMCError((string)"Cannot make a parametric assignment " +

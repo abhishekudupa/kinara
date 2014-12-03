@@ -42,7 +42,7 @@
 
 #include "../utils/UIDGenerator.hpp"
 
-#include "LTSTypes.hpp"
+#include "LTSDecls.hpp"
 #include "LTSState.hpp"
 #include "SymbolTable.hpp"
 #include "LTSEFSMBase.hpp"
@@ -102,8 +102,8 @@ namespace ESMC {
             map<string, set<SymmMsgDeclRef>> BlockedCompletions;
             set<string> CompleteStates;
             set<string> ReadOnlyVars;
-            map<string, ExprTypeRef> UpdateableVariables;
-            map<string, ExprTypeRef> AllVariables;
+            map<string, TypeRef> UpdateableVariables;
+            map<string, TypeRef> AllVariables;
             map<pair<string, SymmMsgDeclRef>, set<string>> VarDeps;
             map<pair<string, SymmMsgDeclRef>, set<string>> VarMsgFieldDeps;
             map<pair<string, SymmMsgDeclRef>, set<string>> OutMsgFieldDeps;
@@ -112,12 +112,12 @@ namespace ESMC {
             UIDGenerator GuardUFUIDGen;
             UIDGenerator UpdateUFUIDGen;
 
-            inline void FilterTerms(set<ExpT>& DomainTerms, const ExprTypeRef& RangeType);
-            set<ExpT> GetDomainTerms(const map<string, ExprTypeRef>& DomainVars);
+            inline void FilterTerms(set<ExpT>& DomainTerms, const TypeRef& RangeType);
+            set<ExpT> GetDomainTerms(const map<string, TypeRef>& DomainVars);
 
             inline set<set<ExpT>> GetArrayLValueGroups(const set<ExpT>& LValues);
 
-            inline vector<ExprTypeRef> GetSymmTypesInExpr(const ExpT& Exp);
+            inline vector<TypeRef> GetSymmTypesInExpr(const ExpT& Exp);
             inline void PartitionDomain(const vector<ExpT>& Args,
                                         vector<ExpT>& SymmArgs,
                                         vector<ExpT>& NonSymmArgs);
@@ -126,7 +126,7 @@ namespace ESMC {
                                           set<set<ExpT>>& EquivalenceSets);
 
             inline set<set<ExpT>> FindEquivalences(const ExpT& Exp,
-                                                   const vector<ExprTypeRef>& SymmTypes,
+                                                   const vector<TypeRef>& SymmTypes,
                                                    const vector<ExpT>& SymmArgs,
                                                    const vector<ExpT>& NonSymmArgs);
 
@@ -142,7 +142,7 @@ namespace ESMC {
 
             inline ExpT FindInputCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
                                                const TPRef& TP,
-                                               const ExprTypeRef& MsgType,
+                                               const TypeRef& MsgType,
                                                const ExpT& CoveredRegion);
 
             inline ExpT FindGlobalCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
@@ -169,7 +169,7 @@ namespace ESMC {
 
             inline void CompleteOneInputTransition(const string& InitStateName,
                                                    const SymmMsgDeclRef& MsgDecl,
-                                                   const map<string, ExprTypeRef>& DomainVars,
+                                                   const map<string, TypeRef>& DomainVars,
                                                    const ExpT& CoveredPred);
 
             inline void CompleteOutputTransitions(const string& InitStateName,
@@ -178,7 +178,7 @@ namespace ESMC {
 
             inline void CompleteOneOutputTransition(const string& InitStateName,
                                                     const SymmMsgDeclRef& MsgDecl,
-                                                    const map<string, ExprTypeRef>& DomainVars,
+                                                    const map<string, TypeRef>& DomainVars,
                                                     vector<ExpT>& GuardExps,
                                                     const ExpT& CoveredPred);
 
@@ -191,7 +191,7 @@ namespace ESMC {
             virtual ~IncompleteEFSM();
             // overrides to remember variables
             virtual void AddVariable(const string& VarName,
-                                     const ExprTypeRef& VarType) override;
+                                     const TypeRef& VarType) override;
 
             // Do not add completions particular set of messages on a
             // particular state

@@ -49,7 +49,7 @@ namespace ESMC {
         using LTS::SymbolTable;
         using LTS::LabelledTS;
         using LTS::ExpT;
-        using LTS::ExprTypeRef;
+        using LTS::TypeRef;
         using Symm::PermutationSet;
         using LTS::MgrT;
 
@@ -148,9 +148,9 @@ namespace ESMC {
                                const ExpT& Guard);
 
             // forwards with checks to LTS
-            ExpT MakeVar(const string& Name, const ExprTypeRef& Type);
-            ExpT MakeBoundVar(i64 Idx, const ExprTypeRef& Type);
-            ExpT MakeVal(const string& Value, const ExprTypeRef& Type);
+            ExpT MakeVar(const string& Name, const TypeRef& Type);
+            ExpT MakeBoundVar(i64 Idx, const TypeRef& Type);
+            ExpT MakeVal(const string& Value, const TypeRef& Type);
 
             template <typename... ArgTypes>
             inline ExpT MakeOp(ArgTypes&&... Args)
@@ -158,9 +158,9 @@ namespace ESMC {
                 return TheLTS->MakeOp(forward<ArgTypes>(Args)...);
             }
 
-            ExpT MakeExists(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body);
-            ExpT MakeForAll(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body);
-            const ExprTypeRef& GetNamedType(const string& TypeName);
+            ExpT MakeExists(const vector<TypeRef>& QVarTypes, const ExpT& Body);
+            ExpT MakeForAll(const vector<TypeRef>& QVarTypes, const ExpT& Body);
+            const TypeRef& GetNamedType(const string& TypeName);
 
             // Methods for model checking
             vector<u32> GetNextStates(u32 CurState, u32 IndexID,

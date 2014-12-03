@@ -125,7 +125,7 @@ namespace ESMC {
                                                  const ExpT& Guard,
                                                  const vector<LTSAssignRef>& Updates,
                                                  const string& MessageName,
-                                                 const ExprTypeRef& MessageType,
+                                                 const TypeRef& MessageType,
                                                  const LTSSymbTransRef& SymbolicTransition)
             : LTSTransitionBase(TheEFSM, ParamInst, InitState, Guard, Updates, SymbolicTransition),
               MessageName(MessageName), MessageType(MessageType)
@@ -143,7 +143,7 @@ namespace ESMC {
             return MessageName;
         }
 
-        const ExprTypeRef& LTSTransitionIOBase::GetMessageType() const
+        const TypeRef& LTSTransitionIOBase::GetMessageType() const
         {
             return MessageType;
         }
@@ -154,7 +154,7 @@ namespace ESMC {
                                                const ExpT& Guard,
                                                const vector<LTSAssignRef>& Updates,
                                                const string& MessageName,
-                                               const ExprTypeRef& MessageType,
+                                               const TypeRef& MessageType,
                                                const LTSSymbTransRef& SymbolicTransition)
             : LTSTransitionIOBase(TheEFSM, ParamInst, InitState, Guard, Updates,
                                   MessageName, MessageType, SymbolicTransition)
@@ -191,7 +191,7 @@ namespace ESMC {
                                                  const ExpT& Guard,
                                                  const vector<LTSAssignRef>& Updates,
                                                  const string& MessageName,
-                                                 const ExprTypeRef& MessageType,
+                                                 const TypeRef& MessageType,
                                                  const set<string>& CompOfFairnessSets,
                                                  const LTSSymbTransRef& SymbolicTransition)
             : LTSTransitionIOBase(TheEFSM, ParamInst, InitState, Guard, Updates,
@@ -272,7 +272,7 @@ namespace ESMC {
         LTSGuardedCommand::LTSGuardedCommand(MgrT* Mgr,
                                              const vector<ExpT>& GuardComps,
                                              const vector<LTSAssignRef>& Updates,
-                                             const ExprTypeRef& MsgType, i32 MsgTypeID,
+                                             const TypeRef& MsgType, i32 MsgTypeID,
                                              const set<LTSFairObjRef>& Fairnesses,
                                              const vector<LTSTransRef>& ProductTrans)
             : Mgr(Mgr), GuardComps(GuardComps), Updates(Updates), MsgType(MsgType),
@@ -383,7 +383,7 @@ namespace ESMC {
             return Updates;
         }
 
-        const ExprTypeRef& LTSGuardedCommand::GetMsgType() const
+        const TypeRef& LTSGuardedCommand::GetMsgType() const
         {
             return MsgType;
         }
@@ -412,8 +412,8 @@ namespace ESMC {
         {
             ostringstream sstr;
             sstr << "guarded command {" << endl;
-            if (MsgType != ExprTypeRef::NullPtr) {
-                sstr << "    label: " << MsgType->As<ExprRecordType>()->GetName() << endl;
+            if (MsgType != TypeRef::NullPtr) {
+                sstr << "    label: " << MsgType->As<RecordType>()->GetName() << endl;
             } else {
                 sstr << "    label: none (internal transition)" << endl;
             }
@@ -529,7 +529,7 @@ namespace ESMC {
                                                          const ExpT& Guard,
                                                          const vector<LTSAssignRef>& Updates,
                                                          const string& MessageName,
-                                                         const ExprTypeRef& MessageType,
+                                                         const TypeRef& MessageType,
                                                          const vector<ExpT>& MessageParams,
                                                          bool Tentative)
         : LTSSymbTransitionBase(TransParams, Params, Constraint, Automaton,
@@ -549,7 +549,7 @@ namespace ESMC {
             return MessageName;
         }
 
-        const ExprTypeRef& LTSSymbIOTransitionBase::GetMessageType() const
+        const TypeRef& LTSSymbIOTransitionBase::GetMessageType() const
         {
             return MessageType;
         }

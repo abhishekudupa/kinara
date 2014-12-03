@@ -44,8 +44,8 @@ namespace ESMC {
         namespace Detail {
 
             MsgTransformer::MsgTransformer(MgrT* Mgr, const string& MsgVarName,
-                                           const ExprTypeRef& MsgRecType,
-                                           const ExprTypeRef& UnifiedMType)
+                                           const TypeRef& MsgRecType,
+                                           const TypeRef& UnifiedMType)
                 : VisitorBaseT("MessageTransformer"),
                   Mgr(Mgr), MsgVarName(MsgVarName), MsgRecType(MsgRecType),
                   UnifiedMType(UnifiedMType)
@@ -96,23 +96,23 @@ namespace ESMC {
                     OldChildren[0]->As<Exprs::VarExpression>()->GetVarName() == MsgVarName &&
                     OldChildren[0]->As<Exprs::VarExpression>()->GetVarType() == MsgRecType) {
 
-                    ExprTypeRef ActMsgRecType = nullptr;
-                    if (MsgRecType->Is<ExprRecordType>()) {
+                    TypeRef ActMsgRecType = nullptr;
+                    if (MsgRecType->Is<RecordType>()) {
                         ActMsgRecType = MsgRecType;
-                    } else if (MsgRecType->Is<ExprParametricType>()) {
-                        ActMsgRecType = MsgRecType->SAs<ExprParametricType>()->GetBaseType();
+                    } else if (MsgRecType->Is<ParametricType>()) {
+                        ActMsgRecType = MsgRecType->SAs<ParametricType>()->GetBaseType();
                     } else {
                         throw ESMCError((string)"MsgTransformer: Message type \"" +
                                         MsgRecType->ToString() + "\" is not a parametric " +
                                         "type or a record type");
                     }
 
-                    auto MTypeAsUnion = UnifiedMType->As<ExprUnionType>();
+                    auto MTypeAsUnion = UnifiedMType->As<UnionType>();
                     auto FieldVarExp = OldChildren[1]->As<VarExpression>();
                     auto const& OldFieldName = FieldVarExp->GetVarName();
                     auto const& NewFieldName = MTypeAsUnion->MapFromMemberField(ActMsgRecType,
                                                                                 OldFieldName);
-                    auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
+                    auto FAType = Mgr->MakeType<FieldAccessType>();
                     auto NewFieldVar = Mgr->MakeVar(NewFieldName, FAType);
                     ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpField, NewChildren[0], NewFieldVar));
                 } else {
@@ -139,8 +139,8 @@ namespace ESMC {
             ExpT MsgTransformer::Do(MgrT* Mgr,
                                     const ExpT& Exp,
                                     const string& MsgVarName,
-                                    const ExprTypeRef& MsgRecType,
-                                    const ExprTypeRef& UnifiedMType)
+                                    const TypeRef& MsgRecType,
+                                    const TypeRef& UnifiedMType)
             {
                 MsgTransformer TheTransformer(Mgr, MsgVarName, MsgRecType, UnifiedMType);
                 Exp->Accept(&TheTransformer);
@@ -193,9 +193,9 @@ namespace ESMC {
                 }
 
                 // An index op
-                auto ArrayType = Children[0]->GetType()->SAs<ExprArrayType>();
-                auto IndexType = ArrayType->GetIndexType();
-                auto ValueType = ArrayType->GetValueType();
+                auto ArrType = Children[0]->GetType()->SAs<ArrayType>();
+                auto IndexType = ArrType->GetIndexType();
+                auto ValueType = ArrType->GetValueType();
                 auto const& IndexElems = IndexType->GetElementsNoUndef();
                 const u32 IndexCardinality = IndexElems.size();
 
@@ -249,7 +249,7 @@ namespace ESMC {
             }
 
             ExpressionPermuter::ExpressionPermuter(MgrT* Mgr, const vector<u08>& PermVec,
-                                                   const map<ExprTypeRef, u32>& TypeOffsets)
+                                                   const map<TypeRef, u32>& TypeOffsets)
                 : VisitorBaseT("ExpressionPermuter"),
                   Mgr(Mgr), PermVec(PermVec), TypeOffsets(TypeOffsets)
             {
@@ -269,12 +269,12 @@ namespace ESMC {
             void ExpressionPermuter::VisitConstExpression(const ConstExpT* Exp)
             {
                 auto const& Type = Exp->GetType();
-                if (!Type->Is<ExprSymmetricType>()) {
+                if (!Type->Is<SymmetricType>()) {
                     ExpStack.push_back(Exp);
                     return;
                 }
 
-                auto TypeAsSym = Type->SAs<ExprSymmetricType>();
+                auto TypeAsSym = Type->SAs<SymmetricType>();
                 // Symmetric type. Permute
                 auto const& ConstVal = Exp->GetConstValue();
                 auto ConstIdx = TypeAsSym->GetMemberIdx(ConstVal);
@@ -349,7 +349,7 @@ namespace ESMC {
 
             ExpT ExpressionPermuter::Do(MgrT* Mgr, const ExpT& Exp,
                                         const vector<u08>& PermVec,
-                                        const map<ExprTypeRef, u32>& TypeOffsets)
+                                        const map<TypeRef, u32>& TypeOffsets)
             {
                 ExpressionPermuter ThePermuter(Mgr, PermVec, TypeOffsets);
                 Exp->Accept(&ThePermuter);

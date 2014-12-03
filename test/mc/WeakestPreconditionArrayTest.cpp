@@ -48,7 +48,7 @@ int main() {
     auto zero_to_ten_range_type = mgr->MakeType<ExprRangeType>(0, 10);
     auto array_type = mgr->MakeType<ExprArrayType>(zero_to_ten_range_type,
                                                    zero_to_ten_range_type);
-    vector<pair<string, ExprTypeRef>> record_members;
+    vector<pair<string, TypeRef>> record_members;
     record_members.push_back(make_pair("array_field", array_type));
     auto record_type = mgr->MakeType<ExprRecordType>("RecordType", record_members);
     auto record_variable = mgr->MakeVar("record_variable", record_type);
@@ -86,7 +86,7 @@ int main() {
 
     // a[1].Data
 
-    vector<pair<string, ExprTypeRef>> record_members_a;
+    vector<pair<string, TypeRef>> record_members_a;
     record_members_a.push_back(make_pair("Data", zero_to_ten_range_type));
     auto record_type_a = mgr->MakeType<ExprRecordType>("RecordTypeA", record_members_a);
     auto array_type_a = mgr->MakeType<ExprArrayType>(zero_to_ten_range_type,
@@ -120,7 +120,7 @@ int main() {
         cout << Exp << endl;
     }
 
-    vector<pair<string, ExprTypeRef>> b_index_record_members;
+    vector<pair<string, TypeRef>> b_index_record_members;
     b_index_record_members.push_back(make_pair("a", array_type_a));
     auto record_type_b = mgr->MakeType<ExprRecordType>("RecordTypeB", b_index_record_members);
 

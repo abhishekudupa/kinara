@@ -806,7 +806,7 @@ namespace ESMC {
             auto PrevState = InitialState;
             for (auto const& TraceElem : TraceElems) {
                 auto const& MsgType = TraceElem.first->GetMsgType();
-                auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
+                auto MsgTypeAsRec = MsgType->SAs<RecordType>();
                 if (Verbosity < 1) {
                     sstr << "Fired Guarded Command with label: "
                          << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() :
@@ -907,7 +907,7 @@ namespace ESMC {
             for (u32 i = 0; i < NumStemSteps; ++i) {
                 auto const& TraceElem = StemPath[i];
                 auto const& MsgType = TraceElem.first->GetMsgType();
-                auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
+                auto MsgTypeAsRec = MsgType->SAs<RecordType>();
                 if (Verbosity < 1) {
                     sstr << "Fired Guarded Command with label: "
                          << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() :
@@ -946,7 +946,7 @@ namespace ESMC {
 
             for (auto const& TraceElem : LoopPath) {
                 auto const& MsgType = TraceElem.first->GetMsgType();
-                auto MsgTypeAsRec = MsgType->SAs<Exprs::ExprRecordType>();
+                auto MsgTypeAsRec = MsgType->SAs<RecordType>();
                 if (Verbosity < 1) {
                     sstr << "Fired Guarded Command with label: "
                          << (MsgTypeAsRec != nullptr ? MsgTypeAsRec->GetName() :

@@ -41,7 +41,7 @@
 #include "../mc/Trace.hpp"
 #include "../mc/Compiler.hpp"
 #include "../uflts/LabelledTS.hpp"
-#include "../uflts/LTSTypes.hpp"
+#include "../uflts/LTSDecls.hpp"
 #include "../uflts/LTSEFSM.hpp"
 #include "../uflts/LTSUtils.hpp"
 #include "../mc/LTSChecker.hpp"
@@ -164,13 +164,13 @@ namespace ESMC {
             Args.insert(ArgsOther.begin(), ArgsOther.end());
 
             vector<ExpT> QVars(Args.begin(), Args.end());
-            vector<ExprTypeRef> QVarTypes;
+            vector<TypeRef> QVarTypes;
 
             auto MutexExp = Mgr->MakeExpr(LTSOps::OpAND, GuardExp1, GuardExp2);
             MutexExp = Mgr->MakeExpr(LTSOps::OpNOT, MutexExp);
 
             transform(QVars.begin(), QVars.end(), back_inserter(QVarTypes),
-                      [&] (const ExpT& Exp) -> ExprTypeRef
+                      [&] (const ExpT& Exp) -> TypeRef
                       {
                           return Exp->GetType();
                       });
@@ -192,12 +192,12 @@ namespace ESMC {
             // audupa: Changed indicators to represent HOW MANY
             // points the guard evaluates to true at 11/09/2014
 
-            auto FuncType = Mgr->LookupUninterpretedFunction(GuardOp)->As<ExprFuncType>();
-            auto DomainTypes = FuncType->GetArgTypes();
+            auto FunType = Mgr->LookupUninterpretedFunction(GuardOp)->As<FuncType>();
+            auto DomainTypes = FunType->GetArgTypes();
             vector<vector<string>> DomainElems;
             const u32 NumDomainTypes = DomainTypes.size();
             transform(DomainTypes.begin(), DomainTypes.end(), back_inserter(DomainElems),
-                      [&] (const ExprTypeRef& Type) -> vector<string>
+                      [&] (const TypeRef& Type) -> vector<string>
                       {
                           return Type->GetElements();
                       });
@@ -213,9 +213,9 @@ namespace ESMC {
                 auto IndicatorVarName = (string)"__guard_point_indicator_" +
                     to_string(GuardPointUIDGenerator.GetUID());
                 auto IndicatorVar = Mgr->MakeVar(IndicatorVarName,
-                                                 Mgr->MakeType<ExprRangeType>(0, 1));
+                                                 Mgr->MakeType<RangeType>(0, 1));
                 PointIndicators.push_back(IndicatorVar);
-                auto OneExp = Mgr->MakeVal("1", Mgr->MakeType<ExprRangeType>(0, 1));
+                auto OneExp = Mgr->MakeVal("1", Mgr->MakeType<RangeType>(0, 1));
                 auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES,
                                                 AppExp,
                                                 Mgr->MakeExpr(LTSOps::OpEQ,
@@ -228,12 +228,12 @@ namespace ESMC {
             }
 
             auto SumExp = MakeSum(PointIndicators, Mgr,
-                                  Mgr->MakeType<ExprRangeType>(0, PointIndicators.size()));
+                                  Mgr->MakeType<RangeType>(0, PointIndicators.size()));
             auto SumIndicatorVarName = (string)"__guard_indicator_" +
                 to_string(IndicatorUIDGenerator.GetUID());
             auto SumIndicatorVar =
                 Mgr->MakeVar(SumIndicatorVarName,
-                             Mgr->MakeType<ExprRangeType>(0,
+                             Mgr->MakeType<RangeType>(0,
                                                           PointIndicators.size()));
             auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumIndicatorVar, SumExp);
             IndicatorExps[GuardOp] = SumIndicatorVar;
@@ -246,9 +246,9 @@ namespace ESMC {
 
             // auto IndicatorUID = IndicatorUIDGenerator.GetUID();
             // string IndicatorVarName = (string)"__indicator_" + to_string(IndicatorUID);
-            // auto FuncType = Mgr->LookupUninterpretedFunction(GuardOp)->As<ExprFuncType>();
-            // IndicatorVarName += (string)"_" + FuncType->GetName();
-            // auto const& DomainTypes = FuncType->GetArgTypes();
+            // auto FunType = Mgr->LookupUninterpretedFunction(GuardOp)->As<FuncType>();
+            // IndicatorVarName += (string)"_" + FunType->GetName();
+            // auto const& DomainTypes = FunType->GetArgTypes();
             // vector<ExpT> BoundArgs;
             // const u32 NumDomainTypes = DomainTypes.size();
             // for (u32 i = 0; i < NumDomainTypes; ++i) {
@@ -257,7 +257,7 @@ namespace ESMC {
             // }
             // auto AppExp = Mgr->MakeExpr(GuardOp, BoundArgs);
             // auto ExistsExp = Mgr->MakeExists(DomainTypes, AppExp);
-            // auto IndicatorType = Mgr->MakeType<ExprRangeType>(0, 1);
+            // auto IndicatorType = Mgr->MakeType<RangeType>(0, 1);
 
             // auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
             // IndicatorExps[GuardOp] = IndicatorVar;
@@ -277,14 +277,14 @@ namespace ESMC {
             assert(ExpAsOp != nullptr);
             auto const& Args = GetOpArgs(Exp);
 
-            vector<ExprTypeRef> ArgTypes;
+            vector<TypeRef> ArgTypes;
             transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
-                      [&] (const ExpT& Exp) -> ExprTypeRef
+                      [&] (const ExpT& Exp) -> TypeRef
                       {
                           return Exp->GetType();
                       });
 
-            vector<ExprTypeRef> QVarTypes = ArgTypes;
+            vector<TypeRef> QVarTypes = ArgTypes;
             QVarTypes.insert(QVarTypes.end(), ArgTypes.begin(), ArgTypes.end());
             const u32 NumArgs = ArgTypes.size();
 
@@ -340,9 +340,9 @@ namespace ESMC {
 
             auto const& OpArgs = GetOpArgs(UpdateExp);
             // remove the lvalue itself from the op args
-            vector<ExprTypeRef> ArgTypes;
+            vector<TypeRef> ArgTypes;
             transform(OpArgs.begin(), OpArgs.end(), back_inserter(ArgTypes),
-                      [&] (const ExpT& Exp) -> ExprTypeRef
+                      [&] (const ExpT& Exp) -> TypeRef
                       {
                           return Exp->GetType();
                       });
@@ -360,7 +360,7 @@ namespace ESMC {
             QBodyExp = Mgr->MakeExpr(LTSOps::OpNOT, QBodyExp);
             QBodyExp = Mgr->BoundSubstitute(SubstMap, QBodyExp);
             auto ExistsExp = Mgr->MakeExists(ArgTypes, QBodyExp);
-            auto IndicatorType = Mgr->MakeType<ExprRangeType>(0, 1);
+            auto IndicatorType = Mgr->MakeType<RangeType>(0, 1);
             auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
             UpdateIndicatorExps[UpdateOp] = IndicatorVar;
 
@@ -727,7 +727,7 @@ namespace ESMC {
             }
 
             auto BoundExp = Mgr->MakeVal(to_string(Bound),
-                                         Mgr->MakeType<ExprRangeType>(0, Bound));
+                                         Mgr->MakeType<RangeType>(0, Bound));
             auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, SumExp, BoundExp);
             cout << "Asserting Bounds Constraint: " << endl
                  << LEExp->ToString() << endl << endl;
@@ -747,7 +747,7 @@ namespace ESMC {
             // }
 
             // auto BoundExp = Mgr->MakeVal(to_string(Bound),
-            //                              Mgr->MakeType<ExprRangeType>(0, Bound));
+            //                              Mgr->MakeType<RangeType>(0, Bound));
             // auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundExp);
             // cout << "Asserting Bounds Constraint:" << endl
             //      << EQExp->ToString() << endl << endl;
@@ -767,7 +767,7 @@ namespace ESMC {
             //     SumExp = Mgr->MakeExpr(LTSOps::OpADD, Summands);
             // }
             // BoundExp = Mgr->MakeVal(to_string(UpdateBound),
-            //                         Mgr->MakeType<ExprRangeType>(0, UpdateBound));
+            //                         Mgr->MakeType<RangeType>(0, UpdateBound));
             // auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, SumExp, BoundExp);
             // cout << "Asserting Update Bounds Constraint:" << endl
             //      << LEExp->ToString() << endl << endl;
@@ -892,7 +892,7 @@ namespace ESMC {
             auto Mgr = TheLTS->GetMgr();
             vector<vector<string>> CPElems;
             auto UFType = Mgr->LookupUninterpretedFunction(UFCode);
-            auto UFTypeAsFunc = UFType->As<ExprFuncType>();
+            auto UFTypeAsFunc = UFType->As<FuncType>();
             auto ArgTypes = UFTypeAsFunc->GetArgTypes();
             for (auto ArgType : ArgTypes) {
                 CPElems.push_back(ArgType->GetElementsNoUndef());
@@ -998,12 +998,12 @@ namespace ESMC {
         {
             auto Mgr = TheLTS->GetMgr();
 
-            auto FuncType =
-                Mgr->LookupUninterpretedFunction(Interps[0]->GetOpCode())->As<ExprFuncType>();
-            auto const& DomTypes = FuncType->GetArgTypes();
+            auto FunType =
+                Mgr->LookupUninterpretedFunction(Interps[0]->GetOpCode())->As<FuncType>();
+            auto const& DomTypes = FunType->GetArgTypes();
             const u32 DomSize = DomTypes.size();
-            auto const& RangeType = FuncType->GetFuncType();
-            // auto const& FuncName = FuncType->GetName();
+            auto const& RangeType = FunType->GetEvalType();
+            // auto const& FuncName = FunType->GetName();
             auto const& AllOpToExp = TheLTS->AllOpToExp;
             auto it = AllOpToExp.find(Interps[0]->GetOpCode());
             if (it == AllOpToExp.end()) {
@@ -1036,11 +1036,11 @@ namespace ESMC {
                 auto const& Value = EvalPoint.second;
 
                 for (u32 i = 0; i < DomSize; ++i) {
-                    auto const& Val = DomTypes[i]->SAs<ExprScalarType>()->ValToConst(Point[i]);
+                    auto const& Val = DomTypes[i]->SAs<ScalarType>()->ValToConst(Point[i]);
                     Out << Val << " ";
                 }
 
-                auto const& Val = RangeType->SAs<ExprScalarType>()->ValToConst(Value);
+                auto const& Val = RangeType->SAs<ScalarType>()->ValToConst(Value);
                 Out << "-> " << Val << endl;
             }
 

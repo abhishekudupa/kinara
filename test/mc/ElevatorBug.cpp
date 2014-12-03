@@ -82,12 +82,12 @@ int main()
 
     // Message types
     // Request Message
-    vector<pair<string, ExprTypeRef>> RequestMsgFields;
+    vector<pair<string, TypeRef>> RequestMsgFields;
     RequestMsgFields.push_back(make_pair("Floor", FloorType));
     auto RequestMsgType = TheLTS->MakeMsgType("Request", RequestMsgFields, false);
     auto RequestMsgExp = TheLTS->MakeVar("Request", RequestMsgType);
     // arrive unit message, not sure how to make unit, just making it bool for now.
-    vector<pair<string, ExprTypeRef>> UnitMsgFields;
+    vector<pair<string, TypeRef>> UnitMsgFields;
     auto BoolType = TheLTS->MakeBoolType();
     UnitMsgFields.push_back(make_pair("Data", BoolType));
     // arrive unit message

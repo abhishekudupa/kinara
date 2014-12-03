@@ -42,7 +42,7 @@
 
 #include "../containers/RefCountable.hpp"
 
-#include "LTSTypes.hpp"
+#include "LTSDecls.hpp"
 #include "LTSState.hpp"
 
 
@@ -173,7 +173,7 @@ namespace ESMC {
         {
         protected:
             string MessageName;
-            ExprTypeRef MessageType;
+            TypeRef MessageType;
             vector<ExpT> MessageParams;
 
         public:
@@ -185,13 +185,13 @@ namespace ESMC {
                                     const ExpT& Guard,
                                     const vector<LTSAssignRef>& Updates,
                                     const string& MessageName,
-                                    const ExprTypeRef& MessageType,
+                                    const TypeRef& MessageType,
                                     const vector<ExpT>& MessageParams,
                                     bool Tentative);
             virtual ~LTSSymbIOTransitionBase();
 
             const string& GetMessageName() const;
-            const ExprTypeRef& GetMessageType() const;
+            const TypeRef& GetMessageType() const;
             const vector<ExpT>& GetMessageParams() const;
         };
 
@@ -247,7 +247,7 @@ namespace ESMC {
         {
         protected:
             string MessageName;
-            ExprTypeRef MessageType;
+            TypeRef MessageType;
 
         public:
             LTSTransitionIOBase(EFSMBase* TheEFSM,
@@ -256,12 +256,12 @@ namespace ESMC {
                                 const ExpT& Guard,
                                 const vector<LTSAssignRef>& Updates,
                                 const string& MessageName,
-                                const ExprTypeRef& MessageType,
+                                const TypeRef& MessageType,
                                 const LTSSymbTransRef& SymbolicTransition);
             virtual ~LTSTransitionIOBase();
 
             const string& GetMessageName() const;
-            const ExprTypeRef& GetMessageType() const;
+            const TypeRef& GetMessageType() const;
         };
 
         class LTSTransitionInput : public LTSTransitionIOBase
@@ -273,7 +273,7 @@ namespace ESMC {
                                const ExpT& Guard,
                                const vector<LTSAssignRef>& Updates,
                                const string& MessageName,
-                               const ExprTypeRef& MessageType,
+                               const TypeRef& MessageType,
                                const LTSSymbTransRef& SymbolicTransition);
             virtual ~LTSTransitionInput();
 
@@ -292,7 +292,7 @@ namespace ESMC {
                                 const ExpT& Guard,
                                 const vector<LTSAssignRef>& Updates,
                                 const string& MessageName,
-                                const ExprTypeRef& MessageType,
+                                const TypeRef& MessageType,
                                 const set<string>& CompOfFairnessSets,
                                 const LTSSymbTransRef& SymbolicTransition);
             virtual ~LTSTransitionOutput();
@@ -330,7 +330,7 @@ namespace ESMC {
             mutable ExpT LoweredGuard;
             vector<LTSAssignRef> Updates;
             mutable vector<LTSAssignRef> LoweredUpdates;
-            ExprTypeRef MsgType;
+            TypeRef MsgType;
             i32 MsgTypeID;
             vector<LTSFairObjRef> FairnessObjs;
             vector<LTSFairSetRef> FairnessSets;
@@ -344,7 +344,7 @@ namespace ESMC {
             LTSGuardedCommand(MgrT* Mgr,
                               const vector<ExpT>& GuardComps,
                               const vector<LTSAssignRef>& Updates,
-                              const ExprTypeRef& MsgType, i32 MsgTypeID,
+                              const TypeRef& MsgType, i32 MsgTypeID,
                               const set<LTSFairObjRef>& Fairnesses,
                               const vector<LTSTransRef>& ProductTrans);
             virtual ~LTSGuardedCommand();
@@ -353,7 +353,7 @@ namespace ESMC {
             const ExpT& GetGuard() const;
             const vector<ExpT>& GetGuardComps() const;
             const vector<LTSAssignRef>& GetUpdates() const;
-            const ExprTypeRef& GetMsgType() const;
+            const TypeRef& GetMsgType() const;
             i32 GetMsgTypeID() const;
             const vector<LTSFairObjRef>& GetFairnessObjs() const;
             const vector<LTSFairSetRef>& GetFairnessSets() const;

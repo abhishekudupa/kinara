@@ -41,6 +41,7 @@
 #define ESMC_LTS_EXTENSIONS_HPP_
 
 #include "../common/FwdDecls.hpp"
+#include "LTSSemTypes.hpp"
 
 // moved this single definition into a separate
 // header file to eliminate circular deps.
@@ -48,7 +49,7 @@
 namespace ESMC {
     namespace LTS {
 
-        using ESMC::Exprs::ExprTypeExtensionBase;
+        using ESMC::LTS::TypeExtensionBase;
         using ESMC::MC::RValueInterpreter;
         using ESMC::MC::LValueInterpreter;
 
@@ -70,7 +71,7 @@ namespace ESMC {
             virtual ~LTSExtensionT();
         };
 
-        class LTSTypeExtensionT : public ExprTypeExtensionBase
+        class LTSTypeExtensionT : public TypeExtensionBase
         {
         public:
             // Offset in the permutation vector

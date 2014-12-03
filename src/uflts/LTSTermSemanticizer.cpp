@@ -79,7 +79,7 @@ namespace ESMC {
 
         namespace Detail {
 
-            const Exprs::ExprTypeRef InvalidType = Exprs::ExprTypeRef::NullPtr;
+            const TypeRef InvalidType = TypeRef::NullPtr;
 
             const string BoundVarPrefix = "dbvar";
 
@@ -136,7 +136,7 @@ namespace ESMC {
             // Nothing here
         }
 
-        const Z3Sort& LTSLoweredContext::GetZ3Sort(const ExprTypeRef& LTSType) const
+        const Z3Sort& LTSLoweredContext::GetZ3Sort(const TypeRef& LTSType) const
         {
             auto it = LTSTypeToSort.find(LTSType);
             if (it == LTSTypeToSort.end()) {
@@ -146,7 +146,7 @@ namespace ESMC {
             }
         }
 
-        void LTSLoweredContext::AddZ3Sort(const ExprTypeRef& LTSType,
+        void LTSLoweredContext::AddZ3Sort(const TypeRef& LTSType,
                                           const Z3Sort& Sort) const
         {
             if (GetZ3Sort(LTSType) != Z3Sort::NullSort) {
@@ -156,19 +156,19 @@ namespace ESMC {
             LTSTypeToSort[LTSType] = Sort;
         }
 
-        const ExprTypeRef& LTSLoweredContext::GetLTSType(const string& VarName) const
+        const TypeRef& LTSLoweredContext::GetLTSType(const string& VarName) const
         {
             auto it = VarNameToLTSType.find(VarName);
             if (it == VarNameToLTSType.end()) {
-                return ExprTypeRef::NullPtr;
+                return TypeRef::NullPtr;
             } else {
                 return it->second;
             }
         }
 
-        void LTSLoweredContext::AddLTSType(const string& VarName, const ExprTypeRef& LTSType) const
+        void LTSLoweredContext::AddLTSType(const string& VarName, const TypeRef& LTSType) const
         {
-            if (GetLTSType(VarName) != ExprTypeRef::NullPtr) {
+            if (GetLTSType(VarName) != TypeRef::NullPtr) {
                 throw ExprTypeError((string)"Error, variable named \"" + VarName + "\"" +
                                     " has already been registed with a type in the context!");
             }

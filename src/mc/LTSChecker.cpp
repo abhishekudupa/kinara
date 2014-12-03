@@ -468,12 +468,12 @@ namespace ESMC {
                     auto const& RHS = Update->GetRHS();
 
                     auto LValType = LHS->GetType();
-                    if (!LValType->Is<ExprRangeType>()) {
+                    if (!LValType->Is<RangeType>()) {
                         continue;
                     }
 
                     // This is a range typed update
-                    auto TypeAsRange = LValType->SAs<ExprRangeType>();
+                    auto TypeAsRange = LValType->SAs<RangeType>();
                     auto RangeLow = TypeAsRange->GetLow();
                     auto RangeHigh = TypeAsRange->GetHigh();
 

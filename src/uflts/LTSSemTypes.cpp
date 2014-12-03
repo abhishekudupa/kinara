@@ -1,6 +1,6 @@
-// LTSTypes.cpp ---
+// LTSSemTypes.cpp ---
 //
-// Filename: LTSTypes.cpp
+// Filename: LTSSemTypes.cpp
 // Author: Abhishek Udupa
 // Created: Thu Jul 24 15:10:36 2014 (-0400)
 //
@@ -37,7 +37,7 @@
 
 // Code:
 
-#include "LTSTypes.hpp"
+#include "LTSSemTypes.hpp"
 #include "../utils/UIDGenerator.hpp"
 #include "../utils/SizeUtils.hpp"
 
@@ -50,7 +50,7 @@
 namespace ESMC {
     namespace LTS {
 
-        UIDGenerator TypeBase::ExprTypeUIDGen(1);
+        UIDGenerator TypeBase::TypeUIDGen(1);
 
         TypeExtensionBase::TypeExtensionBase()
         {
@@ -101,7 +101,7 @@ namespace ESMC {
 
         i64 TypeBase::SetTypeID() const
         {
-            TypeID = ExprTypeUIDGen.GetUID();
+            TypeID = TypeUIDGen.GetUID();
             return TypeID;
         }
 
@@ -125,65 +125,65 @@ namespace ESMC {
             // Nothing here
         }
 
-        BoolType::BoolType()
+        BooleanType::BooleanType()
             : ScalarType()
         {
             // Nothing here
         }
 
-        BoolType::~BoolType()
+        BooleanType::~BooleanType()
         {
             // Nothing here
         }
 
-        string BoolType::ToString() const
+        string BooleanType::ToString() const
         {
-            return "(BoolType)";
+            return "(BooleanType)";
         }
 
-        i32 BoolType::Compare(const TypeBase& Other) const
+        i32 BooleanType::Compare(const TypeBase& Other) const
         {
-            if (Other.As<BoolType>() == nullptr) {
+            if (Other.As<BooleanType>() == nullptr) {
                 return -1;
             } else {
                 return 0;
             }
         }
 
-        vector<string> BoolType::GetElements() const
+        vector<string> BooleanType::GetElements() const
         {
             vector<string> Retval = { "true", "false" };
             return Retval;
         }
 
-        vector<string> BoolType::GetElementsNoUndef() const
+        vector<string> BooleanType::GetElementsNoUndef() const
         {
             vector<string> Retval = { "true", "false" };
             return Retval;
         }
 
-        void BoolType::ComputeHashValue() const
+        void BooleanType::ComputeHashValue() const
         {
             HashCode = 0;
-            boost::hash_combine(HashCode, "BoolType");
+            boost::hash_combine(HashCode, "BooleanType");
         }
 
-        u32 BoolType::GetByteSize() const
+        u32 BooleanType::GetByteSize() const
         {
             return 1;
         }
 
-        u32 BoolType::GetCardinality() const
+        u32 BooleanType::GetCardinality() const
         {
             return 2;
         }
 
-        u32 BoolType::GetCardinalityNoUndef() const
+        u32 BooleanType::GetCardinalityNoUndef() const
         {
             return 2;
         }
 
-        i64 BoolType::ConstToVal(const string& ConstVal) const
+        i64 BooleanType::ConstToVal(const string& ConstVal) const
         {
             if (ConstVal == "true") {
                 return 1;
@@ -192,7 +192,7 @@ namespace ESMC {
             }
         }
 
-        string BoolType::ValToConst(i64 Val) const
+        string BooleanType::ValToConst(i64 Val) const
         {
             if (Val == 0) {
                 return "false";
@@ -201,42 +201,42 @@ namespace ESMC {
             }
         }
 
-        string BoolType::GetClearValue() const
+        string BooleanType::GetClearValue() const
         {
             return "false";
         }
 
-        IntType::IntType()
+        IntegerType::IntegerType()
             : ScalarType()
         {
             // Nothing here
         }
 
-        IntType::~IntType()
+        IntegerType::~IntegerType()
         {
             // Nothing here
         }
 
-        void IntType::ComputeHashValue() const
+        void IntegerType::ComputeHashValue() const
         {
             HashCode = 0;
-            boost::hash_combine(HashCode, "IntType");
+            boost::hash_combine(HashCode, "IntegerType");
         }
 
-        string IntType::ToString() const
+        string IntegerType::ToString() const
         {
-            return "(IntType)";
+            return "(IntegerType)";
         }
 
-        i32 IntType::Compare(const TypeBase& Other) const
+        i32 IntegerType::Compare(const TypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
 
-            if (OtherAsPtr->As<BoolType>() != nullptr) {
+            if (OtherAsPtr->As<BooleanType>() != nullptr) {
                 return 1;
             }
 
-            auto OtherAsInt = OtherAsPtr->As<IntType>();
+            auto OtherAsInt = OtherAsPtr->As<IntegerType>();
             if (OtherAsInt == nullptr) {
                 return -1;
             } else {
@@ -249,50 +249,50 @@ namespace ESMC {
             }
         }
 
-        vector<string> IntType::GetElements() const
+        vector<string> IntegerType::GetElements() const
         {
-            throw ESMCError((string)"Cannot GetElements() on unbounded type IntType");
+            throw ESMCError((string)"Cannot GetElements() on unbounded type IntegerType");
         }
 
-        vector<string> IntType::GetElementsNoUndef() const
+        vector<string> IntegerType::GetElementsNoUndef() const
         {
             return GetElements();
         }
 
-        u32 IntType::GetByteSize() const
+        u32 IntegerType::GetByteSize() const
         {
-            throw InternalError((string)"IntType::GetByteSize() should never have been " +
+            throw InternalError((string)"IntegerType::GetByteSize() should never have been " +
                                 "called.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
         }
 
-        u32 IntType::GetCardinality() const
+        u32 IntegerType::GetCardinality() const
         {
-            throw ESMCError((string)"Cannot get cardinality of unbounded type IntType");
+            throw ESMCError((string)"Cannot get cardinality of unbounded type IntegerType");
         }
 
-        u32 IntType::GetCardinalityNoUndef() const
+        u32 IntegerType::GetCardinalityNoUndef() const
         {
-            throw ESMCError((string)"Cannot get cardinality of unbounded type IntType");
+            throw ESMCError((string)"Cannot get cardinality of unbounded type IntegerType");
         }
 
-        i64 IntType::ConstToVal(const string& ConstVal) const
+        i64 IntegerType::ConstToVal(const string& ConstVal) const
         {
             return boost::lexical_cast<i64>(ConstVal);
         }
 
-        string IntType::ValToConst(i64 Val) const
+        string IntegerType::ValToConst(i64 Val) const
         {
             return to_string(Val);
         }
 
-        string IntType::GetClearValue() const
+        string IntegerType::GetClearValue() const
         {
             return "0";
         }
 
         // Inclusive range
         RangeType::RangeType(i64 RangeLow, i64 RangeHigh)
-            : IntType(),
+            : IntegerType(),
               RangeLow(RangeLow), RangeHigh(RangeHigh),
               Size(RangeHigh - RangeLow + 1)
         {
@@ -343,14 +343,14 @@ namespace ESMC {
         {
             auto OtherAsPtr = &Other;
 
-            if (OtherAsPtr->As<BoolType>() != nullptr) {
+            if (OtherAsPtr->As<BooleanType>() != nullptr) {
                 return 1;
             }
 
             auto OtherAsRange = OtherAsPtr->As<RangeType>();
 
             if (OtherAsRange == nullptr) {
-                if (OtherAsPtr->As<IntType>() != nullptr) {
+                if (OtherAsPtr->As<IntegerType>() != nullptr) {
                     return 1;
                 } else {
                     return -1;
@@ -547,8 +547,8 @@ namespace ESMC {
         i32 EnumType::Compare(const TypeBase& Other) const
         {
             auto OtherPtr = &Other;
-            if (OtherPtr->As<BoolType>() != nullptr ||
-                OtherPtr->As<IntType>() != nullptr ||
+            if (OtherPtr->As<BooleanType>() != nullptr ||
+                OtherPtr->As<IntegerType>() != nullptr ||
                 OtherPtr->As<RangeType>() != nullptr) {
                 return 1;
             }
@@ -687,8 +687,8 @@ namespace ESMC {
         i32 SymmetricType::Compare(const TypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            if (OtherAsPtr->As<BoolType>() != nullptr ||
-                OtherAsPtr->As<IntType>() != nullptr ||
+            if (OtherAsPtr->As<BooleanType>() != nullptr ||
+                OtherAsPtr->As<IntegerType>() != nullptr ||
                 OtherAsPtr->As<RangeType>() != nullptr ||
                 OtherAsPtr->As<EnumType>() != nullptr) {
                 return 1;
@@ -798,15 +798,15 @@ namespace ESMC {
             for (auto const& Arg : ArgTypes) {
                 Retval += Arg->ToString() + " -> ";
             }
-            Retval += (FuncType->ToString() + ")");
+            Retval += (EvalType->ToString() + ")");
             return Retval;
         }
 
         i32 FuncType::Compare(const TypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            if (OtherAsPtr->As<BoolType>() != nullptr ||
-                OtherAsPtr->As<IntType>() != nullptr ||
+            if (OtherAsPtr->As<BooleanType>() != nullptr ||
+                OtherAsPtr->As<IntegerType>() != nullptr ||
                 OtherAsPtr->As<RangeType> () != nullptr ||
                 OtherAsPtr->As<EnumType>() != nullptr ||
                 OtherAsPtr->As<SymmetricType>() != nullptr) {
@@ -854,7 +854,7 @@ namespace ESMC {
         {
             // We return the byte size of the range multiplied
             // by the product of the domains
-            u32 Retval = FuncType->GetByteSize();
+            u32 Retval = EvalType->GetByteSize();
             for (auto const& ArgType : ArgTypes) {
                 Retval *= ArgType->GetElements().size();
             }
@@ -943,8 +943,8 @@ namespace ESMC {
         i32 ArrayType::Compare(const TypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            if (OtherAsPtr->As<BoolType>() != nullptr ||
-                OtherAsPtr->As<IntType>() != nullptr ||
+            if (OtherAsPtr->As<BooleanType>() != nullptr ||
+                OtherAsPtr->As<IntegerType>() != nullptr ||
                 OtherAsPtr->As<RangeType>() != nullptr ||
                 OtherAsPtr->As<EnumType>() != nullptr ||
                 OtherAsPtr->As<SymmetricType>() != nullptr ||
@@ -1017,7 +1017,7 @@ namespace ESMC {
                     throw ESMCError((string)"Record members cannot be functions types or " +
                                     "field access types, or parametric types");
                 }
-                if (NTPair.second->As<IntType>() != nullptr &&
+                if (NTPair.second->As<IntegerType>() != nullptr &&
                     NTPair.second->As<RangeType>() == nullptr) {
                     ContainsUnboundedType = true;
                 }
@@ -1035,7 +1035,7 @@ namespace ESMC {
         void RecordType::ComputeFieldOffsets() const
         {
             for (auto const& NTPair : MemberVec) {
-                if (NTPair.second->As<IntType>() != nullptr &&
+                if (NTPair.second->As<IntegerType>() != nullptr &&
                     NTPair.second->As<RangeType>() == nullptr) {
                     ContainsUnboundedType = true;
                 }
@@ -1137,8 +1137,8 @@ namespace ESMC {
         i32 RecordType::Compare(const TypeBase& Other) const
         {
             auto OtherAsPtr = &Other;
-            if (OtherAsPtr->As<BoolType>() != nullptr ||
-                OtherAsPtr->As<IntType>() != nullptr ||
+            if (OtherAsPtr->As<BooleanType>() != nullptr ||
+                OtherAsPtr->As<IntegerType>() != nullptr ||
                 OtherAsPtr->As<RangeType>() != nullptr ||
                 OtherAsPtr->As<EnumType>() != nullptr ||
                 OtherAsPtr->As<SymmetricType>() != nullptr ||
@@ -1268,8 +1268,8 @@ namespace ESMC {
         {
             auto OtherAsPtr = &Other;
 
-            if (OtherAsPtr->As<BoolType>() != nullptr ||
-                OtherAsPtr->As<IntType>() != nullptr ||
+            if (OtherAsPtr->As<BooleanType>() != nullptr ||
+                OtherAsPtr->As<IntegerType>() != nullptr ||
                 OtherAsPtr->As<RangeType>() != nullptr ||
                 OtherAsPtr->As<EnumType>() != nullptr ||
                 OtherAsPtr->As<SymmetricType>() != nullptr ||
@@ -1358,8 +1358,8 @@ namespace ESMC {
 
         i32 FieldAccessType::Compare(const TypeBase& Other) const
         {
-            if (Other.As<BoolType>() != nullptr ||
-                Other.As<IntType>() != nullptr ||
+            if (Other.As<BooleanType>() != nullptr ||
+                Other.As<IntegerType>() != nullptr ||
                 Other.As<RangeType>() != nullptr ||
                 Other.As<EnumType> () != nullptr ||
                 Other.As<SymmetricType>() != nullptr ||
@@ -1628,8 +1628,8 @@ namespace ESMC {
 
         i32 UnionType::Compare(const TypeBase& Other) const
         {
-            if (Other.As<BoolType>() != nullptr ||
-                Other.As<IntType>() != nullptr ||
+            if (Other.As<BooleanType>() != nullptr ||
+                Other.As<IntegerType>() != nullptr ||
                 Other.As<RangeType>() != nullptr ||
                 Other.As<EnumType> () != nullptr ||
                 Other.As<SymmetricType>() != nullptr ||
@@ -1663,8 +1663,8 @@ namespace ESMC {
                             "have been called");
         }
 
-    } /* end namespace Exprs */
+    } /* end namespace LTS */
 } /* end namespace ESMC */
 
 //
-// LTSTypes.cpp ends here
+// LTSSemTypes.cpp ends here

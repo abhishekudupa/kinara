@@ -37,11 +37,10 @@
 
 // Code:
 
-#include "../uflts/LTSTypes.hpp"
-
-#include "SymbolTable.hpp"
-
 #include <boost/functional/hash.hpp>
+
+#include "../uflts/LTSDecls.hpp"
+#include "SymbolTable.hpp"
 
 namespace ESMC {
     namespace LTS {
@@ -72,11 +71,11 @@ namespace ESMC {
             return HashCode;
         }
 
-        ParamDecl::ParamDecl(const string& Name, const Exprs::ExprTypeRef& Type)
+        ParamDecl::ParamDecl(const string& Name, const TypeRef& Type)
             : DeclBase(Name), ParamType(Type)
         {
-            if (!(Type->Is<Exprs::ExprSymmetricType>() ||
-                  Type->Is<Exprs::ExprRangeType>())) {
+            if (!(Type->Is<SymmetricType>() ||
+                  Type->Is<RangeType>())) {
                 throw ESMCError("Parameters can only be range or symmetric types");
             }
         }
@@ -94,7 +93,7 @@ namespace ESMC {
             boost::hash_combine(HashCode, ParamType->Hash());
         }
 
-        const Exprs::ExprTypeRef& ParamDecl::GetType() const
+        const TypeRef& ParamDecl::GetType() const
         {
             return ParamType;
         }
@@ -109,10 +108,10 @@ namespace ESMC {
                     OtherPtr->GetType() == ParamType);
         }
 
-        MsgDeclBase::MsgDeclBase(const string& Name, const Exprs::ExprTypeRef& Type)
+        MsgDeclBase::MsgDeclBase(const string& Name, const TypeRef& Type)
             : DeclBase(Name), MsgType(Type)
         {
-            if (!Type->Is<Exprs::ExprRecordType>()) {
+            if (!Type->Is<RecordType>()) {
                 throw ESMCError((string)"Message decls must be record types");
             }
         }
@@ -132,7 +131,7 @@ namespace ESMC {
             boost::hash_combine(HashCode, IsOutput());
         }
 
-        const Exprs::ExprTypeRef& MsgDeclBase::GetType() const
+        const TypeRef& MsgDeclBase::GetType() const
         {
             return MsgType;
         }
@@ -180,7 +179,7 @@ namespace ESMC {
             return true;
         }
 
-        VarDecl::VarDecl(const string& Name, const Exprs::ExprTypeRef& Type)
+        VarDecl::VarDecl(const string& Name, const TypeRef& Type)
             : DeclBase(Name), VarType(Type)
         {
             // Nothing here
@@ -209,15 +208,15 @@ namespace ESMC {
                     OtherPtr->GetType() == VarType);
         }
 
-        const Exprs::ExprTypeRef& VarDecl::GetType() const
+        const TypeRef& VarDecl::GetType() const
         {
             return VarType;
         }
 
-        StateDecl::StateDecl(const Exprs::ExprTypeRef& Type)
+        StateDecl::StateDecl(const TypeRef& Type)
             : DeclBase("state"), Type(Type)
         {
-            if (!Type->Is<Exprs::ExprEnumType>()) {
+            if (!Type->Is<EnumType>()) {
                 throw ESMCError((string)"State variable must be of enumerated type");
             }
         }
@@ -244,7 +243,7 @@ namespace ESMC {
             return (OtherPtr->Type == Type);
         }
 
-        const Exprs::ExprTypeRef& StateDecl::GetType() const
+        const TypeRef& StateDecl::GetType() const
         {
             return Type;
         }

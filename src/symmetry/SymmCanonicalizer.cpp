@@ -39,7 +39,7 @@
 
 #include <string.h>
 
-#include "../uflts/LTSTypes.hpp"
+#include "../uflts/LTSDecls.hpp"
 #include "../uflts/LabelledTS.hpp"
 #include "../uflts/LTSChannelEFSM.hpp"
 #include "../uflts/LTSExtensions.hpp"
@@ -61,9 +61,10 @@ namespace ESMC {
         using ESMC::MC::StateVecPrinter;
 
         using ESMC::MC::StateVec;
-        using ESMC::Exprs::ExprArrayType;
-        using ESMC::Exprs::ExprRecordType;
-        using ESMC::Exprs::ExprSymmetricType;
+        using ESMC::LTS::ArrayType;
+        using ESMC::LTS::RecordType;
+        using ESMC::LTS::SymmetricType;
+        using ESMC::LTS::UnionType;
         using ESMC::LTS::LTSExtensionT;
         using ESMC::LTS::LTSTypeExtensionT;
         using ESMC::MC::ProductState;
@@ -98,18 +99,18 @@ namespace ESMC {
             return PermSize;
         }
 
-        PermuterBase* PermuterBase::MakePermuter(u32 Offset, const ExprTypeRef &Type,
+        PermuterBase* PermuterBase::MakePermuter(u32 Offset, const TypeRef &Type,
                                                  const LabelledTS* TheLTS)
         {
-            auto TypeAsArr = Type->As<ExprArrayType>();
+            auto TypeAsArr = Type->As<ArrayType>();
             if (TypeAsArr != nullptr) {
                 return new ArrayPermuter(Offset, Type, TheLTS);
             }
-            auto TypeAsRec = Type->As<ExprRecordType>();
+            auto TypeAsRec = Type->As<RecordType>();
             if (TypeAsRec != nullptr) {
                 return new RecordPermuter(Offset, Type, TheLTS);
             }
-            auto TypeAsSym = Type->As<ExprSymmetricType>();
+            auto TypeAsSym = Type->As<SymmetricType>();
             if (TypeAsSym != nullptr) {
                 return new SymmTypePermuter(Offset, Type, TheLTS);
             }
@@ -117,18 +118,18 @@ namespace ESMC {
             return new NoOpPermuter();
         }
 
-        ArrayPermuter::ArrayPermuter(u32 Offset, const ExprTypeRef& ArrayType,
+        ArrayPermuter::ArrayPermuter(u32 Offset, const TypeRef& ArrType,
                                      const LabelledTS* TheLTS)
             : PermuterBase(Offset, 0, 0)
         {
-            auto TypeAsArr = ArrayType->As<ExprArrayType>();
+            auto TypeAsArr = ArrType->As<ArrayType>();
             auto const& IndexType = TypeAsArr->GetIndexType();
             auto const& ValueType = TypeAsArr->GetValueType();
             NumElems = IndexType->GetCardinalityNoUndef();
             ElemSize = ValueType->GetByteSize();
             ElemSize = Align(ElemSize, ElemSize);
 
-            if (!IndexType->Is<ExprSymmetricType>()) {
+            if (!IndexType->Is<SymmetricType>()) {
                 PermSize = 0;
                 TypeOffset = 0;
                 IsSymmArray = false;
@@ -208,13 +209,13 @@ namespace ESMC {
             }
         }
 
-        RecordPermuter::RecordPermuter(u32 Offset, const ExprTypeRef& RecordType,
+        RecordPermuter::RecordPermuter(u32 Offset, const TypeRef& RecType,
                                        const LabelledTS* TheLTS)
             : PermuterBase(Offset, 0, 0)
         {
-            auto UMType = TheLTS->GetUnifiedMType()->As<Exprs::ExprUnionType>();
-            bool IsUMType = (RecordType == TheLTS->GetUnifiedMType());
-            auto TypeAsRec = RecordType->As<Exprs::ExprRecordType>();
+            auto UMType = TheLTS->GetUnifiedMType()->As<UnionType>();
+            bool IsUMType = (RecType == TheLTS->GetUnifiedMType());
+            auto TypeAsRec = RecType->As<RecordType>();
             auto const& MemberVec = TypeAsRec->GetMemberVec();
 
             for (auto const& Member : MemberVec) {
@@ -256,7 +257,7 @@ namespace ESMC {
             return ElemPermuters;
         }
 
-        MTypePermuter::MTypePermuter(u32 Offset, const ExprTypeRef& Type,
+        MTypePermuter::MTypePermuter(u32 Offset, const TypeRef& Type,
                                      const LabelledTS* TheLTS)
             : PermuterBase(Offset, 0, 0),
               MsgCanonMap(TheLTS->GetMsgCanonMap()),
@@ -295,13 +296,13 @@ namespace ESMC {
             }
         }
 
-        SymmTypePermuter::SymmTypePermuter(u32 Offset, const ExprTypeRef& SymmType,
+        SymmTypePermuter::SymmTypePermuter(u32 Offset, const TypeRef& SymmType,
                                            const LabelledTS* TheLTS)
             : PermuterBase(Offset, 0, 0)
         {
             auto TypeExt = SymmType->GetExtension<LTSTypeExtensionT>();
             TypeOffset = TypeExt->TypeOffset;
-            PermSize = SymmType->As<ExprSymmetricType>()->GetCardinalityNoUndef();
+            PermSize = SymmType->As<SymmetricType>()->GetCardinalityNoUndef();
         }
 
         SymmTypePermuter::~SymmTypePermuter()
@@ -358,13 +359,13 @@ namespace ESMC {
             // Nothing here
         }
 
-        ChanBufferSorter::ChanBufferSorter(u32 Offset, const ExprTypeRef& ChanBufferType,
+        ChanBufferSorter::ChanBufferSorter(u32 Offset, const TypeRef& ChanBufferType,
                                            u32 Capacity, u32 PermVecOffset,
                                            ChannelEFSM* ChanEFSM, u32 InstanceID)
             : Offset(Offset), Capacity(Capacity), PermVecOffset(PermVecOffset),
               ChanEFSM(ChanEFSM), InstanceID(InstanceID)
         {
-            auto TypeAsArray = ChanBufferType->As<ExprArrayType>();
+            auto TypeAsArray = ChanBufferType->As<ArrayType>();
             if (TypeAsArray == nullptr) {
                 throw InternalError((string)"Expected Channel buffer type to be an " +
                                     "array.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
@@ -528,7 +529,7 @@ namespace ESMC {
             vector<u32> TypeSizes(SymmTypes.size());
             PermutationSize = 1;
             for (auto const& SymmType : SymmTypes) {
-                u32 CurTypeSize = SymmType->As<ExprSymmetricType>()->GetCardinalityNoUndef();
+                u32 CurTypeSize = SymmType->As<SymmetricType>()->GetCardinalityNoUndef();
                 TypeSizes[SymmType->GetExtension<LTSTypeExtensionT>()->TypeID] = CurTypeSize;
 
                 PermutationSize *= Factorial(CurTypeSize);

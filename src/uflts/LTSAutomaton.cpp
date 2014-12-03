@@ -109,7 +109,7 @@ namespace ESMC {
                 StateNames.insert(State.first);
             }
 
-            StateType = Mgr->MakeType<ExprEnumType>(Name + "_StateT", StateNames);
+            StateType = Mgr->MakeType<EnumType>(Name + "_StateT", StateNames);
             StatesFrozen = true;
         }
 
@@ -134,7 +134,7 @@ namespace ESMC {
             return Retval;
         }
 
-        const ExprTypeRef& AutomatonBase::GetStateType() const
+        const TypeRef& AutomatonBase::GetStateType() const
         {
             if (!StatesFrozen) {
                 throw ESMCError((string)"Cannot call AutomatonBase::GetStateType() before " +

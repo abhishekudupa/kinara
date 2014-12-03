@@ -116,7 +116,7 @@ namespace ESMC {
         {
             auto const Trans = CandTrans[TransIndex];
             auto TransAsInput = Trans->As<LTSSymbInputTransition>();
-            ExprTypeRef MType = ExprTypeRef::NullPtr;
+            TypeRef MType = TypeRef::NullPtr;
 
             if (TransAsInput != nullptr) {
                 MType = TransAsInput->GetMessageType();
@@ -126,7 +126,7 @@ namespace ESMC {
                 auto const& OtherTrans = CandTrans[j];
                 auto OtherAsInput = OtherTrans->As<LTSSymbInputTransition>();
 
-                if (MType != ExprTypeRef::NullPtr && OtherAsInput != nullptr) {
+                if (MType != TypeRef::NullPtr && OtherAsInput != nullptr) {
                     if (OtherAsInput->GetMessageType() != MType) {
                         continue;
                     }
@@ -180,14 +180,14 @@ namespace ESMC {
             // Nothing here
         }
 
-        void IncompleteEFSM::AddVariable(const string& VarName, const ExprTypeRef& VarType)
+        void IncompleteEFSM::AddVariable(const string& VarName, const TypeRef& VarType)
         {
             DetEFSM::AddVariable(VarName, VarType);
             UpdateableVariables[VarName] = VarType;
             AllVariables[VarName] = VarType;
         }
 
-        set<ExpT> IncompleteEFSM::GetDomainTerms(const map<string, ExprTypeRef>& DomainVars)
+        set<ExpT> IncompleteEFSM::GetDomainTerms(const map<string, TypeRef>& DomainVars)
         {
             set<ExpT> Retval;
             for (auto const& Var : DomainVars) {
@@ -199,13 +199,13 @@ namespace ESMC {
         }
 
         inline void IncompleteEFSM::FilterTerms(set<ExpT>& DomainTerms,
-                                                const ExprTypeRef& RangeType)
+                                                const TypeRef& RangeType)
         {
             vector<set<ExpT>::iterator> ToRemove;
 
             for (auto it1 = DomainTerms.begin(); it1 != DomainTerms.end(); ++it1) {
                 auto Type = (*it1)->GetType();
-                if (!Type->Is<ExprSymmetricType>()) {
+                if (!Type->Is<SymmetricType>()) {
                     continue;
                 }
                 if (Type == RangeType) {
@@ -249,7 +249,7 @@ namespace ESMC {
                 if (NumNewParams == 0) {
                     Guards.push_back(Trans->GetGuard());
                 } else {
-                    vector<ExprTypeRef> NewParamTypes(NumNewParams);
+                    vector<TypeRef> NewParamTypes(NumNewParams);
                     MgrT::SubstMapT SubstMap;
                     for (u32 i = 0; i < NumNewParams; ++i) {
                         auto const& CurParam = NewParams[i];
@@ -289,7 +289,7 @@ namespace ESMC {
         inline ExpT
         IncompleteEFSM::FindInputCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
                                                const TPRef& TP,
-                                               const ExprTypeRef& MsgType,
+                                               const TypeRef& MsgType,
                                                const ExpT& CoveredRegion)
         {
             auto&& RelTransitions =
@@ -325,7 +325,7 @@ namespace ESMC {
             return FindDisjunction(RelTransitions, TP, TheLTS->MakeFalse());
         }
 
-        inline vector<ExprTypeRef>
+        inline vector<TypeRef>
         IncompleteEFSM::GetSymmTypesInExpr(const ExpT& Exp)
         {
             auto Mgr = TheLTS->GetMgr();
@@ -335,20 +335,20 @@ namespace ESMC {
                             [&] (const ExpT& Exp) -> bool
                             {
                                 auto const& ExpType = Exp->GetType();
-                                return (ExpType->Is<ExprSymmetricType>());
+                                return (ExpType->Is<SymmetricType>());
                             });
 
-            set<ExprTypeRef> SymmTypeSet;
+            set<TypeRef> SymmTypeSet;
             for_each(SymmTerms.begin(), SymmTerms.end(),
                      [&] (const ExpT& Term) -> void
                      {
                          SymmTypeSet.insert(Term->GetType());
                      });
-            if (Exp->GetType()->Is<ExprSymmetricType>()) {
+            if (Exp->GetType()->Is<SymmetricType>()) {
                 SymmTypeSet.insert(Exp->GetType());
             }
 
-            return vector<ExprTypeRef>(SymmTypeSet.begin(), SymmTypeSet.end());
+            return vector<TypeRef>(SymmTypeSet.begin(), SymmTypeSet.end());
         }
 
         inline void IncompleteEFSM::PartitionDomain(const vector<ExpT>& Args,
@@ -362,7 +362,7 @@ namespace ESMC {
                      [&] (const ExpT& Arg) -> void
                      {
                          auto const& ArgType = Arg->GetType();
-                         if (ArgType->Is<ExprSymmetricType>()) {
+                         if (ArgType->Is<SymmetricType>()) {
                              SymmArgs.push_back(Arg);
                          } else {
                              NonSymmArgs.push_back(Arg);
@@ -402,13 +402,13 @@ namespace ESMC {
 
         inline set<set<ExpT>>
         IncompleteEFSM::FindEquivalences(const ExpT& Exp,
-                                         const vector<ExprTypeRef>& SymmTypes,
+                                         const vector<TypeRef>& SymmTypes,
                                          const vector<ExpT>& SymmArgs,
                                          const vector<ExpT>& NonSymmArgs)
         {
-            map<ExprTypeRef, u32> TypeOffsets;
+            map<TypeRef, u32> TypeOffsets;
             vector<u32> DomainSizes;
-            auto const IsRangeSymmetric = Exp->GetType()->Is<ExprSymmetricType>();
+            auto const IsRangeSymmetric = Exp->GetType()->Is<SymmetricType>();
             set<set<ExpT>> Retval;
             const u32 NumSymmArgs = SymmArgs.size();
             auto Mgr = TheLTS->GetMgr();
@@ -438,7 +438,7 @@ namespace ESMC {
                     if (Res->Is<ParamDecl>()) {
                         continue;
                     } else {
-                        auto TypeAsSym = SymmArg->GetType()->SAs<Exprs::ExprSymmetricType>();
+                        auto TypeAsSym = SymmArg->GetType()->SAs<SymmetricType>();
                         SymmArgValues.back().push_back(TypeAsSym->GetClearValue());
                     }
                 }
@@ -509,7 +509,7 @@ namespace ESMC {
                                     "\nAt: " + __FILE__ + ":" + to_string(__LINE__));
             }
 
-            if (Exp1->GetType()->Is<ExprBoolType>()) {
+            if (Exp1->GetType()->Is<BooleanType>()) {
                 return Mgr->MakeExpr(LTSOps::OpIFF, Exp1, Exp2);
             } else {
                 return Mgr->MakeExpr(LTSOps::OpEQ, Exp1, Exp2);
@@ -545,7 +545,7 @@ namespace ESMC {
 
                     // Quantify the non symmetric args
                     MgrT::SubstMapT SubstMap;
-                    vector<ExprTypeRef> QVarTypes(NumNonSymmArgs);
+                    vector<TypeRef> QVarTypes(NumNonSymmArgs);
 
                     for (u32 i = 0; i < NumNonSymmArgs; ++i) {
                         auto const& ArgType = NonSymmArgs[i]->GetType();
@@ -572,7 +572,7 @@ namespace ESMC {
             vector<ExpT> DomainTermVec(LocalDomainTerms.begin(),
                                        LocalDomainTerms.end());
 
-            vector<ExprTypeRef> DomainTypes;
+            vector<TypeRef> DomainTypes;
 
             for_each(LocalDomainTerms.begin(), LocalDomainTerms.end(),
                      [&] (const ExpT& DomainTerm) -> void
@@ -587,7 +587,7 @@ namespace ESMC {
 
             auto GuardOp = Mgr->MakeUninterpretedFunction(GuardUFName,
                                                           DomainTypes,
-                                                          Mgr->MakeType<ExprBoolType>());
+                                                          Mgr->MakeType<BooleanType>());
             auto GuardExp = Mgr->MakeExpr(GuardOp, DomainTermVec);
             cout << "Made Guard Exp: " << GuardExp->ToString() << endl << endl;
             // Make the constraints for symmetry on the guard expression
@@ -614,17 +614,17 @@ namespace ESMC {
         {
             auto Mgr = TheLTS->GetMgr();
             // get the symmetric types
-            set<ExprTypeRef> SymmTypeSet;
+            set<TypeRef> SymmTypeSet;
             for (auto const& LValueTerm : LValues) {
                 auto&& CurSymmTypes = GetSymmTypesInExpr(LValueTerm);
                 SymmTypeSet.insert(CurSymmTypes.begin(), CurSymmTypes.end());
             }
 
-            vector<ExprTypeRef> SymmTypes(SymmTypeSet.begin(), SymmTypeSet.end());
+            vector<TypeRef> SymmTypes(SymmTypeSet.begin(), SymmTypeSet.end());
 
             u32 RunningOffset = 0;
             vector<u32> DomainSizes;
-            map<ExprTypeRef, u32> TypeOffsets;
+            map<TypeRef, u32> TypeOffsets;
 
             for (auto const& SymmType : SymmTypes) {
                 auto const CurSize = SymmType->GetCardinalityNoUndef();
@@ -674,14 +674,14 @@ namespace ESMC {
             auto Mgr = TheLTS->GetMgr();
             vector<ExpT> Retval;
 
-            set<ExprTypeRef> SymmTypeSet;
+            set<TypeRef> SymmTypeSet;
             for (auto const& UpdateTerm : UpdateMap) {
                 auto&& CurSymmTypes1 = GetSymmTypesInExpr(UpdateTerm.first);
                 SymmTypeSet.insert(CurSymmTypes1.begin(), CurSymmTypes1.end());
                 auto&& CurSymmTypes2 = GetSymmTypesInExpr(UpdateTerm.second);
                 SymmTypeSet.insert(CurSymmTypes2.begin(), CurSymmTypes2.end());
             }
-            vector<ExprTypeRef> SymmTypes(SymmTypeSet.begin(), SymmTypeSet.end());
+            vector<TypeRef> SymmTypes(SymmTypeSet.begin(), SymmTypeSet.end());
 
             vector<ExpT> LHSTerms(UpdateGroup.begin(), UpdateGroup.end());
             vector<ExpT> RHSTerms;
@@ -715,9 +715,9 @@ namespace ESMC {
             const u32 NumNonSymmArgs = NonSymmArgs.size();
 
 
-            vector<ExprTypeRef> LHSTypes;
+            vector<TypeRef> LHSTypes;
             transform(LHSTerms.begin(), LHSTerms.end(), back_inserter(LHSTypes),
-                      [&] (const ExpT& Exp) -> ExprTypeRef
+                      [&] (const ExpT& Exp) -> TypeRef
                       {
                           return Exp->GetType();
                       });
@@ -726,7 +726,7 @@ namespace ESMC {
 
             vector<vector<string>> LHSCPValues;
             transform(LHSTypes.begin(), LHSTypes.end(), back_inserter(LHSCPValues),
-                      [&] (const ExprTypeRef& Type) -> const vector<string>
+                      [&] (const TypeRef& Type) -> const vector<string>
                       {
                           return Type->GetElements();
                       });
@@ -786,7 +786,7 @@ namespace ESMC {
                     auto CurConstraint = MakeEquivalence(Representative, *it, Mgr);
 
                     MgrT::SubstMapT SubstMap;
-                    vector<ExprTypeRef> QVarTypes(NumNonSymmArgs);
+                    vector<TypeRef> QVarTypes(NumNonSymmArgs);
 
                     for (u32 i = 0; i < NumNonSymmArgs; ++i) {
                         auto const& ArgType = NonSymmArgs[i]->GetType();
@@ -896,7 +896,7 @@ namespace ESMC {
             auto Mgr = TheLTS->GetMgr();
             vector<LTSAssignRef> Retval;
 
-            map<string, ExprTypeRef> LValues;
+            map<string, TypeRef> LValues;
             for (auto const& Var : UpdateableVariables) {
                 LValues.insert(Var);
             }
@@ -924,7 +924,7 @@ namespace ESMC {
                 auto&& LocalDomTerms = GetDomainTermsForUpdate(LValue, DomainTerms, MsgDecl);
                 FilterTerms(LocalDomTerms, LValue->GetType());
 
-                if (LValue->GetType()->Is<ExprSymmetricType>()) {
+                if (LValue->GetType()->Is<SymmetricType>()) {
                     bool FoundOne = false;
                     for (auto const& DomTerm : LocalDomTerms) {
                         if (DomTerm->GetType() == LValue->GetType()) {
@@ -940,7 +940,7 @@ namespace ESMC {
                     }
                 }
 
-                vector<ExprTypeRef> DomainTypes;
+                vector<TypeRef> DomainTypes;
                 vector<ExpT> DomainTermVec(LocalDomTerms.begin(),
                                            LocalDomTerms.end());
                 for_each(LocalDomTerms.begin(), LocalDomTerms.end(),
@@ -998,10 +998,10 @@ namespace ESMC {
                     if (nsit != NextStatesOnTransition.end()) {
                         auto CandidateNS = nsit->second;
                         auto const& UpdateArgs = GetOpArgs(UpdateExp);
-                        vector<ExprTypeRef> UpdateArgTypes;
+                        vector<TypeRef> UpdateArgTypes;
                         transform(UpdateArgs.begin(), UpdateArgs.end(),
                                   back_inserter(UpdateArgTypes),
-                                  [&] (const ExpT& Exp) -> ExprTypeRef
+                                  [&] (const ExpT& Exp) -> TypeRef
                                   {
                                       return Exp->GetType();
                                   });
@@ -1046,7 +1046,7 @@ namespace ESMC {
         inline void
         IncompleteEFSM::CompleteOneInputTransition(const string& InitStateName,
                                                    const SymmMsgDeclRef& MsgDecl,
-                                                   const map<string, ExprTypeRef>& DomainVars,
+                                                   const map<string, TypeRef>& DomainVars,
                                                    const ExpT& CoveredPred)
         {
             auto LocalDomVars = DomainVars;
@@ -1057,19 +1057,19 @@ namespace ESMC {
 
             // Add the input message for the updates
             auto const& MsgType = MsgDecl->GetMessageType();
-            ExprTypeRef ActMsgType = ExprTypeRef::NullPtr;
-            if (MsgType->Is<ExprParametricType>()) {
-                ActMsgType = MsgType->SAs<ExprParametricType>()->GetBaseType();
+            TypeRef ActMsgType = TypeRef::NullPtr;
+            if (MsgType->Is<ParametricType>()) {
+                ActMsgType = MsgType->SAs<ParametricType>()->GetBaseType();
             } else {
                 ActMsgType = MsgType;
             }
 
             cout << "[" << Name << "]: "
                  << "Completing Input Transition from state \"" << InitStateName
-                 << "\" on message type \"" << ActMsgType->SAs<ExprRecordType>()->GetName()
+                 << "\" on message type \"" << ActMsgType->SAs<RecordType>()->GetName()
                  << "\"" << endl;
 
-            auto MsgTypeAsRecord = ActMsgType->SAs<ExprRecordType>();
+            auto MsgTypeAsRecord = ActMsgType->SAs<RecordType>();
             auto NameSuffix = InitStateName + "_" + MsgTypeAsRecord->GetName();
             auto GuardExp = MakeGuard(DomainTerms, CoveredPred, NameSuffix);
             auto GuardOp = GuardExp->SAs<OpExpression>()->GetOpCode();
@@ -1130,7 +1130,7 @@ namespace ESMC {
                 // We're okay to add one or more transitions
                 // Gather the list of expresions that could be
                 // arguments to the uninterpreted functions
-                map<string, ExprTypeRef> DomainVariables;
+                map<string, TypeRef> DomainVariables;
 
                 for (auto const& Var : AllVariables) {
                     DomainVariables.insert(Var);
@@ -1156,25 +1156,25 @@ namespace ESMC {
 
         void IncompleteEFSM::CompleteOneOutputTransition(const string& InitStateName,
                                                          const SymmMsgDeclRef& MsgDecl,
-                                                         const map<string, ExprTypeRef>& DomainVars,
+                                                         const map<string, TypeRef>& DomainVars,
                                                          vector<ExpT>& GuardExps,
                                                          const ExpT& CoveredPred)
         {
             auto&& DomainTerms = GetDomainTerms(DomainVars);
 
             auto const& MsgType = MsgDecl->GetMessageType();
-            ExprTypeRef ActMsgType = ExprTypeRef::NullPtr;
-            if (MsgType->Is<ExprParametricType>()) {
-                ActMsgType = MsgType->SAs<ExprParametricType>()->GetBaseType();
+            TypeRef ActMsgType = TypeRef::NullPtr;
+            if (MsgType->Is<ParametricType>()) {
+                ActMsgType = MsgType->SAs<ParametricType>()->GetBaseType();
             } else {
                 ActMsgType = MsgType;
             }
             cout << "[" << Name << "]: "
                  << "Completing Output Transition from state \"" << InitStateName
-                 << "\" on message type \"" << ActMsgType->SAs<ExprRecordType>()->GetName()
+                 << "\" on message type \"" << ActMsgType->SAs<RecordType>()->GetName()
                  << "\"" << endl;
 
-            auto MsgTypeAsRecord = ActMsgType->SAs<ExprRecordType>();
+            auto MsgTypeAsRecord = ActMsgType->SAs<RecordType>();
             auto NameSuffix = InitStateName + "_" + MsgTypeAsRecord->GetName();
             auto GuardExp = MakeGuard(DomainTerms, CoveredPred, NameSuffix);
             auto GuardOp = GuardExp->SAs<OpExpression>()->GetOpCode();
@@ -1237,7 +1237,7 @@ namespace ESMC {
                     continue;
                 }
 
-                map<string, ExprTypeRef> DomainVariables;
+                map<string, TypeRef> DomainVariables;
                 for (auto const& Var : AllVariables) {
                     DomainVariables.insert(Var);
                 }
@@ -1432,7 +1432,7 @@ namespace ESMC {
             }
 
             auto BaseType = MsgDecl->GetBaseMessageType();
-            auto BaseAsRec = BaseType->SAs<ExprRecordType>();
+            auto BaseAsRec = BaseType->SAs<RecordType>();
 
             auto const& FieldMap = BaseAsRec->GetMemberMap();
             for (auto const& MessageFieldName : MessageFieldNames) {
@@ -1449,7 +1449,7 @@ namespace ESMC {
                                                 const set<string>& DepVars)
         {
             auto BaseType = OutMsgDecl->GetBaseMessageType();
-            auto BaseAsRec = BaseType->SAs<ExprRecordType>();
+            auto BaseAsRec = BaseType->SAs<RecordType>();
 
             if (find(SymmetricMessages.begin(), SymmetricMessages.end(), OutMsgDecl) ==
                 SymmetricMessages.end() || !OutMsgDecl->IsOutput()) {

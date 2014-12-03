@@ -38,9 +38,19 @@
 // Code:
 
 #include "TheoremProver.hpp"
+#include "../uflts/LTSDecls.hpp"
 
 namespace ESMC {
     namespace TP {
+
+        using LTS::BooleanType;
+        using LTS::ArrayType;
+        using LTS::UnionType;
+        using LTS::FuncType;
+        using LTS::IntegerType;
+        using LTS::RangeType;
+        using LTS::RecordType;
+        using LTS::ScalarType;
 
         IncompleteTheoryException::IncompleteTheoryException(const ExpT& Expression) throw ()
             : Expression(Expression)
@@ -116,7 +126,7 @@ namespace ESMC {
         void TheoremProver::Assert(const ExpT& Assertion,
                                    bool UnrollQuantifiers) const
         {
-            if (!Assertion->GetType()->Is<Exprs::ExprBoolType>()) {
+            if (!Assertion->GetType()->Is<BooleanType>()) {
                 throw ESMCError((string)"Attempted to assert a non-Boolean " +
                                 "expression.\nThe expression is:\n" +
                                 Assertion->ToString());
@@ -129,7 +139,7 @@ namespace ESMC {
                                    bool UnrollQuantifiers) const
         {
             for (auto const& Assertion : Assertions) {
-                if (!Assertion->GetType()->Is<Exprs::ExprBoolType>()) {
+                if (!Assertion->GetType()->Is<BooleanType>()) {
                     throw ESMCError((string)"Attempted to assert a non-Boolean " +
                                     "expression.\nThe expression is:\n" +
                                     Assertion->ToString());
@@ -311,7 +321,7 @@ namespace ESMC {
             }
 
             auto ExpType = Exp->GetType();
-            if (!ExpType->Is<Exprs::ExprScalarType>()) {
+            if (!ExpType->Is<ScalarType>()) {
                 throw ESMCError((string)"Z3TheoremProver::Evaluate() called " +
                                 "on non-scalar typed expression. This is not " +
                                 "currently supported!");

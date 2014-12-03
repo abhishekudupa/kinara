@@ -1,6 +1,6 @@
-// LTSTypes.hpp ---
+// LTSDecls.hpp ---
 //
-// Filename: LTSTypes.hpp
+// Filename: LTSDecls.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug  8 13:34:49 2014 (-0400)
 //
@@ -37,8 +37,8 @@
 
 // Code:
 
-#if !defined ESMC_LTS_TYPES_HPP_
-#define ESMC_LTS_TYPES_HPP_
+#if !defined ESMC_LTS_DECLS_HPP_
+#define ESMC_LTS_DECLS_HPP_
 
 #include "../common/FwdDecls.hpp"
 #include "../expr/Expressions.hpp"
@@ -104,7 +104,6 @@ namespace ESMC {
         class LTSGuardedCommand;
         typedef CSmartPtr<LTSGuardedCommand> GCmdRef;
 
-        typedef Exprs::ExprTypeRef ExprTypeRef;
         typedef Exprs::Expr<LTSExtensionT, LTSTermSemanticizer> ExpT;
         typedef Exprs::ExprMgr<LTSExtensionT, LTSTermSemanticizer> MgrT;
         typedef typename LTSTermSemanticizer<LTSExtensionT>::LExpT LExpT;
@@ -120,23 +119,10 @@ namespace ESMC {
         typedef Exprs::AQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> AQExpT;
         typedef unordered_set<ExpT, Exprs::ExpressionPtrHasher> FastExpSetT;
 
-        // types
-        typedef Exprs::ExprBoolType ExprBoolType;
-        typedef Exprs::ExprIntType ExprIntType;
-        typedef Exprs::ExprScalarType ExprScalarType;
-        typedef Exprs::ExprSymmetricType ExprSymmetricType;
-        typedef Exprs::ExprRangeType ExprRangeType;
-        typedef Exprs::ExprEnumType ExprEnumType;
-        typedef Exprs::ExprRecordType ExprRecordType;
-        typedef Exprs::ExprArrayType ExprArrayType;
-        typedef Exprs::ExprParametricType ExprParametricType;
-        typedef Exprs::ExprUnionType ExprUnionType;
-        typedef Exprs::ExprFieldAccessType ExprFieldAccessType;
-
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-#endif /* ESMC_LTS_TYPES_HPP_ */
+#endif /* ESMC_LTS_DECLS_HPP_ */
 
 //
-// LTSTypes.hpp ends here
+// LTSDecls.hpp ends here

@@ -42,10 +42,7 @@
 
 #include "../common/FwdDecls.hpp"
 #include "../expr/Expressions.hpp"
-#include "../uflts/LTSTypes.hpp"
-#include "../uflts/LTSFairnessSet.hpp"
-#include "../tpinterface/TheoremProver.hpp"
-
+#include "../uflts/LTSDecls.hpp"
 
 namespace ESMC {
     namespace Analyses {

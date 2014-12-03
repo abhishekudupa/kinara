@@ -29,12 +29,12 @@ using namespace MC;
 const size_t NumProcesses = 3;
 
 // Messages
-vector<ExprTypeRef> WriteMsgs;
+vector<TypeRef> WriteMsgs;
 
 vector<ExpT> Guards;
 
-ExprTypeRef LegitimateAnnouncement;
-ExprTypeRef IllegitimateAnnouncement;
+TypeRef LegitimateAnnouncement;
+TypeRef IllegitimateAnnouncement;
 
 void DeclareMsgs(LabelledTS* TheLTS)
 {
@@ -43,7 +43,7 @@ void DeclareMsgs(LabelledTS* TheLTS)
 
     auto BoolType = TheLTS->MakeBoolType();
     for (size_t i = 0; i < NumProcesses; i++) {
-        vector<pair<string, ExprTypeRef>> fields { make_pair(string("Data"), BoolType),
+        vector<pair<string, TypeRef>> fields { make_pair(string("Data"), BoolType),
                                                    make_pair(string("Up"), BoolType) };
         string MsgName = string("Write") + to_string(i);
         WriteMsgs.push_back(TheLTS->MakeMsgType(MsgName, fields));

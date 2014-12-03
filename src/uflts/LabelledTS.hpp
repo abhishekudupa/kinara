@@ -42,7 +42,7 @@
 
 #include <tuple>
 
-#include "LTSTypes.hpp"
+#include "LTSDecls.hpp"
 #include "SymbolTable.hpp"
 
 namespace ESMC {
@@ -71,20 +71,20 @@ namespace ESMC {
             bool MsgsFrozen;
             bool AutomataFrozen;
 
-            unordered_map<string, ExprTypeRef> NamedTypes;
-            map<string, ExprTypeRef> SymmTypes;
-            map<string, ExprTypeRef> MsgTypes;
-            map<string, ExprTypeRef> ParametricMsgTypes;
-            map<ExprTypeRef, ExprTypeRef> TypeToPrimed;
-            ExprTypeRef UnifiedMsgType;
+            unordered_map<string, TypeRef> NamedTypes;
+            map<string, TypeRef> SymmTypes;
+            map<string, TypeRef> MsgTypes;
+            map<string, TypeRef> ParametricMsgTypes;
+            map<TypeRef, TypeRef> TypeToPrimed;
+            TypeRef UnifiedMsgType;
             map<string, EFSMBase*> AllEFSMs;
             map<string, EFSMBase*> ActualEFSMs;
             map<string, ChannelEFSM*> ChannelEFSMs;
-            set<ExprTypeRef> UsedSymmTypes;
+            set<TypeRef> UsedSymmTypes;
 
-            map<ExprTypeRef, vector<ExprTypeRef>> ParamTypeInsts;
-            map<ExprTypeRef, vector<ExpT>> PInstToParams;
-            map<ExprTypeRef, ExprTypeRef> PInstToParamType;
+            map<TypeRef, vector<TypeRef>> ParamTypeInsts;
+            map<TypeRef, vector<ExpT>> PInstToParams;
+            map<TypeRef, TypeRef> PInstToParamType;
             // MsgID -> Permutation -> MsgID
             vector<vector<u32>> MsgCanonMap;
             // MsgID -> TypeName
@@ -157,7 +157,7 @@ namespace ESMC {
             const vector<vector<LTSAssignRef>>& GetInitStateGenerators() const;
             const vector<GCmdRef>& GetGuardedCmds() const;
             const vector<ExpT>& GetStateVectorVars() const;
-            const set<ExprTypeRef>& GetUsedSymmTypes() const;
+            const set<TypeRef>& GetUsedSymmTypes() const;
             u32 GetStateVectorSize() const;
 
             // methods for creating expressions
@@ -165,37 +165,37 @@ namespace ESMC {
             // we create all expressions VIA the LTS,
             // this avoids us from having to check expressions,
             // etc.
-            ExprTypeRef MakeBoolType();
-            ExprTypeRef MakeRangeType(i64 Low, i64 High);
-            ExprTypeRef MakeRecordType(const string& Name,
-                                       const vector<pair<string, ExprTypeRef>>& Members);
-            ExprTypeRef MakeArrayType(const ExprTypeRef& IndexType,
-                                      const ExprTypeRef& ValueType);
-            ExprTypeRef MakeEnumType(const string& Name, const set<string>& Members);
-            ExprTypeRef MakeFieldAccessType();
+            TypeRef MakeBoolType();
+            TypeRef MakeRangeType(i64 Low, i64 High);
+            TypeRef MakeRecordType(const string& Name,
+                                       const vector<pair<string, TypeRef>>& Members);
+            TypeRef MakeArrayType(const TypeRef& IndexType,
+                                      const TypeRef& ValueType);
+            TypeRef MakeEnumType(const string& Name, const set<string>& Members);
+            TypeRef MakeFieldAccessType();
             // All symmetric types must be declared here
-            const ExprTypeRef& MakeSymmType(const string& Name, u32 Size);
+            const TypeRef& MakeSymmType(const string& Name, u32 Size);
             // All message types must be declared here
-            const ExprTypeRef& MakeMsgType(const string& Name,
-                                           const vector<pair<string, ExprTypeRef>>& Members,
+            const TypeRef& MakeMsgType(const string& Name,
+                                           const vector<pair<string, TypeRef>>& Members,
                                            bool IncludePrimed = false);
             // All parametric message types must be declared here
-            const ExprTypeRef& MakeMsgTypes(const vector<ExpT>& Params,
+            const TypeRef& MakeMsgTypes(const vector<ExpT>& Params,
                                             const ExpT& Constraint,
                                             const string& Name,
-                                            const vector<pair<string, ExprTypeRef>>& Members,
+                                            const vector<pair<string, TypeRef>>& Members,
                                             bool IncludePrimed = false);
-            const ExprTypeRef& GetNamedType(const string& TypeName) const;
+            const TypeRef& GetNamedType(const string& TypeName) const;
 
             // Get state var type for a named EFSM
-            const ExprTypeRef& GetEFSMType(const string& EFSMName) const;
+            const TypeRef& GetEFSMType(const string& EFSMName) const;
 
             // Expressions
             ExpT MakeTrue();
             ExpT MakeFalse();
-            ExpT MakeVar(const string& Name, const ExprTypeRef& Type);
-            ExpT MakeBoundVar(i64 Idx, const ExprTypeRef& Type);
-            ExpT MakeVal(const string& Value, const ExprTypeRef& Type);
+            ExpT MakeVar(const string& Name, const TypeRef& Type);
+            ExpT MakeBoundVar(i64 Idx, const TypeRef& Type);
+            ExpT MakeVal(const string& Value, const TypeRef& Type);
             ExpT MakeOp(i64 OpCode, const vector<ExpT>& Operands);
             ExpT MakeOp(i64 OpCode, const ExpT& Operand1);
             ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2);
@@ -204,16 +204,16 @@ namespace ESMC {
             ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
                         const ExpT& Operand3, const ExpT& Operand4);
 
-            ExpT MakeExists(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body);
-            ExpT MakeForAll(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body);
-            i64 MakeUF(const string& Name, const vector<ExprTypeRef>& Domain,
-                       const ExprTypeRef& Range);
+            ExpT MakeExists(const vector<TypeRef>& QVarTypes, const ExpT& Body);
+            ExpT MakeForAll(const vector<TypeRef>& QVarTypes, const ExpT& Body);
+            i64 MakeUF(const string& Name, const vector<TypeRef>& Domain,
+                       const TypeRef& Range);
 
 
-            bool CheckMessageType(const ExprTypeRef& MsgType) const;
-            const ExprTypeRef& GetUnifiedMType() const;
+            bool CheckMessageType(const TypeRef& MsgType) const;
+            const TypeRef& GetUnifiedMType() const;
 
-            const ExprTypeRef& GetPrimedType(const ExprTypeRef& Type) const;
+            const TypeRef& GetPrimedType(const TypeRef& Type) const;
 
             template <typename T, typename... ArgTypes>
             inline T*

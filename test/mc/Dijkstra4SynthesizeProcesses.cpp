@@ -72,7 +72,7 @@ const size_t NumProcesses = 3;
 vector<int> ProcessesToSynthesize = {0, 1, 2};
 
 // Messages
-vector<ExprTypeRef> WriteMsgs;
+vector<TypeRef> WriteMsgs;
 
 vector<ExpT> Guards;
 ExpT Legitimacy;
@@ -81,8 +81,8 @@ ExpT Prop3;
 vector<i64> GuardOps;
 vector<i64> UpdateOps;
 
-ExprTypeRef LegitimateAnnouncement;
-ExprTypeRef IllegitimateAnnouncement;
+TypeRef LegitimateAnnouncement;
+TypeRef IllegitimateAnnouncement;
 
 void DeclareMsgs(LabelledTS* TheLTS)
 {
@@ -91,7 +91,7 @@ void DeclareMsgs(LabelledTS* TheLTS)
 
     auto BoolType = TheLTS->MakeBoolType();
     for (size_t i = 0; i < NumProcesses; i++) {
-        vector<pair<string, ExprTypeRef>> fields { make_pair(string("Data"), BoolType),
+        vector<pair<string, TypeRef>> fields { make_pair(string("Data"), BoolType),
                                                    make_pair(string("Up"), BoolType) };
         string MsgName = string("Write") + to_string(i);
         WriteMsgs.push_back(TheLTS->MakeMsgType(MsgName, fields));
@@ -169,7 +169,7 @@ void DeclareProc0(LabelledTS* TheLTS)
                                        U0PayloadAccField);
     if (SynthesizeProcess) {
         auto Args = {D0Exp, D1Exp, U0Exp, U1Exp};
-        vector<ExprTypeRef> ArgTypes;
+        vector<TypeRef> ArgTypes;
         transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
                  [&](ExpT Arg) {return Arg->GetType();});
         auto GuardOp = Mgr->MakeUninterpretedFunction("Guard_" + ProcName,
@@ -282,7 +282,7 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
 
     if (SynthesizeProcess) {
         auto Args = {Dim1Exp, DiExp, Dip1Exp, UiExp, Uip1Exp};
-        vector<ExprTypeRef> ArgTypes;
+        vector<TypeRef> ArgTypes;
         transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
                   [&](ExpT Arg) {return Arg->GetType();});
         auto GuardOp = Mgr->MakeUninterpretedFunction("Guard1_" + ProcName,
@@ -333,7 +333,7 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
 
     if (SynthesizeProcess) {
         auto Args = {DiExp, Dip1Exp, UiExp, Uip1Exp};
-        vector<ExprTypeRef> ArgTypes;
+        vector<TypeRef> ArgTypes;
         transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
                   [&](ExpT Arg) {return Arg->GetType();});
         auto GuardOp = Mgr->MakeUninterpretedFunction("Guard2_" + ProcName,
@@ -463,7 +463,7 @@ void DeclareProcN(LabelledTS* TheLTS)
     if (SynthesizeProcess) {
         // auto Args = {Dim1Exp, DiExp, Uim1Exp, UiExp};
         auto Args = {Dim1Exp, DiExp, UiExp};
-        vector<ExprTypeRef> ArgTypes;
+        vector<TypeRef> ArgTypes;
         transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
                  [&](ExpT Arg) {return Arg->GetType();});
         auto GuardOp = Mgr->MakeUninterpretedFunction("Guard_" + ProcName,

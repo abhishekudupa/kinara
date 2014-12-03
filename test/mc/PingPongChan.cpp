@@ -68,7 +68,7 @@ int main()
     auto TrueExp = TheLTS->MakeTrue();
 
     // Add the message types
-    vector<pair<string, ExprTypeRef>> MsgFields;
+    vector<pair<string, TypeRef>> MsgFields;
     auto RangeType = TheLTS->MakeRangeType(0, 1);
     MsgFields.push_back(make_pair("Data", RangeType));
 

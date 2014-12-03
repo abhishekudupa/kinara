@@ -92,7 +92,7 @@ int main()
                                                                        CacheParam1));
 
     // Message types
-    vector<pair<string, ExprTypeRef>> MessageFields;
+    vector<pair<string, TypeRef>> MessageFields;
     auto GetXMsgType = TheLTS->MakeMsgTypes({ CacheParam, DirParam, AddressParam },
                                             TrueExp, "GetXMsgType", MessageFields, true);
     auto GetSMsgType = TheLTS->MakeMsgTypes({ CacheParam, DirParam, AddressParam },
@@ -1551,7 +1551,7 @@ int main()
     auto AddressIndex1 = TheLTS->MakeBoundVar(4, AddressType);
     auto AddressIndex2 = TheLTS->MakeBoundVar(5, AddressType);
 
-    vector<ExprTypeRef> InvQVarTypes = { AddressType, AddressType, DirIDType,
+    vector<TypeRef> InvQVarTypes = { AddressType, AddressType, DirIDType,
                                          DirIDType, CacheIDType, CacheIDType };
 
     auto CacheExp1 = TheLTS->MakeVar("Cache", CacheType);

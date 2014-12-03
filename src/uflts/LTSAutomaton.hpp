@@ -42,7 +42,7 @@
 
 #include "../utils/UIDGenerator.hpp"
 
-#include "LTSTypes.hpp"
+#include "LTSDecls.hpp"
 #include "LTSState.hpp"
 #include "SymbolTable.hpp"
 
@@ -58,7 +58,7 @@ namespace ESMC {
             ExpT Constraint;
             SymbolTable SymTab;
             map<string, LTSState> States;
-            ExprTypeRef StateType;
+            TypeRef StateType;
             vector<vector<ExpT>> ParamInsts;
             vector<MgrT::SubstMapT> ParamSubsts;
             u32 ClassID;
@@ -81,7 +81,7 @@ namespace ESMC {
 
             const string& GetName() const;
             vector<LTSState> GetStates() const;
-            const ExprTypeRef& GetStateType() const;
+            const TypeRef& GetStateType() const;
             const vector<vector<ExpT>>& GetParamInsts() const;
             const vector<MgrT::SubstMapT>& GetParamSubsts() const;
             u32 GetNumInstances() const;

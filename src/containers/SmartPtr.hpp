@@ -417,7 +417,7 @@ namespace ESMC {
     inline CSmartPtr<T>::CSmartPtr(SmartPtr<T>&& Other)
         : CSmartPtr()
     {
-        swap(Ptr_, Other.Ptr_);
+        swap(const_cast<T*>(Ptr_), Other.Ptr_);
     }
 
     template <typename T>

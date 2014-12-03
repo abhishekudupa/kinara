@@ -47,7 +47,7 @@
 
 #include "LTSTermSemanticizer.hpp"
 #include "SymbolTable.hpp"
-#include "LTSTypes.hpp"
+#include "LTSDecls.hpp"
 #include "LTSAssign.hpp"
 
 
@@ -68,7 +68,7 @@ namespace ESMC {
                     }
                     // We don't want to return field access vars
                     auto Type = ExpAsVar->GetVarType();
-                    auto TypeAsFA = Type->As<Exprs::ExprFieldAccessType>();
+                    auto TypeAsFA = Type->As<FieldAccessType>();
                     return (TypeAsFA == nullptr);
                 }
             };
@@ -84,7 +84,7 @@ namespace ESMC {
                         return false;
                     }
                     auto Type = ExpAsConst->GetConstType();
-                    return (Type->Is<Exprs::ExprSymmetricType>());
+                    return (Type->Is<SymmetricType>());
                 };
             };
 
@@ -98,13 +98,13 @@ namespace ESMC {
                 vector<ExpT> ExpStack;
                 MgrT* Mgr;
                 string MsgVarName;
-                ExprTypeRef MsgRecType;
-                ExprTypeRef UnifiedMType;
+                TypeRef MsgRecType;
+                TypeRef UnifiedMType;
 
             public:
                 MsgTransformer(MgrT* Mgr, const string& MsgVarName,
-                               const ExprTypeRef& MsgRecType,
-                               const ExprTypeRef& UnifiedMType);
+                               const TypeRef& MsgRecType,
+                               const TypeRef& UnifiedMType);
                 virtual ~MsgTransformer();
 
                 virtual void VisitVarExpression(const VarExpT* Exp) override;
@@ -117,8 +117,8 @@ namespace ESMC {
                 static ExpT Do(MgrT* Mgr,
                                const ExpT& Exp,
                                const string& MsgVarName,
-                               const ExprTypeRef& MsgRecType,
-                               const ExprTypeRef& UnifiedMType);
+                               const TypeRef& MsgRecType,
+                               const TypeRef& UnifiedMType);
             };
 
             class ArrayRValueTransformer : public VisitorBaseT
@@ -146,12 +146,12 @@ namespace ESMC {
             private:
                 MgrT* Mgr;
                 const vector<u08>& PermVec;
-                map<ExprTypeRef, u32> TypeOffsets;
+                map<TypeRef, u32> TypeOffsets;
                 vector<ExpT> ExpStack;
 
             public:
                 ExpressionPermuter(MgrT* Mgr, const vector<u08>& PermVec,
-                                   const map<ExprTypeRef, u32>& TypeOffsets);
+                                   const map<TypeRef, u32>& TypeOffsets);
                 virtual ~ExpressionPermuter();
 
                 virtual void VisitVarExpression(const VarExpT* Exp) override;
@@ -163,7 +163,7 @@ namespace ESMC {
 
                 static ExpT Do(MgrT* Mgr, const ExpT& Exp,
                                const vector<u08>& PermVec,
-                               const map<ExprTypeRef, u32>& TypeOffsets);
+                               const map<TypeRef, u32>& TypeOffsets);
 
             };
 
@@ -215,7 +215,7 @@ namespace ESMC {
                     throw ESMCError((string)"Parameters to EFSMS must be variable expressions");
                 }
                 auto Type = ParamAsVar->GetVarType();
-                if ((!Type->Is<Exprs::ExprSymmetricType>())) {
+                if ((!Type->Is<SymmetricType>())) {
                     // TODO: Extend this to range types as well some day.
                     throw ESMCError((string)"Parameter types must be symmetric types");
                 }
@@ -236,7 +236,7 @@ namespace ESMC {
 
             CheckExpr(Constraint, SymTab, Mgr);
             CheckParamPurity(Constraint, SymTab, Mgr);
-            if (!Constraint->GetType()->Is<Exprs::ExprBoolType>()) {
+            if (!Constraint->GetType()->Is<BooleanType>()) {
                 throw ESMCError((string)"Constraints on parameters must be a boolean expression");
             }
         }
@@ -250,9 +250,9 @@ namespace ESMC {
                     throw ESMCError((string)"Parameters to EFSMS must be variable expressions");
                 }
                 auto Type = ParamAsVar->GetVarType();
-                if ((!Type->Is<Exprs::ExprSymmetricType>()) &&
-                    (!Type->Is<Exprs::ExprRangeType>()) &&
-                    (!Type->Is<Exprs::ExprEnumType>())) {
+                if ((!Type->Is<SymmetricType>()) &&
+                    (!Type->Is<RangeType>()) &&
+                    (!Type->Is<EnumType>())) {
                     throw ESMCError((string)"Parameter types must be symmetric, range or enum");
                 }
 
@@ -405,7 +405,7 @@ namespace ESMC {
                                     "cannot be simplified?\nConstraint:\n" +
                                     Constraint->ToString());
                 }
-                if (SimpAsConst->GetType()->As<Exprs::ExprBoolType>() == nullptr) {
+                if (SimpAsConst->GetType()->As<BooleanType>() == nullptr) {
                     throw InternalError((string)"Expected a boolean constant.\nAt: " +
                                         __FILE__ + ":" + to_string(__LINE__));
                 }
@@ -420,14 +420,14 @@ namespace ESMC {
             return Retval;
         }
 
-        static inline ExprTypeRef InstantiateType(const ExprTypeRef& PType,
+        static inline TypeRef InstantiateType(const TypeRef& PType,
                                                   const vector<ExpT>& Params,
                                                   MgrT* Mgr)
         {
             if (Params.size() == 0) {
                 return PType;
             } else {
-                return Mgr->InstantiateType(PType, Params);
+                return Mgr->GetSemanticizer()->InstantiateType(PType, Params);
             }
         }
 
@@ -468,21 +468,21 @@ namespace ESMC {
         {
             auto VarType = Exp->GetType();
             auto Mgr = Exp->GetMgr();
-            if (VarType->Is<Exprs::ExprScalarType>()) {
+            if (VarType->Is<ScalarType>()) {
                 Expansions.insert(Exp);
                 return;
             }
 
-            if (VarType->Is<Exprs::ExprRecordType>() ||
-                VarType->Is<Exprs::ExprParametricType>()) {
+            if (VarType->Is<RecordType>() ||
+                VarType->Is<ParametricType>()) {
 
-                auto BaseType = (VarType->Is<ExprRecordType>() ?
+                auto BaseType = (VarType->Is<RecordType>() ?
                                  VarType :
-                                 VarType->SAs<Exprs::ExprParametricType>()->GetBaseType());
+                                 VarType->SAs<ParametricType>()->GetBaseType());
 
-                auto TypeAsRec = BaseType->SAs<Exprs::ExprRecordType>();
+                auto TypeAsRec = BaseType->SAs<RecordType>();
                 auto const& Fields = TypeAsRec->GetMemberVec();
-                auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+                auto FAType = Mgr->MakeType<FieldAccessType>();
 
                 for (auto const& Field : Fields) {
                     auto FAVar = Mgr->MakeVar(Field.first, FAType);
@@ -493,8 +493,8 @@ namespace ESMC {
                 return;
             }
 
-            if (VarType->Is<Exprs::ExprArrayType>()) {
-                auto TypeAsArray = VarType->SAs<Exprs::ExprArrayType>();
+            if (VarType->Is<ArrayType>()) {
+                auto TypeAsArray = VarType->SAs<ArrayType>();
                 auto const& IndexType = TypeAsArray->GetIndexType();
                 auto const& IndexElems = IndexType->GetElementsNoUndef();
 
@@ -590,8 +590,8 @@ namespace ESMC {
             auto IndexExpAsOp = IndexExp->SAs<OpExpression>();
             IndexExp = IndexExpAsOp->GetChildren()[1];
             auto ArrayExp = IndexExpAsOp->GetChildren()[0];
-            auto ArrayType = ArrayExp->GetType()->SAs<ExprArrayType>();
-            auto IndexType = ArrayType->GetIndexType();
+            auto ArrType = ArrayExp->GetType()->SAs<ArrayType>();
+            auto IndexType = ArrType->GetIndexType();
             auto const& IndexElems = IndexType->GetElementsNoUndef();
             const u32 NumElems = IndexElems.size();
             IndexType = IndexExp->GetType();
@@ -667,8 +667,8 @@ namespace ESMC {
             for (auto const& Exp : TopLevelIndices) {
                 auto ExpAsOp = Exp->SAs<OpExpression>();
                 auto ArrayExp = ExpAsOp->GetChildren()[0];
-                auto ArrayType = ArrayExp->GetType()->As<ExprArrayType>();
-                auto Type = ArrayType->GetIndexType();
+                auto ArrType = ArrayExp->GetType()->As<ArrayType>();
+                auto Type = ArrType->GetIndexType();
                 CPTuples.push_back(Type->GetElementsNoUndef());
             }
 
@@ -680,8 +680,8 @@ namespace ESMC {
                 for (auto const& Exp : TopLevelIndices) {
                     auto ExpAsOp = Exp->SAs<OpExpression>();
                     auto ArrayExp = ExpAsOp->GetChildren()[0];
-                    auto ArrayType = ArrayExp->GetType()->As<ExprArrayType>();
-                    auto IndexType = ArrayType->GetIndexType();
+                    auto ArrType = ArrayExp->GetType()->As<ArrayType>();
+                    auto IndexType = ArrType->GetIndexType();
                     auto Idx = ExpAsOp->GetChildren()[1];
                     auto CurVal = Mgr->MakeVal(ProdTuple[i], IndexType);
                     auto Constraint = Mgr->MakeExpr(LTSOps::OpEQ, Idx, CurVal);
@@ -744,7 +744,7 @@ namespace ESMC {
         }
 
         static inline ExpT MakeSum(const vector<ExpT>& Summands,
-                                   MgrT* Mgr, const ExprTypeRef& Type)
+                                   MgrT* Mgr, const TypeRef& Type)
         {
             if (Summands.size() == 0) {
                 return Mgr->MakeVal("0", Type);

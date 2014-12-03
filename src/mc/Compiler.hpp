@@ -42,7 +42,7 @@
 
 #include "../tpinterface/TheoremProver.hpp"
 #include "../common/FwdDecls.hpp"
-#include "../uflts/LTSTypes.hpp"
+#include "../uflts/LTSDecls.hpp"
 
 namespace ESMC {
     namespace MC {

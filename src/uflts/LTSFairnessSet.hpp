@@ -43,7 +43,7 @@
 #include "../containers/RefCountable.hpp"
 #include "../utils/UIDGenerator.hpp"
 
-#include "LTSTypes.hpp"
+#include "LTSDecls.hpp"
 
 namespace ESMC {
     namespace LTS {

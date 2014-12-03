@@ -66,12 +66,12 @@ namespace ESMC {
 
             EFSMBase::FreezeStates();
             auto Mgr = TheLTS->GetMgr();
-            IndexType = Mgr->MakeType<ExprRangeType>(0, Capacity - 1);
+            IndexType = Mgr->MakeType<RangeType>(0, Capacity - 1);
             ValType = TheLTS->GetUnifiedMType();
-            ArrayType = Mgr->MakeType<ExprArrayType>(IndexType, ValType);
-            CountType = Mgr->MakeType<ExprRangeType>(0, Capacity);
+            ArrType = Mgr->MakeType<ArrayType>(IndexType, ValType);
+            CountType = Mgr->MakeType<RangeType>(0, Capacity);
 
-            EFSMBase::AddVariable("MsgBuffer", ArrayType);
+            EFSMBase::AddVariable("MsgBuffer", ArrType);
             if (Ordered) {
                 EFSMBase::AddVariable("MsgCount", CountType);
             }
@@ -83,7 +83,7 @@ namespace ESMC {
             EFSMBase::FreezeVars();
 
             CountExp = Mgr->MakeVar("MsgCount", CountType);
-            ArrayExp = Mgr->MakeVar("MsgBuffer", ArrayType);
+            ArrayExp = Mgr->MakeVar("MsgBuffer", ArrType);
             IndexExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, CountExp);
             LastMsgExp = Mgr->MakeVar("LastMsg", ValType);
             MaxChanExp = Mgr->MakeVal(to_string(Capacity), CountType);
@@ -95,7 +95,7 @@ namespace ESMC {
             if (Ordered) {
                 InitUpdates.push_back(new LTSAssignSimple(CountExp, Mgr->MakeVal("0", CountType)));
             }
-            InitUpdates.push_back(new LTSAssignSimple(ArrayExp, Mgr->MakeVal("clear", ArrayType)));
+            InitUpdates.push_back(new LTSAssignSimple(ArrayExp, Mgr->MakeVal("clear", ArrType)));
             if (Lossy) {
                 InitUpdates.push_back(new LTSAssignSimple(LastMsgExp,
                                                           Mgr->MakeVal("clear", ValType)));
@@ -136,13 +136,13 @@ namespace ESMC {
 
         inline void ChannelEFSM::MakeInputTransition(u32 InstanceID,
                                                      const MgrT::SubstMapT& SubstMap,
-                                                     const ExprTypeRef& MessageType,
+                                                     const TypeRef& MessageType,
                                                      const set<string>& InputFairnessSets)
         {
             auto Mgr = TheLTS->GetMgr();
-            auto const& UMType = TheLTS->GetUnifiedMType()->As<ExprUnionType>();
+            auto const& UMType = TheLTS->GetUnifiedMType()->As<UnionType>();
 
-            auto RecType = MessageType->As<ExprRecordType>();
+            auto RecType = MessageType->As<RecordType>();
             if (RecType == nullptr) {
                 throw ESMCError((string)"Expected Record type as message type " +
                                 "in ChannelEFSM::MakeInputTransition()");
@@ -170,7 +170,7 @@ namespace ESMC {
                     }
                 }
 
-                auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+                auto FAType = Mgr->MakeType<FieldAccessType>();
                 vector<LTSAssignRef> Updates;
                 vector<LTSAssignRef> NoCountUpdates;
                 string InMsgName = "__inmsg__";
@@ -294,13 +294,13 @@ namespace ESMC {
 
         void ChannelEFSM::MakeOutputTransition(u32 InstanceID,
                                                const MgrT::SubstMapT& SubstMap,
-                                               const ExprTypeRef& MessageType,
+                                               const TypeRef& MessageType,
                                                const set<string>& NonDupOutputFairnessSets,
                                                const set<string>& DupOutputFairnessSets)
         {
             auto Mgr = TheLTS->GetMgr();
             auto PMessageType = TheLTS->GetPrimedType(MessageType);
-            auto UMType = TheLTS->GetUnifiedMType()->As<ExprUnionType>();
+            auto UMType = TheLTS->GetUnifiedMType()->As<UnionType>();
 
             vector<ExpT> ChooseExps;
             if (!Ordered) {
@@ -314,7 +314,7 @@ namespace ESMC {
             for (auto const& ChooseExp : ChooseExps) {
                 auto ChooseIndexExp = Mgr->MakeExpr(LTSOps::OpIndex, ArrayExp, ChooseExp);
                 auto TrueExp = Mgr->MakeTrue();
-                auto FAType = Mgr->MakeType<ExprFieldAccessType>();
+                auto FAType = Mgr->MakeType<FieldAccessType>();
                 auto FieldVar = Mgr->MakeVar(UMType->GetTypeIDFieldName(), FAType);
                 auto FieldExp = Mgr->MakeExpr(LTSOps::OpField, ChooseIndexExp, FieldVar);
 
@@ -364,7 +364,7 @@ namespace ESMC {
                         auto Cond = Mgr->MakeExpr(LTSOps::OpGE, Mgr->MakeVal(to_string(i),
                                                                              IndexType),
                                                   ChooseExp);
-                        auto const& Fields = ValType->SAs<ExprRecordType>()->GetMemberVec();
+                        auto const& Fields = ValType->SAs<RecordType>()->GetMemberVec();
                         for (auto const& Field : Fields) {
                             auto FieldVar = Mgr->MakeVar(Field.first, FAType);
                             auto IExp = Mgr->MakeVal(to_string(i), IndexType);
@@ -413,7 +413,7 @@ namespace ESMC {
             }
         }
 
-        void ChannelEFSM::AddMsg(const ExprTypeRef& MessageType,
+        void ChannelEFSM::AddMsg(const TypeRef& MessageType,
                                  const vector<ExpT>& Params,
                                  LTSFairnessType MessageFairness,
                                  LossDupFairnessType LossDupFairness)
@@ -479,7 +479,7 @@ namespace ESMC {
 
         void ChannelEFSM::AddMsgs(const vector<ExpT> NewParams,
                                   const ExpT& Constraint,
-                                  const ExprTypeRef& MessageType,
+                                  const TypeRef& MessageType,
                                   const vector<ExpT>& MessageParams,
                                   LTSFairnessType MessageFairness,
                                   LossDupFairnessType LossDupFairness)
@@ -567,7 +567,7 @@ namespace ESMC {
             }
         }
 
-        SymmMsgDeclRef ChannelEFSM::AddInputMsg(const ExprTypeRef& MessageType,
+        SymmMsgDeclRef ChannelEFSM::AddInputMsg(const TypeRef& MessageType,
                                                 const vector<ExpT>& Params)
         {
             throw ESMCError((string)"ChannelEFSM::AddInputMsg() should not be called");
@@ -575,13 +575,13 @@ namespace ESMC {
 
         SymmMsgDeclRef ChannelEFSM::AddInputMsgs(const vector<ExpT>& NewParams,
                                                  const ExpT& Constraint,
-                                                 const ExprTypeRef& MessageType,
+                                                 const TypeRef& MessageType,
                                                  const vector<ExpT>& MessageParams)
         {
             throw ESMCError((string)"ChannelEFSM::AddInputMsgs() should not be called");
         }
 
-        SymmMsgDeclRef ChannelEFSM::AddOutputMsg(const ExprTypeRef& MessageType,
+        SymmMsgDeclRef ChannelEFSM::AddOutputMsg(const TypeRef& MessageType,
                                                  const vector<ExpT>& Params)
         {
             throw ESMCError((string)"ChannelEFSM::AddOutputMsg() should not be called");
@@ -589,14 +589,14 @@ namespace ESMC {
 
         SymmMsgDeclRef ChannelEFSM::AddOutputMsgs(const vector<ExpT>& NewParams,
                                                   const ExpT& Constraint,
-                                                  const ExprTypeRef& MessageType,
+                                                  const TypeRef& MessageType,
                                                   const vector<ExpT>& MessageParams)
         {
             throw ESMCError((string)"ChannelEFSM::AddOutputMsgs() should not be called");
         }
 
 
-        void ChannelEFSM::AddVariable(const string& VarName, const ExprTypeRef& VarType)
+        void ChannelEFSM::AddVariable(const string& VarName, const TypeRef& VarType)
         {
             throw ESMCError((string)"ChannelEFSM::AddVariable() should not be called");
         }
@@ -605,7 +605,7 @@ namespace ESMC {
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
-                                             const ExprTypeRef& MessageType,
+                                             const TypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
                                              bool Tentative)
         {
@@ -618,7 +618,7 @@ namespace ESMC {
                                               const ExpT& Guard,
                                               const vector<LTSAssignRef>& Updates,
                                               const string& MessageName,
-                                              const ExprTypeRef& MessageType,
+                                              const TypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
                                               bool Tentative)
         {
@@ -629,7 +629,7 @@ namespace ESMC {
                                               const ExpT& Guard,
                                               const vector<LTSAssignRef>& Updates,
                                               const string& MessageName,
-                                              const ExprTypeRef& MessageType,
+                                              const TypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
                                               const set<string>& AddToFairnessSets,
                                               bool Tentative)
@@ -643,7 +643,7 @@ namespace ESMC {
                                                const ExpT& Guard,
                                                const vector<LTSAssignRef>& Updates,
                                                const string& MessageName,
-                                               const ExprTypeRef& MessageType,
+                                               const TypeRef& MessageType,
                                                const vector<ExpT>& MessageParams,
                                                LTSFairnessType MessageFairness,
                                                SplatFairnessType SplatFairness,

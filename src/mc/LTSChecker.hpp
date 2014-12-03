@@ -43,7 +43,7 @@
 #include <boost/functional/hash.hpp>
 
 #include "../common/FwdDecls.hpp"
-#include "../uflts/LTSTypes.hpp"
+#include "../uflts/LTSDecls.hpp"
 
 #include "AQStructure.hpp"
 

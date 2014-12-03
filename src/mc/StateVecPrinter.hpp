@@ -52,7 +52,7 @@ namespace ESMC {
         private:
             u32 Offset;
             u32 Size;
-            ExprTypeRef Type;
+            TypeRef Type;
             i64 Low;
             i64 High;
             vector<string> MsgNameMap;
@@ -60,7 +60,7 @@ namespace ESMC {
 
         public:
             ScalarPrinter();
-            ScalarPrinter(u32 Offset, const ExprTypeRef& Type);
+            ScalarPrinter(u32 Offset, const TypeRef& Type);
             ScalarPrinter(u32 Offset, const vector<string> MsgNameMap);
             ScalarPrinter(const ScalarPrinter& Other);
             ~ScalarPrinter();

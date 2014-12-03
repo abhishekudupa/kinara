@@ -28,7 +28,7 @@ int main()
     int TopFloorInt = 3;
     auto TheLTS = new LabelledTS();
     auto True = TheLTS->MakeTrue();
-    map<string, ExprTypeRef> Msgs;
+    map<string, TypeRef> Msgs;
     auto FloorType = TheLTS->MakeRangeType(1, TopFloorInt);
     auto TopFloor = TheLTS->MakeVal(to_string(TopFloorInt), FloorType);
 

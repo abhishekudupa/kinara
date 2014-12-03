@@ -78,7 +78,7 @@ int main()
     // "send" with data from sender client to sender process, both safety and liveness monitors listen to this
     // "receive" with data from receiver to receiver client, both safety and liveness monitors listen
 
-    vector<pair<string, ExprTypeRef>> DataMsgFields;
+    vector<pair<string, TypeRef>> DataMsgFields;
     DataMsgFields.push_back(make_pair("Data", DataType));
     auto DataPort = TheLTS->MakeMsgType("DataPort", DataMsgFields, false);
     auto DataPortExp = TheLTS->MakeVar("DataPort", DataPort);
@@ -92,7 +92,7 @@ int main()
             DataFieldExp);
 
 
-    vector<pair<string, ExprTypeRef>> DataTagPortFields;
+    vector<pair<string, TypeRef>> DataTagPortFields;
     DataTagPortFields.push_back(make_pair("Data", DataType));
     DataTagPortFields.push_back(make_pair("Tag", TagType));
     auto DataTagPort = TheLTS->MakeMsgType("DataTagPort", DataTagPortFields, true);
@@ -107,7 +107,7 @@ int main()
     // This should work for Primed data tag messages too.
 
 
-    vector<pair<string, ExprTypeRef>> TagMsgFields;
+    vector<pair<string, TypeRef>> TagMsgFields;
     TagMsgFields.push_back(make_pair("Tag", TagType));
     auto TagPort = TheLTS->MakeMsgType("TagPort", TagMsgFields, true);
     auto TagPortP = TheLTS->GetNamedType("TagPort'");
@@ -116,7 +116,7 @@ int main()
     auto TagPortTagFieldExp = TheLTS->MakeOp(LTSOps::OpField, TagPortExp, TagAccFieldExp);
     auto TagPortPTagFieldExp = TheLTS->MakeOp(LTSOps::OpField, TagPortPExp, TagAccFieldExp);
 
-    vector<pair<string, ExprTypeRef>> TimeoutFields;
+    vector<pair<string, TypeRef>> TimeoutFields;
     TimeoutFields.push_back(make_pair("Dummy", UnitType));
     auto TimeOutPort = TheLTS->MakeMsgType("TimeOutPort", TimeoutFields, false);
     auto TimeOutPortExp = TheLTS->MakeVar("TimeOutPort", TimeOutPort);

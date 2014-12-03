@@ -40,7 +40,7 @@
 #if !defined ESMC_LTS_CHANNEL_EFSM_HPP_
 #define ESMC_LTS_CHANNEL_EFSM_HPP_
 
-#include "LTSTypes.hpp"
+#include "LTSDecls.hpp"
 #include "LTSState.hpp"
 #include "SymbolTable.hpp"
 
@@ -60,10 +60,10 @@ namespace ESMC {
             bool Duplicating;
             bool Blocking;
 
-            ExprTypeRef ArrayType;
-            ExprTypeRef ValType;
-            ExprTypeRef IndexType;
-            ExprTypeRef CountType;
+            TypeRef ArrType;
+            TypeRef ValType;
+            TypeRef IndexType;
+            TypeRef CountType;
 
             ExpT ArrayExp;
             ExpT IndexExp;
@@ -81,12 +81,12 @@ namespace ESMC {
 
             inline void MakeInputTransition(u32 InstanceID,
                                             const MgrT::SubstMapT& SubstMap,
-                                            const ExprTypeRef& MessageType,
+                                            const TypeRef& MessageType,
                                             const set<string>& AddToFairnessSets);
 
             inline void MakeOutputTransition(u32 InstanceID,
                                              const MgrT::SubstMapT& SubstMap,
-                                             const ExprTypeRef& MessageType,
+                                             const TypeRef& MessageType,
                                              const set<string>& NonDupOutputFairnessSets,
                                              const set<string>& DupOutputFairnessSets);
 
@@ -105,46 +105,46 @@ namespace ESMC {
             virtual void FreezeVars() override;
             virtual void AddFairnessSet(const string& Name, FairSetFairnessType Fairness) override;
 
-            void AddMsg(const ExprTypeRef& MessageType,
+            void AddMsg(const TypeRef& MessageType,
                         const vector<ExpT>& Params = vector<ExpT>(),
                         LTSFairnessType MessageFairness = LTSFairnessType::None,
                         LossDupFairnessType LossDupFairness = LossDupFairnessType::None);
 
             void AddMsgs(const vector<ExpT> NewParams,
                          const ExpT& Constraint,
-                         const ExprTypeRef& MessageType,
+                         const TypeRef& MessageType,
                          const vector<ExpT>& MessageParams = vector<ExpT>(),
                          LTSFairnessType MessageFairness = LTSFairnessType::None,
                          LossDupFairnessType LossDupFairness = LossDupFairnessType::None);
 
 
             virtual SymmMsgDeclRef
-            AddInputMsg(const ExprTypeRef& MessageType,
+            AddInputMsg(const TypeRef& MessageType,
                         const vector<ExpT>& Params = vector<ExpT>()) override;
 
             virtual SymmMsgDeclRef
             AddInputMsgs(const vector<ExpT>& NewParams,
                          const ExpT& Constraint,
-                         const ExprTypeRef& MessageType,
+                         const TypeRef& MessageType,
                          const vector<ExpT>& MessageParams) override;
 
             virtual SymmMsgDeclRef
-            AddOutputMsg(const ExprTypeRef& MessageType,
+            AddOutputMsg(const TypeRef& MessageType,
                          const vector<ExpT>& Params = vector<ExpT>()) override;
 
             virtual SymmMsgDeclRef
             AddOutputMsgs(const vector<ExpT>& NewParams,
                           const ExpT& Constraint,
-                          const ExprTypeRef& MessageType,
+                          const TypeRef& MessageType,
                           const vector<ExpT>& MessageParams) override;
 
-            virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType) override;
+            virtual void AddVariable(const string& VarName, const TypeRef& VarType) override;
 
             virtual void AddInputTransition(const string& InitState,
                                             const ExpT& Guard,
                                             const vector<LTSAssignRef>& Updates,
                                             const string& MessageName,
-                                            const ExprTypeRef& MessageType,
+                                            const TypeRef& MessageType,
                                             const vector<ExpT>& MessageParams,
                                             bool Tentative = false) override;
 
@@ -154,7 +154,7 @@ namespace ESMC {
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
-                                             const ExprTypeRef& MessageType,
+                                             const TypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
                                              bool Tentative = false) override;
 
@@ -162,7 +162,7 @@ namespace ESMC {
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
-                                             const ExprTypeRef& MessageType,
+                                             const TypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
                                              const set<string>& AddToFairnessSets =
                                              set<string>(),
@@ -174,7 +174,7 @@ namespace ESMC {
                                               const ExpT& Guard,
                                               const vector<LTSAssignRef>& Updates,
                                               const string& MessageName,
-                                              const ExprTypeRef& MessageType,
+                                              const TypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
                                               LTSFairnessType MessageFairness,
                                               SplatFairnessType SplatFairness,

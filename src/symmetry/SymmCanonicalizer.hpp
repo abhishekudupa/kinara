@@ -51,7 +51,7 @@ namespace ESMC {
 
         using ESMC::MC::StateFactory;
         using ESMC::MC::StateVec;
-        using ESMC::Exprs::ExprTypeRef;
+        using ESMC::LTS::TypeRef;
         using ESMC::LTS::LabelledTS;
         using ESMC::LTS::ExpT;
         using ESMC::MC::StateVecPrinter;
@@ -87,7 +87,7 @@ namespace ESMC {
             u32 GetTypeOffset() const;
             u32 GetPermSize() const;
 
-            static PermuterBase* MakePermuter(u32 Offset, const ExprTypeRef& Type,
+            static PermuterBase* MakePermuter(u32 Offset, const TypeRef& Type,
                                               const LabelledTS* TheLTS);
         };
 
@@ -101,7 +101,7 @@ namespace ESMC {
             vector<PermuterBase*> ElemPermuters;
 
         public:
-            ArrayPermuter(u32 Offset, const ExprTypeRef& ArrayType,
+            ArrayPermuter(u32 Offset, const TypeRef& ArrType,
                           const LabelledTS* TheLTS);
             virtual ~ArrayPermuter();
 
@@ -120,7 +120,7 @@ namespace ESMC {
             vector<PermuterBase*> ElemPermuters;
 
         public:
-            RecordPermuter(u32 Offset, const ExprTypeRef& RecordType,
+            RecordPermuter(u32 Offset, const TypeRef& RecType,
                            const LabelledTS* TheLTS);
             virtual ~RecordPermuter();
 
@@ -137,7 +137,7 @@ namespace ESMC {
             u32 TypeSize;
 
         public:
-            MTypePermuter(u32 Offset, const ExprTypeRef& Type,
+            MTypePermuter(u32 Offset, const TypeRef& Type,
                           const LabelledTS* TheLTS);
 
             virtual ~MTypePermuter();
@@ -149,7 +149,7 @@ namespace ESMC {
         class SymmTypePermuter : public PermuterBase
         {
         public:
-            SymmTypePermuter(u32 Offset, const ExprTypeRef& Type,
+            SymmTypePermuter(u32 Offset, const TypeRef& Type,
                              const LabelledTS* TheLTS);
             virtual ~SymmTypePermuter();
 
@@ -184,7 +184,7 @@ namespace ESMC {
             u32 InstanceID;
 
         public:
-            ChanBufferSorter(u32 Offset, const ExprTypeRef& ChanBufferType,
+            ChanBufferSorter(u32 Offset, const TypeRef& ChanBufferType,
                              u32 Capacity, u32 PermVecOffset,
                              ChannelEFSM* ChanEFSM, u32 InstanceID);
             ~ChanBufferSorter();
