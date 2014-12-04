@@ -53,6 +53,8 @@
 namespace ESMC {
     namespace LTS {
 
+        using namespace Decls;
+
         namespace Detail {
 
             struct VarGatherer

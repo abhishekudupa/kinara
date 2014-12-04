@@ -48,6 +48,8 @@
 namespace ESMC {
     namespace LTS {
 
+        using namespace Decls;
+
         class LabelledTS
         {
         private:

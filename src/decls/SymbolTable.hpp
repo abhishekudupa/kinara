@@ -50,7 +50,9 @@
 namespace ESMC {
     namespace Decls {
 
-        class STSTDeclBase : public RefCountable
+        using namespace LTS;
+
+        class STDeclBase : public RefCountable
         {
         private:
             string DeclName;
@@ -62,8 +64,8 @@ namespace ESMC {
             virtual void ComputeHashValue() const = 0;
 
         public:
-            STSTDeclBase(const string& DeclName);
-            virtual ~STSTDeclBase();
+            STDeclBase(const string& DeclName);
+            virtual ~STDeclBase();
 
             const string& GetDeclName() const;
 

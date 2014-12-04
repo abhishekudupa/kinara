@@ -41,6 +41,9 @@
 
 namespace ESMC {
     namespace LTS {
+
+        using namespace Decls;
+
         namespace Detail {
 
             MsgTransformer::MsgTransformer(MgrT* Mgr, const string& MsgVarName,

@@ -49,6 +49,8 @@
 namespace ESMC {
     namespace LTS {
 
+        using namespace Decls;
+
         class AutomatonBase
         {
         protected:
