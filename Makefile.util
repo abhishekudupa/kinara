@@ -42,7 +42,7 @@ FLEX=flex
 
 default: debug
 
-all: eoptlto eopt debug fulllto
+all: fulllto eoptlto eopt debug
 
 opt:
 	@echo "Building opt flavor..."
@@ -82,7 +82,7 @@ eproflto:
 
 fulllto:
 	@echo "Building fulllto flavor..."
-	@OPTFLAGS="-O3 -pg -flto -flto-compression-level=9" LTO_BUILD="yes" FULL_LTO_BUILD="yes" BUILD_SUFFIX=fulllto $(MAKE) --no-print-directory toplevel
+	@OPTFLAGS="-O3 -flto -flto-compression-level=9" LTO_BUILD="yes" FULL_LTO_BUILD="yes" BUILD_SUFFIX=fulllto $(MAKE) --no-print-directory toplevel
 
 fullltoprof:
 	@echo "Building fullltoprof flavor..."

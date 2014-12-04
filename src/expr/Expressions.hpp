@@ -2288,20 +2288,24 @@ namespace ESMC {
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::MakeTrue(const E& ExtVal)
         {
-            return ExpCache.template Get<ConstExpression<E, S>>(this,
-                                                                "true",
-                                                                Sem->MakeBoolType(),
-                                                                ExtVal);
+            auto Retval = ExpCache.template Get<ConstExpression<E, S>>(this,
+                                                                       "true",
+                                                                       Sem->MakeBoolType(),
+                                                                       ExtVal);
+            Sem->TypeCheck(Retval);
+            return Retval;
         }
 
         template <typename E, template <typename> class S>
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::MakeFalse(const E& ExtVal)
         {
-            return ExpCache.template Get<ConstExpression<E, S>>(this,
-                                                                "false",
-                                                                Sem->MakeBoolType(),
-                                                                ExtVal);
+            auto Retval = ExpCache.template Get<ConstExpression<E, S>>(this,
+                                                                       "false",
+                                                                       Sem->MakeBoolType(),
+                                                                       ExtVal);
+            Sem->TypeCheck(Retval);
+            return Retval;
         }
 
         template <typename E, template<typename> class S>
