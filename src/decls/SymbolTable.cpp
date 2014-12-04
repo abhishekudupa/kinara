@@ -43,26 +43,26 @@
 #include "SymbolTable.hpp"
 
 namespace ESMC {
-    namespace LTS {
+    namespace Decls {
 
-        DeclBase::DeclBase(const string& DeclName)
+        STDeclBase::STDeclBase(const string& DeclName)
             : DeclName(DeclName),
               HashCode(0), HashValid(false)
         {
             // Nothing here
         }
 
-        DeclBase::~DeclBase()
+        STDeclBase::~STDeclBase()
         {
             // Nothing here
         }
 
-        const string& DeclBase::GetDeclName() const
+        const string& STDeclBase::GetDeclName() const
         {
             return DeclName;
         }
 
-        u64 DeclBase::Hash() const
+        u64 STDeclBase::Hash() const
         {
             if (!HashValid) {
                 ComputeHashValue();
@@ -72,7 +72,7 @@ namespace ESMC {
         }
 
         ParamDecl::ParamDecl(const string& Name, const TypeRef& Type)
-            : DeclBase(Name), ParamType(Type)
+            : STDeclBase(Name), ParamType(Type)
         {
             if (!(Type->Is<SymmetricType>() ||
                   Type->Is<RangeType>())) {
@@ -98,7 +98,7 @@ namespace ESMC {
             return ParamType;
         }
 
-        bool ParamDecl::Equals(const DeclBase& Other) const
+        bool ParamDecl::Equals(const STDeclBase& Other) const
         {
             if (!Other.Is<ParamDecl>()) {
                 return false;
@@ -108,20 +108,20 @@ namespace ESMC {
                     OtherPtr->GetType() == ParamType);
         }
 
-        MsgDeclBase::MsgDeclBase(const string& Name, const TypeRef& Type)
-            : DeclBase(Name), MsgType(Type)
+        MsgSTDeclBase::MsgSTDeclBase(const string& Name, const TypeRef& Type)
+            : STDeclBase(Name), MsgType(Type)
         {
             if (!Type->Is<RecordType>()) {
                 throw ESMCError((string)"Message decls must be record types");
             }
         }
 
-        MsgDeclBase::~MsgDeclBase()
+        MsgSTDeclBase::~MsgSTDeclBase()
         {
             // Nothing here
         }
 
-        void MsgDeclBase::ComputeHashValue() const
+        void MsgSTDeclBase::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, "Msg");
@@ -131,18 +131,18 @@ namespace ESMC {
             boost::hash_combine(HashCode, IsOutput());
         }
 
-        const TypeRef& MsgDeclBase::GetType() const
+        const TypeRef& MsgSTDeclBase::GetType() const
         {
             return MsgType;
         }
 
-        bool MsgDeclBase::Equals(const DeclBase& Other) const
+        bool MsgSTDeclBase::Equals(const STDeclBase& Other) const
         {
-            if (!Other.Is<MsgDeclBase>()) {
+            if (!Other.Is<MsgSTDeclBase>()) {
                 return false;
             }
 
-            auto OtherPtr = Other.As<MsgDeclBase>();
+            auto OtherPtr = Other.As<MsgSTDeclBase>();
             return (OtherPtr->GetDeclName() == GetDeclName() &&
                     OtherPtr->GetType() == MsgType &&
                     OtherPtr->IsInput() == IsInput() &&
@@ -180,7 +180,7 @@ namespace ESMC {
         }
 
         VarDecl::VarDecl(const string& Name, const TypeRef& Type)
-            : DeclBase(Name), VarType(Type)
+            : STDeclBase(Name), VarType(Type)
         {
             // Nothing here
         }
@@ -198,7 +198,7 @@ namespace ESMC {
             boost::hash_combine(HashCode, VarType->Hash());
         }
 
-        bool VarDecl::Equals(const DeclBase& Other) const
+        bool VarDecl::Equals(const STDeclBase& Other) const
         {
             if (!Other.Is<VarDecl>()) {
                 return false;
@@ -214,7 +214,7 @@ namespace ESMC {
         }
 
         StateDecl::StateDecl(const TypeRef& Type)
-            : DeclBase("state"), Type(Type)
+            : STDeclBase("state"), Type(Type)
         {
             if (!Type->Is<EnumType>()) {
                 throw ESMCError((string)"State variable must be of enumerated type");
@@ -233,7 +233,7 @@ namespace ESMC {
             boost::hash_combine(HashCode, Type->Hash());
         }
 
-        bool StateDecl::Equals(const DeclBase& Other) const
+        bool StateDecl::Equals(const STDeclBase& Other) const
         {
             if (!Other.Is<StateDecl>()) {
                 return false;
@@ -355,7 +355,7 @@ namespace ESMC {
             return *this;
         }
 
-    } /* end namespace LTS */
+    } /* end namespace Decls */
 } /* end namespace ESMC */
 
 //

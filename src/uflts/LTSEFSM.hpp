@@ -44,7 +44,6 @@
 
 #include "LTSDecls.hpp"
 #include "LTSState.hpp"
-#include "SymbolTable.hpp"
 #include "LTSEFSMBase.hpp"
 
 namespace ESMC {

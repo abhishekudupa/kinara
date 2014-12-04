@@ -91,6 +91,15 @@ namespace ESMC {
 
     } /* end namespace Exprs */
 
+    namespace Decls {
+
+        class SymbolTable;
+        class SymtabScope;
+
+        typedef SmartPtr<SymtabScope> ScopeRef;
+
+    } /* end namespace Decls */
+
     namespace LTS {
 
         class TypeBase;
