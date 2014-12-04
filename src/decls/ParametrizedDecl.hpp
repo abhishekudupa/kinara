@@ -1,8 +1,8 @@
-// LTSState.hpp ---
+// ParametrizedDecl.hpp ---
 //
-// Filename: LTSState.hpp
+// Filename: ParametrizedDecl.hpp
 // Author: Abhishek Udupa
-// Created: Fri Aug  8 13:43:46 2014 (-0400)
+// Created: Thu Dec  4 11:49:02 2014 (-0500)
 //
 //
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
@@ -37,56 +37,11 @@
 
 // Code:
 
-#if !defined ESMC_LTS_STATE_HPP_
-#define ESMC_LTS_STATE_HPP_
+#if !defined ESMC_PARAMETRIZED_DECL_HPP_
+#define ESMC_PARAMETRIZED_DECL_HPP_
 
-#include "../common/ESMCFwdDecls.hpp"
 
-namespace ESMC {
-    namespace LTS {
-
-        class LTSState
-        {
-            friend class AutomatonBase;
-        private:
-            string StateName;
-            bool Accepting;
-            bool Final;
-            bool Error;
-            bool Initial;
-
-        private:
-            LTSState(const string& StateName, bool Initial,
-                     bool Final, bool Accepting, bool Error);
-
-        public:
-            LTSState(const LTSState& Other);
-            LTSState();
-            ~LTSState();
-
-            LTSState& operator = (const LTSState& Other);
-
-            string GetName() const;
-            bool IsAccepting() const;
-            bool IsFinal() const;
-            bool IsError() const;
-            bool IsInitial() const;
-            string ToString() const;
-
-            static LTSState MakeEFSMState(const string& StateName,
-                                          bool Initial = false,
-                                          bool Final = false,
-                                          bool Error = false);
-
-            static LTSState MakeMonitorState(const string& StateName,
-                                             bool Initial = false,
-                                             bool Accepting = false);
-        };
-
-    } /* end namespace LTS */
-} /* end namespace ESMC */
-
-#endif /* ESMC_LTS_STATE_HPP_ */
+#endif /* ESMC_PARAMETRIZED_DECL_HPP_ */
 
 //
-// LTSState.hpp ends here
+// ParametrizedDecl.hpp ends here

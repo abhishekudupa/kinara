@@ -40,7 +40,7 @@
 #if !defined ESMC_COMB_UTILS_HPP_
 #define ESMC_COMB_UTILS_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 #include <functional>
 #include <vector>

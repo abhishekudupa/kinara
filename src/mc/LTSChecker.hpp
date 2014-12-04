@@ -42,7 +42,7 @@
 
 #include <boost/functional/hash.hpp>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../uflts/LTSDecls.hpp"
 
 #include "AQStructure.hpp"

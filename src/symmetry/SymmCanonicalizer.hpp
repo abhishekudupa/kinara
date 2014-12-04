@@ -42,7 +42,7 @@
 
 #include <vector>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 #include "Permutations.hpp"
 

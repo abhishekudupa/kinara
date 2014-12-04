@@ -1,6 +1,6 @@
-// Types.hpp ---
+// ESMCESMCTypes.hpp ---
 //
-// Filename: Types.hpp
+// Filename: ESMCESMCTypes.hpp
 // Author: Abhishek Udupa
 // Created: Sun Jun 29 13:43:04 2014 (-0400)
 //
@@ -39,8 +39,8 @@
 
 // Common types used throughout the solver
 
-#if !defined ESMC_TYPES_HPP_
-#define ESMC_TYPES_HPP_
+#if !defined ESMC_ESMC_ESMCTYPES_HPP_
+#define ESMC_ESMC_ESMCTYPES_HPP_
 
 #include <cstdio>
 #include <cstdlib>
@@ -197,7 +197,7 @@ namespace ESMC {
 
 } /* end namespace ESMC */
 
-#endif /* ESMC_TYPES_HPP_ */
+#endif /* ESMC_ESMC_ESMCTYPES_HPP_ */
 
 //
-// Types.hpp ends here
+// ESMCESMCTypes.hpp ends here

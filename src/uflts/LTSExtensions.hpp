@@ -40,7 +40,7 @@
 #if !defined ESMC_LTS_EXTENSIONS_HPP_
 #define ESMC_LTS_EXTENSIONS_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "LTSSemTypes.hpp"
 
 // moved this single definition into a separate

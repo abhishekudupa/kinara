@@ -42,7 +42,7 @@
 #if !defined ESMC_REF_COUNTABLE_HPP_
 #define ESMC_REF_COUNTABLE_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
 

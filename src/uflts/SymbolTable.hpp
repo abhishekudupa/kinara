@@ -40,7 +40,7 @@
 #if !defined ESMC_SYMBOL_TABLE_HPP_
 #define ESMC_SYMBOL_TABLE_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
 

@@ -1,6 +1,6 @@
-// FwdDecls.hpp ---
+// ESMCESMCFwdDecls.hpp ---
 //
-// Filename: FwdDecls.hpp
+// Filename: ESMCESMCFwdDecls.hpp
 // Author: Abhishek Udupa
 // Created: Sun Jun 29 13:46:14 2014 (-0400)
 //
@@ -39,10 +39,10 @@
 
 // Forward declarations of classes and types
 
-#if !defined ESMC_FWD_DECLS_HPP_
-#define ESMC_FWD_DECLS_HPP_
+#if !defined ESMC_ESMC_FWD_DECLS_HPP_
+#define ESMC_ESMC_FWD_DECLS_HPP_
 
-#include "Types.hpp"
+#include "ESMCTypes.hpp"
 #include <list>
 
 namespace ESMC {
@@ -256,7 +256,7 @@ namespace ESMC {
 
 } /* end namespace */
 
-#endif /* ESMC_FWD_DECLS_HPP_ */
+#endif /* ESMC_ESMC_FWD_DECLS_HPP_ */
 
 //
-// FwdDecls.hpp ends here
+// ESMCESMCFwdDecls.hpp ends here

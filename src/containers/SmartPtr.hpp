@@ -40,7 +40,7 @@
 #if !defined ESMC_SMART_PTR_HPP_
 #define ESMC_SMART_PTR_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
 

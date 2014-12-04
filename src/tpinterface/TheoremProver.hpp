@@ -45,7 +45,7 @@
 
 #include <z3.h>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../uflts/LTSDecls.hpp"
 #include "../uflts/LTSTermSemanticizer.hpp"

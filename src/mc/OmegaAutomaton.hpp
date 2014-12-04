@@ -40,7 +40,7 @@
 #if !defined ESMC_OMEGA_AUTOMATON_HPP_
 #define ESMC_OMEGA_AUTOMATON_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../utils/UIDGenerator.hpp"
 
 namespace ESMC {

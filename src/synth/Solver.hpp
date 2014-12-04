@@ -40,7 +40,7 @@
 #if !defined ESMC_SOLVER_HPP_
 #define ESMC_SOLVER_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../uflts/LTSTransitions.hpp"
 #include "../utils/UIDGenerator.hpp"

@@ -49,7 +49,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
 #include "../containers/RefCache.hpp"
