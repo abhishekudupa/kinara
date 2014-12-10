@@ -40,6 +40,8 @@
 #if !defined ESMC_SOLVER_HPP_
 #define ESMC_SOLVER_HPP_
 
+#include <tuple>
+
 #include "../common/ESMCFwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../uflts/LTSTransitions.hpp"
@@ -55,6 +57,18 @@ namespace ESMC {
         using namespace ESMC::Synth;
 
         extern const u64 TentativeEdgeCost;
+
+        enum class GuardBoundingMethodT {
+            PointBound, NonFalseBound, VarDepBound, NoBounding
+        };
+
+        enum class UpdateBoundingMethodT {
+            NonIdentityBound, VarDepBound, NoBounding
+        };
+
+        enum class StateUpdateBoundingMethodT {
+            AllSame, VarDepBound, NoBounding
+        };
 
         namespace Detail {
 
@@ -112,6 +126,10 @@ namespace ESMC {
         private:
             static const string BoundsVarPrefix;
 
+            GuardBoundingMethodT GBoundMethod;
+            UpdateBoundingMethodT UBoundMethod;
+            StateUpdateBoundingMethodT SBoundMethod;
+
             // Assertions in the current iteration
             FastExpSetT CurrentAssertions;
             TPRef TP;
@@ -131,19 +149,32 @@ namespace ESMC {
             // The set of assertions already asserted
             unordered_set<ExpT, Detail::UnorderedExpSetHasher> AssertedConstraints;
 
-            unordered_map<i64, ExpT> IndicatorExps;
+            unordered_map<i64, ExpT> GuardIndicatorExps;
             unordered_map<i64, ExpT> UpdateIndicatorExps;
             Z3TheoremProver* TPAsZ3;
             Z3Ctx Ctx;
-            UIDGenerator IndicatorUIDGenerator;
+            UIDGenerator GuardIndicatorUIDGenerator;
             UIDGenerator UpdateIndicatorUIDGenerator;
+            UIDGenerator IdentityUpdateUIDGenerator;
+            UIDGenerator VarDepIndicatorUIDGenerator;
+            UIDGenerator FunctionCostUIDGenerator;
             UIDGenerator GuardPointUIDGenerator;
-            // How many updates per allowed transition?
-            u32 UpdateBoundsMultiplier;
-            u32 UpdateBound;
+            UIDGenerator AllFalseUIDGenerator;
+            FastExpSetT AllIndicators;
 
             inline void CheckedAssert(const ExpT& Assertion);
             inline void AssertCurrentConstraints();
+
+            inline tuple<ExpT, ExpT, ExpT, ExpT>
+            CreateIndicatorSubsts(vector<TypeRef>& ExistsQVars,
+                                  const ExpT& UpdateExp,
+                                  const ExpT& CurrentArg);
+            inline vector<ExpT>
+            CreateArgDepConstraints(const ExpT& OpExpression,
+                                    const ExpT& IdentityIndicatorExp);
+            inline void CreateIndicators(const ExpT& OpExpression, const ExpT& LValueExp,
+                                         bool IsGuard);
+            inline void CreateIndicators(i64 OpCode);
 
             inline void MakeStateIdenticalConstraints(const ExpT& Exp);
 
@@ -162,7 +193,10 @@ namespace ESMC {
             inline void UpdateCommands();
 
         public:
-            Solver(LTSChecker* Checker);
+            Solver(LTSChecker* Checker,
+                   GuardBoundingMethodT GBoundMethod = GuardBoundingMethodT::NoBounding,
+                   UpdateBoundingMethodT UBoundMethod = UpdateBoundingMethodT::NoBounding,
+                   StateUpdateBoundingMethodT SBoundMethod = StateUpdateBoundingMethodT::NoBounding);
             virtual ~Solver();
 
             // makes an assertion. Also fixes up interpretations

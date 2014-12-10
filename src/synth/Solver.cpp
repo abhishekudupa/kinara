@@ -66,17 +66,20 @@ namespace ESMC {
 
         const string Solver::BoundsVarPrefix = (string)"__SynthBound__";
 
-        Solver::Solver(LTSChecker* Checker)
-            : TP(new Z3TheoremProver()),
+        Solver::Solver(LTSChecker* Checker,
+                       GuardBoundingMethodT GBoundMethod,
+                       UpdateBoundingMethodT UBoundMethod,
+                       StateUpdateBoundingMethodT SBoundMethod)
+            : GBoundMethod(GBoundMethod),
+              UBoundMethod(UBoundMethod),
+              SBoundMethod(SBoundMethod),
+              TP(new Z3TheoremProver()),
               TheLTS(Checker->TheLTS),
               Compiler(Checker->Compiler),
               Checker(Checker),
               Bound(0),
-              GuardedCommands(TheLTS->GetGuardedCmds()),
-              UpdateBoundsMultiplier(0),
-              UpdateBound(0)
+              GuardedCommands(TheLTS->GetGuardedCmds())
         {
-            auto Mgr = TheLTS->GetMgr();
             // push a scope onto the theorem prover and assert
             // true
 
@@ -85,31 +88,6 @@ namespace ESMC {
 
             TPAsZ3 = const_cast<Z3TheoremProver*>(TP->As<Z3TheoremProver>());
             Ctx = TPAsZ3->GetCtx();
-
-            // Find the maximum number of lvalues in any incomplete EFSM
-            u32 MaxLValues = 0;
-            auto const& AllEFSMs = TheLTS->AllEFSMs;
-
-            for (auto const& NameEFSM : AllEFSMs) {
-                if (!NameEFSM.second->Is<IncompleteEFSM>()) {
-                    continue;
-                }
-                auto EFSMAsInc = NameEFSM.second->SAs<IncompleteEFSM>();
-
-                vector<ExpT> LValues;
-                for (auto const& Var : EFSMAsInc->UpdateableVariables) {
-                    auto&& CurLValues = GetScalarTerms(Mgr->MakeVar(Var.first,
-                                                                    Var.second));
-                    LValues.insert(LValues.end(), CurLValues.begin(),
-                                   CurLValues.end());
-                }
-
-                if (LValues.size() > MaxLValues) {
-                    MaxLValues = LValues.size();
-                }
-            }
-
-            UpdateBoundsMultiplier = MaxLValues;
 
             // Populate the set of fixed commands and create the cost function
             unordered_set<u32> FixedCommands;
@@ -139,6 +117,212 @@ namespace ESMC {
         Solver::~Solver()
         {
             // Nothing here
+        }
+
+
+        inline tuple<ExpT, ExpT, ExpT, ExpT>
+        Solver::CreateIndicatorSubsts(vector<TypeRef>& ExistsQVars,
+                                      const ExpT& UpdateExp,
+                                      const ExpT& CurrentArg)
+        {
+            auto Mgr = TheLTS->GetMgr();
+
+            auto const& UpdateArgs = GetOpArgs(UpdateExp);
+            vector<ExpT> OtherArgs;
+            for (auto const& UpdateArg : UpdateArgs) {
+                if (UpdateArg != CurrentArg) {
+                    OtherArgs.push_back(UpdateArg);
+                }
+            }
+            const u32 NumOtherArgs = OtherArgs.size();
+            vector<TypeRef> OtherArgTypes;
+            transform(OtherArgs.begin(), OtherArgs.end(), back_inserter(OtherArgTypes),
+                      [&] (const ExpT& Exp) -> TypeRef
+                      {
+                          return Exp->GetType();
+                      });
+            MgrT::SubstMapT OtherArgSubstMap1;
+            for (u32 i = 0; i < NumOtherArgs; ++i) {
+                auto BoundVar = Mgr->MakeBoundVar(OtherArgTypes[i], NumOtherArgs - i - 1);
+                OtherArgSubstMap1[OtherArgs[i]] = BoundVar;
+            }
+            auto ArgBoundVar = Mgr->MakeBoundVar(CurrentArg->GetType(), NumOtherArgs);
+            auto ArgPrimeBoundVar = Mgr->MakeBoundVar(CurrentArg->GetType(), NumOtherArgs + 1);
+            OtherArgSubstMap1[CurrentArg] = ArgBoundVar;
+            auto OtherArgSubstMap2 = OtherArgSubstMap1;
+            OtherArgSubstMap2[CurrentArg] = ArgPrimeBoundVar;
+
+            ExistsQVars.push_back(CurrentArg->GetType());
+            ExistsQVars.push_back(CurrentArg->GetType());
+            ExistsQVars.insert(ExistsQVars.end(), OtherArgTypes.begin(), OtherArgTypes.end());
+
+            auto SubstExp1 = Mgr->BoundSubstitute(OtherArgSubstMap1, UpdateExp);
+            auto SubstExp2 = Mgr->BoundSubstitute(OtherArgSubstMap2, UpdateExp);
+
+            return make_tuple(SubstExp1, SubstExp2, ArgBoundVar, ArgPrimeBoundVar);
+        }
+
+        inline vector<ExpT>
+        Solver::CreateArgDepConstraints(const ExpT& OpExpression,
+                                        const ExpT& IdentityIndicatorExp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            vector<ExpT> Retval;
+            auto const& OpArgs = GetOpArgs(OpExpression);
+            for (auto const& Arg : OpArgs) {
+                vector<TypeRef> ExistsQVars;
+                auto SubstExpPair =
+                    CreateIndicatorSubsts(ExistsQVars, OpExpression, Arg);
+
+                auto const& SubstExp1 = get<0>(SubstExpPair);
+                auto const& SubstExp2 = get<1>(SubstExpPair);
+
+                auto QBody = Mgr->MakeExpr(LTSOps::OpEQ, SubstExp1, SubstExp2);
+                QBody = Mgr->MakeExpr(LTSOps::OpNOT, QBody);
+
+                auto Antecedent = Mgr->MakeExists(ExistsQVars, QBody);
+                if (IdentityIndicatorExp != ExpT::NullPtr) {
+                    Antecedent = Mgr->MakeExpr(LTSOps::OpAND, Antecedent,
+                                               Mgr->MakeExpr(LTSOps::OpNOT,
+                                                             IdentityIndicatorExp));
+                }
+
+                auto IndicatorUIDStr = to_string(VarDepIndicatorUIDGenerator.GetUID());
+                // TODO: Make more descriptive indicator names
+                auto IndicatorVarName =
+                    (string)"__var_dep_indicator_" + IndicatorUIDStr;
+                auto IndicatorExp = Mgr->MakeVar(IndicatorVarName,
+                                                 Mgr->MakeType<RangeType>(0, 1));
+                // AllIndicators.insert(IndicatorExp);
+                auto Consequent = Mgr->MakeExpr(LTSOps::OpEQ, IndicatorExp,
+                                                Mgr->MakeVal("1", IndicatorExp->GetType()));
+                auto Implication = Mgr->MakeExpr(LTSOps::OpIFF, Antecedent, Consequent);
+
+                cout << "Asserting Indicator Implication:" << endl
+                     << Implication->ToString() << endl << endl;
+                CurrentAssertions.insert(Implication);
+                Retval.push_back(IndicatorExp);
+            }
+            return Retval;
+        }
+
+        inline void Solver::CreateIndicators(const ExpT& OpExpression,
+                                             const ExpT& LValueExp,
+                                             bool IsGuard)
+        {
+            auto Mgr = TheLTS->GetMgr();
+
+            auto const& AppArgs = GetOpArgs(OpExpression);
+            const u32 NumArgs = AppArgs.size();
+            auto FuncCostVarName = (string)"__func_cost_" +
+                to_string(FunctionCostUIDGenerator.GetUID());
+            auto FuncCostVarType = Mgr->MakeType<RangeType>(0, 1 + NumArgs);
+            auto FuncCostVar = Mgr->MakeVar(FuncCostVarName, FuncCostVarType);
+            AllIndicators.insert(FuncCostVar);
+
+            vector<TypeRef> QVarTypes;
+            transform(AppArgs.begin(), AppArgs.end(), back_inserter(QVarTypes),
+                      [&] (const ExpT& Exp) -> TypeRef
+                      {
+                          return Exp->GetType();
+                      });
+            MgrT::SubstMapT SubstMap;
+            for (u32 i = 0; i < NumArgs; ++i) {
+                SubstMap[AppArgs[i]] = Mgr->MakeBoundVar(QVarTypes[i], NumArgs - i - 1);
+            }
+
+            if (LValueExp != ExpT::NullPtr && !IsGuard) {
+                auto Body = Mgr->MakeExpr(LTSOps::OpEQ, OpExpression, LValueExp);
+                Body = Mgr->MakeExpr(LTSOps::OpNOT, Body);
+                auto SubstBody = Mgr->BoundSubstitute(SubstMap, Body);
+                auto ExistsExp = Mgr->MakeExists(QVarTypes, SubstBody);
+                auto IdentityVarName = "__identity_update_indicator_" +
+                    to_string(IdentityUpdateUIDGenerator.GetUID());
+                auto IdentityVar = Mgr->MakeVar(IdentityVarName, Mgr->MakeType<BooleanType>());
+                auto IdentityConstraint = Mgr->MakeExpr(LTSOps::OpIFF, ExistsExp,
+                                                        Mgr->MakeExpr(LTSOps::OpNOT, IdentityVar));
+                cout << "Asserting Identity Update Constraint:" << IdentityConstraint->ToString()
+                     << endl << endl;
+                CurrentAssertions.insert(IdentityConstraint);
+
+                auto&& ArgDepConstraints = CreateArgDepConstraints(OpExpression, IdentityVar);
+
+                auto Antecedent = Mgr->MakeExpr(LTSOps::OpNOT, IdentityVar);
+                auto Consequent = MakeSum(ArgDepConstraints, Mgr, FuncCostVarType);
+                Consequent = Mgr->MakeExpr(LTSOps::OpADD, Consequent,
+                                           Mgr->MakeVal("1", FuncCostVarType));
+                Consequent = Mgr->MakeExpr(LTSOps::OpGE, FuncCostVar, Consequent);
+                auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, Antecedent, Consequent);
+                cout << "Asserting Cost Constraint:" << endl << ImpliesExp->ToString()
+                     << endl << endl;
+                CurrentAssertions.insert(ImpliesExp);
+            } else if (IsGuard) {
+                auto Body = OpExpression;
+                auto SubstBody = Mgr->BoundSubstitute(SubstMap, Body);
+                auto ExistsExp = Mgr->MakeExists(QVarTypes, SubstBody);
+                auto AllFalseIndicatorVarName = "__all_false_" +
+                    to_string(AllFalseUIDGenerator.GetUID());
+                auto AllFalseVar = Mgr->MakeVar(AllFalseIndicatorVarName,
+                                                Mgr->MakeType<BooleanType>());
+                auto NegAllFalse = Mgr->MakeExpr(LTSOps::OpNOT, AllFalseVar);
+                auto AllFalseConstraint = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp, NegAllFalse);
+
+                // IndicatorExps[OpExpression->SAs<Exprs::OpExpression>()->GetOpCode()] = NegAllFalse;
+
+                cout << "Asserting All False Constraint:" << AllFalseConstraint->ToString()
+                     << endl << endl;
+                CurrentAssertions.insert(AllFalseConstraint);
+
+                auto&& ArgDepConstraints = CreateArgDepConstraints(OpExpression, ExpT::NullPtr);
+
+                auto Antecedent = NegAllFalse;
+                auto Consequent = MakeSum(ArgDepConstraints, Mgr, FuncCostVarType);
+                Consequent = Mgr->MakeExpr(LTSOps::OpADD, Consequent,
+                                           Mgr->MakeVal("1", FuncCostVarType));
+                Consequent = Mgr->MakeExpr(LTSOps::OpGE, FuncCostVar, Consequent);
+                auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, Antecedent, Consequent);
+                cout << "Asserting Cost Constraint:" << endl << ImpliesExp->ToString()
+                     << endl << endl;
+                CurrentAssertions.insert(ImpliesExp);
+            } else {
+                auto&& ArgDepConstraints = CreateArgDepConstraints(OpExpression, ExpT::NullPtr);
+                auto SumExp = MakeSum(ArgDepConstraints, Mgr, FuncCostVarType);
+                auto Constraint = Mgr->MakeExpr(LTSOps::OpGE, FuncCostVar, SumExp);
+                cout << "Asserting Cost Constraint:" << endl << Constraint->ToString()
+                     << endl << endl;
+                CurrentAssertions.insert(Constraint);
+            }
+        }
+
+        inline void Solver::CreateIndicators(i64 OpCode)
+        {
+            auto const& GuardOpToExp = TheLTS->GuardOpToExp;
+            auto const& UpdateOpToLValue = TheLTS->UpdateOpToUpdateLValue;
+            auto const& AllOpToExp = TheLTS->AllOpToExp;
+
+            // is this an lvalue update that requires
+            // identity constraints?
+            auto it1 = GuardOpToExp.find(OpCode);
+            auto it2 = UpdateOpToLValue.find(OpCode);
+            auto it3 = AllOpToExp.find(OpCode);
+
+            if (it3 == AllOpToExp.end()) {
+                throw InternalError((string)"Could not find an expression for OpCode: " +
+                                    to_string(OpCode) + ".\nAt: " + __FILE__ + ":" +
+                                    to_string(__LINE__));
+            }
+
+            if (it1 != GuardOpToExp.end()) {
+                // This is a guard
+                // CreateIndicators(it3->second, ExpT::NullPtr, true);
+                CreateGuardIndicator(OpCode);
+            } else if (it2 == UpdateOpToLValue.end()) {
+                // This is an update, but is exempt
+                CreateIndicators(it3->second, ExpT::NullPtr, false);
+            } else {
+                // Update and non-exempt
+                CreateIndicators(it3->second, it2->second.second, false);
+            }
         }
 
         inline void Solver::CreateMutualExclusionConstraint(const ExpT& GuardExp1,
@@ -230,13 +414,13 @@ namespace ESMC {
             auto SumExp = MakeSum(PointIndicators, Mgr,
                                   Mgr->MakeType<RangeType>(0, PointIndicators.size()));
             auto SumIndicatorVarName = (string)"__guard_indicator_" +
-                to_string(IndicatorUIDGenerator.GetUID());
+                to_string(GuardIndicatorUIDGenerator.GetUID());
             auto SumIndicatorVar =
                 Mgr->MakeVar(SumIndicatorVarName,
                              Mgr->MakeType<RangeType>(0,
                                                           PointIndicators.size()));
             auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumIndicatorVar, SumExp);
-            IndicatorExps[GuardOp] = SumIndicatorVar;
+            GuardIndicatorExps[GuardOp] = SumIndicatorVar;
 
             cout << "Asserting Guard Indicator Constraint:" << endl
                  << EQExp->ToString() << endl << endl;
@@ -747,7 +931,7 @@ namespace ESMC {
             ExpT SumExp = nullptr;
 
             // Sum over ALL the indicators
-            for (auto const& IndexExp : IndicatorExps) {
+            for (auto const& IndexExp : GuardIndicatorExps) {
                 Summands.push_back(IndexExp.second);
             }
             for (auto const& IndexExp : UpdateIndicatorExps) {
@@ -874,7 +1058,7 @@ namespace ESMC {
                 // all good. extract a model
                 auto const& Model = TPAsZ3->GetModel();
                 // PrintSolution();
-                Compiler->UpdateModel(Model, InterpretedOps, IndicatorExps);
+                Compiler->UpdateModel(Model, InterpretedOps, GuardIndicatorExps);
 
                 // Okay, we're good to model check now
                 Checker->ClearAQS();
@@ -995,8 +1179,8 @@ namespace ESMC {
                     AllTransitions.push_back(InternalTransition);
                 }
             }
-            cout << "The solution is the following" << endl;
-            for (auto NewOpIndicatorVar : IndicatorExps) {
+            cout << "The solution is the following:" << endl;
+            for (auto NewOpIndicatorVar : GuardIndicatorExps) {
                 auto NewOp = NewOpIndicatorVar.first;
                 auto IndicatorVar = NewOpIndicatorVar.second;
                 auto IndicatorValue = TPAsZ3->Evaluate(IndicatorVar);
