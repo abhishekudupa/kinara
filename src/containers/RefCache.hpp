@@ -40,7 +40,7 @@
 #if !defined ESMC_REF_CACHE_HPP_
 #define ESMC_REF_CACHE_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include <unordered_set>
 #include <vector>
 

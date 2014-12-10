@@ -41,7 +41,7 @@
 #define ESMC_COMPILER_HPP_
 
 #include "../tpinterface/TheoremProver.hpp"
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../uflts/LTSDecls.hpp"
 
 namespace ESMC {

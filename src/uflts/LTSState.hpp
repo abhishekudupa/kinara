@@ -40,7 +40,7 @@
 #if !defined ESMC_LTS_STATE_HPP_
 #define ESMC_LTS_STATE_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
     namespace LTS {

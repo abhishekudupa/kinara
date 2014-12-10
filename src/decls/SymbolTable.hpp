@@ -40,7 +40,7 @@
 #if !defined ESMC_SYMBOL_TABLE_HPP_
 #define ESMC_SYMBOL_TABLE_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
 
@@ -48,9 +48,11 @@
 #include <vector>
 
 namespace ESMC {
-    namespace LTS {
+    namespace Decls {
 
-        class DeclBase : public RefCountable
+        using namespace LTS;
+
+        class STDeclBase : public RefCountable
         {
         private:
             string DeclName;
@@ -62,14 +64,14 @@ namespace ESMC {
             virtual void ComputeHashValue() const = 0;
 
         public:
-            DeclBase(const string& DeclName);
-            virtual ~DeclBase();
+            STDeclBase(const string& DeclName);
+            virtual ~STDeclBase();
 
             const string& GetDeclName() const;
 
             u64 Hash() const;
 
-            virtual bool Equals(const DeclBase& Other) const = 0;
+            virtual bool Equals(const STDeclBase& Other) const = 0;
             virtual const TypeRef& GetType() const = 0;
 
             template <typename T>
@@ -103,9 +105,9 @@ namespace ESMC {
             }
         };
 
-        typedef CSmartPtr<DeclBase> DeclRef;
+        typedef CSmartPtr<STDeclBase> DeclRef;
 
-        class ParamDecl : public DeclBase
+        class ParamDecl : public STDeclBase
         {
         private:
             TypeRef ParamType;
@@ -117,11 +119,11 @@ namespace ESMC {
             ParamDecl(const string& Name, const TypeRef& Type);
             virtual ~ParamDecl();
 
-            virtual bool Equals(const DeclBase& Other) const override;
+            virtual bool Equals(const STDeclBase& Other) const override;
             virtual const TypeRef& GetType() const override;
         };
 
-        class MsgDeclBase : public DeclBase
+        class MsgSTDeclBase : public STDeclBase
         {
         private:
             TypeRef MsgType;
@@ -130,34 +132,34 @@ namespace ESMC {
             virtual void ComputeHashValue() const override;
 
         public:
-            MsgDeclBase(const string& Name, const TypeRef& Type);
-            virtual ~MsgDeclBase();
+            MsgSTDeclBase(const string& Name, const TypeRef& Type);
+            virtual ~MsgSTDeclBase();
 
-            virtual bool Equals(const DeclBase& Other) const override;
+            virtual bool Equals(const STDeclBase& Other) const override;
             virtual const TypeRef& GetType() const override;
             virtual bool IsInput() const = 0;
             virtual bool IsOutput() const = 0;
         };
 
-        class InMsgDecl : public MsgDeclBase
+        class InMsgDecl : public MsgSTDeclBase
         {
-            using MsgDeclBase::MsgDeclBase;
+            using MsgSTDeclBase::MsgSTDeclBase;
             virtual ~InMsgDecl();
 
             virtual bool IsInput() const override;
             virtual bool IsOutput() const override;
         };
 
-        class OutMsgDecl : public MsgDeclBase
+        class OutMsgDecl : public MsgSTDeclBase
         {
-            using MsgDeclBase::MsgDeclBase;
+            using MsgSTDeclBase::MsgSTDeclBase;
             virtual ~OutMsgDecl();
 
             virtual bool IsInput() const override;
             virtual bool IsOutput() const override;
         };
 
-        class VarDecl : public DeclBase
+        class VarDecl : public STDeclBase
         {
         private:
             TypeRef VarType;
@@ -169,11 +171,11 @@ namespace ESMC {
             VarDecl(const string& Name, const TypeRef& Type);
             virtual ~VarDecl();
 
-            virtual bool Equals(const DeclBase& Other) const override;
+            virtual bool Equals(const STDeclBase& Other) const override;
             virtual const TypeRef& GetType() const override;
         };
 
-        class StateDecl : public DeclBase
+        class StateDecl : public STDeclBase
         {
         private:
             TypeRef Type;
@@ -185,7 +187,7 @@ namespace ESMC {
             StateDecl(const TypeRef& Type);
             virtual ~StateDecl();
 
-            virtual bool Equals(const DeclBase& Other) const override;
+            virtual bool Equals(const STDeclBase& Other) const override;
             virtual const TypeRef& GetType() const override;
         };
 
@@ -229,7 +231,7 @@ namespace ESMC {
             SymbolTable& operator = (const SymbolTable& Other);
         };
 
-    } /* end namespace LTS */
+    } /* end namespace Decls */
 } /* end namespace ESMC */
 
 #endif /* ESMC_SYMBOL_TABLE_HPP_ */

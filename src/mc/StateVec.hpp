@@ -42,7 +42,7 @@
 
 #include <boost/pool/pool.hpp>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
     namespace MC {

@@ -45,7 +45,7 @@
 #include <boost/functional/hash.hpp>
 #include <iterator>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
     namespace Symm {

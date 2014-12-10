@@ -40,7 +40,7 @@
 #if !defined ESMC_LTS_SEM_TYPES_HPP_
 #define ESMC_LTS_SEM_TYPES_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
 

@@ -57,6 +57,7 @@ namespace ESMC {
         const string LabelledTS::ProductMsgName = "__trans_msg__";
 
         using ESMC::Symm::PermutationSet;
+        using namespace Decls;
 
         LabelledTS::LabelledTS()
             : Mgr(new MgrT()),

@@ -22,6 +22,7 @@ endif
 PROJECT_MODULES= \
 	common \
 	containers \
+	decls \
 	expr \
 	hash \
 	main \

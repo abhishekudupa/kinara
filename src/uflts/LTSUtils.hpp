@@ -40,19 +40,20 @@
 #if !defined ESMC_LTS_UTILS_HPP_
 #define ESMC_LTS_UTILS_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../expr/Expressions.hpp"
 #include "../utils/CombUtils.hpp"
-
+#include "../decls/SymbolTable.hpp"
 
 #include "LTSTermSemanticizer.hpp"
-#include "SymbolTable.hpp"
 #include "LTSDecls.hpp"
 #include "LTSAssign.hpp"
 
 
 namespace ESMC {
     namespace LTS {
+
+        using namespace Decls;
 
         namespace Detail {
 

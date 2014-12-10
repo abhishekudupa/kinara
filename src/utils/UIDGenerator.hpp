@@ -40,7 +40,7 @@
 #if !defined ESMC_UID_GENERATOR_HPP_
 #define ESMC_UID_GENERATOR_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
 

@@ -41,13 +41,15 @@
 #define ESMC_LTS_AUTOMATON_HPP_
 
 #include "../utils/UIDGenerator.hpp"
+#include "../decls/SymbolTable.hpp"
 
 #include "LTSDecls.hpp"
 #include "LTSState.hpp"
-#include "SymbolTable.hpp"
 
 namespace ESMC {
     namespace LTS {
+
+        using namespace Decls;
 
         class AutomatonBase
         {

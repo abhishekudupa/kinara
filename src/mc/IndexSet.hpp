@@ -46,7 +46,7 @@
 
 #include "../uflts/LTSDecls.hpp"
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
     namespace MC {

@@ -40,7 +40,7 @@
 #if !defined ESMC_STATE_VEC_PRINTER_HPP_
 #define ESMC_STATE_VEC_PRINTER_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
     namespace MC {

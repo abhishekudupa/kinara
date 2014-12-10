@@ -49,7 +49,7 @@
 #include <boost/pool/object_pool.hpp>
 #include <boost/functional/hash.hpp>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 #include "StateVec.hpp"
 

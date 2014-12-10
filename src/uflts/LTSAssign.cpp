@@ -43,6 +43,8 @@
 namespace ESMC {
     namespace LTS {
 
+        using namespace Decls;
+
         LTSAssignBase::LTSAssignBase()
         {
             // Nothing here

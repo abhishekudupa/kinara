@@ -45,7 +45,7 @@
 #include <unordered_set>
 #include <tuple>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../uflts/LTSDecls.hpp"
 
 namespace ESMC {

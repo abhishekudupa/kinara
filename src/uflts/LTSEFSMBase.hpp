@@ -42,8 +42,6 @@
 
 #include "LTSDecls.hpp"
 #include "LTSState.hpp"
-#include "SymbolTable.hpp"
-
 #include "LTSAutomaton.hpp"
 
 namespace ESMC {

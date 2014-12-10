@@ -40,7 +40,7 @@
 #if !defined ESMC_SIZE_UTILS_HPP_
 #define ESMC_SIZE_UTILS_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include <math.h>
 
 namespace ESMC {

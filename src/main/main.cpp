@@ -37,7 +37,7 @@
 
 // Code:
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 int main()
 {

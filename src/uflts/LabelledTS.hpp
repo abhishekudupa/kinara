@@ -43,10 +43,12 @@
 #include <tuple>
 
 #include "LTSDecls.hpp"
-#include "SymbolTable.hpp"
+#include "../decls/SymbolTable.hpp"
 
 namespace ESMC {
     namespace LTS {
+
+        using namespace Decls;
 
         class LabelledTS
         {
