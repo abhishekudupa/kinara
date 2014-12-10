@@ -591,7 +591,11 @@ namespace ESMC {
             auto GuardExp = Mgr->MakeExpr(GuardOp, DomainTermVec);
             cout << "Made Guard Exp: " << GuardExp->ToString() << endl << endl;
             // Make the constraints for symmetry on the guard expression
+
             auto&& SymmConstraints = GetSymmetryConstraints(GuardExp);
+
+            // audupa: clearing SymmConstraints as a test
+            // SymmConstraints.clear();
 
             cout << "Symmetry constraints:" << endl;
             for (auto const& Constraint : SymmConstraints) {
@@ -906,14 +910,17 @@ namespace ESMC {
             map<ExpT, set<ExpT>> GroupedLValues;
             map<ExpT, ExpT> GroupedLValueToUpdateExp;
 
-            cout << "Array LValue Groups:" << endl;
-            for (auto const& Group : ArrayLValueGroups) {
-                cout << "Group {" << endl;
-                for (auto const& LVal : Group) {
-                    cout << "    " << LVal->ToString() << endl;
-                    GroupedLValues[LVal] = Group;
+            if (ArrayLValueGroups.size() > 0) {
+
+                cout << "Array LValue Groups:" << endl;
+                for (auto const& Group : ArrayLValueGroups) {
+                    cout << "Group {" << endl;
+                    for (auto const& LVal : Group) {
+                        cout << "    " << LVal->ToString() << endl;
+                        GroupedLValues[LVal] = Group;
+                    }
+                    cout << "}" << endl << endl;
                 }
-                cout << "}" << endl << endl;
             }
 
             // Add the state lvalue
@@ -968,6 +975,9 @@ namespace ESMC {
 
                 if (GroupedLValues.find(LValue) == GroupedLValues.end()) {
                     auto&& SymmConstraints = GetSymmetryConstraints(UpdateExp);
+
+                    // audupa: clearing SymmConstraints as a test
+                    // SymmConstraints.clear();
 
                     cout << "Symmetry constraints for update of term " << LValue->ToString()
                          << ":" << endl;
@@ -1030,6 +1040,9 @@ namespace ESMC {
             for (auto const& ArrayLValueGroup : ArrayLValueGroups) {
                 auto&& SymmConstraints = GetSymmetryConstraints(ArrayLValueGroup,
                                                                 GroupedLValueToUpdateExp);
+
+                // audupa: clearing SymmConstraints as a test
+                // SymmConstraints.clear();
                 cout << "Symmetry constraints for symmetric updates:" << endl;
                 for (auto const& Constraint : SymmConstraints) {
                     cout << Constraint->ToString() << endl << endl;

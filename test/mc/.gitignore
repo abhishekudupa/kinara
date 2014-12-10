@@ -2,4 +2,6 @@ bin/debug/*
 bin/opt/*
 bin/prof/*
 bin/lto/*
-bin/fullto/*
+bin/fulllto/*
+log*
+core

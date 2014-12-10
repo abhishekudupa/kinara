@@ -2405,7 +2405,11 @@ namespace ESMC {
             auto Retval = Sem->Canonicalize(NewExp);
             Retval = Internalize(Retval);
             Sem->TypeCheck(Retval);
-            return Retval;
+            if (QVarTypes.size() == 0) {
+                return QExpr;
+            } else {
+                return Retval;
+            }
         }
 
         template <typename E, template <typename> class S>
