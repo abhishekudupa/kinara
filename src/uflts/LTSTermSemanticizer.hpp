@@ -2125,31 +2125,6 @@ namespace ESMC {
 
                     Z3_dec_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl));
 
-                    // Make the constraints on the application
-                    // if necessary
-                    auto RangeTypeAsRange = RType->template As<RangeType>();
-                    if (RangeTypeAsRange != nullptr) {
-                        auto RangeLow = RangeTypeAsRange->GetLow();
-                        auto RangeHigh = RangeTypeAsRange->GetHigh();
-                        Z3_ast AndArgs[2];
-
-                        auto LowString = to_string(RangeLow);
-                        auto HighString = to_string(RangeHigh);
-
-                        auto LowConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, LowString.c_str(),
-                                                                  Z3_mk_int_sort(*Ctx)));
-                        auto HighConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, HighString.c_str(),
-                                                                   Z3_mk_int_sort(*Ctx)));
-
-                        auto LowExp = Z3Expr(Ctx, Z3_mk_ge(*Ctx, AppExp, LowConst));
-                        auto HighExp = Z3Expr(Ctx, Z3_mk_le(*Ctx, AppExp, HighConst));
-
-                        AndArgs[0] = LowExp;
-                        AndArgs[1] = HighExp;
-
-                        LTSCtx->AddAssumption(Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs)));
-                    }
-
                     ExpStack.push_back(AppExp);
                     break;
                 }

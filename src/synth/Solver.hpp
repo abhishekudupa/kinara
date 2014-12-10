@@ -149,6 +149,7 @@ namespace ESMC {
 
             inline void CreateGuardIndicator(i64 GuardOp);
             inline void CreateUpdateIndicator(i64 UpdateOp);
+            inline void CreateBoundsConstraints(i64 UpdateOp);
             inline void CreateMutualExclusionConstraint(const ExpT& GuardExp1,
                                                         const ExpT& GuardExp2);
             inline void AssertBoundsConstraint();

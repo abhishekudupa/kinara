@@ -81,7 +81,7 @@ namespace ESMC {
             // true
 
             TP->Push();
-            TP->Assert(TheLTS->MakeTrue(), true);
+            TP->Assert(TheLTS->MakeTrue(), false);
 
             TPAsZ3 = const_cast<Z3TheoremProver*>(TP->As<Z3TheoremProver>());
             Ctx = TPAsZ3->GetCtx();
@@ -133,7 +133,7 @@ namespace ESMC {
 
             AssertedConstraints.insert(Assertion);
             // cout << "Asserting: " << Assertion->ToString() << endl;
-            TP->Assert(Assertion, true);
+            TP->Assert(Assertion, false);
         }
 
         Solver::~Solver()
@@ -372,6 +372,39 @@ namespace ESMC {
             CurrentAssertions.insert(ImpliesExp);
         }
 
+        inline void Solver::CreateBoundsConstraints(i64 UpdateOp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto FunType = Mgr->LookupUninterpretedFunction(UpdateOp)->As<FuncType>();
+            auto RType = FunType->GetEvalType();
+            auto RTypeAsRange = RType->As<RangeType>();
+            if (RTypeAsRange == nullptr) {
+                return;
+            }
+
+            auto High = RTypeAsRange->GetHigh();
+            auto Low = RTypeAsRange->GetLow();
+
+            auto HighVal = Mgr->MakeVal(to_string(High), RType);
+            auto LowVal = Mgr->MakeVal(to_string(Low), RType);
+
+            // We need to assert constraints
+            auto const& DomTypes = FunType->GetArgTypes();
+            const u32 NumArgs = DomTypes.size();
+            vector<ExpT> FunArgs(NumArgs);
+            for (u32 i = 0; i < NumArgs; ++i) {
+                FunArgs[i] = Mgr->MakeBoundVar(DomTypes[i], NumArgs - i - 1);
+            }
+
+            auto AppExp = Mgr->MakeExpr(UpdateOp, FunArgs);
+            auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, AppExp, HighVal);
+            auto GEExp = Mgr->MakeExpr(LTSOps::OpGE, AppExp, LowVal);
+
+            auto QBody = Mgr->MakeExpr(LTSOps::OpAND, LEExp, GEExp);
+            auto QExpr = Mgr->MakeForAll(DomTypes, QBody);
+            CurrentAssertions.insert(QExpr);
+        }
+
         inline void Solver::UpdateCommands()
         {
             for (auto const& Cmd : GuardedCommands) {
@@ -476,6 +509,7 @@ namespace ESMC {
             // Create indicator variables for each newly unveiled update as well
             for (auto const& NewUpdateOp : NewlyUnveiledUpdates) {
                 CreateUpdateIndicator(NewUpdateOp);
+                CreateBoundsConstraints(NewUpdateOp);
             }
             UpdateCommands();
         }
@@ -559,6 +593,8 @@ namespace ESMC {
                                         "blown in call to Solver::HandleOneSafetyViolation()\n" +
                                         "The State:\n" + sstr.str() + "\nCould not find bounds " +
                                         "invariant that was blown for the state listed above.\n" +
+                                        "But the invariant:\n" + BlownInvariant->ToString() +
+                                        "\nwas reported to have been blown!\n" +
                                         "At: " + __FILE__ + ":" + to_string(__LINE__));
                 }
             }
@@ -731,7 +767,7 @@ namespace ESMC {
             auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, SumExp, BoundExp);
             cout << "Asserting Bounds Constraint: " << endl
                  << LEExp->ToString() << endl << endl;
-            TP->Assert(LEExp, true);
+            TP->Assert(LEExp, false);
 
 
             // for (auto const& IndexExp : IndicatorExps) {
