@@ -84,6 +84,7 @@ libesmc_OBJS= \
 	SymbolTable.o \
 	SymmCanonicalizer.o \
 	TheoremProver.o \
+	TimeValue.o \
 	Trace.o \
 	UIDGenerator.o \
 	Z3Objects.o \

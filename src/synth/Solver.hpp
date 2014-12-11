@@ -129,6 +129,7 @@ namespace ESMC {
             GuardBoundingMethodT GBoundMethod;
             UpdateBoundingMethodT UBoundMethod;
             StateUpdateBoundingMethodT SBoundMethod;
+            bool UnrollQuantifiers;
 
             // Assertions in the current iteration
             FastExpSetT CurrentAssertions;
@@ -161,6 +162,10 @@ namespace ESMC {
             UIDGenerator GuardPointUIDGenerator;
             UIDGenerator AllFalseUIDGenerator;
             FastExpSetT AllIndicators;
+            u32 TotalSMTQueries;
+            u64 TotalSMTTime;
+            u64 MinSMTQueryTime;
+            u64 MaxSMTQueryTime;
 
             inline void CheckedAssert(const ExpT& Assertion);
             inline void AssertCurrentConstraints();
@@ -196,7 +201,8 @@ namespace ESMC {
             Solver(LTSChecker* Checker,
                    GuardBoundingMethodT GBoundMethod = GuardBoundingMethodT::NoBounding,
                    UpdateBoundingMethodT UBoundMethod = UpdateBoundingMethodT::NoBounding,
-                   StateUpdateBoundingMethodT SBoundMethod = StateUpdateBoundingMethodT::NoBounding);
+                   StateUpdateBoundingMethodT SBoundMethod = StateUpdateBoundingMethodT::NoBounding,
+                   bool UnrollQuantifiers = false);
             virtual ~Solver();
 
             // makes an assertion. Also fixes up interpretations

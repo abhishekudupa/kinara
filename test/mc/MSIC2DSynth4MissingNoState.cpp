@@ -52,6 +52,10 @@
 #include "../../src/mc/Trace.hpp"
 #include "../../src/synth/Solver.hpp"
 
+#include "MSISynthOptions.hpp"
+
+MSISynthOptionsT Options;
+
 using namespace ESMC;
 using namespace LTS;
 using namespace Exprs;
@@ -63,8 +67,9 @@ const u32 NumAddresses = 1;
 const u32 NumValues = 2;
 const u32 NumDirs = 1;
 
-int main()
+int main(int argc, char* argv[])
 {
+    ParseOptions(argc, argv, Options);
     auto TheLTS = new LabelledTS();
 
     auto TrueExp = TheLTS->MakeTrue();
@@ -1694,7 +1699,9 @@ int main()
     Monitor->AddTransition("Accepting", "Accepting", MonEnvDotStateNEQInitial);
     Monitor->Freeze();
 
-    auto TheSolver = new Solver(Checker);
+    auto TheSolver = new Solver(Checker, Options.GBoundMethod,
+                                Options.UBoundMethod, Options.SBoundMethod,
+                                Options.UnrollQuantifiers);
     TheSolver->Solve();
 
     delete TheSolver;

@@ -33,7 +33,7 @@ libz3_MAKE_DIR=$(PROJECT_ROOT)/../../thirdparty/z3-4.3.1/
 libesmc_FULL_PATH=$(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)/libesmc.so
 libesmc_MAKE_DIR=$(PROJECT_ROOT)/../../
 
-$(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_LINK_LIBS_COMMON=z3 boost_system rt))
+$(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_LINK_LIBS_COMMON=z3 boost_system rt boost_program_options))
 $(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_LINK_LIBS_LTO=esmc))
 $(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_OBJS=$(exec).o))
 $(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_LIB_PATHS=$(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX) \

@@ -48,6 +48,7 @@
 #include "../symexec/LTSAnalyses.hpp"
 #include "../mc/OmegaAutomaton.hpp"
 #include "../mc/StateVecPrinter.hpp"
+#include "../utils/TimeValue.hpp"
 
 #include "Solver.hpp"
 
@@ -69,10 +70,12 @@ namespace ESMC {
         Solver::Solver(LTSChecker* Checker,
                        GuardBoundingMethodT GBoundMethod,
                        UpdateBoundingMethodT UBoundMethod,
-                       StateUpdateBoundingMethodT SBoundMethod)
+                       StateUpdateBoundingMethodT SBoundMethod,
+                       bool UnrollQuantifiers)
             : GBoundMethod(GBoundMethod),
               UBoundMethod(UBoundMethod),
               SBoundMethod(SBoundMethod),
+              UnrollQuantifiers(UnrollQuantifiers),
               TP(new Z3TheoremProver()),
               TheLTS(Checker->TheLTS),
               Compiler(Checker->Compiler),
@@ -84,7 +87,7 @@ namespace ESMC {
             // true
 
             TP->Push();
-            TP->Assert(TheLTS->MakeTrue(), false);
+            TP->Assert(TheLTS->MakeTrue(), UnrollQuantifiers);
 
             TPAsZ3 = const_cast<Z3TheoremProver*>(TP->As<Z3TheoremProver>());
             Ctx = TPAsZ3->GetCtx();
@@ -111,7 +114,7 @@ namespace ESMC {
 
             AssertedConstraints.insert(Assertion);
             // cout << "Asserting: " << Assertion->ToString() << endl;
-            TP->Assert(Assertion, false);
+            TP->Assert(Assertion, UnrollQuantifiers);
         }
 
         Solver::~Solver()
@@ -512,53 +515,86 @@ namespace ESMC {
                 // variable
                 auto it2 = StateUpdateOpToExp.find(UpdateOp);
                 if (it2 == StateUpdateOpToExp.end()) {
-                    return;
+                    // This is an exempt lvalue
+                    if (UBoundMethod == UpdateBoundingMethodT::VarDepBound) {
+                        CreateIndicators(UpdateOp);
+                        return;
+                    } else {
+                        return;
+                    }
                 }
 
-                // This is a state variable. Constrain to be identical
-                MakeStateIdenticalConstraints(it2->second);
+                // This is a state variable.
+                auto const& AppArgs = GetOpArgs(it2->second);
+                const u32 NumArgs = AppArgs.size();
+                auto FuncCostVarName = (string)"__func_cost_" +
+                    to_string(FunctionCostUIDGenerator.GetUID());
+                auto FuncCostVarType = Mgr->MakeType<RangeType>(0, NumArgs);
+                auto FuncCostVar = Mgr->MakeVar(FuncCostVarName, FuncCostVarType);
+                AllIndicators.insert(FuncCostVar);
+
+                if (SBoundMethod == StateUpdateBoundingMethodT::AllSame) {
+                    MakeStateIdenticalConstraints(it2->second);
+                } else if (SBoundMethod == StateUpdateBoundingMethodT::VarDepBound) {
+                    auto&& ArgDepConstraints = CreateArgDepConstraints(it2->second, ExpT::NullPtr);
+                    auto SumExp = MakeSum(ArgDepConstraints, Mgr, FuncCostVarType);
+                    auto Constraint = Mgr->MakeExpr(LTSOps::OpGE, FuncCostVar, SumExp);
+                    UpdateIndicatorExps[UpdateOp] = FuncCostVar;
+                    CurrentAssertions.insert(Constraint);
+                } else {
+                    // No bounding
+                    return;
+                }
                 return;
             }
 
-            auto IndicatorUID = UpdateIndicatorUIDGenerator.GetUID();
-            string IndicatorVarName =
-                (string)"__update_indicator_" + to_string(IndicatorUID);
+            // This has an LValue, is not a state update and is not exempt
+            if (UBoundMethod == UpdateBoundingMethodT::NonIdentityBound) {
 
-            auto const& UpdateExp = it->second.first;
-            auto const& LValue = it->second.second;
+                auto IndicatorUID = UpdateIndicatorUIDGenerator.GetUID();
+                string IndicatorVarName =
+                    (string)"__update_indicator_" + to_string(IndicatorUID);
 
-            auto const& OpArgs = GetOpArgs(UpdateExp);
-            // remove the lvalue itself from the op args
-            vector<TypeRef> ArgTypes;
-            transform(OpArgs.begin(), OpArgs.end(), back_inserter(ArgTypes),
-                      [&] (const ExpT& Exp) -> TypeRef
-                      {
-                          return Exp->GetType();
-                      });
+                auto const& UpdateExp = it->second.first;
+                auto const& LValue = it->second.second;
 
-            // replace each of the arg types by a bound var
-            MgrT::SubstMapT SubstMap;
-            const u32 NumArgs = ArgTypes.size();
-            for (u32 i = 0; i < NumArgs; ++i) {
-                auto BoundVar = Mgr->MakeBoundVar(ArgTypes[i], NumArgs - i - 1);
-                SubstMap[OpArgs[i]] = BoundVar;
+                auto const& OpArgs = GetOpArgs(UpdateExp);
+                // remove the lvalue itself from the op args
+                vector<TypeRef> ArgTypes;
+                transform(OpArgs.begin(), OpArgs.end(), back_inserter(ArgTypes),
+                          [&] (const ExpT& Exp) -> TypeRef
+                          {
+                              return Exp->GetType();
+                          });
+
+                // replace each of the arg types by a bound var
+                MgrT::SubstMapT SubstMap;
+                const u32 NumArgs = ArgTypes.size();
+                for (u32 i = 0; i < NumArgs; ++i) {
+                    auto BoundVar = Mgr->MakeBoundVar(ArgTypes[i], NumArgs - i - 1);
+                    SubstMap[OpArgs[i]] = BoundVar;
+                }
+
+                // Substitute the bound vars
+                auto QBodyExp = Mgr->MakeExpr(LTSOps::OpEQ, LValue, UpdateExp);
+                QBodyExp = Mgr->MakeExpr(LTSOps::OpNOT, QBodyExp);
+                QBodyExp = Mgr->BoundSubstitute(SubstMap, QBodyExp);
+                auto ExistsExp = Mgr->MakeExists(ArgTypes, QBodyExp);
+                auto IndicatorType = Mgr->MakeType<RangeType>(0, 1);
+                auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
+                UpdateIndicatorExps[UpdateOp] = IndicatorVar;
+
+                auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
+                                                Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
+                                                              Mgr->MakeVal("1", IndicatorType)));
+                cout << "Asserting Update Indicator Implication:" << endl
+                     << ImpliesExp->ToString() << endl << endl;
+                CurrentAssertions.insert(ImpliesExp);
+            } else if (UBoundMethod == UpdateBoundingMethodT::VarDepBound) {
+                CreateIndicators(UpdateOp);
+            } else {
+                return;
             }
-
-            // Substitute the bound vars
-            auto QBodyExp = Mgr->MakeExpr(LTSOps::OpEQ, LValue, UpdateExp);
-            QBodyExp = Mgr->MakeExpr(LTSOps::OpNOT, QBodyExp);
-            QBodyExp = Mgr->BoundSubstitute(SubstMap, QBodyExp);
-            auto ExistsExp = Mgr->MakeExists(ArgTypes, QBodyExp);
-            auto IndicatorType = Mgr->MakeType<RangeType>(0, 1);
-            auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
-            UpdateIndicatorExps[UpdateOp] = IndicatorVar;
-
-            auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
-                                            Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
-                                                          Mgr->MakeVal("1", IndicatorType)));
-            cout << "Asserting Update Indicator Implication:" << endl
-                 << ImpliesExp->ToString() << endl << endl;
-            CurrentAssertions.insert(ImpliesExp);
         }
 
         inline void Solver::CreateBoundsConstraints(i64 UpdateOp)
@@ -956,7 +992,7 @@ namespace ESMC {
             auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, SumExp, BoundExp);
             cout << "Asserting Bounds Constraint: " << endl
                  << LEExp->ToString() << endl << endl;
-            TP->Assert(LEExp, false);
+            TP->Assert(LEExp, UnrollQuantifiers);
 
 
             // for (auto const& IndexExp : IndicatorExps) {
@@ -976,7 +1012,7 @@ namespace ESMC {
             // auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundExp);
             // cout << "Asserting Bounds Constraint:" << endl
             //      << EQExp->ToString() << endl << endl;
-            // TP->Assert(EQExp, true);
+            // TP->Assert(EQExp, UnrollQuantifiers);
 
             // // Now make the bounds constraint for the update
             // Summands.clear();
@@ -996,7 +1032,7 @@ namespace ESMC {
             // auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, SumExp, BoundExp);
             // cout << "Asserting Update Bounds Constraint:" << endl
             //      << LEExp->ToString() << endl << endl;
-            // TP->Assert(LEExp, true);
+            // TP->Assert(LEExp, UnrollQuantifiers);
         }
 
         inline void Solver::AssertCurrentConstraints()
@@ -1027,6 +1063,13 @@ namespace ESMC {
         //       continue
         void Solver::Solve()
         {
+            auto SolveStartTime = TimeValue::GetTimeValue();
+            // reset stats
+            TotalSMTQueries = 0;
+            TotalSMTTime = 0;
+            MinSMTQueryTime = UINT64_MAX;
+            MaxSMTQueryTime = 0;
+
             bool FirstIteration = true;
             while (Bound <= LimitOnBound) {
 
@@ -1037,7 +1080,22 @@ namespace ESMC {
 
                 TP->Push();
                 AssertBoundsConstraint();
+
+                auto SMTStartTime = TimeValue::GetTimeValue();
                 auto TPRes = TP->CheckSat();
+                ++TotalSMTQueries;
+                auto SMTEndTime = TimeValue::GetTimeValue();
+                auto CurQueryTime = SMTEndTime - SMTStartTime;
+                auto CurSMTTime = CurQueryTime.InMicroSeconds();
+                TotalSMTTime += CurSMTTime;
+
+                if (CurSMTTime < MinSMTQueryTime) {
+                    MinSMTQueryTime = CurSMTTime;
+                }
+                if (CurSMTTime > MaxSMTQueryTime) {
+                    MaxSMTQueryTime = CurSMTTime;
+                }
+
                 TP->Pop();
 
                 // if (TPRes == TPResult::UNSATISFIABLE) {
@@ -1102,9 +1160,20 @@ namespace ESMC {
                 if (!CompletionGood) {
                     continue;
                 } else {
+                    auto SolveEndTime = TimeValue::GetTimeValue();
+                    auto SolveTimeInMicroSecs = (SolveEndTime - SolveStartTime).InMicroSeconds();
                     cout << "Found Correct Completion!" << endl;
                     cout << "With Bound = " << Bound << ", Model:" << endl;
                     PrintFinalSolution(cout);
+                    cout << "Solution found in " << SolveTimeInMicroSecs << " useconds ("
+                         << ((float)SolveTimeInMicroSecs / 1000000.0)
+                         << " seconds)." << endl;
+                    cout << "Total SMT Queries: " << TotalSMTQueries << endl;
+                    cout << "Total SMT Time: " << TotalSMTTime << " useconds." << endl;
+                    cout << "Average SMT Time: " << ((float)TotalSMTTime / TotalSMTQueries)
+                         << " useconds." << endl;
+                    cout << "Max SMT Time: " << MaxSMTQueryTime << " useconds" << endl;
+                    cout << "Min SMT Time: " << MinSMTQueryTime << " useconds" << endl;
                     return;
                 }
             }
