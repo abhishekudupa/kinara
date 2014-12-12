@@ -54,6 +54,7 @@ struct MSISynthOptionsT {
     UpdateBoundingMethodT UBoundMethod;
     StateUpdateBoundingMethodT SBoundMethod;
     bool UnrollQuantifiers;
+    bool NarrowDomains;
 };
 
 static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Options)
@@ -69,6 +70,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
          "Method for bounding updates; one of: none, vardep, nonid")
         ("sbound,s", po::value<string>(&SBoundMethodStr)->default_value("none"),
          "Method for bounding location updates; one of: none, allsame, vardep")
+        ("narrpw,n", "Use narrow domains for functions to be synthesized")
         ("quants,q", "Unroll Quantifiers before handing off to Z3");
 
     po::variables_map vm;
@@ -116,11 +118,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
         exit(1);
     }
 
-    if (vm.count("quants") > 0) {
-        Options.UnrollQuantifiers = true;
-    } else {
-        Options.UnrollQuantifiers = false;
-    }
+    Options.UnrollQuantifiers = (vm.count("quants") > 0);
+    Options.NarrowDomains = (vm.count("narrow") > 0);
 
     return;
 }

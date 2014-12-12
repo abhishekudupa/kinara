@@ -77,6 +77,7 @@ libesmc_OBJS= \
 	LTSUtils.o \
 	OmegaAutomaton.o \
 	Permutations.o \
+	ResourceLimitManager.o \
 	Solver.o \
 	SpookyHash.o \
 	StateVec.o \

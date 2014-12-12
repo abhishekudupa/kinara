@@ -67,15 +67,8 @@ namespace ESMC {
 
         const string Solver::BoundsVarPrefix = (string)"__SynthBound__";
 
-        Solver::Solver(LTSChecker* Checker,
-                       GuardBoundingMethodT GBoundMethod,
-                       UpdateBoundingMethodT UBoundMethod,
-                       StateUpdateBoundingMethodT SBoundMethod,
-                       bool UnrollQuantifiers)
-            : GBoundMethod(GBoundMethod),
-              UBoundMethod(UBoundMethod),
-              SBoundMethod(SBoundMethod),
-              UnrollQuantifiers(UnrollQuantifiers),
+        Solver::Solver(LTSChecker* Checker, const SolverOptionsT& Options)
+            : Options(Options),
               TP(new Z3TheoremProver()),
               TheLTS(Checker->TheLTS),
               Compiler(Checker->Compiler),
@@ -87,7 +80,7 @@ namespace ESMC {
             // true
 
             TP->Push();
-            TP->Assert(TheLTS->MakeTrue(), UnrollQuantifiers);
+            TP->Assert(TheLTS->MakeTrue(), Options.UnrollQuantifiers);
 
             TPAsZ3 = const_cast<Z3TheoremProver*>(TP->As<Z3TheoremProver>());
             Ctx = TPAsZ3->GetCtx();
@@ -114,7 +107,7 @@ namespace ESMC {
 
             AssertedConstraints.insert(Assertion);
             // cout << "Asserting: " << Assertion->ToString() << endl;
-            TP->Assert(Assertion, UnrollQuantifiers);
+            TP->Assert(Assertion, Options.UnrollQuantifiers);
         }
 
         Solver::~Solver()
@@ -377,7 +370,7 @@ namespace ESMC {
         {
             auto Mgr = TheLTS->GetMgr();
 
-            if (GBoundMethod == GuardBoundingMethodT::PointBound) {
+            if (Options.GBoundMethod == GuardBoundingMethodT::PointBound) {
 
                 auto FunType = Mgr->LookupUninterpretedFunction(GuardOp)->As<FuncType>();
                 auto DomainTypes = FunType->GetArgTypes();
@@ -428,7 +421,7 @@ namespace ESMC {
                      << EQExp->ToString() << endl << endl;
                 CurrentAssertions.insert(EQExp);
 
-            } else if (GBoundMethod == GuardBoundingMethodT::NonFalseBound) {
+            } else if (Options.GBoundMethod == GuardBoundingMethodT::NonFalseBound) {
 
                 auto IndicatorUID = GuardIndicatorUIDGenerator.GetUID();
                 string IndicatorVarName = (string)"__indicator_" + to_string(IndicatorUID);
@@ -454,7 +447,7 @@ namespace ESMC {
                 cout << "Asserting Indicator Implication:" << endl
                      << Implies->ToString() << endl << endl;
                 CurrentAssertions.insert(Implies);
-            } else if (GBoundMethod == GuardBoundingMethodT::VarDepBound) {
+            } else if (Options.GBoundMethod == GuardBoundingMethodT::VarDepBound) {
                 CreateIndicators(GuardOp);
             } else {
                 // No bounding, return
@@ -516,7 +509,7 @@ namespace ESMC {
                 auto it2 = StateUpdateOpToExp.find(UpdateOp);
                 if (it2 == StateUpdateOpToExp.end()) {
                     // This is an exempt lvalue
-                    if (UBoundMethod == UpdateBoundingMethodT::VarDepBound) {
+                    if (Options.UBoundMethod == UpdateBoundingMethodT::VarDepBound) {
                         CreateIndicators(UpdateOp);
                         return;
                     } else {
@@ -533,9 +526,9 @@ namespace ESMC {
                 auto FuncCostVar = Mgr->MakeVar(FuncCostVarName, FuncCostVarType);
                 AllIndicators.insert(FuncCostVar);
 
-                if (SBoundMethod == StateUpdateBoundingMethodT::AllSame) {
+                if (Options.SBoundMethod == StateUpdateBoundingMethodT::AllSame) {
                     MakeStateIdenticalConstraints(it2->second);
-                } else if (SBoundMethod == StateUpdateBoundingMethodT::VarDepBound) {
+                } else if (Options.SBoundMethod == StateUpdateBoundingMethodT::VarDepBound) {
                     auto&& ArgDepConstraints = CreateArgDepConstraints(it2->second, ExpT::NullPtr);
                     auto SumExp = MakeSum(ArgDepConstraints, Mgr, FuncCostVarType);
                     auto Constraint = Mgr->MakeExpr(LTSOps::OpGE, FuncCostVar, SumExp);
@@ -549,7 +542,7 @@ namespace ESMC {
             }
 
             // This has an LValue, is not a state update and is not exempt
-            if (UBoundMethod == UpdateBoundingMethodT::NonIdentityBound) {
+            if (Options.UBoundMethod == UpdateBoundingMethodT::NonIdentityBound) {
 
                 auto IndicatorUID = UpdateIndicatorUIDGenerator.GetUID();
                 string IndicatorVarName =
@@ -590,7 +583,7 @@ namespace ESMC {
                 cout << "Asserting Update Indicator Implication:" << endl
                      << ImpliesExp->ToString() << endl << endl;
                 CurrentAssertions.insert(ImpliesExp);
-            } else if (UBoundMethod == UpdateBoundingMethodT::VarDepBound) {
+            } else if (Options.UBoundMethod == UpdateBoundingMethodT::VarDepBound) {
                 CreateIndicators(UpdateOp);
             } else {
                 return;
@@ -992,7 +985,7 @@ namespace ESMC {
             auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, SumExp, BoundExp);
             cout << "Asserting Bounds Constraint: " << endl
                  << LEExp->ToString() << endl << endl;
-            TP->Assert(LEExp, UnrollQuantifiers);
+            TP->Assert(LEExp, Options.UnrollQuantifiers);
 
 
             // for (auto const& IndexExp : IndicatorExps) {

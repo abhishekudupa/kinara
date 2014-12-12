@@ -70,6 +70,51 @@ namespace ESMC {
             AllSame, VarDepBound, NoBounding
         };
 
+        class SolverOptionsT {
+        public:
+            GuardBoundingMethodT GBoundMethod;
+            UpdateBoundingMethodT UBoundMethod;
+            StateUpdateBoundingMethodT SBoundMethod;
+            bool UnrollQuantifiers;
+            u64 CPULimitInSeconds;
+            u64 MemLimitInMB;
+
+            inline SolverOptionsT()
+                : GBoundMethod(GuardBoundingMethodT::NoBounding),
+                  UBoundMethod(UpdateBoundingMethodT::NoBounding),
+                  SBoundMethod(StateUpdateBoundingMethodT::NoBounding),
+                  UnrollQuantifiers(false), CPULimitInSeconds(UINT64_MAX),
+                  MemLimitInMB(UINT64_MAX)
+            {
+                // Nothing here
+            }
+
+            inline SolverOptionsT(const SolverOptionsT& Other)
+                : GBoundMethod(Other.GBoundMethod),
+                  UBoundMethod(Other.UBoundMethod),
+                  SBoundMethod(Other.SBoundMethod),
+                  UnrollQuantifiers(Other.UnrollQuantifiers),
+                  CPULimitInSeconds(Other.CPULimitInSeconds),
+                  MemLimitInMB(Other.MemLimitInMB)
+            {
+                // Nothing here
+            }
+
+            inline SolverOptionsT& operator = (const SolverOptionsT& Other)
+            {
+                if (&Other == this) {
+                    return *this;
+                }
+
+                GBoundMethod = Other.GBoundMethod;
+                SBoundMethod = Other.SBoundMethod;
+                UBoundMethod = Other.UBoundMethod;
+                UnrollQuantifiers = Other.UnrollQuantifiers;
+                CPULimitInSeconds = Other.CPULimitInSeconds;
+                MemLimitInMB = Other.MemLimitInMB;
+            }
+        };
+
         namespace Detail {
 
             // A cost functor for shortest paths
@@ -126,10 +171,7 @@ namespace ESMC {
         private:
             static const string BoundsVarPrefix;
 
-            GuardBoundingMethodT GBoundMethod;
-            UpdateBoundingMethodT UBoundMethod;
-            StateUpdateBoundingMethodT SBoundMethod;
-            bool UnrollQuantifiers;
+            SolverOptionsT Options;
 
             // Assertions in the current iteration
             FastExpSetT CurrentAssertions;
@@ -198,11 +240,7 @@ namespace ESMC {
             inline void UpdateCommands();
 
         public:
-            Solver(LTSChecker* Checker,
-                   GuardBoundingMethodT GBoundMethod = GuardBoundingMethodT::NoBounding,
-                   UpdateBoundingMethodT UBoundMethod = UpdateBoundingMethodT::NoBounding,
-                   StateUpdateBoundingMethodT SBoundMethod = StateUpdateBoundingMethodT::NoBounding,
-                   bool UnrollQuantifiers = false);
+            Solver(LTSChecker* Checker, const SolverOptionsT& Options = SolverOptionsT());
             virtual ~Solver();
 
             // makes an assertion. Also fixes up interpretations
