@@ -107,6 +107,7 @@ namespace ESMC {
             // Ignores all the assertions on the stack
             virtual TPResult CheckSat(const ExpT& Assertion,
                                       bool UnrollQuantifiers) const = 0;
+            virtual u64 GetNumAssertions() const = 0;
 
             // Evaluates only scalar typed expressions
             virtual ExpT Evaluate(const ExpT& Exp) const = 0;
@@ -178,6 +179,7 @@ namespace ESMC {
             virtual TPResult CheckSat() const override;
             virtual TPResult CheckSat(const ExpT& Assertion,
                                       bool UnrollQuantifiers = false) const override;
+            virtual u64 GetNumAssertions() const override;
 
             virtual ExpT Evaluate(const ExpT& Exp) const override;
 

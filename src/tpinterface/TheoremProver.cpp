@@ -312,6 +312,12 @@ namespace ESMC {
             return LastSolveResult;
         }
 
+        u64 Z3TheoremProver::GetNumAssertions() const
+        {
+            auto ASTVec = Z3_solver_get_assertions(*Ctx, Solver);
+            return Z3_ast_vector_size(*Ctx, ASTVec);
+        }
+
         ExpT Z3TheoremProver::Evaluate(const ExpT& Exp) const
         {
             if (LastSolveResult != TPResult::SATISFIABLE) {

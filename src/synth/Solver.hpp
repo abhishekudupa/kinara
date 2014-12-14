@@ -47,6 +47,7 @@
 #include "../uflts/LTSTransitions.hpp"
 #include "../utils/UIDGenerator.hpp"
 #include "../mc/AQStructure.hpp"
+#include "../utils/TimeValue.hpp"
 
 namespace ESMC {
     namespace Synth {
@@ -78,13 +79,14 @@ namespace ESMC {
             bool UnrollQuantifiers;
             u64 CPULimitInSeconds;
             u64 MemLimitInMB;
+            u32 NumCExToProcess;
 
             inline SolverOptionsT()
                 : GBoundMethod(GuardBoundingMethodT::NoBounding),
                   UBoundMethod(UpdateBoundingMethodT::NoBounding),
                   SBoundMethod(StateUpdateBoundingMethodT::NoBounding),
                   UnrollQuantifiers(false), CPULimitInSeconds(UINT64_MAX),
-                  MemLimitInMB(UINT64_MAX)
+                  MemLimitInMB(UINT64_MAX), NumCExToProcess(8)
             {
                 // Nothing here
             }
@@ -95,7 +97,8 @@ namespace ESMC {
                   SBoundMethod(Other.SBoundMethod),
                   UnrollQuantifiers(Other.UnrollQuantifiers),
                   CPULimitInSeconds(Other.CPULimitInSeconds),
-                  MemLimitInMB(Other.MemLimitInMB)
+                  MemLimitInMB(Other.MemLimitInMB),
+                  NumCExToProcess(Other.NumCExToProcess)
             {
                 // Nothing here
             }
@@ -112,6 +115,7 @@ namespace ESMC {
                 UnrollQuantifiers = Other.UnrollQuantifiers;
                 CPULimitInSeconds = Other.CPULimitInSeconds;
                 MemLimitInMB = Other.MemLimitInMB;
+                NumCExToProcess = Other.NumCExToProcess;
             }
         };
 
@@ -164,6 +168,27 @@ namespace ESMC {
 
         } /* end namespace Detail */
 
+
+        struct SolverStatsT
+        {
+            TimeValue SolveStartTime;
+            TimeValue SolveEndTime;
+            u64 InitialNumAssertions;
+            u64 FinalNumAssertions;
+            u64 NumIterations;
+            u64 TotalSMTTime;
+            u64 MinSMTTime;
+            u64 MaxSMTTime;
+
+            inline SolverStatsT()
+                : InitialNumAssertions(0), FinalNumAssertions(0),
+                  NumIterations(0), TotalSMTTime(0), MinSMTTime(0),
+                  MaxSMTTime(0)
+            {
+                // Nothing here
+            }
+        };
+
         class Solver
         {
             friend class ESMC::Analyses::TraceAnalyses;
@@ -204,10 +229,8 @@ namespace ESMC {
             UIDGenerator GuardPointUIDGenerator;
             UIDGenerator AllFalseUIDGenerator;
             FastExpSetT AllIndicators;
-            u32 TotalSMTQueries;
-            u64 TotalSMTTime;
-            u64 MinSMTQueryTime;
-            u64 MaxSMTQueryTime;
+
+            SolverStatsT Stats;
 
             inline void CheckedAssert(const ExpT& Assertion);
             inline void AssertCurrentConstraints();
@@ -238,6 +261,8 @@ namespace ESMC {
             inline void HandleLivenessViolation(const LivenessViolation* Trace,
                                                 StateBuchiAutomaton* Monitor);
             inline void UpdateCommands();
+            inline void ResetStats();
+            inline void PrintStats(ostream& Out);
 
         public:
             Solver(LTSChecker* Checker, const SolverOptionsT& Options = SolverOptionsT());
@@ -257,6 +282,7 @@ namespace ESMC {
             void PrintOneUFFinalSolution(const vector<const UFInterpreter*>& Interps,
                                          ostream& Out);
             void PrintFinalSolution(ostream& Out);
+            const SolverStatsT& GetStats() const;
         };
 
     } /* end namespace Synth */

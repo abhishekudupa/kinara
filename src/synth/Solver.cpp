@@ -48,7 +48,6 @@
 #include "../symexec/LTSAnalyses.hpp"
 #include "../mc/OmegaAutomaton.hpp"
 #include "../mc/StateVecPrinter.hpp"
-#include "../utils/TimeValue.hpp"
 #include "../utils/ResourceLimitManager.hpp"
 
 #include "Solver.hpp"
@@ -987,46 +986,6 @@ namespace ESMC {
             cout << "Asserting Bounds Constraint: " << endl
                  << LEExp->ToString() << endl << endl;
             TP->Assert(LEExp, Options.UnrollQuantifiers);
-
-
-            // for (auto const& IndexExp : IndicatorExps) {
-            //     Summands.push_back(IndexExp.second);
-            // }
-
-            // if (Summands.size() == 0) {
-            //     return;
-            // } else if (Summands.size() == 1) {
-            //     SumExp = Summands[0];
-            // } else {
-            //     SumExp = Mgr->MakeExpr(LTSOps::OpADD, Summands);
-            // }
-
-            // auto BoundExp = Mgr->MakeVal(to_string(Bound),
-            //                              Mgr->MakeType<RangeType>(0, Bound));
-            // auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundExp);
-            // cout << "Asserting Bounds Constraint:" << endl
-            //      << EQExp->ToString() << endl << endl;
-            // TP->Assert(EQExp, UnrollQuantifiers);
-
-            // // Now make the bounds constraint for the update
-            // Summands.clear();
-            // for (auto const& IndexExp : UpdateIndicatorExps) {
-            //     Summands.push_back(IndexExp.second);
-            // }
-            // SumExp = ExpT::NullPtr;
-            // if (Summands.size() == 0) {
-            //     return;
-            // } else if (Summands.size() == 1) {
-            //     SumExp = Summands[0];
-            // } else {
-            //     SumExp = Mgr->MakeExpr(LTSOps::OpADD, Summands);
-            // }
-            // BoundExp = Mgr->MakeVal(to_string(UpdateBound),
-            //                         Mgr->MakeType<RangeType>(0, UpdateBound));
-            // auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, SumExp, BoundExp);
-            // cout << "Asserting Update Bounds Constraint:" << endl
-            //      << LEExp->ToString() << endl << endl;
-            // TP->Assert(LEExp, UnrollQuantifiers);
         }
 
         inline void Solver::AssertCurrentConstraints()
@@ -1034,6 +993,41 @@ namespace ESMC {
             for (auto const& Pred : CurrentAssertions) {
                 CheckedAssert(Pred);
             }
+        }
+
+        inline void Solver::ResetStats()
+        {
+            Stats.SolveStartTime = TimeValue();
+            Stats.SolveEndTime = TimeValue();
+            Stats.MinSMTTime = UINT64_MAX;
+            Stats.MaxSMTTime = 0;
+            Stats.NumIterations = 0;
+            Stats.TotalSMTTime = 0;
+            Stats.InitialNumAssertions = 0;
+            Stats.FinalNumAssertions = 0;
+        }
+
+        inline void Solver::PrintStats(ostream& Out)
+        {
+            auto SolveTimeInMicroSecs = (Stats.SolveEndTime -
+                                         Stats.SolveStartTime).InMicroSeconds();
+            Out << "Solver Stats:" << endl << endl;
+            Out << "----------------------------------------------------------------"
+                << endl;
+            Out << "Solve Time: " << ((float)SolveTimeInMicroSecs / 1000000.0)
+                << " (s)" << endl;
+            Out << "Initial Asserts: " << Stats.InitialNumAssertions << endl;
+            Out << "Final Asserts: " << Stats.FinalNumAssertions << endl;
+            Out << "Num Iterations: " << Stats.NumIterations << endl;
+            Out << "Total SMT Time: " << Stats.TotalSMTTime << " (uS)" << endl;
+            Out << "Min SMT Time: " << Stats.MinSMTTime << " (uS)" << endl;
+            Out << "Max SMT Time: " << Stats.MaxSMTTime << " (uS)" << endl;
+            Out << "Avg SMT Time: "
+                << ((float)Stats.TotalSMTTime / Stats.NumIterations)
+                << " (uS)" << endl;
+            Out << "Final Bound: " << Bound << endl;
+            Out << "----------------------------------------------------------------"
+                << endl << endl;
         }
 
         // Algorithm:
@@ -1057,26 +1051,26 @@ namespace ESMC {
         //       continue
         void Solver::Solve()
         {
-            auto SolveStartTime = TimeValue::GetTimeValue();
-            // reset stats
-            TotalSMTQueries = 0;
-            TotalSMTTime = 0;
-            MinSMTQueryTime = UINT64_MAX;
-            MaxSMTQueryTime = 0;
-
+            ResetStats();
+            Stats.SolveStartTime = TimeValue::GetTimeValue();
             ResourceLimitManager::SetCPULimit(Options.CPULimitInSeconds);
             ResourceLimitManager::SetMemLimit(Options.MemLimitInMB << 20);
             ResourceLimitManager::QueryStart();
 
             bool FirstIteration = true;
+            bool InitialConstraintsCounted = false;
             while (Bound <= LimitOnBound) {
 
                 if (ResourceLimitManager::CheckMemOut()) {
+                    Stats.SolveEndTime = TimeValue::GetTimeValue();
                     cout << "Memory limit reached. Aborting with Memout!" << endl << endl;
+                    PrintStats(cout);
                     exit(1);
                 }
                 if (ResourceLimitManager::CheckTimeOut()) {
+                    Stats.SolveEndTime = TimeValue::GetTimeValue();
                     cout << "CPU Time limit reached. Aborting with Timeout" << endl << endl;
+                    PrintStats(cout);
                     exit(1);
                 }
 
@@ -1085,39 +1079,33 @@ namespace ESMC {
                 AssertCurrentConstraints();
                 CurrentAssertions.clear();
 
+                if (!FirstIteration && !InitialConstraintsCounted) {
+                    InitialConstraintsCounted = true;
+                    Stats.InitialNumAssertions = TP->GetNumAssertions();
+                }
+
+                Stats.FinalNumAssertions = TP->GetNumAssertions();
+
                 TP->Push();
                 AssertBoundsConstraint();
 
                 auto SMTStartTime = TimeValue::GetTimeValue();
                 auto TPRes = TP->CheckSat();
-                ++TotalSMTQueries;
+                ++Stats.NumIterations;
                 auto SMTEndTime = TimeValue::GetTimeValue();
                 auto CurQueryTime = SMTEndTime - SMTStartTime;
                 auto CurSMTTime = CurQueryTime.InMicroSeconds();
-                TotalSMTTime += CurSMTTime;
+                Stats.TotalSMTTime += CurSMTTime;
 
-                if (CurSMTTime < MinSMTQueryTime) {
-                    MinSMTQueryTime = CurSMTTime;
+                if (CurSMTTime < Stats.MinSMTTime) {
+                    Stats.MinSMTTime = CurSMTTime;
                 }
-                if (CurSMTTime > MaxSMTQueryTime) {
-                    MaxSMTQueryTime = CurSMTTime;
+                if (CurSMTTime > Stats.MaxSMTTime) {
+                    Stats.MaxSMTTime = CurSMTTime;
                 }
 
                 TP->Pop();
 
-                // if (TPRes == TPResult::UNSATISFIABLE) {
-                //     if (UpdateBound < Bound * UpdateBoundsMultiplier) {
-                //         ++UpdateBound;
-                //     } else {
-                //         UpdateBound = 0;
-                //         ++Bound;
-                //     }
-                //     continue;
-                // } else if (TPRes == TPResult::UNKNOWN) {
-                //     throw ESMCError((string)"Could not solve constraints!");
-                // }
-
-                // for unified bounds
                 if (TPRes == TPResult::UNSATISFIABLE) {
                     ++Bound;
                     continue;
@@ -1137,7 +1125,7 @@ namespace ESMC {
                     CExBound = UINT32_MAX;
                     FirstIteration = false;
                 } else {
-                    CExBound = 8;
+                    CExBound = Options.NumCExToProcess;
                 }
                 auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, CExBound);
 
@@ -1167,20 +1155,11 @@ namespace ESMC {
                 if (!CompletionGood) {
                     continue;
                 } else {
-                    auto SolveEndTime = TimeValue::GetTimeValue();
-                    auto SolveTimeInMicroSecs = (SolveEndTime - SolveStartTime).InMicroSeconds();
+                    Stats.SolveEndTime = TimeValue::GetTimeValue();
                     cout << "Found Correct Completion!" << endl;
                     cout << "With Bound = " << Bound << ", Model:" << endl;
                     PrintFinalSolution(cout);
-                    cout << "Solution found in " << SolveTimeInMicroSecs << " useconds ("
-                         << ((float)SolveTimeInMicroSecs / 1000000.0)
-                         << " seconds)." << endl;
-                    cout << "Total SMT Queries: " << TotalSMTQueries << endl;
-                    cout << "Total SMT Time: " << TotalSMTTime << " useconds." << endl;
-                    cout << "Average SMT Time: " << ((float)TotalSMTTime / TotalSMTQueries)
-                         << " useconds." << endl;
-                    cout << "Max SMT Time: " << MaxSMTQueryTime << " useconds" << endl;
-                    cout << "Min SMT Time: " << MinSMTQueryTime << " useconds" << endl;
+                    PrintStats(cout);
                     return;
                 }
             }
