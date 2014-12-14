@@ -856,10 +856,13 @@ int main(int argc, char* argv[])
     CacheAsInc->MarkStateIncomplete("C_S_ST");
     CacheAsInc->IgnoreAllMsgsOnState("C_S_ST");
     CacheAsInc->HandleMsgOnState(GetXMsgDecl, "C_S_ST");
-    CacheAsInc->SetVariableDepsOnMsg("Data", GetXMsgDecl, { "Data" }, {});
-    CacheAsInc->SetVariableDepsOnMsg("FwdToCache", GetXMsgDecl, { "FwdToCache" }, {});
-    CacheAsInc->SetVariableDepsOnMsg("PendingWrite", GetXMsgDecl, { "PendingWrite" }, {});
-    CacheAsInc->SetVariableDepsOnMsg("AckCounter", GetXMsgDecl, { "AckCounter" }, {});
+
+    if (Options.NarrowDomains) {
+        CacheAsInc->SetVariableDepsOnMsg("Data", GetXMsgDecl, { "Data" }, {});
+        CacheAsInc->SetVariableDepsOnMsg("FwdToCache", GetXMsgDecl, { "FwdToCache" }, {});
+        CacheAsInc->SetVariableDepsOnMsg("PendingWrite", GetXMsgDecl, { "PendingWrite" }, {});
+        CacheAsInc->SetVariableDepsOnMsg("AckCounter", GetXMsgDecl, { "AckCounter" }, {});
+    }
 
     // CacheAsInc->MarkStateIncomplete("C_II_SENDACK");
     // CacheAsInc->IgnoreAllMsgsOnState("C_II_SENDACK");
@@ -1309,13 +1312,17 @@ int main(int argc, char* argv[])
     DirAsInc->MarkStateIncomplete("D_BUSY_WB");
     DirAsInc->IgnoreAllMsgsOnState("D_BUSY_WB");
     DirAsInc->HandleMsgOnState(DataMsgD2CDeclOut, "D_BUSY_WB");
-    DirAsInc->SetVariableDepsOnMsg("Data", DataMsgD2CDeclOut, { "Data" }, {});
-    DirAsInc->SetVariableDepsOnMsg("ActiveID", DataMsgD2CDeclOut, { "ActiveID" }, {});
-    DirAsInc->SetVariableDepsOnMsg("Sharers", DataMsgD2CDeclOut, { "Sharers" }, {});
-    DirAsInc->SetVariableDepsOnMsg("NumSharers", DataMsgD2CDeclOut, { "NumSharers" }, {});
-    DirAsInc->SetVariableDepsOnMsg("Owner", DataMsgD2CDeclOut, { "Owner" }, {});
-    DirAsInc->SetOutMsgFieldDeps(DataMsgD2CDeclOut, "Data", { "Data" });
-    DirAsInc->SetOutMsgFieldDeps(DataMsgD2CDeclOut, "NumAcks", { "NumSharers" });
+
+    if (Options.NarrowDomains) {
+        DirAsInc->SetVariableDepsOnMsg("Data", DataMsgD2CDeclOut, { "Data" }, {});
+        DirAsInc->SetVariableDepsOnMsg("ActiveID", DataMsgD2CDeclOut, { "ActiveID" }, {});
+        DirAsInc->SetVariableDepsOnMsg("Sharers", DataMsgD2CDeclOut, { "Sharers" }, {});
+        DirAsInc->SetVariableDepsOnMsg("NumSharers", DataMsgD2CDeclOut, { "NumSharers" }, {});
+        DirAsInc->SetVariableDepsOnMsg("Owner", DataMsgD2CDeclOut, { "Owner" }, {});
+        DirAsInc->SetOutMsgFieldDeps(DataMsgD2CDeclOut, "Data", { "Data" });
+        DirAsInc->SetOutMsgFieldDeps(DataMsgD2CDeclOut, "NumAcks", { "NumSharers" });
+    }
+
     DirEFSM->Freeze();
 
     TheLTS->FreezeAutomata();
@@ -1695,9 +1702,9 @@ int main(int argc, char* argv[])
     Monitor->AddTransition("Accepting", "Accepting", MonEnvDotStateNEQInitial);
     Monitor->Freeze();
 
-    auto TheSolver = new Solver(Checker, Options.GBoundMethod,
-                                Options.UBoundMethod, Options.SBoundMethod,
-                                Options.UnrollQuantifiers);
+    SolverOptionsT SolverOpts;
+    OptsToSolverOpts(Options, SolverOpts);
+    auto TheSolver = new Solver(Checker, SolverOpts);
     TheSolver->Solve();
 
     delete TheSolver;

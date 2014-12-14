@@ -164,7 +164,7 @@ namespace ESMC {
 
         } /* end namespace Detail */
 
-        class Solver : public RefCountable
+        class Solver
         {
             friend class ESMC::Analyses::TraceAnalyses;
 

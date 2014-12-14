@@ -49,6 +49,7 @@
 #include "../mc/OmegaAutomaton.hpp"
 #include "../mc/StateVecPrinter.hpp"
 #include "../utils/TimeValue.hpp"
+#include "../utils/ResourceLimitManager.hpp"
 
 #include "Solver.hpp"
 
@@ -1063,8 +1064,21 @@ namespace ESMC {
             MinSMTQueryTime = UINT64_MAX;
             MaxSMTQueryTime = 0;
 
+            ResourceLimitManager::SetCPULimit(Options.CPULimitInSeconds);
+            ResourceLimitManager::SetMemLimit(Options.MemLimitInMB << 20);
+            ResourceLimitManager::QueryStart();
+
             bool FirstIteration = true;
             while (Bound <= LimitOnBound) {
+
+                if (ResourceLimitManager::CheckMemOut()) {
+                    cout << "Memory limit reached. Aborting with Memout!" << endl << endl;
+                    exit(1);
+                }
+                if (ResourceLimitManager::CheckTimeOut()) {
+                    cout << "CPU Time limit reached. Aborting with Timeout" << endl << endl;
+                    exit(1);
+                }
 
                 // Assert any constraints we might have
                 // from the previous iteration

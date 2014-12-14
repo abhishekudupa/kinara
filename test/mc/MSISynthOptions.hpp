@@ -48,6 +48,7 @@ namespace po = boost::program_options;
 using ESMC::Synth::GuardBoundingMethodT;
 using ESMC::Synth::UpdateBoundingMethodT;
 using ESMC::Synth::StateUpdateBoundingMethodT;
+using ESMC::u64;
 
 struct MSISynthOptionsT {
     GuardBoundingMethodT GBoundMethod;
@@ -55,12 +56,16 @@ struct MSISynthOptionsT {
     StateUpdateBoundingMethodT SBoundMethod;
     bool UnrollQuantifiers;
     bool NarrowDomains;
+    u64 CPULimit;
+    u64 MemLimit;
 };
 
 static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Options)
 {
     po::options_description Desc("Usage and Allowed Options");
     string GBoundMethodStr, UBoundMethodStr, SBoundMethodStr;
+    u64 CPULimit;
+    u64 MemLimit;
 
     Desc.add_options()
         ("help", "Produce this help message")
@@ -70,8 +75,12 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
          "Method for bounding updates; one of: none, vardep, nonid")
         ("sbound,s", po::value<string>(&SBoundMethodStr)->default_value("none"),
          "Method for bounding location updates; one of: none, allsame, vardep")
-        ("narrpw,n", "Use narrow domains for functions to be synthesized")
-        ("quants,q", "Unroll Quantifiers before handing off to Z3");
+        ("narrow,n", "Use narrow domains for functions to be synthesized")
+        ("quants,q", "Unroll Quantifiers before handing off to Z3")
+        ("cpu-limit,t", po::value<u64>(&CPULimit)->default_value(UINT64_MAX),
+         "CPU Time limit in seconds")
+        ("mem-limit,m", po::value<u64>(&MemLimit)->default_value(UINT64_MAX),
+         "Memory limit in MB");
 
     po::variables_map vm;
 
@@ -120,8 +129,21 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
 
     Options.UnrollQuantifiers = (vm.count("quants") > 0);
     Options.NarrowDomains = (vm.count("narrow") > 0);
+    Options.CPULimit = CPULimit;
+    Options.MemLimit = MemLimit;
 
     return;
+}
+
+static inline void OptsToSolverOpts(const MSISynthOptionsT& Opts,
+                                    ESMC::Synth::SolverOptionsT& SolverOpts)
+{
+    SolverOpts.GBoundMethod = Opts.GBoundMethod;
+    SolverOpts.UBoundMethod = Opts.UBoundMethod;
+    SolverOpts.SBoundMethod = Opts.SBoundMethod;
+    SolverOpts.UnrollQuantifiers = Opts.UnrollQuantifiers;
+    SolverOpts.CPULimitInSeconds = Opts.CPULimit;
+    SolverOpts.MemLimitInMB = Opts.MemLimit;
 }
 
 //
