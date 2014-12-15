@@ -958,7 +958,7 @@ namespace ESMC {
             delete Trace;
         }
 
-        inline void Solver::AssertBoundsConstraint()
+        inline bool Solver::AssertBoundsConstraint()
         {
             auto Mgr = TheLTS->GetMgr();
             vector<ExpT> Summands;
@@ -973,7 +973,7 @@ namespace ESMC {
             }
 
             if (Summands.size() == 0) {
-                return;
+                return false;
             } else if (Summands.size() == 1) {
                 SumExp = Summands[0];
             } else {
@@ -985,7 +985,11 @@ namespace ESMC {
             auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, SumExp, BoundExp);
             cout << "Asserting Bounds Constraint: " << endl
                  << LEExp->ToString() << endl << endl;
+
+            TP->Push();
             TP->Assert(LEExp, Options.UnrollQuantifiers);
+
+            return true;
         }
 
         inline void Solver::AssertCurrentConstraints()
@@ -1086,8 +1090,7 @@ namespace ESMC {
 
                 Stats.FinalNumAssertions = TP->GetNumAssertions();
 
-                TP->Push();
-                AssertBoundsConstraint();
+                bool MustPop = AssertBoundsConstraint();
 
                 auto SMTStartTime = TimeValue::GetTimeValue();
                 auto TPRes = TP->CheckSat();
@@ -1104,7 +1107,9 @@ namespace ESMC {
                     Stats.MaxSMTTime = CurSMTTime;
                 }
 
-                TP->Pop();
+                if (MustPop) {
+                    TP->Pop();
+                }
 
                 if (TPRes == TPResult::UNSATISFIABLE) {
                     ++Bound;

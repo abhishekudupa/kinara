@@ -253,7 +253,7 @@ namespace ESMC {
             inline void CreateBoundsConstraints(i64 UpdateOp);
             inline void CreateMutualExclusionConstraint(const ExpT& GuardExp1,
                                                         const ExpT& GuardExp2);
-            inline void AssertBoundsConstraint();
+            inline bool AssertBoundsConstraint();
             inline void HandleSafetyViolations();
             inline void HandleOneSafetyViolation(const StateVec* ErrorState,
                                                  const ExpT& BlownInvariant);
