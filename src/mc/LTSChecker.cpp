@@ -845,8 +845,6 @@ namespace ESMC {
                             } else if (InvarRes == 0) {
                                 // Again, remember this state, but continue
                                 // on with the AQS construction
-                                // We only want the first one to be stored
-                                // so use itercount
                                 ErrorStates[CanonNextState] = Invar;
                                 if (ErrorStates.size() >= NumErrors) {
                                     return;

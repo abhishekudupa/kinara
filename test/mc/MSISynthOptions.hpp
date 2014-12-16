@@ -75,7 +75,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
         ("gbound,g", po::value<string>(&GBoundMethodStr)->default_value("none"),
          "Method for bounding guards; one of: none, vardep, nonfalse, point")
         ("ubound,u", po::value<string>(&UBoundMethodStr)->default_value("none"),
-         "Method for bounding updates; one of: none, vardep, nonid")
+         "Method for bounding updates; one of: none, vardep, nonid, point")
         ("sbound,s", po::value<string>(&SBoundMethodStr)->default_value("none"),
          "Method for bounding location updates; one of: none, allsame, vardep")
         ("narrow,n", "Use narrow domains for functions to be synthesized")
@@ -114,6 +114,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
         Options.UBoundMethod = UpdateBoundingMethodT::VarDepBound;
     } else if (UBoundMethodStr == "nonid") {
         Options.UBoundMethod = UpdateBoundingMethodT::NonIdentityBound;
+    } else if (UBoundMethodStr == "point") {
+        Options.UBoundMethod = UpdateBoundingMethodT::PointBound;
     } else if (UBoundMethodStr == "none") {
         Options.UBoundMethod = UpdateBoundingMethodT::NoBounding;
     } else {

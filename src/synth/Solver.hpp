@@ -64,7 +64,7 @@ namespace ESMC {
         };
 
         enum class UpdateBoundingMethodT {
-            NonIdentityBound, VarDepBound, NoBounding
+            PointBound, NonIdentityBound, VarDepBound, NoBounding
         };
 
         enum class StateUpdateBoundingMethodT {
@@ -98,7 +98,8 @@ namespace ESMC {
                   UnrollQuantifiers(Other.UnrollQuantifiers),
                   CPULimitInSeconds(Other.CPULimitInSeconds),
                   MemLimitInMB(Other.MemLimitInMB),
-                  NumCExToProcess(Other.NumCExToProcess)
+                  NumCExToProcess(Other.NumCExToProcess == 0 ?
+                                  UINT32_MAX : Other.NumCExToProcess)
             {
                 // Nothing here
             }
@@ -115,7 +116,8 @@ namespace ESMC {
                 UnrollQuantifiers = Other.UnrollQuantifiers;
                 CPULimitInSeconds = Other.CPULimitInSeconds;
                 MemLimitInMB = Other.MemLimitInMB;
-                NumCExToProcess = Other.NumCExToProcess;
+                NumCExToProcess =
+                    Other.NumCExToProcess == 0 ? UINT32_MAX : Other.NumCExToProcess;
             }
         };
 
@@ -231,6 +233,7 @@ namespace ESMC {
             UIDGenerator VarDepIndicatorUIDGenerator;
             UIDGenerator FunctionCostUIDGenerator;
             UIDGenerator GuardPointUIDGenerator;
+            UIDGenerator UpdatePointUIDGenerator;
             UIDGenerator AllFalseUIDGenerator;
             FastExpSetT AllIndicators;
 
@@ -253,6 +256,7 @@ namespace ESMC {
             inline void MakeStateIdenticalConstraints(const ExpT& Exp);
 
             inline void CreateGuardIndicator(i64 GuardOp);
+            inline void CreateUpdatePointBounds(i64 UpdateOp);
             inline void CreateUpdateIndicator(i64 UpdateOp);
             inline void CreateBoundsConstraints(i64 UpdateOp);
             inline void CreateMutualExclusionConstraint(const ExpT& GuardExp1,

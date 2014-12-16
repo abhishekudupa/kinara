@@ -472,6 +472,74 @@ namespace ESMC {
             }
         }
 
+        inline void Solver::CreateUpdatePointBounds(i64 UpdateOp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto FunType = Mgr->LookupUninterpretedFunction(UpdateOp)->SAs<FuncType>();
+            auto const& DomTypes = FunType->GetArgTypes();
+
+            auto const& UpdateOpToLValue = TheLTS->UpdateOpToUpdateLValue;
+            auto it = UpdateOpToLValue.find(UpdateOp);
+
+            if (it == UpdateOpToLValue.end()) {
+                throw InternalError((string)"Could not find update exp and lvalue for op " +
+                                    "with opcode: " + to_string(UpdateOp));
+            }
+            auto const& UpdateExp = it->second.first;
+            auto const& LValueExp = it->second.second;
+
+            auto UpdateEQLValue = Mgr->MakeExpr(LTSOps::OpEQ, UpdateExp, LValueExp);
+            auto const& ActualArgs = GetOpArgs(UpdateExp);
+
+            const u32 NumArgs = DomTypes.size();
+            vector<vector<string>> DomainValues(NumArgs);
+            for (u32 i = 0; i < NumArgs; ++i) {
+                DomainValues[i] = DomTypes[i]->GetElements();
+            }
+
+            // Find the cross product of the arguments
+            auto&& ArgCP = CrossProduct<string>(DomainValues.begin(), DomainValues.end());
+            const u32 NumPoints = ArgCP.size();
+            vector<ExpT> PointIndicators(NumPoints);
+
+            for (u32 i = 0; i < NumPoints; ++i) {
+                auto const& CurPoint = ArgCP[i];
+
+                // Make a subst map
+                MgrT::SubstMapT SubstMap;
+                for (u32 j = 0; j < NumArgs; ++j) {
+                    auto CurValue = Mgr->MakeVal(CurPoint[j], DomTypes[j]);
+                    SubstMap[ActualArgs[j]] = CurValue;
+                }
+                auto SubstEQ = Mgr->TermSubstitute(SubstMap, UpdateEQLValue);
+                auto NotSubstEQ = Mgr->MakeExpr(LTSOps::OpNOT, SubstEQ);
+
+                string PointIndicatorName = "__update_point_indicator_" +
+                    to_string(UpdatePointUIDGenerator.GetUID());
+                auto PointIndicator = Mgr->MakeVar(PointIndicatorName,
+                                                   Mgr->MakeType<RangeType>(0,1));
+                PointIndicators[i] = PointIndicator;
+                auto PointEQOne = Mgr->MakeExpr(LTSOps::OpEQ, PointIndicator,
+                                                Mgr->MakeVal("1",
+                                                             Mgr->MakeType<RangeType>(0,1)));
+
+                CurrentAssertions.insert(Mgr->MakeExpr(LTSOps::OpIMPLIES,
+                                                       NotSubstEQ,
+                                                       PointEQOne));
+            }
+
+            // Make an indicator for the update itself
+            string UpdateIndicatorName = "__update_indicator_" +
+                to_string(UpdateIndicatorUIDGenerator.GetUID());
+            // Update equal to sum of the point indicators
+            auto UpdateRangeType = Mgr->MakeType<RangeType>(0, NumPoints);
+            auto UpdateIndicator = Mgr->MakeVar(UpdateIndicatorName,
+                                                UpdateRangeType);
+            auto SumExp = MakeSum(PointIndicators, Mgr, UpdateRangeType);
+            auto UpdateEQSum = Mgr->MakeExpr(LTSOps::OpEQ, UpdateIndicator, SumExp);
+            UpdateIndicatorExps[UpdateOp] = UpdateIndicator;
+        }
+
         inline void Solver::MakeStateIdenticalConstraints(const ExpT& Exp)
         {
             auto Mgr = TheLTS->GetMgr();
@@ -602,6 +670,8 @@ namespace ESMC {
                 CurrentAssertions.insert(ImpliesExp);
             } else if (Options.UBoundMethod == UpdateBoundingMethodT::VarDepBound) {
                 CreateIndicators(UpdateOp);
+            } else if (Options.UBoundMethod == UpdateBoundingMethodT::PointBound) {
+                CreateUpdatePointBounds(UpdateOp);
             } else {
                 return;
             }
@@ -784,6 +854,7 @@ namespace ESMC {
                                                      const ExpT& BlownInvariant)
         {
             auto AQS = Checker->AQS;
+            auto Mgr = TheLTS->GetMgr();
 
             // cout << "Handling one safety violation, computing shortest path... ";
             // flush(cout);
@@ -805,7 +876,7 @@ namespace ESMC {
 
             auto LastState = Trace->GetTraceElems().back().second;
 
-            auto ActualBlownInvariant = BlownInvariant;
+            vector<ExpT> ActualBlownInvariants;
             // Find out the invariant blown on the last state of trace now
             if (BlownInvariant != Checker->TheLTS->InvariantExp) {
                 auto const& BoundsInvariants = Checker->BoundsInvariants;
@@ -819,7 +890,7 @@ namespace ESMC {
                         continue;
                     } else if (Res == 0) {
                         FoundBlown = true;
-                        ActualBlownInvariant = Invar;
+                        ActualBlownInvariants.push_back(Invar);
                     }
                 }
 
@@ -834,11 +905,14 @@ namespace ESMC {
                                         "\nwas reported to have been blown!\n" +
                                         "At: " + __FILE__ + ":" + to_string(__LINE__));
                 }
+            } else {
+                ActualBlownInvariants.push_back(Checker->TheLTS->InvariantExp);
             }
 
             // cout << "Done!" << endl << "Blown Invariant: " << endl
             //      << ActualBlownInvariant->ToString() << endl << "Computing weakest pre... ";
             // flush(cout);
+            auto ActualBlownInvariant = MakeConjunction(ActualBlownInvariants, Mgr);
 
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this, Trace, ActualBlownInvariant);
@@ -1166,7 +1240,7 @@ namespace ESMC {
 
                 // all good. extract a model
                 auto const& Model = TP->GetModel();
-                cout << "Model:" << endl << Model.ToString() << endl;
+                // cout << "Model:" << endl << Model.ToString() << endl;
                 // PrintSolution();
                 Compiler->UpdateModel(Model, InterpretedOps, GuardIndicatorExps);
 
