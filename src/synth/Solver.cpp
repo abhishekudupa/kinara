@@ -63,9 +63,10 @@ namespace ESMC {
         using LTS::ExpT;
 
         const u64 TentativeEdgeCost = ((u64)1 << 30);
-        const u32 LimitOnBound = 1024;
+        const u32 LimitOnBound = 32;
 
         const string Solver::BoundsVarPrefix = (string)"__SynthBound__";
+        const u32 Solver::MaxBound = 32;
 
         Solver::Solver(LTSChecker* Checker, const SolverOptionsT& Options)
             : Options(Options),
@@ -74,16 +75,13 @@ namespace ESMC {
               Compiler(Checker->Compiler),
               Checker(Checker),
               Bound(0),
-              GuardedCommands(TheLTS->GetGuardedCmds())
+              GuardedCommands(TheLTS->GetGuardedCmds()),
+              UnveiledNewOps(false)
         {
             // push a scope onto the theorem prover and assert
             // true
-
             TP->Push();
-            TP->Assert(TheLTS->MakeTrue(), Options.UnrollQuantifiers);
-
-            TPAsZ3 = const_cast<Z3TheoremProver*>(TP->As<Z3TheoremProver>());
-            Ctx = TPAsZ3->GetCtx();
+            Ctx = TP->GetCtx();
 
             // Populate the set of fixed commands and create the cost function
             unordered_set<u32> FixedCommands;
@@ -95,6 +93,25 @@ namespace ESMC {
             }
 
             CostFunction = Detail::SynthCostFunction(FixedCommands);
+
+            auto Mgr = TheLTS->GetMgr();
+
+            auto BoundsType = Mgr->MakeType<RangeType>(0, MaxBound);
+            BoundsVariable = Mgr->MakeVar(BoundsVarPrefix, BoundsType);
+
+            // initialize the bounds assertions
+            for (u32 i = 0; i < MaxBound; ++i) {
+                auto CurBoundsVal = Mgr->MakeVal(to_string(i), BoundsType);
+                auto CurProp = Mgr->MakeVar("__assumption_prop_var_" + to_string(i),
+                                            Mgr->MakeType<BooleanType>());
+                LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
+                auto LoweredProp = Mgr->LowerExpr(CurProp, LTSCtx);
+                CheckedAssert(Mgr->MakeExpr(LTSOps::OpIMPLIES, CurProp,
+                                            Mgr->MakeExpr(LTSOps::OpLE,
+                                                          BoundsVariable,
+                                                          CurBoundsVal)));
+                CurrentAssumptions.push_back(LoweredProp);
+            }
         }
 
         inline void Solver::CheckedAssert(const ExpT& Assertion)
@@ -709,6 +726,8 @@ namespace ESMC {
 
             // Mark the guard and its updates as unveiled
             UnveiledGuardOps.insert(Op);
+            UnveiledNewOps = true;
+
             InterpretedOps.insert(Op);
             auto it4 = GuardOpToUpdates.find(Op);
             if (it4 != GuardOpToUpdates.end()) {
@@ -958,8 +977,20 @@ namespace ESMC {
             delete Trace;
         }
 
-        inline bool Solver::AssertBoundsConstraint()
+        inline void Solver::AssertBoundsConstraint()
         {
+            if (!UnveiledNewOps) {
+                return;
+            }
+
+            UnveiledNewOps = false;
+
+            // We need to toss out the entire stack of assertions
+            // and reassert them
+            TP = new Z3TheoremProver();
+            TP->Push();
+            Ctx = TP->GetCtx();
+
             auto Mgr = TheLTS->GetMgr();
             vector<ExpT> Summands;
             ExpT SumExp = nullptr;
@@ -973,23 +1004,36 @@ namespace ESMC {
             }
 
             if (Summands.size() == 0) {
-                return false;
+                return;
             } else if (Summands.size() == 1) {
                 SumExp = Summands[0];
             } else {
                 SumExp = Mgr->MakeExpr(LTSOps::OpADD, Summands);
             }
 
-            auto BoundExp = Mgr->MakeVal(to_string(Bound),
-                                         Mgr->MakeType<RangeType>(0, Bound));
-            auto LEExp = Mgr->MakeExpr(LTSOps::OpLE, SumExp, BoundExp);
+            auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundsVariable);
+
             cout << "Asserting Bounds Constraint: " << endl
-                 << LEExp->ToString() << endl << endl;
+                 << EQExp->ToString() << endl << endl;
 
-            TP->Push();
-            TP->Assert(LEExp, Options.UnrollQuantifiers);
+            TP->Assert(EQExp, Options.UnrollQuantifiers);
+            for (auto const& Assertion : AssertedConstraints) {
+                TP->Assert(Assertion, Options.UnrollQuantifiers);
+            }
 
-            return true;
+            // Redo the assumptions in the new theorem prover
+            CurrentAssumptions.clear();
+
+            // initialize the bounds assertions
+            for (u32 i = 0; i < MaxBound; ++i) {
+                auto CurProp = Mgr->MakeVar("__assumption_prop_var_" + to_string(i),
+                                            Mgr->MakeType<BooleanType>());
+                LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
+                auto LoweredProp = Mgr->LowerExpr(CurProp, LTSCtx);
+                CurrentAssumptions.push_back(LoweredProp);
+            }
+
+            return;
         }
 
         inline void Solver::AssertCurrentConstraints()
@@ -1058,7 +1102,8 @@ namespace ESMC {
             ResetStats();
             Stats.SolveStartTime = TimeValue::GetTimeValue();
             ResourceLimitManager::SetCPULimit(Options.CPULimitInSeconds);
-            ResourceLimitManager::SetMemLimit(Options.MemLimitInMB << 20);
+            ResourceLimitManager::SetMemLimit((Options.MemLimitInMB == UINT64_MAX ?
+                                               Options.MemLimitInMB : Options.MemLimitInMB << 20));
             ResourceLimitManager::QueryStart();
 
             bool FirstIteration = true;
@@ -1069,12 +1114,14 @@ namespace ESMC {
                     Stats.SolveEndTime = TimeValue::GetTimeValue();
                     cout << "Memory limit reached. Aborting with Memout!" << endl << endl;
                     PrintStats(cout);
+                    ResourceLimitManager::QueryEnd();
                     exit(1);
                 }
                 if (ResourceLimitManager::CheckTimeOut()) {
                     Stats.SolveEndTime = TimeValue::GetTimeValue();
                     cout << "CPU Time limit reached. Aborting with Timeout" << endl << endl;
                     PrintStats(cout);
+                    ResourceLimitManager::QueryEnd();
                     exit(1);
                 }
 
@@ -1090,10 +1137,10 @@ namespace ESMC {
 
                 Stats.FinalNumAssertions = TP->GetNumAssertions();
 
-                bool MustPop = AssertBoundsConstraint();
+                AssertBoundsConstraint();
 
                 auto SMTStartTime = TimeValue::GetTimeValue();
-                auto TPRes = TP->CheckSat();
+                auto TPRes = TP->CheckSatWithAssumptions(CurrentAssumptions);
                 ++Stats.NumIterations;
                 auto SMTEndTime = TimeValue::GetTimeValue();
                 auto CurQueryTime = SMTEndTime - SMTStartTime;
@@ -1107,19 +1154,19 @@ namespace ESMC {
                     Stats.MaxSMTTime = CurSMTTime;
                 }
 
-                if (MustPop) {
-                    TP->Pop();
-                }
-
                 if (TPRes == TPResult::UNSATISFIABLE) {
                     ++Bound;
+                    cout << "UNSAT! Relaxed bound to " << Bound << endl;
+                    CurrentAssumptions.pop_front();
                     continue;
                 } else if (TPRes == TPResult::UNKNOWN) {
+                    ResourceLimitManager::QueryEnd();
                     throw ESMCError((string)"Could not solve constraints!");
                 }
 
                 // all good. extract a model
-                auto const& Model = TPAsZ3->GetModel();
+                auto const& Model = TP->GetModel();
+                cout << "Model:" << endl << Model.ToString() << endl;
                 // PrintSolution();
                 Compiler->UpdateModel(Model, InterpretedOps, GuardIndicatorExps);
 
@@ -1160,6 +1207,7 @@ namespace ESMC {
                 if (!CompletionGood) {
                     continue;
                 } else {
+                    ResourceLimitManager::QueryEnd();
                     Stats.SolveEndTime = TimeValue::GetTimeValue();
                     cout << "Found Correct Completion!" << endl;
                     cout << "With Bound = " << Bound << ", Model:" << endl;
@@ -1193,14 +1241,14 @@ namespace ESMC {
                     Args.push_back(Arg);
                 }
                 auto AppExp = Mgr->MakeExpr(UFCode, Args);
-                auto ModelValue = TPAsZ3->Evaluate(AppExp);
+                auto ModelValue = TP->Evaluate(AppExp);
                 cout << "-> " << ModelValue << endl;
             }
         }
 
         ExpT Solver::Evaluate(const ExpT& Input)
         {
-            return TPAsZ3->Evaluate(Input);
+            return TP->Evaluate(Input);
         }
 
         void Solver::PrintSolution()
@@ -1218,7 +1266,7 @@ namespace ESMC {
                 {
                     return EFSM->Is<IncompleteEFSM>();
                 };
-            auto Model = TPAsZ3->GetModel();
+            auto Model = TP->GetModel();
             vector<LTSTransRef> AllTransitions;
             auto IncompleteEFSMs = TheLTS->GetEFSMs(IsIncomplete);
             for (auto IncompleteEFSM : IncompleteEFSMs) {
@@ -1248,7 +1296,7 @@ namespace ESMC {
             for (auto NewOpIndicatorVar : GuardIndicatorExps) {
                 auto NewOp = NewOpIndicatorVar.first;
                 auto IndicatorVar = NewOpIndicatorVar.second;
-                auto IndicatorValue = TPAsZ3->Evaluate(IndicatorVar);
+                auto IndicatorValue = TP->Evaluate(IndicatorVar);
                 if (IndicatorValue->ToString() == "1") {
                     for (auto Transition : AllTransitions) {
                         auto Guard = Transition->GetGuard();

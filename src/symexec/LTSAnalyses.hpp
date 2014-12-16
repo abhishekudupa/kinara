@@ -114,7 +114,7 @@ namespace ESMC {
 
             static vector<GCmdRef> TentativeGuardedCommandsInLTS(LabelledTS* TheLTS);
 
-            static map<vector<ExpT>, ExpT> ModelResults(LabelledTS* TheLTS, ExpT UFExp, TPRef TP);
+            static map<vector<ExpT>, ExpT> ModelResults(LabelledTS* TheLTS, ExpT UFExp, Z3TPRef TP);
 
             static ExpT
             ConditionToResolveDeadlock(LabelledTS* TheLTS,

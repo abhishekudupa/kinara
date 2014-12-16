@@ -214,12 +214,12 @@ namespace ESMC {
         {
         private:
             Z3_model Model;
-            TheoremProver* TPPtr;
+            Z3TheoremProver* TPPtr;
 
         public:
             Z3Model();
             Z3Model(const Z3Model& Other);
-            Z3Model(Z3Ctx Ctx, Z3_model Model, TheoremProver* TPPtr);
+            Z3Model(Z3Ctx Ctx, Z3_model Model, Z3TheoremProver* TPPtr);
             Z3Model(Z3Model&& Other);
             virtual ~Z3Model();
 
@@ -231,7 +231,7 @@ namespace ESMC {
 
             operator Z3_model () const;
             Z3_model GetModel() const;
-            TheoremProver* GetTPPtr() const;
+            Z3TheoremProver* GetTPPtr() const;
 
             static Z3Model NullModel;
         };

@@ -209,7 +209,7 @@ namespace ESMC {
         }
 
         map<vector<ExpT>, ExpT>
-        TraceAnalyses::ModelResults(LabelledTS* TheLTS, ExpT UFExp, TPRef TP)
+        TraceAnalyses::ModelResults(LabelledTS* TheLTS, ExpT UFExp, Z3TPRef TP)
         {
             map<vector<ExpT>, ExpT> Retval;
             vector<vector<ExpT>> Inputs;

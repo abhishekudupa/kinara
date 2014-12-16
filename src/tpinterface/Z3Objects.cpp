@@ -450,7 +450,7 @@ namespace ESMC {
             }
         }
 
-        Z3Model::Z3Model(Z3Ctx Ctx, Z3_model Model, TheoremProver* TPPtr)
+        Z3Model::Z3Model(Z3Ctx Ctx, Z3_model Model, Z3TheoremProver* TPPtr)
             : Z3Object(Ctx), Model(Model), TPPtr(TPPtr)
         {
             if (Ctx != Z3Ctx::NullPtr && Model != nullptr) {
@@ -512,7 +512,7 @@ namespace ESMC {
             return Model;
         }
 
-        TheoremProver* Z3Model::GetTPPtr() const
+        Z3TheoremProver* Z3Model::GetTPPtr() const
         {
             return TPPtr;
         }

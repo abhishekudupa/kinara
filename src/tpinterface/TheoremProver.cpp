@@ -76,134 +76,48 @@ namespace ESMC {
             return Expression;
         }
 
-
-        TheoremProver::TheoremProver(const string& Name)
-            : Name(Name)
-        {
-            AssertionStack.push(vector<ExpT>());
-        }
-
-        TheoremProver::~TheoremProver()
-        {
-            // Nothing here
-        }
-
-        TPResult TheoremProver::GetLastSolveResult() const
-        {
-            return LastSolveResult;
-        }
-
-        const string& TheoremProver::GetName() const
-        {
-            return Name;
-        }
-
-        void TheoremProver::ClearSolution() const
-        {
-            LastSolveResult = TPResult::UNKNOWN;
-        }
-
-        void TheoremProver::Push() const
-        {
-            AssertionStack.push(vector<ExpT>());
-        }
-
-        vector<ExpT> TheoremProver::Pop() const
-        {
-            auto Retval = AssertionStack.top();
-            AssertionStack.pop();
-            return Retval;
-        }
-
-        void TheoremProver::Pop(u32 NumScopes) const
-        {
-            for (u32 i = 0; i < NumScopes; ++i) {
-                Pop();
-            }
-        }
-
-        // Assumes that quantifiers are unrolled already
-        void TheoremProver::Assert(const ExpT& Assertion,
-                                   bool UnrollQuantifiers) const
-        {
-            if (!Assertion->GetType()->Is<BooleanType>()) {
-                throw ESMCError((string)"Attempted to assert a non-Boolean " +
-                                "expression.\nThe expression is:\n" +
-                                Assertion->ToString());
-            }
-            AssertionStack.top().push_back(Assertion);
-        }
-
-        // Again, assumes that quantifiers are unrolled already
-        void TheoremProver::Assert(const vector<ExpT>& Assertions,
-                                   bool UnrollQuantifiers) const
-        {
-            for (auto const& Assertion : Assertions) {
-                if (!Assertion->GetType()->Is<BooleanType>()) {
-                    throw ESMCError((string)"Attempted to assert a non-Boolean " +
-                                    "expression.\nThe expression is:\n" +
-                                    Assertion->ToString());
-                }
-                AssertionStack.top().push_back(Assertion);
-            }
-        }
-
+        const u32 Z3TheoremProver::MaxNumAssumptions = (1 << 20);
 
         // Z3TheoremProver implementation
         Z3TheoremProver::Z3TheoremProver()
-            : TheoremProver("Z3TheoremProver"),
-              Ctx(new Z3CtxWrapper()), TheModel(Z3Model::NullModel),
-              Solver(Ctx), FlashSolver(Ctx)
+            : Ctx(new Z3CtxWrapper()), TheModel(Z3Model::NullModel),
+              Solver(Ctx), FlashSolver(Ctx),
+              LastSolveResult(TPResult::UNKNOWN)
         {
-            // Push the default scope on
-            Z3_solver_push(*Ctx, Solver);
+            AssumptionVec = new Z3_ast[MaxNumAssumptions];
         }
 
         Z3TheoremProver::Z3TheoremProver(const Z3Ctx& Ctx)
-            : TheoremProver("Z3TheoremProver"),
-              Ctx(Ctx), TheModel(Z3Model::NullModel),
-              Solver(Ctx), FlashSolver(Ctx)
+            : Ctx(Ctx), TheModel(Z3Model::NullModel),
+              Solver(Ctx), FlashSolver(Ctx),
+              LastSolveResult(TPResult::UNKNOWN)
         {
-            // Push the default scope on
-            Z3_solver_push(*Ctx, Solver);
+            AssumptionVec = new Z3_ast[MaxNumAssumptions];
         }
 
         Z3TheoremProver::~Z3TheoremProver()
         {
-            // Nothing here
+            delete[] AssumptionVec;
         }
 
-        void Z3TheoremProver::ClearSolution() const
+        void Z3TheoremProver::ClearSolution()
         {
-            TheoremProver::ClearSolution();
             TheModel = Z3Model::NullModel;
         }
 
-        void Z3TheoremProver::Push() const
+        void Z3TheoremProver::Push()
         {
             Z3_solver_push(*Ctx, Solver);
-            TheoremProver::Push();
         }
 
-        vector<ExpT> Z3TheoremProver::Pop() const
-        {
-            Z3_solver_pop(*Ctx, Solver, 1);
-            return TheoremProver::Pop();
-        }
-
-        void Z3TheoremProver::Pop(u32 NumScopes) const
+        void Z3TheoremProver::Pop(u32 NumScopes)
         {
             Z3_solver_pop(*Ctx, Solver, NumScopes);
-            TheoremProver::Pop(NumScopes);
         }
 
-        void Z3TheoremProver::Assert(const ExpT& Assertion,
-                                     bool UnrollQuantifiers) const
+        void Z3TheoremProver::Assert(const ExpT& Assertion, bool UnrollQuantifiers)
         {
             auto Mgr = Assertion->GetMgr();
-            // cout << "Non Unrolled assertion:" << endl
-            //      << Assertion->ToString() << endl;
-            // flush(cout);
             LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
             ExpT UnrolledExp = ExpT::NullPtr;
 
@@ -212,47 +126,29 @@ namespace ESMC {
             } else {
                 UnrolledExp = Assertion;
             }
-            TheoremProver::Assert(Assertion, UnrollQuantifiers);
-
-            // cout << "[Z3TheoremProver] Original:" << endl;
-            // cout << UnrolledExp->ToString() << endl;
             auto LoweredAssertion = Mgr->LowerExpr(UnrolledExp, LTSCtx);
             Z3_solver_assert(*Ctx, Solver, LoweredAssertion);
-            // cout << "[Z3TheoremProver] Asserted:" << endl
-            //      << LoweredAssertion.ToString() << endl;
-
-            // Assert the constraints from the lowered context as well
             auto const& Assumptions = LTSCtx->GetAllAssumptions();
             for (auto const& AssumptionSet : Assumptions) {
                 for (auto const& Assumption : AssumptionSet) {
                     Z3_solver_assert(*Ctx, Solver, Assumption);
                 }
             }
-
-            // auto Res = CheckSat();
-            // if (Res == TPResult::UNSATISFIABLE) {
-            //     cout << "Assertions are unsat!" << endl;
-            // } else if (Res == TPResult::SATISFIABLE) {
-            //     cout << "Assertions are sat!" << endl;
-            // } else {
-            //     cout << "Unknown Solve Result" << endl;
-            // }
         }
 
-        void Z3TheoremProver::Assert(const vector<ExpT>& Assertions,
-                                     bool UnrollQuantifiers) const
+        void Z3TheoremProver::Assert(const vector<ExpT>& Assertions, bool UnrollQuantifiers)
         {
             for (auto const& Assertion : Assertions) {
                 Assert(Assertion, UnrollQuantifiers);
             }
         }
 
-        void Z3TheoremProver::Assert(const Z3Expr& Assertion) const
+        void Z3TheoremProver::Assert(const Z3Expr& Assertion)
         {
             Z3_solver_assert(*Ctx, Solver, Assertion);
         }
 
-        TPResult Z3TheoremProver::CheckSat() const
+        TPResult Z3TheoremProver::CheckSat()
         {
             auto ASTVec = Z3_solver_get_assertions(*Ctx, Solver);
             cout << "Checking SAT with " << Z3_ast_vector_size(*Ctx, ASTVec)
@@ -270,8 +166,7 @@ namespace ESMC {
             return LastSolveResult;
         }
 
-        TPResult Z3TheoremProver::CheckSat(const ExpT& Assertion,
-                                           bool UnrollQuantifiers) const
+        TPResult Z3TheoremProver::CheckSat(const ExpT& Assertion, bool UnrollQuantifiers)
         {
             Z3_solver_reset(*Ctx, FlashSolver);
 
@@ -285,9 +180,6 @@ namespace ESMC {
                 UnrolledAssertion = Assertion;
             }
             auto LoweredAssertion = Mgr->LowerExpr(Assertion, LTSCtx);
-
-            // cout << "Checking Lowered Assertion For SAT:" << endl
-            //      << LoweredAssertion.ToString() << endl;
 
             Z3_solver_assert(*Ctx, FlashSolver, LoweredAssertion);
 
@@ -312,13 +204,67 @@ namespace ESMC {
             return LastSolveResult;
         }
 
+        TPResult Z3TheoremProver::CheckSatWithAssumptions(const vector<Z3Expr>& Assumptions)
+        {
+            const u32 NumAssumptions = Assumptions.size();
+            for (u32 i = 0; i < NumAssumptions; ++i) {
+                AssumptionVec[i] = Assumptions[i];
+            }
+
+            auto ASTVec = Z3_solver_get_assertions(*Ctx, Solver);
+            cout << "Checking SAT with " << Z3_ast_vector_size(*Ctx, ASTVec)
+                 << " assertions on stack" << endl;
+            auto Res = Z3_solver_check_assumptions(*Ctx, Solver,
+                                                   NumAssumptions,
+                                                   AssumptionVec);
+            if (Res == Z3_L_TRUE) {
+                LastSolveResult = TPResult::SATISFIABLE;
+            } else if (Res == Z3_L_FALSE) {
+                LastSolveResult = TPResult::UNSATISFIABLE;
+            } else {
+                LastSolveResult = TPResult::UNKNOWN;
+            }
+
+            LastSolveWasFlash = false;
+            TheModel = Z3Model::NullModel;
+            return LastSolveResult;
+        }
+
+        TPResult Z3TheoremProver::CheckSatWithAssumptions(const deque<Z3Expr>& Assumptions)
+        {
+            const u32 NumAssumptions = Assumptions.size();
+            u32 i = 0;
+            for (auto const& Assumption : Assumptions) {
+                AssumptionVec[i] = Assumption;
+                ++i;
+            }
+
+            auto ASTVec = Z3_solver_get_assertions(*Ctx, Solver);
+            cout << "Checking SAT with " << Z3_ast_vector_size(*Ctx, ASTVec)
+                 << " assertions on stack" << endl;
+            auto Res = Z3_solver_check_assumptions(*Ctx, Solver,
+                                                   NumAssumptions,
+                                                   AssumptionVec);
+            if (Res == Z3_L_TRUE) {
+                LastSolveResult = TPResult::SATISFIABLE;
+            } else if (Res == Z3_L_FALSE) {
+                LastSolveResult = TPResult::UNSATISFIABLE;
+            } else {
+                LastSolveResult = TPResult::UNKNOWN;
+            }
+
+            LastSolveWasFlash = false;
+            TheModel = Z3Model::NullModel;
+            return LastSolveResult;
+        }
+
         u64 Z3TheoremProver::GetNumAssertions() const
         {
             auto ASTVec = Z3_solver_get_assertions(*Ctx, Solver);
             return Z3_ast_vector_size(*Ctx, ASTVec);
         }
 
-        ExpT Z3TheoremProver::Evaluate(const ExpT& Exp) const
+        ExpT Z3TheoremProver::Evaluate(const ExpT& Exp)
         {
             if (LastSolveResult != TPResult::SATISFIABLE) {
                 throw ESMCError((string)"Z3TheoremProver::Evaluate() called, but " +
@@ -336,9 +282,8 @@ namespace ESMC {
             // Get the model if not already done
             if (TheModel == Z3Model::NullModel) {
                 TheModel = Z3Model(Ctx, Z3_solver_get_model(*Ctx,
-                                                         (LastSolveWasFlash ?
-                                                          FlashSolver : Solver)),
-                                   const_cast<Z3TheoremProver*>(this));
+                                                            (LastSolveWasFlash ?
+                                                             FlashSolver : Solver)), this);
             }
 
             auto Mgr = Exp->GetMgr();
@@ -355,7 +300,7 @@ namespace ESMC {
             return Mgr->RaiseExpr(EvalLExpr, LTSCtx);
         }
 
-        const Z3Model& Z3TheoremProver::GetModel() const
+        const Z3Model& Z3TheoremProver::GetModel()
         {
             if (LastSolveResult != TPResult::SATISFIABLE) {
                 throw ESMCError((string)"Z3TheoremProver::GetModel() called, but " +

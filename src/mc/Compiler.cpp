@@ -506,7 +506,7 @@ namespace ESMC {
             auto ConcAppExp = Mgr->MakeExpr(OpCode, AppArgExps);
 
             // Evaluate the expression in the model
-            TPRef TP = Model.GetTPPtr();
+            Z3TPRef TP = Model.GetTPPtr();
             auto EvalExp = TP->Evaluate(ConcAppExp);
             auto EvalAsConst = EvalExp->As<Exprs::ConstExpression>();
             if (EvalAsConst == nullptr) {
@@ -546,7 +546,7 @@ namespace ESMC {
                 auto it = IndicatorExps.find(MyOpCode);
                 if (it != IndicatorExps.end()) {
                     // check if my indicator is true
-                    TPRef TP = Model.GetTPPtr();
+                    Z3TPRef TP = Model.GetTPPtr();
                     auto Res = TP->Evaluate(it->second);
                     auto ResAsConst = Res->As<Exprs::ConstExpression>();
                     if (ResAsConst == nullptr) {

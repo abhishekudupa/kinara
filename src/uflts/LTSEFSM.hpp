@@ -65,7 +65,7 @@ namespace ESMC {
         {
         private:
             inline void
-            CheckTransition(const TPRef& TP, u32 TransIndex,
+            CheckTransition(const Z3TPRef& TP, u32 TransIndex,
                             const vector<LTSSymbTransRef>& CandTrans) const;
 
         public:
@@ -136,21 +136,21 @@ namespace ESMC {
                                                        const map<ExpT, ExpT>& UpdateMap);
 
             inline ExpT FindDisjunction(const vector<LTSSymbTransRef>& Transitions,
-                                        const TPRef& TP,
+                                        const Z3TPRef& TP,
                                         const ExpT& CoveredRegion);
 
             inline ExpT FindInputCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
-                                               const TPRef& TP,
+                                               const Z3TPRef& TP,
                                                const TypeRef& MsgType,
                                                const ExpT& CoveredRegion);
 
             inline ExpT FindGlobalCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
-                                                const TPRef& TP);
+                                                const Z3TPRef& TP);
 
             inline void CompleteInputTransitions(const string& StateName,
                                                  const vector<LTSSymbTransRef>& Transitions,
                                                  const ExpT& CoveredPredicate,
-                                                 const TPRef& TP);
+                                                 const Z3TPRef& TP);
 
             inline ExpT MakeGuard(const set<ExpT>& DomainTerms,
                                   const ExpT& CoveredPredicate,
@@ -173,7 +173,7 @@ namespace ESMC {
 
             inline void CompleteOutputTransitions(const string& InitStateName,
                                                   const ExpT& CoveredPredicate,
-                                                  const TPRef& TP);
+                                                  const Z3TPRef& TP);
 
             inline void CompleteOneOutputTransition(const string& InitStateName,
                                                     const SymmMsgDeclRef& MsgDecl,

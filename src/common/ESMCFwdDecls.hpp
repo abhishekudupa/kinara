@@ -239,10 +239,8 @@ namespace ESMC {
 
         typedef CSmartPtr<Z3CtxWrapper> Z3Ctx;
 
-        class TheoremProver;
         class Z3TheoremProver;
-
-        typedef CSmartPtr<TheoremProver> TPRef;
+        typedef SmartPtr<Z3TheoremProver> Z3TPRef;
 
     } /* end namespace TP */
 

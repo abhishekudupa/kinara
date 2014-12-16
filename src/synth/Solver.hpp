@@ -195,12 +195,16 @@ namespace ESMC {
 
         private:
             static const string BoundsVarPrefix;
+            static const u32 MaxBound;
 
             SolverOptionsT Options;
 
             // Assertions in the current iteration
+            // Barring the cost bounds assertions
             FastExpSetT CurrentAssertions;
-            TPRef TP;
+            deque<Z3Expr> CurrentAssumptions;
+            ExpT BoundsVariable;
+            Z3TPRef TP;
             LabelledTS* TheLTS;
             LTSCompiler* Compiler;
             LTSChecker* Checker;
@@ -210,6 +214,7 @@ namespace ESMC {
 
             unordered_set<i64> UnveiledGuardOps;
             unordered_set<i64> UnveiledUpdateOps;
+            bool UnveiledNewOps;
             // Union of the two sets above, maintained
             // for efficiency
             unordered_set<i64> InterpretedOps;
@@ -219,7 +224,6 @@ namespace ESMC {
 
             unordered_map<i64, ExpT> GuardIndicatorExps;
             unordered_map<i64, ExpT> UpdateIndicatorExps;
-            Z3TheoremProver* TPAsZ3;
             Z3Ctx Ctx;
             UIDGenerator GuardIndicatorUIDGenerator;
             UIDGenerator UpdateIndicatorUIDGenerator;
@@ -253,7 +257,7 @@ namespace ESMC {
             inline void CreateBoundsConstraints(i64 UpdateOp);
             inline void CreateMutualExclusionConstraint(const ExpT& GuardExp1,
                                                         const ExpT& GuardExp2);
-            inline bool AssertBoundsConstraint();
+            inline void AssertBoundsConstraint();
             inline void HandleSafetyViolations();
             inline void HandleOneSafetyViolation(const StateVec* ErrorState,
                                                  const ExpT& BlownInvariant);

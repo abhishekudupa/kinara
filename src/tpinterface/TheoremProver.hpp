@@ -76,114 +76,42 @@ namespace ESMC {
             const ExpT& GetExpression() const;
         };
 
-        class TheoremProver : public RefCountable
-        {
-        private:
-            string Name;
-
-        protected:
-            mutable stack<vector<ExpT>> AssertionStack;
-            mutable TPResult LastSolveResult;
-
-        public:
-            TheoremProver(const string& Name);
-            virtual ~TheoremProver();
-
-            TPResult GetLastSolveResult() const;
-            const string& GetName() const;
-
-            virtual void ClearSolution() const;
-
-            virtual void Push() const;
-            virtual vector<ExpT> Pop() const;
-            virtual void Pop(u32 NumScopes) const;
-
-            virtual void Assert(const ExpT& Assertion,
-                                bool UnrollQuantifiers) const;
-            virtual void Assert(const vector<ExpT>& Assertions,
-                                bool UnrollQuantifiers) const;
-
-            virtual TPResult CheckSat() const = 0;
-            // Ignores all the assertions on the stack
-            virtual TPResult CheckSat(const ExpT& Assertion,
-                                      bool UnrollQuantifiers) const = 0;
-            virtual u64 GetNumAssertions() const = 0;
-
-            // Evaluates only scalar typed expressions
-            virtual ExpT Evaluate(const ExpT& Exp) const = 0;
-
-            template <typename T, typename... ArgTypes>
-            static inline TPRef MakeProver(ArgTypes&&... Args)
-            {
-                TPRef Retval = new T(forward<ArgTypes>(Args)...);
-                return Retval;
-            }
-
-            template <typename T>
-            inline T* As()
-            {
-                return dynamic_cast<T*>(this);
-            }
-
-            template <typename T>
-            inline const T* As() const
-            {
-                return dynamic_cast<const T*>(this);
-            }
-
-            template <typename T>
-            inline T* SAs()
-            {
-                return static_cast<T*>(this);
-            }
-
-            template <typename T>
-            inline const T* SAs() const
-            {
-                return static_cast<const T*>(this);
-            }
-
-            template <typename T>
-            inline bool Is() const
-            {
-                return (dynamic_cast<const T*>(this) != nullptr);
-            }
-        };
-
-        class Z3TheoremProver : public TheoremProver
+        class Z3TheoremProver : public RefCountable
         {
         private:
             Z3Ctx Ctx;
-            mutable Z3Model TheModel;
+            Z3Model TheModel;
             Z3Solver Solver;
             Z3Solver FlashSolver;
-            mutable bool LastSolveWasFlash;
+            bool LastSolveWasFlash;
+            Z3_ast* AssumptionVec;
+            TPResult LastSolveResult;
+
+            static const u32 MaxNumAssumptions;
 
         public:
             Z3TheoremProver();
             Z3TheoremProver(const Z3Ctx& Ctx);
             virtual ~Z3TheoremProver();
 
-            virtual void ClearSolution() const override;
-            virtual void Push() const override;
-            virtual vector<ExpT> Pop() const override;
-            virtual void Pop(u32 NumScopes) const override;
+            void ClearSolution();
+            void Push();
+            void Pop(u32 NumScopes = 1);
 
-            virtual void Assert(const ExpT& Assertion,
-                                bool UnrollQuantifiers = false) const override;
-            virtual void Assert(const vector<ExpT>& Assertions,
-                                bool UnrollQuantifiers = false) const override;
+            void Assert(const ExpT& Assertion, bool UnrollQuantifiers = false);
+            void Assert(const vector<ExpT>& Assertions, bool UnrollQuantifiers = false);
+            void Assert(const Z3Expr& Assertion);
 
-            void Assert(const Z3Expr& Assertion) const;
+            TPResult CheckSat();
+            TPResult CheckSatWithAssumptions(const vector<Z3Expr>& Assumptions);
+            TPResult CheckSatWithAssumptions(const deque<Z3Expr>& Assumptions);
+            TPResult CheckSat(const ExpT& Assertion, bool UnrollQuantifiers = false);
 
-            virtual TPResult CheckSat() const override;
-            virtual TPResult CheckSat(const ExpT& Assertion,
-                                      bool UnrollQuantifiers = false) const override;
-            virtual u64 GetNumAssertions() const override;
+            u64 GetNumAssertions() const;
 
-            virtual ExpT Evaluate(const ExpT& Exp) const override;
+            ExpT Evaluate(const ExpT& Exp);
 
-            const Z3Model& GetModel() const;
+            const Z3Model& GetModel();
             const Z3Ctx& GetCtx() const;
             const Z3Solver& GetSolver() const;
         };

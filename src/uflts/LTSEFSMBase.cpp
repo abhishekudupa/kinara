@@ -1236,7 +1236,7 @@ namespace ESMC {
             AssertEFSMNotFrozen();
 
             FairSetFairnessType SetFairnessType = FairSetFairnessType::Weak;
-            string SplatPrefix;
+            string SplaZ3TPRefix;
             if (SplatFairness != SplatFairnessType::None) {
                 if (FairnessKind == LTSFairnessType::None) {
                     throw ESMCError((string)"Cannot create splat fairness with FairnessKind " +
@@ -1246,10 +1246,10 @@ namespace ESMC {
                     FairSetFairnessType::Weak : FairSetFairnessType::Strong;
 
                 if (SplatFairnessName == "") {
-                    SplatPrefix = ((string)"SplatFairness_" +
+                    SplaZ3TPRefix = ((string)"SplatFairness_" +
                                    to_string(FairnessUIDGenerator.GetUID()));
                 } else {
-                    SplatPrefix = SplatFairnessName;
+                    SplaZ3TPRefix = SplatFairnessName;
                 }
             }
 
@@ -1286,8 +1286,8 @@ namespace ESMC {
             const u32 NumTransParams = TransParams.size();
 
             if (SplatFairness == SplatFairnessType::Group) {
-                Fairnesses->AddFairnessSet(SplatPrefix, SetFairnessType);
-                UserToInternalFairness[SplatPrefix].insert(SplatPrefix);
+                Fairnesses->AddFairnessSet(SplaZ3TPRefix, SetFairnessType);
+                UserToInternalFairness[SplaZ3TPRefix].insert(SplaZ3TPRefix);
             }
 
             vector<ExpT> CombinedParams = Params;
@@ -1333,17 +1333,17 @@ namespace ESMC {
                     string SplatFairnessSetName;
 
                     if (SplatFairness == SplatFairnessType::Group) {
-                        SplatFairnessSetName = SplatPrefix;
+                        SplatFairnessSetName = SplaZ3TPRefix;
                         LocalFairnessSets.insert(SplatFairnessSetName);
                     }
                     if (SplatFairness == SplatFairnessType::Individual) {
-                        SplatFairnessSetName = SplatPrefix + "_" +
+                        SplatFairnessSetName = SplaZ3TPRefix + "_" +
                             to_string(LocalFairnessUIDGenerator.GetUID());
                         LocalFairnessSets.insert(SplatFairnessSetName);
 
                         if (FirstInstance) {
                             Fairnesses->AddFairnessSet(SplatFairnessSetName, SetFairnessType);
-                            UserToInternalFairness[SplatPrefix].insert(SplatFairnessSetName);
+                            UserToInternalFairness[SplaZ3TPRefix].insert(SplatFairnessSetName);
                         }
                     }
 
@@ -1491,7 +1491,7 @@ namespace ESMC {
             AssertEFSMNotFrozen();
 
             FairSetFairnessType SetFairnessType = FairSetFairnessType::Weak;
-            string SplatPrefix;
+            string SplaZ3TPRefix;
             if (SplatFairness != SplatFairnessType::None) {
                 if (FairnessKind == LTSFairnessType::None) {
                     throw ESMCError((string)"Cannot create splat fairness with FairnessKind " +
@@ -1501,10 +1501,10 @@ namespace ESMC {
                     FairSetFairnessType::Weak : FairSetFairnessType::Strong;
 
                 if (SplatFairnessName == "") {
-                    SplatPrefix = ((string)"SplatFairness_" +
+                    SplaZ3TPRefix = ((string)"SplatFairness_" +
                                    to_string(FairnessUIDGenerator.GetUID()));
                 } else {
-                    SplatPrefix = SplatFairnessName;
+                    SplaZ3TPRefix = SplatFairnessName;
                 }
             }
 
@@ -1534,8 +1534,8 @@ namespace ESMC {
             const u32 NumTransParams = TransParams.size();
 
             if (SplatFairness == SplatFairnessType::Group) {
-                Fairnesses->AddFairnessSet(SplatPrefix, SetFairnessType);
-                UserToInternalFairness[SplatPrefix].insert(SplatPrefix);
+                Fairnesses->AddFairnessSet(SplaZ3TPRefix, SetFairnessType);
+                UserToInternalFairness[SplaZ3TPRefix].insert(SplaZ3TPRefix);
             }
 
             bool FirstInstance = true;
@@ -1562,17 +1562,17 @@ namespace ESMC {
                         LocalFairnessSets.insert("ProcessFairness");
                     }
                     if (SplatFairness == SplatFairnessType::Group) {
-                        SplatFairnessSetName = SplatPrefix;
+                        SplatFairnessSetName = SplaZ3TPRefix;
                         LocalFairnessSets.insert(SplatFairnessSetName);
                     }
                     if (SplatFairness == SplatFairnessType::Individual) {
-                        SplatFairnessSetName = SplatPrefix + "_" +
+                        SplatFairnessSetName = SplaZ3TPRefix + "_" +
                             to_string(LocalFairnessUIDGenerator.GetUID());
                         LocalFairnessSets.insert(SplatFairnessSetName);
 
                         if (FirstInstance) {
                             Fairnesses->AddFairnessSet(SplatFairnessSetName, SetFairnessType);
-                            UserToInternalFairness[SplatPrefix].insert(SplatFairnessSetName);
+                            UserToInternalFairness[SplaZ3TPRefix].insert(SplatFairnessSetName);
                         }
                     }
 

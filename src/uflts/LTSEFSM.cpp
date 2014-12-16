@@ -83,7 +83,7 @@ namespace ESMC {
         }
 
         static inline bool CheckDisjoint(const ExpT& Exp1, const ExpT& Exp2,
-                                         const TPRef& TP)
+                                         const Z3TPRef& TP)
         {
             auto Mgr = Exp1->GetMgr();
             auto Conjunction = Mgr->MakeExpr(LTSOps::OpAND, Exp1, Exp2);
@@ -111,7 +111,7 @@ namespace ESMC {
         // 3. An internal transition t
         //    - Must have disjoint guards from all other internal transitions
 
-        inline void DetEFSM::CheckTransition(const TPRef& TP, u32 TransIndex,
+        inline void DetEFSM::CheckTransition(const Z3TPRef& TP, u32 TransIndex,
                                              const vector<LTSSymbTransRef>& CandTrans) const
         {
             auto const Trans = CandTrans[TransIndex];
@@ -149,7 +149,7 @@ namespace ESMC {
             EFSMBase::Freeze();
 
             // Check for determinism
-            auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
+            Z3TPRef TP = new Z3TheoremProver();
 
             for (auto const& NameState : States) {
                 auto const& StateName = NameState.first;
@@ -236,7 +236,7 @@ namespace ESMC {
         // which is also in the region defined by RegionConstraint
         inline ExpT
         IncompleteEFSM::FindDisjunction(const vector<LTSSymbTransRef>& Transitions,
-                                        const TPRef& TP,
+                                        const Z3TPRef& TP,
                                         const ExpT& CoveredRegion)
         {
             vector<ExpT> Guards = { CoveredRegion };
@@ -288,7 +288,7 @@ namespace ESMC {
         // input transition on MsgType
         inline ExpT
         IncompleteEFSM::FindInputCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
-                                               const TPRef& TP,
+                                               const Z3TPRef& TP,
                                                const TypeRef& MsgType,
                                                const ExpT& CoveredRegion)
         {
@@ -311,7 +311,7 @@ namespace ESMC {
         // transitions
         inline ExpT
         IncompleteEFSM::FindGlobalCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
-                                                const TPRef& TP)
+                                                const Z3TPRef& TP)
         {
             auto&& RelTransitions =
                 Filter<LTSSymbTransRef>(Transitions.begin(),
@@ -1114,7 +1114,7 @@ namespace ESMC {
         inline void
         IncompleteEFSM::CompleteInputTransitions(const string& StateName,
                                                  const vector<LTSSymbTransRef>& TransFromState,
-                                                 const ExpT& CoveredRegion, const TPRef& TP)
+                                                 const ExpT& CoveredRegion, const Z3TPRef& TP)
         {
             if (CompleteStates.find(StateName) != CompleteStates.end()) {
                 return;
@@ -1226,7 +1226,7 @@ namespace ESMC {
 
         void IncompleteEFSM::CompleteOutputTransitions(const string& StateName,
                                                        const ExpT& CoveredPredicate,
-                                                       const TPRef& TP)
+                                                       const Z3TPRef& TP)
         {
             if (CompleteStates.find(StateName) != CompleteStates.end()) {
                 return;
@@ -1282,7 +1282,7 @@ namespace ESMC {
             // Thaw it
             EFSMFrozen = false;
 
-            auto TP = TheoremProver::MakeProver<Z3TheoremProver>();
+            Z3TPRef TP = new Z3TheoremProver();
             vector<ExpT> AddedGuards;
             auto Mgr = TheLTS->GetMgr();
 
