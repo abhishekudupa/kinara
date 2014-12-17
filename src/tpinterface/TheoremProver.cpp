@@ -152,8 +152,9 @@ namespace ESMC {
         {
             auto ASTVec = Z3_solver_get_assertions(*Ctx, Solver);
             cout << "Checking SAT with " << Z3_ast_vector_size(*Ctx, ASTVec)
-                 << " assertions" << endl;
+                 << " assertions... ";
             auto Res = Z3_solver_check(*Ctx, Solver);
+            cout << "Done!" << endl;
             if (Res == Z3_L_FALSE) {
                 LastSolveResult = TPResult::UNSATISFIABLE;
             } else if (Res == Z3_L_TRUE) {
@@ -213,10 +214,11 @@ namespace ESMC {
 
             auto ASTVec = Z3_solver_get_assertions(*Ctx, Solver);
             cout << "Checking SAT with " << Z3_ast_vector_size(*Ctx, ASTVec)
-                 << " assertions on stack" << endl;
+                 << " assertions on stack... ";
             auto Res = Z3_solver_check_assumptions(*Ctx, Solver,
                                                    NumAssumptions,
                                                    AssumptionVec);
+            cout << "Done!" << endl;
             if (Res == Z3_L_TRUE) {
                 LastSolveResult = TPResult::SATISFIABLE;
             } else if (Res == Z3_L_FALSE) {

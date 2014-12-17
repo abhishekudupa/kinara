@@ -117,13 +117,13 @@ namespace ESMC {
         inline void Solver::CheckedAssert(const ExpT& Assertion)
         {
             if (AssertedConstraints.find(Assertion) != AssertedConstraints.end()) {
-                // cout << "Not asserting previously asserted constraint:" << endl
-                //      << Assertion->ToString() << endl;
+                cout << "Not asserting previously asserted constraint:" << endl
+                     << Assertion->ToString() << endl;
                 return;
             }
 
             AssertedConstraints.insert(Assertion);
-            // cout << "Asserting: " << Assertion->ToString() << endl;
+            cout << "Asserting: " << Assertion->ToString() << endl;
             TP->Assert(Assertion, Options.UnrollQuantifiers);
         }
 
@@ -522,10 +522,11 @@ namespace ESMC {
                 auto PointEQOne = Mgr->MakeExpr(LTSOps::OpEQ, PointIndicator,
                                                 Mgr->MakeVal("1",
                                                              Mgr->MakeType<RangeType>(0,1)));
+                auto Implication = Mgr->MakeExpr(LTSOps::OpIMPLIES, NotSubstEQ, PointEQOne);
+                CurrentAssertions.insert(Implication);
 
-                CurrentAssertions.insert(Mgr->MakeExpr(LTSOps::OpIMPLIES,
-                                                       NotSubstEQ,
-                                                       PointEQOne));
+                cout << "Creating update point indicator:" << endl
+                     << Implication->ToString() << endl;
             }
 
             // Make an indicator for the update itself
@@ -537,6 +538,9 @@ namespace ESMC {
                                                 UpdateRangeType);
             auto SumExp = MakeSum(PointIndicators, Mgr, UpdateRangeType);
             auto UpdateEQSum = Mgr->MakeExpr(LTSOps::OpEQ, UpdateIndicator, SumExp);
+
+            cout << "Creating update indicator for " << UpdateExp
+                 << endl << UpdateEQSum->ToString() << endl;
             UpdateIndicatorExps[UpdateOp] = UpdateIndicator;
         }
 
@@ -1112,6 +1116,7 @@ namespace ESMC {
 
         inline void Solver::AssertCurrentConstraints()
         {
+            cout << "Asserting constraints for this iteration." << endl;
             for (auto const& Pred : CurrentAssertions) {
                 CheckedAssert(Pred);
             }
