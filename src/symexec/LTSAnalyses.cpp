@@ -530,7 +530,7 @@ namespace ESMC {
         FastExpSetT
         TraceAnalyses::WeakestPrecondition(Solver* TheSolver,
                                            SafetyViolation* Trace,
-                                           ExpT InitialPredicate)
+                                           const ExpT& InitialPredicate)
         {
             auto TheLTS = TheSolver->TheLTS;
             ExpT Phi = InitialPredicate;

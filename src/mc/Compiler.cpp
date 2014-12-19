@@ -1252,7 +1252,6 @@ namespace ESMC {
                 Cmd->SetLoweredGuard(LoweredGuard);
             }
 
-
             return Retval;
         }
 

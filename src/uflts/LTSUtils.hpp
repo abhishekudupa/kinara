@@ -580,7 +580,7 @@ namespace ESMC {
             return ExpT::NullPtr;
         }
 
-        static ExpT TransformArrayRValue(const ExpT Exp)
+        static ExpT TransformArrayRValue(const ExpT& Exp)
         {
             auto Mgr = Exp->GetMgr();
             auto IndexExp = GetTopmostIndexExp(Exp);

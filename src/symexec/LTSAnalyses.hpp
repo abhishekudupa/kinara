@@ -145,10 +145,7 @@ namespace ESMC {
 
             static FastExpSetT WeakestPrecondition(Solver* TheSolver,
                                                    SafetyViolation* Trace,
-                                                   ExpT InitialPredicate);
-
-            static ExpT WeakestPrecondition(ExpT InitialPhi,
-                                            TraceBase* Trace);
+                                                   const ExpT& InitialPredicate);
 
             static ExpT
             WeakestPreconditionForLiveness(Solver* TheSolver,

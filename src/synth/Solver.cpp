@@ -117,13 +117,13 @@ namespace ESMC {
         inline void Solver::CheckedAssert(const ExpT& Assertion)
         {
             if (AssertedConstraints.find(Assertion) != AssertedConstraints.end()) {
-                cout << "Not asserting previously asserted constraint:" << endl
-                     << Assertion->ToString() << endl;
+                // cout << "Not asserting previously asserted constraint:" << endl
+                //      << Assertion->ToString() << endl;
                 return;
             }
 
             AssertedConstraints.insert(Assertion);
-            cout << "Asserting: " << Assertion->ToString() << endl;
+            // cout << "Asserting: " << Assertion->ToString() << endl;
             TP->Assert(Assertion, Options.UnrollQuantifiers);
         }
 
@@ -210,8 +210,8 @@ namespace ESMC {
                                                 Mgr->MakeVal("1", IndicatorExp->GetType()));
                 auto Implication = Mgr->MakeExpr(LTSOps::OpIFF, Antecedent, Consequent);
 
-                cout << "Asserting Indicator Implication:" << endl
-                     << Implication->ToString() << endl << endl;
+                // cout << "Asserting Indicator Implication:" << endl
+                //      << Implication->ToString() << endl << endl;
                 CurrentAssertions.insert(Implication);
                 Retval.push_back(IndicatorExp);
             }
@@ -254,8 +254,8 @@ namespace ESMC {
                 auto IdentityVar = Mgr->MakeVar(IdentityVarName, Mgr->MakeType<BooleanType>());
                 auto IdentityConstraint = Mgr->MakeExpr(LTSOps::OpIFF, ExistsExp,
                                                         Mgr->MakeExpr(LTSOps::OpNOT, IdentityVar));
-                cout << "Asserting Identity Update Constraint:" << IdentityConstraint->ToString()
-                     << endl << endl;
+                // cout << "Asserting Identity Update Constraint:" << IdentityConstraint->ToString()
+                //      << endl << endl;
                 CurrentAssertions.insert(IdentityConstraint);
 
                 auto&& ArgDepConstraints = CreateArgDepConstraints(OpExpression, IdentityVar);
@@ -266,8 +266,8 @@ namespace ESMC {
                                            Mgr->MakeVal("1", FuncCostVarType));
                 Consequent = Mgr->MakeExpr(LTSOps::OpGE, FuncCostVar, Consequent);
                 auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, Antecedent, Consequent);
-                cout << "Asserting Cost Constraint:" << endl << ImpliesExp->ToString()
-                     << endl << endl;
+                // cout << "Asserting Cost Constraint:" << endl << ImpliesExp->ToString()
+                //      << endl << endl;
 
                 UpdateIndicatorExps[OpCode] = FuncCostVar;
                 CurrentAssertions.insert(ImpliesExp);
@@ -282,8 +282,8 @@ namespace ESMC {
                 auto NegAllFalse = Mgr->MakeExpr(LTSOps::OpNOT, AllFalseVar);
                 auto AllFalseConstraint = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp, NegAllFalse);
 
-                cout << "Asserting All False Constraint:" << AllFalseConstraint->ToString()
-                     << endl << endl;
+                // cout << "Asserting All False Constraint:" << AllFalseConstraint->ToString()
+                //      << endl << endl;
                 CurrentAssertions.insert(AllFalseConstraint);
 
                 auto&& ArgDepConstraints = CreateArgDepConstraints(OpExpression, ExpT::NullPtr);
@@ -294,16 +294,16 @@ namespace ESMC {
                                            Mgr->MakeVal("1", FuncCostVarType));
                 Consequent = Mgr->MakeExpr(LTSOps::OpGE, FuncCostVar, Consequent);
                 auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, Antecedent, Consequent);
-                cout << "Asserting Cost Constraint:" << endl << ImpliesExp->ToString()
-                     << endl << endl;
+                // cout << "Asserting Cost Constraint:" << endl << ImpliesExp->ToString()
+                //      << endl << endl;
                 GuardIndicatorExps[OpCode] = FuncCostVar;
                 CurrentAssertions.insert(ImpliesExp);
             } else {
                 auto&& ArgDepConstraints = CreateArgDepConstraints(OpExpression, ExpT::NullPtr);
                 auto SumExp = MakeSum(ArgDepConstraints, Mgr, FuncCostVarType);
                 auto Constraint = Mgr->MakeExpr(LTSOps::OpGE, FuncCostVar, SumExp);
-                cout << "Asserting Cost Constraint:" << endl << Constraint->ToString()
-                     << endl << endl;
+                // cout << "Asserting Cost Constraint:" << endl << Constraint->ToString()
+                //      << endl << endl;
                 UpdateIndicatorExps[OpCode] = FuncCostVar;
                 CurrentAssertions.insert(Constraint);
             }
@@ -419,8 +419,8 @@ namespace ESMC {
                                                                   IndicatorVar,
                                                                   OneExp));
 
-                    cout << "Asserting Guard Point Constraint:" << endl
-                         << ImpliesExp->ToString() << endl << endl;
+                    // cout << "Asserting Guard Point Constraint:" << endl
+                    //      << ImpliesExp->ToString() << endl << endl;
                     CurrentAssertions.insert(ImpliesExp);
                 }
 
@@ -434,8 +434,8 @@ namespace ESMC {
                 auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumIndicatorVar, SumExp);
                 GuardIndicatorExps[GuardOp] = SumIndicatorVar;
 
-                cout << "Asserting Guard Indicator Constraint:" << endl
-                     << EQExp->ToString() << endl << endl;
+                // cout << "Asserting Guard Indicator Constraint:" << endl
+                //      << EQExp->ToString() << endl << endl;
                 CurrentAssertions.insert(EQExp);
 
             } else if (Options.GBoundMethod == GuardBoundingMethodT::NonFalseBound) {
@@ -461,8 +461,8 @@ namespace ESMC {
                 auto Implies = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
                                              Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
                                                            Mgr->MakeVal("1", IndicatorType)));
-                cout << "Asserting Indicator Implication:" << endl
-                     << Implies->ToString() << endl << endl;
+                // cout << "Asserting Indicator Implication:" << endl
+                //      << Implies->ToString() << endl << endl;
                 CurrentAssertions.insert(Implies);
             } else if (Options.GBoundMethod == GuardBoundingMethodT::VarDepBound) {
                 CreateIndicators(GuardOp);
@@ -525,8 +525,8 @@ namespace ESMC {
                 auto Implication = Mgr->MakeExpr(LTSOps::OpIMPLIES, NotSubstEQ, PointEQOne);
                 CurrentAssertions.insert(Implication);
 
-                cout << "Creating update point indicator:" << endl
-                     << Implication->ToString() << endl;
+                // cout << "Creating update point indicator:" << endl
+                //      << Implication->ToString() << endl;
             }
 
             // Make an indicator for the update itself
@@ -539,8 +539,8 @@ namespace ESMC {
             auto SumExp = MakeSum(PointIndicators, Mgr, UpdateRangeType);
             auto UpdateEQSum = Mgr->MakeExpr(LTSOps::OpEQ, UpdateIndicator, SumExp);
 
-            cout << "Creating update indicator for " << UpdateExp
-                 << endl << UpdateEQSum->ToString() << endl;
+            // cout << "Creating update indicator for " << UpdateExp
+            //      << endl << UpdateEQSum->ToString() << endl;
             UpdateIndicatorExps[UpdateOp] = UpdateIndicator;
         }
 
@@ -580,8 +580,8 @@ namespace ESMC {
             auto Body = Mgr->MakeExpr(LTSOps::OpEQ, App1, App2);
 
             auto Constraint = Mgr->MakeForAll(QVarTypes, Body);
-            cout << "State Variable Identical Constraint:" << endl
-                 << Constraint->ToString() << endl << endl;
+            // cout << "State Variable Identical Constraint:" << endl
+            //      << Constraint->ToString() << endl << endl;
             CurrentAssertions.insert(Constraint);
         }
 
@@ -669,8 +669,8 @@ namespace ESMC {
                 auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
                                                 Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
                                                               Mgr->MakeVal("1", IndicatorType)));
-                cout << "Asserting Update Indicator Implication:" << endl
-                     << ImpliesExp->ToString() << endl << endl;
+                // cout << "Asserting Update Indicator Implication:" << endl
+                //      << ImpliesExp->ToString() << endl << endl;
                 CurrentAssertions.insert(ImpliesExp);
             } else if (Options.UBoundMethod == UpdateBoundingMethodT::VarDepBound) {
                 CreateIndicators(UpdateOp);
@@ -754,8 +754,8 @@ namespace ESMC {
 
             auto GuardExp = ExpIt->second;
 
-            cout << "Unveiling Guard Exp: " << GuardExp->ToString() << endl;
-            cout << "Asserting Symmetry constraints:" << endl;
+            // cout << "Unveiling Guard Exp: " << GuardExp->ToString() << endl;
+            // cout << "Asserting Symmetry constraints:" << endl;
 
             // This is a new guard
             // Assert the symmetry constraints
@@ -766,8 +766,8 @@ namespace ESMC {
                 }
             }
 
-            cout << "End of Symmetry constraints:" << endl;
-            cout << "Asserting Determinism constraints:" << endl;
+            // cout << "End of Symmetry constraints:" << endl;
+            // cout << "Asserting Determinism constraints:" << endl;
 
             // Assert the determinism constraints wrt guards
             // that have already been unveiled
@@ -783,20 +783,20 @@ namespace ESMC {
                     CreateMutualExclusionConstraint(GuardExp, OtherGuard);
                 }
             }
-            cout << "End of Determinism constraints:" << endl;
-            cout << "Asserting Symmetry constraints on updates:" << endl;
+            // cout << "End of Determinism constraints:" << endl;
+            // cout << "Asserting Symmetry constraints on updates:" << endl;
 
             // add the symmetry constraints for updates associated with
             // this guard
             auto it3 = GuardOpToUpdateSymmetryConstraints.find(Op);
             if (it3 != GuardOpToUpdateSymmetryConstraints.end()) {
                 for (auto const& Constraint : it3->second) {
-                    cout << Constraint->ToString() << endl;
+                    // cout << Constraint->ToString() << endl;
                     CurrentAssertions.insert(Constraint);
                 }
             }
 
-            cout << "End of Symmetry constraints on updates:" << endl;
+            // cout << "End of Symmetry constraints on updates:" << endl;
 
             // Mark the guard and its updates as unveiled
             UnveiledGuardOps.insert(Op);
@@ -894,7 +894,13 @@ namespace ESMC {
                         continue;
                     } else if (Res == 0) {
                         FoundBlown = true;
-                        ActualBlownInvariants.push_back(Invar);
+                        // cout << endl << "Blown invar: " << Invar->ToString() << endl;
+                        auto it = Checker->LoweredBoundsInvars.find(Invar);
+                        if (it == Checker->LoweredBoundsInvars.end()) {
+                            throw InternalError((string)"Could not find array transformed invariant " +
+                                                "for bounds invariant:\n" + Invar->ToString());
+                        }
+                        ActualBlownInvariants.push_back(it->second);
                     }
                 }
 
@@ -910,7 +916,7 @@ namespace ESMC {
                                         "At: " + __FILE__ + ":" + to_string(__LINE__));
                 }
             } else {
-                ActualBlownInvariants.push_back(Checker->TheLTS->InvariantExp);
+                ActualBlownInvariants.push_back(Checker->LoweredInvariant);
             }
 
             // cout << "Done!" << endl << "Blown Invariant: " << endl
@@ -974,7 +980,7 @@ namespace ESMC {
                 if (Res == 0) {
                     continue;
                 }
-                Disjuncts.push_back(Cmd->GetGuard());
+                Disjuncts.push_back(Cmd->GetLoweredGuard());
             }
 
             ExpT GoodExp = ExpT::NullPtr;
@@ -1091,8 +1097,8 @@ namespace ESMC {
 
             auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundsVariable);
 
-            cout << "Asserting Bounds Constraint: " << endl
-                 << EQExp->ToString() << endl << endl;
+            // cout << "Asserting Bounds Constraint: " << endl
+            //      << EQExp->ToString() << endl << endl;
 
             TP->Assert(EQExp, Options.UnrollQuantifiers);
             for (auto const& Assertion : AssertedConstraints) {
@@ -1116,7 +1122,7 @@ namespace ESMC {
 
         inline void Solver::AssertCurrentConstraints()
         {
-            cout << "Asserting constraints for this iteration." << endl;
+            // cout << "Asserting constraints for this iteration." << endl;
             for (auto const& Pred : CurrentAssertions) {
                 CheckedAssert(Pred);
             }
@@ -1260,9 +1266,9 @@ namespace ESMC {
                 }
                 auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, CExBound);
 
-                cout << "Model Used:" << endl;
-                PrintFinalSolution(cout);
-                cout << "End of model" << endl << endl;
+                // cout << "Model Used:" << endl;
+                // PrintFinalSolution(cout);
+                // cout << "End of model" << endl << endl;
 
                 if (!Safe) {
                     HandleSafetyViolations();

@@ -188,6 +188,9 @@ namespace ESMC {
 
             // Set of invariant expressions for bounds, etc.
             set<ExpT> BoundsInvariants;
+            MgrT::SubstMapT LoweredBoundsInvars;
+            // Lowered invariant from the LTS
+            ExpT LoweredInvariant;
             ExpT DeadlockFreeInvariant;
 
             // The set of all error states, mapping to the

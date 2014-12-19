@@ -421,7 +421,6 @@ namespace ESMC {
                 Invar = Mgr->MakeExpr(LTSOps::OpNOT, Invar);
                 Invar = Mgr->MakeExpr(LTSOps::OpIMPLIES, Precondition, Invar);
                 Invar = Mgr->Simplify(Invar);
-                Compiler->CompileExp(Invar, TheLTS);
                 BoundsInvariants.insert(Invar);
             }
         }
@@ -487,7 +486,6 @@ namespace ESMC {
                                                           HighConstraint);
                     BoundsConstraint = Mgr->MakeExpr(LTSOps::OpIMPLIES, Guard, BoundsConstraint);
                     auto Simplified = Mgr->Simplify(BoundsConstraint);
-                    Compiler->CompileExp(Simplified, TheLTS);
                     BoundsInvariants.insert(Simplified);
                 }
             }
@@ -501,7 +499,14 @@ namespace ESMC {
             for (auto const& Invar : BoundsInvariants) {
                 SimplifiedBoundsInvars.insert(Mgr->Simplify(Invar));
             }
+
             BoundsInvariants = SimplifiedBoundsInvars;
+
+            // compile and lower the invariants
+            for (auto const& Invar : BoundsInvariants) {
+                Compiler->CompileExp(Invar, TheLTS);
+                LoweredBoundsInvars[Invar] = TransformArrayRValue(Invar);
+            }
         }
 
         inline void LTSChecker::RecordErrorState(const StateVec* ErrorState)
@@ -595,6 +600,7 @@ namespace ESMC {
 
             // Make the invariant on undef and bounds
             MakeBoundsInvariants();
+            LoweredInvariant = TransformArrayRValue(TheLTS->InvariantExp);
         }
 
         LTSChecker::~LTSChecker()

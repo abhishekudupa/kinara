@@ -88,8 +88,8 @@ namespace ESMC {
             auto Mgr = Exp1->GetMgr();
             auto Conjunction = Mgr->MakeExpr(LTSOps::OpAND, Exp1, Exp2);
 
-            cout << "Checking for unsat:" << endl << Conjunction->ToString()
-                 << endl << endl;
+            // cout << "Checking for unsat:" << endl << Conjunction->ToString()
+            //      << endl << endl;
             auto Res = TP->CheckSat(Conjunction, true);
             if (Res == TPResult::UNKNOWN) {
                 throw IncompleteTheoryException(Conjunction);
@@ -589,7 +589,7 @@ namespace ESMC {
                                                           DomainTypes,
                                                           Mgr->MakeType<BooleanType>());
             auto GuardExp = Mgr->MakeExpr(GuardOp, DomainTermVec);
-            cout << "Made Guard Exp: " << GuardExp->ToString() << endl << endl;
+            // cout << "Made Guard Exp: " << GuardExp->ToString() << endl << endl;
             // Make the constraints for symmetry on the guard expression
 
             auto&& SymmConstraints = GetSymmetryConstraints(GuardExp);
@@ -597,11 +597,11 @@ namespace ESMC {
             // audupa: clearing SymmConstraints as a test
             // SymmConstraints.clear();
 
-            cout << "Symmetry constraints:" << endl;
-            for (auto const& Constraint : SymmConstraints) {
-                cout << Constraint->ToString() << endl << endl;
-            }
-            cout << "End of symmetry constraints" << endl;
+            // cout << "Symmetry constraints:" << endl;
+            // for (auto const& Constraint : SymmConstraints) {
+            //     cout << Constraint->ToString() << endl << endl;
+            // }
+            // cout << "End of symmetry constraints" << endl;
 
             GuardSymmetryConstraints[GuardOp].insert(SymmConstraints.begin(),
                                                      SymmConstraints.end());
@@ -912,14 +912,14 @@ namespace ESMC {
 
             if (ArrayLValueGroups.size() > 0) {
 
-                cout << "Array LValue Groups:" << endl;
+                // cout << "Array LValue Groups:" << endl;
                 for (auto const& Group : ArrayLValueGroups) {
-                    cout << "Group {" << endl;
+                    // cout << "Group {" << endl;
                     for (auto const& LVal : Group) {
-                        cout << "    " << LVal->ToString() << endl;
+                        // cout << "    " << LVal->ToString() << endl;
                         GroupedLValues[LVal] = Group;
                     }
-                    cout << "}" << endl << endl;
+                    // cout << "}" << endl << endl;
                 }
             }
 
@@ -970,8 +970,8 @@ namespace ESMC {
                 GuardOpToUpdates[GuardOp].insert(UpdateExp);
                 AllOpToExp[UpdateOp] = UpdateExp;
 
-                cout << "Made update exp for term " << LValue->ToString()
-                     << ":" << endl << UpdateExp->ToString() << endl;
+                // cout << "Made update exp for term " << LValue->ToString()
+                //      << ":" << endl << UpdateExp->ToString() << endl;
 
                 if (GroupedLValues.find(LValue) == GroupedLValues.end()) {
                     auto&& SymmConstraints = GetSymmetryConstraints(UpdateExp);
@@ -979,12 +979,12 @@ namespace ESMC {
                     // audupa: clearing SymmConstraints as a test
                     // SymmConstraints.clear();
 
-                    cout << "Symmetry constraints for update of term " << LValue->ToString()
-                         << ":" << endl;
-                    for (auto const& Constraint : SymmConstraints) {
-                        cout << Constraint->ToString() << endl << endl;
-                    }
-                    cout << "End of symmetry constraints" << endl << endl;
+                    // cout << "Symmetry constraints for update of term " << LValue->ToString()
+                    //      << ":" << endl;
+                    // for (auto const& Constraint : SymmConstraints) {
+                    //     cout << Constraint->ToString() << endl << endl;
+                    // }
+                    // cout << "End of symmetry constraints" << endl << endl;
                     GuardOpToUpdateSymmetryConstraints[GuardOp].insert(SymmConstraints.begin(),
                                                                        SymmConstraints.end());
                 } else {
@@ -1043,11 +1043,11 @@ namespace ESMC {
 
                 // audupa: clearing SymmConstraints as a test
                 // SymmConstraints.clear();
-                cout << "Symmetry constraints for symmetric updates:" << endl;
-                for (auto const& Constraint : SymmConstraints) {
-                    cout << Constraint->ToString() << endl << endl;
-                }
-                cout << "End of symmetry constraints" << endl << endl;
+                // cout << "Symmetry constraints for symmetric updates:" << endl;
+                // for (auto const& Constraint : SymmConstraints) {
+                //     cout << Constraint->ToString() << endl << endl;
+                // }
+                // cout << "End of symmetry constraints" << endl << endl;
 
                 GuardOpToUpdateSymmetryConstraints[GuardOp].insert(SymmConstraints.begin(),
                                                                    SymmConstraints.end());
@@ -1077,10 +1077,10 @@ namespace ESMC {
                 ActMsgType = MsgType;
             }
 
-            cout << "[" << Name << "]: "
-                 << "Completing Input Transition from state \"" << InitStateName
-                 << "\" on message type \"" << ActMsgType->SAs<RecordType>()->GetName()
-                 << "\"" << endl;
+            // cout << "[" << Name << "]: "
+            //      << "Completing Input Transition from state \"" << InitStateName
+            //      << "\" on message type \"" << ActMsgType->SAs<RecordType>()->GetName()
+            //      << "\"" << endl;
 
             auto MsgTypeAsRecord = ActMsgType->SAs<RecordType>();
             auto NameSuffix = InitStateName + "_" + MsgTypeAsRecord->GetName();
@@ -1182,10 +1182,10 @@ namespace ESMC {
             } else {
                 ActMsgType = MsgType;
             }
-            cout << "[" << Name << "]: "
-                 << "Completing Output Transition from state \"" << InitStateName
-                 << "\" on message type \"" << ActMsgType->SAs<RecordType>()->GetName()
-                 << "\"" << endl;
+            // cout << "[" << Name << "]: "
+            //      << "Completing Output Transition from state \"" << InitStateName
+            //      << "\" on message type \"" << ActMsgType->SAs<RecordType>()->GetName()
+            //      << "\"" << endl;
 
             auto MsgTypeAsRecord = ActMsgType->SAs<RecordType>();
             auto NameSuffix = InitStateName + "_" + MsgTypeAsRecord->GetName();
@@ -1297,7 +1297,7 @@ namespace ESMC {
                                            });
                 auto CoveredPred = FindGlobalCoveredRegion(TransFromState, TP);
                 if (CoveredPred == TheLTS->MakeTrue()) {
-                    cout << "Nothing to complete on state " << StateName << endl;
+                    // cout << "Nothing to complete on state " << StateName << endl;
                     continue;
                 }
 

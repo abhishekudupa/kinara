@@ -81,7 +81,7 @@ int main()
     auto AddressParam = TheLTS->MakeVar("AddressID", AddressType);
     auto ValueParam = TheLTS->MakeVar("ValueID", ValueType);
 
-    auto AckType = TheLTS->MakeRangeType(-((i64)NumCaches), NumCaches);
+    auto AckType = TheLTS->MakeRangeType(-((i64)NumCaches - 1), NumCaches - 1);
     auto FAType = TheLTS->MakeFieldAccessType();
 
     // Useful expressions for constraints
