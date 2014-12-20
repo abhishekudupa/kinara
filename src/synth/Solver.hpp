@@ -80,13 +80,15 @@ namespace ESMC {
             u64 CPULimitInSeconds;
             u64 MemLimitInMB;
             u32 NumCExToProcess;
+            u32 BoundLimit;
 
             inline SolverOptionsT()
                 : GBoundMethod(GuardBoundingMethodT::NoBounding),
                   UBoundMethod(UpdateBoundingMethodT::NoBounding),
                   SBoundMethod(StateUpdateBoundingMethodT::NoBounding),
                   UnrollQuantifiers(false), CPULimitInSeconds(UINT64_MAX),
-                  MemLimitInMB(UINT64_MAX), NumCExToProcess(8)
+                  MemLimitInMB(UINT64_MAX), NumCExToProcess(8),
+                  BoundLimit(256)
             {
                 // Nothing here
             }
@@ -99,7 +101,8 @@ namespace ESMC {
                   CPULimitInSeconds(Other.CPULimitInSeconds),
                   MemLimitInMB(Other.MemLimitInMB),
                   NumCExToProcess(Other.NumCExToProcess == 0 ?
-                                  UINT32_MAX : Other.NumCExToProcess)
+                                  UINT32_MAX : Other.NumCExToProcess),
+                  BoundLimit(Other.BoundLimit == 0 ? 256 : Other.BoundLimit)
             {
                 // Nothing here
             }
@@ -118,6 +121,7 @@ namespace ESMC {
                 MemLimitInMB = Other.MemLimitInMB;
                 NumCExToProcess =
                     Other.NumCExToProcess == 0 ? UINT32_MAX : Other.NumCExToProcess;
+                BoundLimit = Other.BoundLimit == 0 ? 256 : Other.BoundLimit;
             }
         };
 

@@ -60,6 +60,7 @@ struct MSISynthOptionsT {
     u64 CPULimit;
     u64 MemLimit;
     u32 NumCExToProcess;
+    u32 BoundLimit;
 };
 
 static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Options)
@@ -69,6 +70,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     u64 CPULimit;
     u64 MemLimit;
     u32 CExToProcess;
+    u32 BoundLimit;
 
     Desc.add_options()
         ("help", "Produce this help message")
@@ -82,6 +84,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
         ("quants,q", "Unroll Quantifiers before handing off to Z3")
         ("cex,c", po::value<u32>(&CExToProcess)->default_value(8),
          "Number of counterexamples to process on each model checking run")
+        ("bound,b", po::value<u32>(&BoundLimit)->default_value(256),
+         "Max limit on bound")
         ("cpu-limit,t", po::value<u64>(&CPULimit)->default_value(UINT64_MAX),
          "CPU Time limit in seconds")
         ("mem-limit,m", po::value<u64>(&MemLimit)->default_value(UINT64_MAX),
@@ -139,6 +143,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     Options.CPULimit = CPULimit;
     Options.MemLimit = MemLimit;
     Options.NumCExToProcess = CExToProcess;
+    Options.BoundLimit = BoundLimit;
 
     return;
 }
@@ -153,6 +158,7 @@ static inline void OptsToSolverOpts(const MSISynthOptionsT& Opts,
     SolverOpts.CPULimitInSeconds = Opts.CPULimit;
     SolverOpts.MemLimitInMB = Opts.MemLimit;
     SolverOpts.NumCExToProcess = Opts.NumCExToProcess;
+    SolverOpts.BoundLimit = Opts.BoundLimit;
 }
 
 //

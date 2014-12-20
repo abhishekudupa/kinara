@@ -63,10 +63,7 @@ namespace ESMC {
         using LTS::ExpT;
 
         const u64 TentativeEdgeCost = ((u64)1 << 30);
-        const u32 LimitOnBound = 32;
-
         const string Solver::BoundsVarPrefix = (string)"__SynthBound__";
-        const u32 Solver::MaxBound = 32;
 
         Solver::Solver(LTSChecker* Checker, const SolverOptionsT& Options)
             : Options(Options),
@@ -96,11 +93,11 @@ namespace ESMC {
 
             auto Mgr = TheLTS->GetMgr();
 
-            auto BoundsType = Mgr->MakeType<RangeType>(0, MaxBound);
+            auto BoundsType = Mgr->MakeType<RangeType>(0, Options.BoundLimit);
             BoundsVariable = Mgr->MakeVar(BoundsVarPrefix, BoundsType);
 
             // initialize the bounds assertions
-            for (u32 i = 0; i < MaxBound; ++i) {
+            for (u32 i = 0; i < Options.BoundLimit; ++i) {
                 auto CurBoundsVal = Mgr->MakeVal(to_string(i), BoundsType);
                 auto CurProp = Mgr->MakeVar("__assumption_prop_var_" + to_string(i),
                                             Mgr->MakeType<BooleanType>());
@@ -1109,7 +1106,7 @@ namespace ESMC {
             CurrentAssumptions.clear();
 
             // initialize the bounds assertions
-            for (u32 i = 0; i < MaxBound; ++i) {
+            for (u32 i = 0; i < Options.BoundLimit; ++i) {
                 auto CurProp = Mgr->MakeVar("__assumption_prop_var_" + to_string(i),
                                             Mgr->MakeType<BooleanType>());
                 LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
@@ -1193,7 +1190,7 @@ namespace ESMC {
 
             bool FirstIteration = true;
             bool InitialConstraintsCounted = false;
-            while (Bound <= LimitOnBound) {
+            while (Bound <= Options.BoundLimit) {
 
                 if (ResourceLimitManager::CheckMemOut()) {
                     Stats.SolveEndTime = TimeValue::GetTimeValue();
