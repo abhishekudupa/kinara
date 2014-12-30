@@ -96,18 +96,23 @@ namespace ESMC {
             auto BoundsType = Mgr->MakeType<RangeType>(0, Options.BoundLimit);
             BoundsVariable = Mgr->MakeVar(BoundsVarPrefix, BoundsType);
 
-            // initialize the bounds assertions
-            for (u32 i = 0; i < Options.BoundLimit; ++i) {
-                auto CurBoundsVal = Mgr->MakeVal(to_string(i), BoundsType);
-                auto CurProp = Mgr->MakeVar("__assumption_prop_var_" + to_string(i),
-                                            Mgr->MakeType<BooleanType>());
-                LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
-                auto LoweredProp = Mgr->LowerExpr(CurProp, LTSCtx);
-                CheckedAssert(Mgr->MakeExpr(LTSOps::OpIMPLIES, CurProp,
-                                            Mgr->MakeExpr(LTSOps::OpLE,
-                                                          BoundsVariable,
-                                                          CurBoundsVal)));
-                CurrentAssumptions.push_back(LoweredProp);
+            if (Options.UBoundMethod != UpdateBoundingMethodT::NoBounding ||
+                Options.GBoundMethod != GuardBoundingMethodT::NoBounding ||
+                (Options.SBoundMethod != StateUpdateBoundingMethodT::NoBounding &&
+                 Options.SBoundMethod != StateUpdateBoundingMethodT::AllSame)) {
+                // initialize the bounds assertions
+                for (u32 i = 0; i < Options.BoundLimit; ++i) {
+                    auto CurBoundsVal = Mgr->MakeVal(to_string(i), BoundsType);
+                    auto CurProp = Mgr->MakeVar("__assumption_prop_var_" + to_string(i),
+                                                Mgr->MakeType<BooleanType>());
+                    LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
+                    auto LoweredProp = Mgr->LowerExpr(CurProp, LTSCtx);
+                    CheckedAssert(Mgr->MakeExpr(LTSOps::OpIMPLIES, CurProp,
+                                                Mgr->MakeExpr(LTSOps::OpLE,
+                                                              BoundsVariable,
+                                                              CurBoundsVal)));
+                    CurrentAssumptions.push_back(LoweredProp);
+                }
             }
         }
 
@@ -1066,12 +1071,6 @@ namespace ESMC {
 
             UnveiledNewOps = false;
 
-            // We need to toss out the entire stack of assertions
-            // and reassert them
-            TP = new Z3TheoremProver();
-            TP->Push();
-            Ctx = TP->GetCtx();
-
             auto Mgr = TheLTS->GetMgr();
             vector<ExpT> Summands;
             ExpT SumExp = nullptr;
@@ -1085,11 +1084,21 @@ namespace ESMC {
             }
 
             if (Summands.size() == 0) {
+                // No bounding, nothing changes, leave everything
+                // alone and return.
                 return;
-            } else if (Summands.size() == 1) {
-                SumExp = Summands[0];
             } else {
-                SumExp = Mgr->MakeExpr(LTSOps::OpADD, Summands);
+                // Something changes, so
+                // we need to toss out the entire stack of assertions
+                // and reassert them
+                TP = new Z3TheoremProver();
+                TP->Push();
+                Ctx = TP->GetCtx();
+                if (Summands.size() == 1) {
+                    SumExp = Summands[0];
+                } else {
+                    SumExp = Mgr->MakeExpr(LTSOps::OpADD, Summands);
+                }
             }
 
             auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundsVariable);
@@ -1106,12 +1115,18 @@ namespace ESMC {
             CurrentAssumptions.clear();
 
             // initialize the bounds assertions
-            for (u32 i = 0; i < Options.BoundLimit; ++i) {
-                auto CurProp = Mgr->MakeVar("__assumption_prop_var_" + to_string(i),
-                                            Mgr->MakeType<BooleanType>());
-                LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
-                auto LoweredProp = Mgr->LowerExpr(CurProp, LTSCtx);
-                CurrentAssumptions.push_back(LoweredProp);
+            // if needed
+            if (Options.UBoundMethod != UpdateBoundingMethodT::NoBounding ||
+                Options.GBoundMethod != GuardBoundingMethodT::NoBounding ||
+                (Options.SBoundMethod != StateUpdateBoundingMethodT::NoBounding &&
+                 Options.SBoundMethod != StateUpdateBoundingMethodT::AllSame)) {
+                for (u32 i = 0; i < Options.BoundLimit; ++i) {
+                    auto CurProp = Mgr->MakeVar("__assumption_prop_var_" + to_string(i),
+                                                Mgr->MakeType<BooleanType>());
+                    LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
+                    auto LoweredProp = Mgr->LowerExpr(CurProp, LTSCtx);
+                    CurrentAssumptions.push_back(LoweredProp);
+                }
             }
 
             return;
