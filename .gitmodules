@@ -7,3 +7,6 @@
 [submodule "thirdparty/boost-local"]
 	path = thirdparty/boost-local
 	url = acggrid01.seas.upenn.edu:/home1/a/audupa/work/gitroot/boost-local
+[submodule "thirdparty/z3"]
+	path = thirdparty/z3
+	url = acggrid01.seas.upenn.edu:/home1/a/audupa/work/gitroot/z3-4.3.2.git

@@ -9,7 +9,7 @@ BASE_SRC_DIR=$(PROJECT_ROOT)/src
 CXX?=g++
 
 CXXFLAGS=-std=c++11 -Wall -pedantic -fopenmp -pipe
-CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/z3-4.3.1/src/api
+CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/z3/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/sparsehash
 
@@ -43,7 +43,7 @@ esmc_DEP_LIBS=esmc
 esmc_EXT_LIBS=boost z3
 
 esmc_LIB_PATHS= \
-	$(PROJECT_ROOT)/thirdparty/z3-4.3.1/install \
+	$(PROJECT_ROOT)/thirdparty/z3/install \
 	$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/lib \
 	$(PROJECT_ROOT)/lib/$(BUILD_SUFFIX)
 
@@ -51,8 +51,8 @@ esmc_OBJS=main.o
 
 libboost_FULL_PATH=$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/install.ph
 libboost_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/boost-local/
-libz3_FULL_PATH=$(PROJECT_ROOT)/thirdparty/z3-4.3.1/install/libz3.so
-libz3_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/z3-4.3.1/
+libz3_FULL_PATH=$(PROJECT_ROOT)/thirdparty/z3/install/libz3.so
+libz3_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/z3/
 
 PROJECT_LIBS=esmc
 
