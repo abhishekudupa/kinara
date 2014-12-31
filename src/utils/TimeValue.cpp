@@ -46,22 +46,22 @@ namespace ESMC {
         Value = Other.Value;
     }
 
-    TimeValue::TimeValue(struct timeval Value)
+    TimeValue::TimeValue(const struct timespec& Value)
         : Value(Value)
     {
         // Nothing here
     }
 
-    TimeValue::TimeValue(time_t sec, suseconds_t usec)
+    TimeValue::TimeValue(time_t sec, long nsec)
     {
         Value.tv_sec = sec;
-        Value.tv_usec = usec;
+        Value.tv_nsec = nsec;
     }
 
     TimeValue::TimeValue()
     {
         Value.tv_sec = 0;
-        Value.tv_usec = 0;
+        Value.tv_nsec = 0;
     }
 
     TimeValue& TimeValue::operator = (const TimeValue& Other)
@@ -76,42 +76,42 @@ namespace ESMC {
     TimeValue TimeValue::operator - (const TimeValue& Other) const
     {
         time_t sec;
-        suseconds_t usec;
-        struct timeval tv = Value;
+        long nsec;
+        struct timespec tv = Value;
 
-        if (tv.tv_usec < Other.Value.tv_usec) {
-            tv.tv_usec += 1000000;
+        if (tv.tv_nsec < Other.Value.tv_nsec) {
+            tv.tv_nsec += 1000000000LL;
             tv.tv_sec--;
         }
 
-        usec = tv.tv_usec - Other.Value.tv_usec;
+        nsec = tv.tv_nsec - Other.Value.tv_nsec;
         sec = tv.tv_sec - Other.Value.tv_sec;
 
-        return TimeValue(sec, usec);
+        return TimeValue(sec, nsec);
     }
 
     TimeValue TimeValue::operator + (const TimeValue& Other) const
     {
         time_t sec;
-        suseconds_t usec;
+        long nsec;
 
         sec = 0;
-        usec = 0;
+        nsec = 0;
 
-        usec = this->Value.tv_usec + Other.Value.tv_usec;
-        if(usec > 1000000) {
-            usec -= 1000000;
+        nsec = this->Value.tv_nsec + Other.Value.tv_nsec;
+        if(nsec > 1000000000LL) {
+            nsec -= 1000000000LL;
             sec += 1;
         }
         sec += (this->Value.tv_sec + Other.Value.tv_sec);
-        return TimeValue(sec, usec);
+        return TimeValue(sec, nsec);
     }
 
     TimeValue TimeValue::operator += (const TimeValue& Other)
     {
-        this->Value.tv_usec += Other.Value.tv_usec;
-        if(this->Value.tv_usec > 1000000) {
-            this->Value.tv_usec -= 1000000;
+        this->Value.tv_nsec += Other.Value.tv_nsec;
+        if(this->Value.tv_nsec > 1000000000LL) {
+            this->Value.tv_nsec -= 1000000000LL;
             this->Value.tv_sec += 1;
         }
         this->Value.tv_sec += Other.Value.tv_sec;
@@ -120,20 +120,20 @@ namespace ESMC {
 
     u64 TimeValue::InMicroSeconds() const
     {
-        return ((u64)Value.tv_sec * (u64)1000000 + (u64)Value.tv_usec);
+        return ((u64)Value.tv_sec * (u64)1000000 + ((u64)Value.tv_nsec) / 1000);
     }
 
     string TimeValue::ToString() const
     {
         ostringstream sstr;
-        sstr << ((double)Value.tv_sec + ((double)Value.tv_usec / 1000000.0));
+        sstr << ((double)Value.tv_sec + ((double)Value.tv_nsec / 1000000000.0));
         return sstr.str();
     }
 
-    TimeValue TimeValue::GetTimeValue()
+    TimeValue TimeValue::GetTimeValue(clockid_t ClockID)
     {
-        struct timeval tv;
-        gettimeofday(&tv, NULL);
+        struct timespec tv;
+        clock_gettime(ClockID, &tv);
         return TimeValue(tv);
     }
 

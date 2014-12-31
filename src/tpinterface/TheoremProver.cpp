@@ -260,6 +260,12 @@ namespace ESMC {
             return LastSolveResult;
         }
 
+        void Z3TheoremProver::Interrupt()
+        {
+            cout << "Interrupting Z3 now!" << endl << endl;
+            Z3_interrupt(*Ctx);
+        }
+
         u64 Z3TheoremProver::GetNumAssertions() const
         {
             auto ASTVec = Z3_solver_get_assertions(*Ctx, Solver);

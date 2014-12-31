@@ -107,6 +107,8 @@ namespace ESMC {
             TPResult CheckSatWithAssumptions(const deque<Z3Expr>& Assumptions);
             TPResult CheckSat(const ExpT& Assertion, bool UnrollQuantifiers = false);
 
+            void Interrupt();
+
             u64 GetNumAssertions() const;
 
             ExpT Evaluate(const ExpT& Exp);

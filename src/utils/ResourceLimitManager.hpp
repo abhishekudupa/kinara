@@ -41,8 +41,11 @@
 #if !defined ESMC_RESOURCE_LIMIT_MANAGER_HPP_
 #define ESMC_RESOURCE_LIMIT_MANAGER_HPP_
 
+#include <functional>
 #include <signal.h>
 #include <time.h>
+#include <setjmp.h>
+#include <vector>
 
 #include "../common/ESMCFwdDecls.hpp"
 
@@ -67,6 +70,8 @@ namespace ESMC {
         static bool TimeOut;
         static bool MemOut;
 
+        static vector<function<void(bool)>> OnLimitHandlers;
+
         // Hide all constructors
         ResourceLimitManager();
         ResourceLimitManager(const ResourceLimitManager& Other);
@@ -83,10 +88,12 @@ namespace ESMC {
         static u64 GetCPULimit();
         static void SetTimerInterval(u64 TimerIntervalNS);
         static u64 GetTimerFrequency();
-        static void QueryStart();
+        static bool QueryStart();
         static void QueryEnd();
         static bool CheckTimeOut();
         static bool CheckMemOut();
+        static void AddOnLimitHandler(const function<void(bool)>& Handler);
+        static void ClearOnLimitHandlers();
 
         static void GetUsage(double& TotalTime, double& PeakMem);
     };

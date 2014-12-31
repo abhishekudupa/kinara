@@ -67,8 +67,15 @@ namespace ESMC {
     bool ResourceLimitManager::TimeOut = false;
     bool ResourceLimitManager::MemOut = false;
 
+    vector<function<void(bool)>> ResourceLimitManager::OnLimitHandlers;
+
     void ResourceLimitManager::TimerHandler(int SigNum, siginfo_t* SigInfo, void* Context)
     {
+        // Already timedout of memedout?
+        if (TimeOut || MemOut) {
+            return;
+        }
+
         // Check resource usage
         struct rusage CurUsage;
         getrusage(RUSAGE_SELF, &CurUsage);
@@ -89,6 +96,13 @@ namespace ESMC {
             OldAction.sa_sigaction(SigNum, SigInfo, Context);
         } else if(OldAction.sa_handler != nullptr) {
             OldAction.sa_handler(SigNum);
+        }
+
+        // finally if timeout or memout is true, call the OnLimitHandlers
+        if (TimeOut || MemOut) {
+            for (auto const& Handler : OnLimitHandlers) {
+                Handler(TimeOut);
+            }
         }
     }
 
@@ -174,7 +188,7 @@ namespace ESMC {
         TimerInterval = TimerIntervalNS;
     }
 
-    void ResourceLimitManager::QueryStart()
+    bool ResourceLimitManager::QueryStart()
     {
         // install handlers IF resource limits are specified
         if (MemLimit != UINT64_MAX ||
@@ -188,6 +202,7 @@ namespace ESMC {
             FreqSpec.it_interval.tv_nsec = TimerInterval;
             timer_settime(TimerID, 0, &FreqSpec, NULL);
         }
+
         TimeOut = MemOut = false;
     }
 
@@ -213,6 +228,16 @@ namespace ESMC {
     bool ResourceLimitManager::CheckMemOut()
     {
         return (volatile bool)MemOut;
+    }
+
+    void ResourceLimitManager::AddOnLimitHandler(const function<void(bool)>& Handler)
+    {
+        OnLimitHandlers.push_back(Handler);
+    }
+
+    void ResourceLimitManager::ClearOnLimitHandlers()
+    {
+        OnLimitHandlers.clear();
     }
 
     void ResourceLimitManager::GetUsage(double& TotalTime, double& PeakMem)

@@ -122,6 +122,7 @@ namespace ESMC {
                 NumCExToProcess =
                     Other.NumCExToProcess == 0 ? UINT32_MAX : Other.NumCExToProcess;
                 BoundLimit = Other.BoundLimit == 0 ? 256 : Other.BoundLimit;
+                return *this;
             }
         };
 
@@ -275,6 +276,7 @@ namespace ESMC {
             inline void UpdateCommands();
             inline void ResetStats();
             inline void PrintStats(ostream& Out);
+            inline void HandleResourceLimit();
 
         public:
             Solver(LTSChecker* Checker, const SolverOptionsT& Options = SolverOptionsT());

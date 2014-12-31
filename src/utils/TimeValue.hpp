@@ -49,10 +49,10 @@ namespace ESMC {
     class TimeValue
     {
     private:
-        struct timeval Value;
+        struct timespec Value;
         // private constructors
-        TimeValue(struct timeval Value);
-        TimeValue(time_t sec, suseconds_t usec);
+        TimeValue(const struct timespec& Value);
+        TimeValue(time_t sec, long nsec);
         void Initialize(const TimeValue& Other);
 
     public:
@@ -67,7 +67,7 @@ namespace ESMC {
         string ToString() const;
         u64 InMicroSeconds() const;
 
-        static TimeValue GetTimeValue();
+        static TimeValue GetTimeValue(clockid_t ClockID);
     };
 
     extern ostream& operator << (ostream& str, const TimeValue& TV);

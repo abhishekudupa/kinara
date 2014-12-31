@@ -1175,6 +1175,19 @@ namespace ESMC {
                 << endl << endl;
         }
 
+        inline void Solver::HandleResourceLimit()
+        {
+            Stats.SolveEndTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
+            if (ResourceLimitManager::CheckMemOut()) {
+                cout << "Memory limit reached. Aborting with Memout!" << endl << endl;
+            } else {
+                cout << "CPU Time limit reached. Aborting with Timeout" << endl << endl;
+            }
+            PrintStats(cout);
+            ResourceLimitManager::QueryEnd();
+            exit(1);
+        }
+
         // Algorithm:
         // unlocked := {}
         // bound := 0
@@ -1197,29 +1210,24 @@ namespace ESMC {
         void Solver::Solve()
         {
             ResetStats();
-            Stats.SolveStartTime = TimeValue::GetTimeValue();
+            Stats.SolveStartTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
             ResourceLimitManager::SetCPULimit(Options.CPULimitInSeconds);
             ResourceLimitManager::SetMemLimit((Options.MemLimitInMB == UINT64_MAX ?
                                                Options.MemLimitInMB : Options.MemLimitInMB << 20));
             ResourceLimitManager::QueryStart();
+            ResourceLimitManager::AddOnLimitHandler([this](bool TimeOut) -> void
+                                                    {
+                                                        cout << "In OnLimit Lambda" << endl << endl;
+                                                        TP->Interrupt();
+                                                    });
 
             bool FirstIteration = true;
             bool InitialConstraintsCounted = false;
             while (Bound <= Options.BoundLimit) {
 
-                if (ResourceLimitManager::CheckMemOut()) {
-                    Stats.SolveEndTime = TimeValue::GetTimeValue();
-                    cout << "Memory limit reached. Aborting with Memout!" << endl << endl;
-                    PrintStats(cout);
-                    ResourceLimitManager::QueryEnd();
-                    exit(1);
-                }
-                if (ResourceLimitManager::CheckTimeOut()) {
-                    Stats.SolveEndTime = TimeValue::GetTimeValue();
-                    cout << "CPU Time limit reached. Aborting with Timeout" << endl << endl;
-                    PrintStats(cout);
-                    ResourceLimitManager::QueryEnd();
-                    exit(1);
+                if (ResourceLimitManager::CheckMemOut() ||
+                    ResourceLimitManager::CheckTimeOut()) {
+                    HandleResourceLimit();
                 }
 
                 // Assert any constraints we might have
@@ -1236,10 +1244,10 @@ namespace ESMC {
 
                 AssertBoundsConstraint();
 
-                auto SMTStartTime = TimeValue::GetTimeValue();
+                auto SMTStartTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
                 auto TPRes = TP->CheckSatWithAssumptions(CurrentAssumptions);
                 ++Stats.NumIterations;
-                auto SMTEndTime = TimeValue::GetTimeValue();
+                auto SMTEndTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
                 auto CurQueryTime = SMTEndTime - SMTStartTime;
                 auto CurSMTTime = CurQueryTime.InMicroSeconds();
                 Stats.TotalSMTTime += CurSMTTime;
@@ -1256,9 +1264,14 @@ namespace ESMC {
                     cout << "UNSAT! Relaxed bound to " << Bound << endl;
                     CurrentAssumptions.pop_front();
                     continue;
-                } else if (TPRes == TPResult::UNKNOWN) {
+                } else if (TPRes == TPResult::UNKNOWN &&
+                           !ResourceLimitManager::CheckMemOut() &&
+                           !ResourceLimitManager::CheckTimeOut()) {
                     ResourceLimitManager::QueryEnd();
                     throw ESMCError((string)"Could not solve constraints!");
+                } else if (TPRes == TPResult::UNKNOWN) {
+                    cout << "Solver: Timeout on TP call!" << endl << endl;
+                    HandleResourceLimit();
                 }
 
                 // all good. extract a model
@@ -1305,7 +1318,7 @@ namespace ESMC {
                     continue;
                 } else {
                     ResourceLimitManager::QueryEnd();
-                    Stats.SolveEndTime = TimeValue::GetTimeValue();
+                    Stats.SolveEndTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
                     cout << "Found Correct Completion!" << endl;
                     cout << "With Bound = " << Bound << ", Model:" << endl;
                     PrintFinalSolution(cout);
