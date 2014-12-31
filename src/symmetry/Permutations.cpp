@@ -1,13 +1,13 @@
-// Permutations.cpp --- 
-// 
+// Permutations.cpp ---
+//
 // Filename: Permutations.cpp
 // Author: Abhishek Udupa
 // Created: Wed Aug 13 15:58:02 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -45,12 +45,12 @@
 
 namespace ESMC {
     namespace Symm {
-        
+
         // Allow use of explicit representation for permutations
         // upto size 8. This will require less than 1MB of
-        // memory for explicit representation. Beyond this 
-        // size, the memory usage will be too high and we 
-        // use a more compact representation that trades off 
+        // memory for explicit representation. Beyond this
+        // size, the memory usage will be too high and we
+        // use a more compact representation that trades off
         // CPU time for memory usage.
         const u32 DomainPermuter::MaxExplicitSize = 8;
 
@@ -61,8 +61,8 @@ namespace ESMC {
             // Assumes that the perm has domain size
             for (u32 i = 0; i < DomainSize; ++i) {
                 auto FirstElem = Perm[i];
-                u32 Pos = count_if(Perm.begin() + i, Perm.end(), 
-                                   [=] (u32 Elem) -> bool 
+                u32 Pos = count_if(Perm.begin() + i, Perm.end(),
+                                   [=] (u32 Elem) -> bool
                                    { return (Elem < FirstElem); });
                 Retval += (Pos * Multiplier);
                 if (i + 1 != DomainSize) {
@@ -72,7 +72,7 @@ namespace ESMC {
             return Retval;
         }
 
-        inline void DomainPermuter::GetPermForLehmerCode(u32 Code, 
+        inline void DomainPermuter::GetPermForLehmerCode(u32 Code,
                                                          vector<u08>& OutPerm) const
         {
             u32 Multiplier = DomMinusOneFactorial;
@@ -81,7 +81,7 @@ namespace ESMC {
             OutPerm = IdentityPerm;
             for (u32 i = 0; i < DomainSize; ++i) {
                 u32 Digit = LeftCode / Multiplier;
-                rotate(OutPerm.begin() + j, OutPerm.begin() + Digit + j, 
+                rotate(OutPerm.begin() + j, OutPerm.begin() + Digit + j,
                        OutPerm.begin() + Digit + 1 + j);
                 LeftCode = LeftCode % Multiplier;
                 ++j;
@@ -91,17 +91,17 @@ namespace ESMC {
             }
         }
 
-        inline void DomainPermuter::InvertPerm(const vector<u08>& Perm, 
+        inline void DomainPermuter::InvertPerm(const vector<u08>& Perm,
                                                    vector<u08>& OutPerm) const
         {
             for (u32 i = 0; i < DomainSize; ++i) {
                 OutPerm[Perm[i]] = i;
             }
         }
-        
+
         DomainPermuter::DomainPermuter(u32 DomainSize, u32 Offset,
                                                bool Compact)
-            : DomainSize(DomainSize), PermSize((u32)Factorial(DomainSize)), 
+            : DomainSize(DomainSize), PermSize((u32)Factorial(DomainSize)),
               Offset(Offset), Compact(Compact || DomainSize > MaxExplicitSize),
               DomMinusOneFactorial(Factorial(DomainSize - 1))
         {
@@ -113,7 +113,7 @@ namespace ESMC {
 
             if (!Compact) {
                 PermIdxToInvPermIdx.insert(PermIdxToInvPermIdx.end(), PermSize, 0);
-                
+
                 for (u32 i = 0; i < PermSize; ++i) {
                     GetPermForLehmerCode(i, CachedPerm);
                     InvertPerm(CachedPerm, CachedInvPerm);
@@ -340,12 +340,12 @@ namespace ESMC {
             return (!(this->operator==(Other)));
         }
 
-        PermutationSet::iterator& 
-        PermutationSet::iterator::operator = (const PermutationSet::iterator& Other) 
+        PermutationSet::iterator&
+        PermutationSet::iterator::operator = (const PermutationSet::iterator& Other)
         {
             if (&Other == this) {
                 return *this;
-            } 
+            }
             Index = Other.Index;
             PermSet = Other.PermSet;
             return *this;
@@ -353,7 +353,7 @@ namespace ESMC {
 
 
         PermutationSet::PermutationSet(const vector<u32>& DomainSizes, bool Compact)
-            : DomainSizes(DomainSizes), NumDomains(DomainSizes.size()), 
+            : DomainSizes(DomainSizes), NumDomains(DomainSizes.size()),
               BeginIterator(0, this), EndIterator(0, this)
         {
             u32 Offset = 0;
@@ -375,7 +375,7 @@ namespace ESMC {
             }
         }
 
-        inline void PermutationSet::GetPermForIndex(u32 Index)
+        void PermutationSet::GetPermForIndex(u32 Index)
         {
             if (Index == CachedIdx) {
                 return;
@@ -401,12 +401,12 @@ namespace ESMC {
             return;
         }
 
-        inline void PermutationSet::GetPermForIndex(u32 Index, vector<u08> &OutVec) const
+        void PermutationSet::GetPermForIndex(u32 Index, vector<u08> &OutVec) const
         {
             if (Index == CachedIdx) {
                 OutVec = CachedPerm;
             }
-            
+
             OutVec = CachedPerm;
             // Extract components
             u32 LeftIndex = Index;
@@ -427,13 +427,13 @@ namespace ESMC {
             return;
         }
 
-        inline u32 PermutationSet::GetIndexForPerm(const vector<u08>& Perm) const
+        u32 PermutationSet::GetIndexForPerm(const vector<u08>& Perm) const
         {
             u32 RunningOffset = 0;
             u32 Index = 0;
             for (u32 i = 0; i < NumDomains; ++i) {
                 Index = Index * Multipliers[i];
-                vector<u08> CurVec(Perm.begin() + RunningOffset, 
+                vector<u08> CurVec(Perm.begin() + RunningOffset,
                                    Perm.begin() + RunningOffset + DomainSizes[i]);
                 RunningOffset += DomainSizes[i];
                 auto CurIndex = DomPermuters[i]->GetPermIdx(CurVec);
@@ -517,7 +517,7 @@ namespace ESMC {
         {
             vector<u08> PermVec;
             GetPermForIndex(PermIdx, PermVec);
-            
+
             u32 RunningOffset = 0;
             for (u32 i = 0; i < NumDomains; ++i) {
                 if (i != 0) {
@@ -537,5 +537,5 @@ namespace ESMC {
     } /* end namespace Symm */
 } /* end namespace ESMC */
 
-// 
+//
 // Permutations.cpp ends here

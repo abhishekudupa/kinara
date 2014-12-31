@@ -1,13 +1,13 @@
-// Types.hpp --- 
-// 
-// Filename: Types.hpp
+// ESMCESMCTypes.hpp ---
+//
+// Filename: ESMCESMCTypes.hpp
 // Author: Abhishek Udupa
 // Created: Sun Jun 29 13:43:04 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,15 +32,15 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
 // Common types used throughout the solver
 
-#if !defined ESMC_TYPES_HPP_
-#define ESMC_TYPES_HPP_
+#if !defined ESMC_ESMC_ESMCTYPES_HPP_
+#define ESMC_ESMC_ESMCTYPES_HPP_
 
 #include <cstdio>
 #include <cstdlib>
@@ -60,7 +60,7 @@ using namespace std;
 
 namespace ESMC {
     typedef int8_t i08;
-    
+
     typedef uint8_t u08;
     typedef int16_t i16;
     typedef uint16_t u16;
@@ -79,8 +79,8 @@ namespace ESMC {
         string ErrorMsg;
 
     public:
-        
-        inline InternalError(const string& ErrorMsg) 
+
+        inline InternalError(const string& ErrorMsg)
             : ErrorMsg((string)"InternalError: " + ErrorMsg) {}
         inline virtual ~InternalError() throw() {}
         inline virtual const char* what() const throw() override { return ErrorMsg.c_str(); }
@@ -90,7 +90,7 @@ namespace ESMC {
     {
     private:
         string ErrorMsg;
-        
+
     public:
         inline ESMCError(const string& ErrorMsg)
             : ErrorMsg(ErrorMsg)
@@ -120,8 +120,8 @@ namespace ESMC {
             : MethodName(MethodName), FileName(FileName),
               LineNum(LineNum)
         {
-            ErrMsg = (string)"Unimplemented method: " + MethodName + 
-                (string)", at " + FileName + (string)":" + 
+            ErrMsg = (string)"Unimplemented method: " + MethodName +
+                (string)", at " + FileName + (string)":" +
                 to_string(LineNum);
         }
 
@@ -196,8 +196,8 @@ namespace ESMC {
     };
 
 } /* end namespace ESMC */
-    
-#endif /* ESMC_TYPES_HPP_ */
 
-// 
-// Types.hpp ends here
+#endif /* ESMC_ESMC_ESMCTYPES_HPP_ */
+
+//
+// ESMCESMCTypes.hpp ends here

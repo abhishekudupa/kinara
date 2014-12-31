@@ -1,13 +1,13 @@
-// LTSAutomaton.hpp --- 
-// 
+// LTSAutomaton.hpp ---
+//
 // Filename: LTSAutomaton.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug 15 12:02:09 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -41,19 +41,18 @@
 #define ESMC_LTS_AUTOMATON_HPP_
 
 #include "../utils/UIDGenerator.hpp"
+#include "../decls/SymbolTable.hpp"
 
-#include "LTSTypes.hpp"
+#include "LTSDecls.hpp"
 #include "LTSState.hpp"
-#include "SymbolTable.hpp"
 
 namespace ESMC {
     namespace LTS {
 
+        using namespace Decls;
+
         class AutomatonBase
         {
-        private:
-            static UIDGenerator AutomatonClassIDGen;
-
         protected:
             LabelledTS* TheLTS;
             string Name;
@@ -61,7 +60,7 @@ namespace ESMC {
             ExpT Constraint;
             SymbolTable SymTab;
             map<string, LTSState> States;
-            ExprTypeRef StateType;
+            TypeRef StateType;
             vector<vector<ExpT>> ParamInsts;
             vector<MgrT::SubstMapT> ParamSubsts;
             u32 ClassID;
@@ -79,12 +78,12 @@ namespace ESMC {
 
             virtual void FreezeStates();
             virtual void AddState(const string& StateName,
-                                  bool Initial = false, bool Final = false, 
+                                  bool Initial = false, bool Final = false,
                                   bool Accepting = false, bool Error = false);
 
             const string& GetName() const;
             vector<LTSState> GetStates() const;
-            const ExprTypeRef& GetStateType() const;
+            const TypeRef& GetStateType() const;
             const vector<vector<ExpT>>& GetParamInsts() const;
             const vector<MgrT::SubstMapT>& GetParamSubsts() const;
             u32 GetNumInstances() const;
@@ -128,5 +127,5 @@ namespace ESMC {
 
 #endif /* ESMC_LTS_AUTOMATON_HPP_ */
 
-// 
+//
 // LTSAutomaton.hpp ends here

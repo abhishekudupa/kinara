@@ -1,13 +1,13 @@
-// ExprTypes.hpp --- 
-// 
-// Filename: ExprTypes.hpp
+// LTSSemTypes.hpp ---
+//
+// Filename: LTSSemTypes.hpp
 // Author: Abhishek Udupa
 // Created: Thu Jul 24 10:44:06 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,15 +32,15 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
-#if !defined ESMC_EXPR_TYPES_HPP_
-#define ESMC_EXPR_TYPES_HPP_
+#if !defined ESMC_LTS_SEM_TYPES_HPP_
+#define ESMC_LTS_SEM_TYPES_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
 
@@ -50,33 +50,33 @@
 #include <list>
 
 namespace ESMC {
-    namespace Exprs {
+    namespace LTS {
 
-        class ExprTypeExtensionBase
+        class TypeExtensionBase
         {
         public:
-            ExprTypeExtensionBase();
-            virtual ~ExprTypeExtensionBase();
+            TypeExtensionBase();
+            virtual ~TypeExtensionBase();
 
-            template <typename T> 
+            template <typename T>
             inline T* As()
             {
                 return dynamic_cast<T*>(this);
             }
 
-            template <typename T> 
+            template <typename T>
             inline const T* As() const
             {
                 return dynamic_cast<const T*>(this);
             }
 
-            template <typename T> 
+            template <typename T>
             inline T* SAs()
             {
                 return static_cast<T*>(this);
             }
 
-            template <typename T> 
+            template <typename T>
             inline const T* SAs() const
             {
                 return static_cast<const T*>(this);
@@ -90,14 +90,14 @@ namespace ESMC {
         };
 
 
-        class ExprTypeBase : public RefCountable
+        class TypeBase : public RefCountable
         {
         private:
             mutable i64 TypeID;
-            static UIDGenerator ExprTypeUIDGen;
+            static UIDGenerator TypeUIDGen;
             mutable bool HashValid;
-            mutable list<ExprTypeExtensionBase*> Extensions;
-            mutable ExprTypeExtensionBase* LastExtension;
+            mutable list<TypeExtensionBase*> Extensions;
+            mutable TypeExtensionBase* LastExtension;
 
         protected:
             mutable u64 HashCode;
@@ -105,25 +105,28 @@ namespace ESMC {
             virtual void ComputeHashValue() const = 0;
 
         public:
-            ExprTypeBase();
-            virtual ~ExprTypeBase();
+            TypeBase();
+            virtual ~TypeBase();
 
             virtual string ToString() const = 0;
-            virtual i32 Compare(const ExprTypeBase& Other) const = 0;
+            virtual i32 Compare(const TypeBase& Other) const = 0;
             virtual vector<string> GetElements() const = 0;
+            virtual vector<string> GetElementsNoUndef() const = 0;
             virtual u32 GetByteSize() const = 0;
             virtual u32 GetCardinality() const = 0;
-            
+            virtual u32 GetCardinalityNoUndef() const = 0;
+            virtual string GetClearValue() const = 0;
+
             u64 Hash() const;
-            bool Equals(const ExprTypeBase& Other) const;
-            bool LT(const ExprTypeBase& Other) const;
+            bool Equals(const TypeBase& Other) const;
+            bool LT(const TypeBase& Other) const;
 
             i64 GetTypeID() const;
             i64 SetTypeID() const;
             i64 GetOrSetTypeID() const;
 
 
-            template <typename T> 
+            template <typename T>
             inline T* As()
             {
                 return dynamic_cast<T*>(this);
@@ -136,7 +139,7 @@ namespace ESMC {
             }
 
             template <typename T>
-            inline T* SAs() 
+            inline T* SAs()
             {
                 return static_cast<T*>(this);
             }
@@ -153,7 +156,7 @@ namespace ESMC {
                 return (dynamic_cast<const T*>(this) != nullptr);
             }
 
-            inline void AddExtension(ExprTypeExtensionBase* Ext) const
+            inline void AddExtension(TypeExtensionBase* Ext) const
             {
                 Extensions.push_front(Ext);
             }
@@ -193,14 +196,14 @@ namespace ESMC {
             template <typename T>
             void PurgeExtensionsOfType() const
             {
-                vector<list<ExprTypeExtensionBase*>::iterator> ToDelete;
+                vector<list<TypeExtensionBase*>::iterator> ToDelete;
 
                 for(auto it = Extensions.begin(); it != Extensions.end(); ++it) {
                     if ((*it)->Is<T>()) {
                         ToDelete.push_back(it);
                     }
                 }
-                
+
                 for (auto const& it : ToDelete) {
                     Extensions.erase(it);
                     delete (*it);
@@ -217,58 +220,64 @@ namespace ESMC {
         };
 
         // An abstract base for all scalar types
-        class ExprScalarType : public ExprTypeBase
+        class ScalarType : public TypeBase
         {
         public:
-            ExprScalarType();
-            virtual ~ExprScalarType();
+            ScalarType();
+            virtual ~ScalarType();
 
             virtual i64 ConstToVal(const string& ConstVal) const = 0;
             virtual string ValToConst(i64 Val) const = 0;
         };
 
-        class ExprBoolType : public ExprScalarType
+        class BooleanType : public ScalarType
         {
         protected:
             virtual void ComputeHashValue() const override;
 
         public:
-            ExprBoolType();
-            virtual ~ExprBoolType();
+            BooleanType();
+            virtual ~BooleanType();
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
             virtual string ValToConst(i64 Val) const override;
+            virtual string GetClearValue() const override;
         };
 
 
-        // A generic int type, can be converted to 
-        // any kind of subrange type. 
-        class ExprIntType : public ExprScalarType
+        // A generic int type, can be converted to
+        // any kind of subrange type.
+        class IntegerType : public ScalarType
         {
         protected:
             virtual void ComputeHashValue() const override;
-            
+
         public:
-            ExprIntType();
-            virtual ~ExprIntType();
-            
+            IntegerType();
+            virtual ~IntegerType();
+
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual vector<string> GetElements() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
             virtual string ValToConst(i64 Val) const override;
+            virtual string GetClearValue() const override;
         };
 
-        class ExprRangeType : public ExprIntType
+        class RangeType : public IntegerType
         {
         private:
             i64 RangeLow;
@@ -279,25 +288,28 @@ namespace ESMC {
             virtual void ComputeHashValue() const;
 
         public:
-            ExprRangeType(i64 RangeLow, i64 RangeHigh);
-            virtual ~ExprRangeType();
-            
+            RangeType(i64 RangeLow, i64 RangeHigh);
+            virtual ~RangeType();
+
             i64 GetLow() const;
             i64 GetHigh() const;
             u64 GetSize() const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
             virtual string ValToConst(i64 Val) const override;
+            virtual string GetClearValue() const override;
         };
 
         // Mainly for states and such
-        class ExprEnumType : public ExprScalarType
+        class EnumType : public ScalarType
         {
         private:
             string Name;
@@ -308,33 +320,37 @@ namespace ESMC {
             virtual void ComputeHashValue() const;
 
         public:
-            ExprEnumType(const string& Name, const set<string>& Members);
-            virtual ~ExprEnumType();
-            
+            EnumType(const string& Name, const set<string>& Members);
+            virtual ~EnumType();
+
             const string& GetName() const;
             const set<string>& GetMembers() const;
-            
+
             bool IsMember(const string& MemberName) const;
             u32 GetMemberIdx(const string& MemberName) const;
-            
+
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
             virtual string ValToConst(i64 Val) const override;
+            virtual string GetClearValue() const override;
         };
 
-        class ExprSymmetricType : public ExprScalarType
+        class SymmetricType : public ScalarType
         {
         private:
             string Name;
             u32 Size;
             vector<string> Members;
+            vector<string> MembersNoUndef;
             set<string> MemberSet;
-            
+
             // An index into the permutation
             // set
             mutable u32 Index;
@@ -343,12 +359,12 @@ namespace ESMC {
             virtual void ComputeHashValue() const;
 
         public:
-            ExprSymmetricType(const string& Name, u32 Size);
-            virtual ~ExprSymmetricType();
+            SymmetricType(const string& Name, u32 Size);
+            virtual ~SymmetricType();
 
             const string& GetName() const;
             u32 GetSize() const;
-            
+
             const vector<string>& GetMembers() const;
             const string& GetMember(u32 Index) const;
             const bool IsMember(const string& Value) const;
@@ -358,76 +374,85 @@ namespace ESMC {
             u32 GetIndex() const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
 
             virtual i64 ConstToVal(const string& ConstVal) const override;
             virtual string ValToConst(i64 Val) const override;
+            virtual string GetClearValue() const override;
         };
 
-        class ExprFuncType : public ExprTypeBase
+        class FuncType : public TypeBase
         {
         private:
             string Name;
             string MangledName;
-            vector<ExprTypeRef> ArgTypes;
-            ExprTypeRef FuncType;
+            vector<TypeRef> ArgTypes;
+            TypeRef EvalType;
 
         protected:
             virtual void ComputeHashValue() const;
 
         public:
-            ExprFuncType(const string& Name, const vector<ExprTypeRef>& ArgTypes,
-                        const ExprTypeRef& FuncType);
-            virtual ~ExprFuncType();
+            FuncType(const string& Name, const vector<TypeRef>& ArgTypes,
+                     const TypeRef& RangeType);
+            virtual ~FuncType();
 
             const string& GetName() const;
-            const vector<ExprTypeRef>& GetArgTypes() const;
-            const ExprTypeRef& GetFuncType() const;
+            const vector<TypeRef>& GetArgTypes() const;
+            const TypeRef& GetEvalType() const;
             const string& GetMangledName() const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
+            virtual string GetClearValue() const override;
         };
 
-        class ExprArrayType : public ExprTypeBase
+        class ArrayType : public TypeBase
         {
         private:
-            ExprTypeRef IndexType;
-            ExprTypeRef ValueType;
+            TypeRef IndexType;
+            TypeRef ValueType;
 
         protected:
             virtual void ComputeHashValue() const;
 
         public:
-            ExprArrayType(const ExprTypeRef& IndexType,
-                         const ExprTypeRef& ValueType);
-            virtual ~ExprArrayType();
+            ArrayType(const TypeRef& IndexType,
+                      const TypeRef& ValueType);
+            virtual ~ArrayType();
 
-            const ExprTypeRef& GetIndexType() const;
-            const ExprTypeRef& GetValueType() const;
+            const TypeRef& GetIndexType() const;
+            const TypeRef& GetValueType() const;
             u32 GetOffset(u32 ElemIdx) const;
-            ExprTypeRef GetBaseValueType() const;
+            TypeRef GetBaseValueType() const;
             u32 GetLevelsOfIndex() const;
-            
+
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
+            virtual string GetClearValue() const override;
         };
 
-        class ExprRecordType : public ExprTypeBase
+        class RecordType : public TypeBase
         {
         protected:
             string Name;
-            map<string, ExprTypeRef> MemberMap;
-            vector<pair<string, ExprTypeRef>> MemberVec;
+            map<string, TypeRef> MemberMap;
+            vector<pair<string, TypeRef>> MemberVec;
             mutable map<string, u32> FieldOffsets;
             mutable bool ContainsUnboundedType;
             mutable bool FieldOffsetsComputed;
@@ -435,198 +460,195 @@ namespace ESMC {
         protected:
             virtual void ComputeHashValue() const;
             // For use in subclasses, viz the ExprMessageType
-            ExprRecordType();
+            RecordType();
 
         private:
             void ComputeFieldOffsets() const;
 
         public:
-            ExprRecordType(const string& Name,
-                           const vector<pair<string, ExprTypeRef>>& RecordMembers);
+            RecordType(const string& Name,
+                       const vector<pair<string, TypeRef>>& RecordMembers);
 
-            virtual ~ExprRecordType();
+            virtual ~RecordType();
 
             const string& GetName() const;
-            const map<string, ExprTypeRef>& GetMemberMap() const;
-            const vector<pair<string, ExprTypeRef>>& GetMemberVec() const;
-            const ExprTypeRef& GetTypeForMember(const string& MemberName) const;
+            const map<string, TypeRef>& GetMemberMap() const;
+            const vector<pair<string, TypeRef>>& GetMemberVec() const;
+            const TypeRef& GetTypeForMember(const string& MemberName) const;
             u32 GetFieldOffset(const string& FieldName) const;
             u32 GetFieldIdx(const string& FieldName) const;
 
             virtual string ToString() const;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
+            virtual string GetClearValue() const override;
         };
 
         // A parametric record type RESOLVES to
-        // the BASE TYPE, when instantiated with 
+        // the BASE TYPE, when instantiated with
         // VALUES of the appropriate types.
-        class ExprParametricType : public ExprTypeBase
+        class ParametricType : public TypeBase
         {
         private:
-            ExprTypeRef BaseType;
-            vector<ExprTypeRef> ParameterTypes;
+            TypeRef BaseType;
+            vector<TypeRef> ParameterTypes;
 
         protected:
             virtual void ComputeHashValue() const override;
-            
-        public:
-            ExprParametricType(const ExprTypeRef& BaseType,
-                               const vector<ExprTypeRef>& ParameterTypes);
-            virtual ~ExprParametricType();
 
-            const ExprTypeRef& GetBaseType() const;
-            const vector<ExprTypeRef>& GetParameterTypes() const;
+        public:
+            ParametricType(const TypeRef& BaseType,
+                               const vector<TypeRef>& ParameterTypes);
+            virtual ~ParametricType();
+
+            const TypeRef& GetBaseType() const;
+            const vector<TypeRef>& GetParameterTypes() const;
             const string& GetName() const;
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
+            virtual string GetClearValue() const override;
         };
 
         // A dummy type for field access terms variables
-        class ExprFieldAccessType : public ExprTypeBase
+        class FieldAccessType : public TypeBase
         {
         protected:
             virtual void ComputeHashValue() const override;
 
         public:
-            ExprFieldAccessType();
-            virtual ~ExprFieldAccessType();
+            FieldAccessType();
+            virtual ~FieldAccessType();
 
             virtual string ToString() const override;
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
+            virtual vector<string> GetElementsNoUndef() const override;
             virtual u32 GetByteSize() const override;
             virtual u32 GetCardinality() const override;
+            virtual u32 GetCardinalityNoUndef() const override;
+            virtual string GetClearValue() const override;
         };
 
         // A dedicated class for message types
-        class ExprUnionType : public ExprRecordType
+        class UnionType : public RecordType
         {
         private:
-            set<ExprTypeRef> MemberTypes;
-            map<ExprTypeRef, u32> MemberTypeToID;
-            map<u32, ExprTypeRef> IDToMemberType;
+            set<TypeRef> MemberTypes;
+            map<TypeRef, u32> MemberTypeToID;
+            map<u32, TypeRef> IDToMemberType;
             map<u32, map<string, string>> MemberFieldToField;
             map<u32, map<string, string>> FieldToMemberField;
 
             const string TypeIDFieldName = "__mtype__";
-            ExprTypeRef TypeIDFieldType;
+            TypeRef TypeIDFieldType;
 
         protected:
             virtual void ComputeHashValue() const override;
 
         public:
-            ExprUnionType(const string& Name,
-                          const set<ExprTypeRef>& MemberTypes,
-                          const ExprTypeRef& TypeIDFieldType);
-            virtual ~ExprUnionType();
+            UnionType(const string& Name,
+                      const set<TypeRef>& MemberTypes,
+                      const TypeRef& TypeIDFieldType);
+            virtual ~UnionType();
 
-            const set<ExprTypeRef>& GetMemberTypes() const;
-            const map<ExprTypeRef, u32>& GetMemberTypeToID() const;
-            const map<u32, ExprTypeRef>& GetIDToMemberType() const;
+            const set<TypeRef>& GetMemberTypes() const;
+            const map<TypeRef, u32>& GetMemberTypeToID() const;
+            const map<u32, TypeRef>& GetIDToMemberType() const;
             const map<u32, map<string, string>>& GetMemberFieldToField() const;
             const map<u32, map<string, string>>& GetFieldToMemberField() const;
             const string& GetTypeIDFieldName() const;
-            const ExprTypeRef& GetTypeIDFieldType() const;
-            const u32 GetTypeIDForMemberType(const ExprTypeRef& MemType) const;
-            const ExprTypeRef& GetMemberTypeForTypeID(u32 TypeID) const;
-            const string& MapFromMemberField(const ExprTypeRef& MemberType, 
+            const TypeRef& GetTypeIDFieldType() const;
+            const u32 GetTypeIDForMemberType(const TypeRef& MemType) const;
+            const TypeRef& GetMemberTypeForTypeID(u32 TypeID) const;
+            const string& MapFromMemberField(const TypeRef& MemberType,
                                              const string& FieldName) const;
             const string& MapToMemberField(u32 TypeID,
                                            const string& FieldName) const;
 
-            virtual i32 Compare(const ExprTypeBase& Other) const override;
+            virtual i32 Compare(const TypeBase& Other) const override;
+            string GetClearValue() const override;
         };
 
-        class ExprTypePtrHasher
+        class TypePtrHasher
         {
         public:
-            // inline u64 operator () (const ExprTypeBase* Type) const
+            // inline u64 operator () (const TypeBase* Type) const
             // {
             //     return Type->Hash();
             // }
-            
-            inline u64 operator () (const ExprTypeRef& Type) const
+
+            inline u64 operator () (const TypeRef& Type) const
             {
                 return Type->Hash();
             }
         };
 
-        class ExprTypePtrEquals
+        class TypePtrEquals
         {
         public:
-            // inline bool operator () (const ExprTypeBase* Type1,
-            //                          const ExprTypeBase* Type2) const
+            // inline bool operator () (const TypeBase* Type1,
+            //                          const TypeBase* Type2) const
             // {
             //     return Type1->Equals(*Type2);
             // }
 
-            inline bool operator () (const ExprTypeRef& Type1,
-                                     const ExprTypeRef& Type2) const
+            inline bool operator () (const TypeRef& Type1,
+                                     const TypeRef& Type2) const
             {
                 return Type1->Equals(*Type2);
             }
         };
 
-        class ExprTypePtrCompare
+        class TypePtrCompare
         {
         public:
-            // inline bool operator () (const ExprTypeBase* Type1,
-            //                          const ExprTypeBase* Type2) const
+            // inline bool operator () (const TypeBase* Type1,
+            //                          const TypeBase* Type2) const
             // {
             //     return Type1->LT(*Type2);
             // }
 
-            inline bool operator () (const ExprTypeRef& Type1,
-                                     const ExprTypeRef& Type2) const
+            inline bool operator () (const TypeRef& Type1,
+                                     const TypeRef& Type2) const
             {
                 return Type1->LT(*Type2);
             }
         };
 
         // A helper routine to check if types are assignment compatible
-        static inline bool CheckAsgnCompat(const ExprTypeRef& LHS,
-                                           const ExprTypeRef& RHS)
+        static inline bool CheckAsgnCompat(const TypeRef& LHS,
+                                           const TypeRef& RHS)
         {
             if (LHS->Equals(*RHS)) {
                 return true;
             }
 
-            if (LHS->Is<ExprIntType>() &&
-                RHS->Is<ExprRangeType>()) {
+            if (LHS->Is<IntegerType>() &&
+                RHS->Is<RangeType>()) {
                 return true;
             }
-            
-            if (RHS->Is<ExprIntType>() &&
-                LHS->Is<ExprRangeType>()) {
+
+            if (RHS->Is<IntegerType>() &&
+                LHS->Is<RangeType>()) {
                 return true;
             }
             return false;
         }
 
-    } /* end namespace Exprs */
+    } /* end namespace LTS */
 } /* end namespace ESMC */
 
-namespace std {
+#endif /* ESMC_LTS_SEM_TYPES_HPP_ */
 
-    template<>
-    struct hash<ESMC::Exprs::ExprTypeRef>
-    {
-        inline size_t operator () (const ESMC::Exprs::ExprTypeRef& Type) const 
-        { 
-            return Type->Hash(); 
-        }
-    };
-
-} /* end namespace std */
-
-#endif /* ESMC_EXPR_TYPES_HPP_ */
-
-// 
-// ExprTypes.hpp ends here
+//
+// LTSSemTypes.hpp ends here

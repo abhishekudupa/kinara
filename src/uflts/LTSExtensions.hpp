@@ -1,13 +1,13 @@
-// LTSExtensions.hpp --- 
-// 
+// LTSExtensions.hpp ---
+//
 // Filename: LTSExtensions.hpp
 // Author: Abhishek Udupa
 // Created: Tue Jul 29 08:53:58 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,16 +32,16 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
 #if !defined ESMC_LTS_EXTENSIONS_HPP_
 #define ESMC_LTS_EXTENSIONS_HPP_
 
-#include "../common/FwdDecls.hpp"
-#include "../expr/ExprTypes.hpp"
+#include "../common/ESMCFwdDecls.hpp"
+#include "LTSSemTypes.hpp"
 
 // moved this single definition into a separate
 // header file to eliminate circular deps.
@@ -49,32 +49,29 @@
 namespace ESMC {
     namespace LTS {
 
-        using ESMC::Exprs::ExprTypeExtensionBase;
+        using ESMC::LTS::TypeExtensionBase;
         using ESMC::MC::RValueInterpreter;
         using ESMC::MC::LValueInterpreter;
 
         class LTSExtensionT
         {
         public:
-            bool IsMsg;
             // Offset != -1 ==> Fixed offset
             i32 Offset;
             // info about constants
             bool ConstCompiled;
             i64 ConstVal;
-            bool ClearConstant;
-
             // Info for record accesses
             u32 FieldOffset;
-            // Interpreter for whatever 
+            // Interpreter for whatever
             // cannot be compiled in
             RValueInterpreter* Interp;
-            
+
             LTSExtensionT();
             virtual ~LTSExtensionT();
         };
 
-        class LTSTypeExtensionT : public ExprTypeExtensionBase
+        class LTSTypeExtensionT : public TypeExtensionBase
         {
         public:
             // Offset in the permutation vector
@@ -91,5 +88,5 @@ namespace ESMC {
 
 #endif /* ESMC_LTS_EXTENSIONS_HPP_ */
 
-// 
+//
 // LTSExtensions.hpp ends here

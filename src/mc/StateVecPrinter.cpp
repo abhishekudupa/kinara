@@ -1,13 +1,13 @@
-// StateVecPrinter.cpp --- 
-// 
+// StateVecPrinter.cpp ---
+//
 // Filename: StateVecPrinter.cpp
 // Author: Abhishek Udupa
 // Created: Wed Aug 20 16:24:03 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -51,23 +51,23 @@ namespace ESMC {
         using namespace ESMC::LTS;
 
         ScalarPrinter::ScalarPrinter()
-            : Offset(0), Size(0), Type(ExprTypeRef::NullPtr)
+            : Offset(0), Size(0), Type(TypeRef::NullPtr)
         {
             // Nothing here
         }
 
-        ScalarPrinter::ScalarPrinter(u32 Offset, const ExprTypeRef& Type)
-            : Offset(Offset), Size(Type->GetByteSize()), Type(Type), Low(0), 
-              High(INT64_MAX)
+        ScalarPrinter::ScalarPrinter(u32 Offset, const TypeRef& Type)
+            : Offset(Offset), Size(Type->GetByteSize()), Type(Type), Low(0),
+              High(INT64_MAX), IsMsgType(false)
         {
-            if (!Type->Is<ExprScalarType>()) {
-                throw InternalError((string)"Scalar printer with non-scalar type:\n" + 
-                                    Type->ToString() + "\nAt: " + __FILE__ + ":" + 
+            if (!Type->Is<ScalarType>()) {
+                throw InternalError((string)"Scalar printer with non-scalar type:\n" +
+                                    Type->ToString() + "\nAt: " + __FILE__ + ":" +
                                     to_string(__LINE__));
             }
-            if (Type->Is<ExprRangeType>()) {
-                Low = Type->SAs<ExprRangeType>()->GetLow();
-                High = Type->SAs<ExprRangeType>()->GetHigh();
+            if (Type->Is<RangeType>()) {
+                Low = Type->SAs<RangeType>()->GetLow();
+                High = Type->SAs<RangeType>()->GetHigh();
             } else {
                 High = Type->GetCardinality() - 1;
             }
@@ -75,7 +75,15 @@ namespace ESMC {
 
         ScalarPrinter::ScalarPrinter(const ScalarPrinter& Other)
             : Offset(Other.Offset), Size(Other.Size), Type(Other.Type),
-              Low(Other.Low), High(Other.High)
+              Low(Other.Low), High(Other.High), MsgNameMap(Other.MsgNameMap),
+              IsMsgType(Other.IsMsgType)
+        {
+            // Nothing here
+        }
+
+        ScalarPrinter::ScalarPrinter(u32 Offset, const vector<string> MsgNameMap)
+            : Offset(Offset), Size(0), Type(TypeRef::NullPtr),
+              Low(-1), High(-1), MsgNameMap(MsgNameMap), IsMsgType(true)
         {
             // Nothing here
         }
@@ -95,6 +103,8 @@ namespace ESMC {
             Type = Other.Type;
             High = Other.High;
             Low = Other.Low;
+            MsgNameMap = Other.MsgNameMap;
+            IsMsgType = Other.IsMsgType;
             return *this;
         }
 
@@ -107,10 +117,18 @@ namespace ESMC {
 
         string ScalarPrinter::Print(const StateVec* StateVector) const
         {
-            if (Type == ExprTypeRef::NullPtr) {
+            if (IsMsgType) {
+                auto ActVal = StateVector->ReadShort(Offset);
+                // return (MsgNameMap[ActVal] + " { Offset : " + to_string(Offset) +
+                //         ", Raw Value : " + to_string(ActVal) + " }");
+                return MsgNameMap[ActVal];
+            }
+
+            if (Type == TypeRef::NullPtr) {
                 return (string)"printer error at: " + __FILE__ + ":" + to_string(__LINE__);
             }
-            auto TypeAsScalar = Type->SAs<ExprScalarType>();
+
+            auto TypeAsScalar = Type->SAs<ScalarType>();
             i64 ActVal;
             if (Size == 1) {
                 ActVal = StateVector->ReadByte(Offset);
@@ -120,12 +138,10 @@ namespace ESMC {
                 ActVal = StateVector->ReadWord(Offset);
             }
 
-            if (ActVal == 0) {
-                return "undefined";
-            } else {
-                ActVal = ActVal + Low - 1;
-                return TypeAsScalar->ValToConst(ActVal);
-            }
+            ActVal = ActVal + Low;
+            // return (TypeAsScalar->ValToConst(ActVal) + " { Offset : " + to_string(Offset) +
+            //         ", Raw Value : " + to_string(ActVal) + " }");
+            return TypeAsScalar->ValToConst(ActVal);
         }
 
         void StateVecPrinter::MakePrinters(const ExpT& Exp, LabelledTS* TheLTS)
@@ -133,30 +149,43 @@ namespace ESMC {
             auto Mgr = TheLTS->GetMgr();
             Compiler->CompileExp(Exp, TheLTS);
             auto Type = Exp->GetType();
-            if (Type->Is<ExprScalarType>()) {
+            if (Type->Is<ScalarType>()) {
                 auto Offset = Exp->ExtensionData.Offset;
                 ExpsToPrint.push_back(make_pair(Exp, ScalarPrinter(Offset, Type)));
-            } else if (Type->Is<ExprArrayType>()) {
-                auto TypeAsArr = Type->SAs<ExprArrayType>();
+            } else if (Type->Is<ArrayType>()) {
+                auto TypeAsArr = Type->SAs<ArrayType>();
                 auto const& IndexType = TypeAsArr->GetIndexType();
-                auto&& IndexElems = IndexType->GetElements();
+                auto&& IndexElems = IndexType->GetElementsNoUndef();
                 for (auto const& Elem : IndexElems) {
-                    MakePrinters(Mgr->MakeExpr(LTSOps::OpIndex, Exp, 
-                                               Mgr->MakeVal(Elem, IndexType)), 
+                    MakePrinters(Mgr->MakeExpr(LTSOps::OpIndex, Exp,
+                                               Mgr->MakeVal(Elem, IndexType)),
                                  TheLTS);
                 }
-            } else if (Type->Is<ExprRecordType>()) {
-                auto TypeAsRec = Type->SAs<ExprRecordType>();
+            } else if (Type->Is<RecordType>()) {
+                auto TypeAsRec = Type->SAs<RecordType>();
                 auto const& MemberVec = TypeAsRec->GetMemberVec();
-                auto const& FAType = Mgr->MakeType<ExprFieldAccessType>();
+                auto const& FAType = Mgr->MakeType<FieldAccessType>();
                 for (auto const& MemType : MemberVec) {
+                    if (Type == TheLTS->GetUnifiedMType() &&
+                        MemType.first ==
+                        TheLTS->GetUnifiedMType()->SAs<UnionType>()->GetTypeIDFieldName()) {
+                        auto FieldExp = Mgr->MakeExpr(LTSOps::OpField, Exp,
+                                                      Mgr->MakeVar(MemType.first, FAType));
+                        Compiler->CompileExp(FieldExp, TheLTS);
+
+                        auto Offset = FieldExp->ExtensionData.Offset;
+                        ExpsToPrint.push_back(make_pair(FieldExp,
+                                                        ScalarPrinter(Offset,
+                                                                      TheLTS->GetMsgTypeMap())));
+                        continue;
+                    }
                     MakePrinters(Mgr->MakeExpr(LTSOps::OpField, Exp,
                                                Mgr->MakeVar(MemType.first, FAType)),
                                  TheLTS);
                 }
             }
         }
-        
+
         StateVecPrinter::StateVecPrinter(LabelledTS* TheLTS, LTSCompiler* Compiler)
             : Compiler(Compiler)
         {
@@ -190,7 +219,7 @@ namespace ESMC {
 
             const u32 NumLines = CurState.size();
             vector<string> Retval;
-            
+
             for (u32 i = 0; i < NumLines; ++i) {
                 if (CurState[i] != PrevState[i]) {
                     Retval.push_back(CurState[i]);
@@ -207,7 +236,7 @@ namespace ESMC {
             }
         }
 
-        void StateVecPrinter::PrintState(const StateVec* StateVector, 
+        void StateVecPrinter::PrintState(const StateVec* StateVector,
                                          const StateVec* PrevStateVector,
                                          ostream& Out) const
         {
@@ -241,8 +270,8 @@ namespace ESMC {
             Out << "Monitor State: " << State->GetMonitorState() << endl;
         }
 
-        void StateVecPrinter::PrintState(const ProductState* State, 
-                                         const ProductStructure* ThePS, 
+        void StateVecPrinter::PrintState(const ProductState* State,
+                                         const ProductStructure* ThePS,
                                          ostream& Out) const
         {
             auto&& Lines = PrintState(State->GetSVPtr());
@@ -252,14 +281,14 @@ namespace ESMC {
 
             auto Monitor = ThePS->GetMonitor();
             Out << "Tracked Index: " << State->GetIndexID() << endl;
-            Out << "Monitor State: " << 
+            Out << "Monitor State: " <<
                 Monitor->GetStateNameForID(State->GetMonitorState())
                 << (Monitor->IsAccepting(State->GetMonitorState()) ? " (accepting)" : "")
                 << endl;
         }
 
-        void StateVecPrinter::PrintState(const ProductState* State, 
-                                         const ProductState* Prev, 
+        void StateVecPrinter::PrintState(const ProductState* State,
+                                         const ProductState* Prev,
                                          const ProductStructure* ThePS,
                                          ostream& Out) const
         {
@@ -270,7 +299,7 @@ namespace ESMC {
 
             auto Monitor = ThePS->GetMonitor();
             Out << "Tracked Index: " << State->GetIndexID() << endl;
-            Out << "Monitor State: " << 
+            Out << "Monitor State: " <<
                 Monitor->GetStateNameForID(State->GetMonitorState())
                 << (Monitor->IsAccepting(State->GetMonitorState()) ? " (accepting)" : "")
                 << endl;
@@ -279,5 +308,5 @@ namespace ESMC {
 
 } /* end namespace ESMC */
 
-// 
+//
 // StateVecPrinter.cpp ends here

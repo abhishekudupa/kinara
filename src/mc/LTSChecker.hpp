@@ -1,13 +1,13 @@
-// LTSChecker.hpp --- 
-// 
+// LTSChecker.hpp ---
+//
 // Filename: LTSChecker.hpp
 // Author: Abhishek Udupa
 // Created: Sun Aug 17 17:32:54 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -42,8 +42,8 @@
 
 #include <boost/functional/hash.hpp>
 
-#include "../common/FwdDecls.hpp"
-#include "../uflts/LTSTypes.hpp"
+#include "../common/ESMCFwdDecls.hpp"
+#include "../uflts/LTSDecls.hpp"
 
 #include "AQStructure.hpp"
 
@@ -54,7 +54,7 @@ namespace ESMC {
         using ESMC::Symm::Canonicalizer;
 
         namespace Detail {
-            
+
             class DFSStackEntry
             {
             private:
@@ -75,14 +75,14 @@ namespace ESMC {
                 i64 GetLastFired() const;
                 const StateVec* GetState() const;
                 StateVec* GetState();
-                
+
                 void SetLastFired(i64 NewLastFired);
             };
 
             class PStatePEdgePairHasher
             {
             public:
-                inline u64 
+                inline u64
                 operator () (const pair<const ProductState*, const ProductEdge*>& ThePair) const
                 {
                     u64 Retval = 0;
@@ -115,10 +115,10 @@ namespace ESMC {
                 // Guarded commands I need to respond to
                 // for each tracked index
                 vector<vector<bool>> GCmdsToRespondTo;
-                // Same info as above, but in the form of 
+                // Same info as above, but in the form of
                 // sets
                 vector<unordered_set<u32>> GCmdIDsToRespondTo;
-                // Set of states where I'm enabled, but 
+                // Set of states where I'm enabled, but
                 // not taken
                 unordered_set<const ProductState*> EnabledStates;
                 LTSChecker* Checker;
@@ -135,7 +135,7 @@ namespace ESMC {
                                 const vector<GCmdRef>& GuardedCommands,
                                 LTSChecker* Checker);
                 ~FairnessChecker();
-                
+
                 void ResetFairness();
                 void ResetFull();
                 void ProcessSCCState(const ProductState* State,
@@ -162,6 +162,8 @@ namespace ESMC {
         {
             friend class Detail::FairnessChecker;
             friend class TraceBase;
+            friend class Synth::Solver;
+
         private:
             LabelledTS* TheLTS;
             StateFactory* Factory;
@@ -182,51 +184,102 @@ namespace ESMC {
             map<string, BuchiAutomatonBase*> AllBuchiAutomata;
             map<string, StateBuchiAutomaton*> StateBuchiAutomata;
             map<string, MsgBuchiAutomaton*> MsgBuchiAutomata;
+            vector<string> BuchiMonitorNames;
 
-            StateVec* ExceptionState;
-            MCExceptionType ExceptionType;
-            u32 ExceptionCmdID;
+            // Set of invariant expressions for bounds, etc.
+            set<ExpT> BoundsInvariants;
+            MgrT::SubstMapT LoweredBoundsInvars;
+            // Lowered invariant from the LTS
+            ExpT LoweredInvariant;
+            ExpT DeadlockFreeInvariant;
 
-            inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired);
-            inline void DoDFS(StateVec* Root);
-            inline void DoBFS(const vector<StateVec*>& Roots);
+            // The set of all error states, mapping to the
+            // invariant expression that was blown
+            unordered_map<const StateVec*, ExpT> ErrorStates;
+
+            // A set of commands that need to be tested
+            // these are all the commands that are "fully"
+            // interpreted, i.e., have been "unlocked" and
+            // have a model supporting them
+            set<u32> InterpretedCommands;
+
+            // returns <Cmd, false> if successful
+            // returns <null, false> if no more commands
+            // returns <null, true> if exception
+            inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired,
+                                                    bool& Exception);
+
+            inline void RecordErrorState(const StateVec* ErrorState);
+
+            inline void DoDFS(StateVec* Root, u32 NumErrors);
+            inline void DoBFS(const vector<StateVec*>& Roots, u32 NumErrors);
 
             inline void ConstructProduct(StateBuchiAutomaton* Monitor);
             inline vector<const ProductState*> GetAcceptingSCCs();
-            
+
             inline void DoThreadedBFS(const ProductState* SCCRoot,
                                       u32 IndexID);
 
-            inline bool CheckSCCFairness(const ProductState* SCCRoot, 
+            inline bool CheckSCCFairness(const ProductState* SCCRoot,
                                          vector<const ProductState*>& UnfairStates);
 
             inline unordered_set<const ProductState*> ExpandSCC(const ProductState* SCCRoot);
             inline vector<TraceBase*> MakeFairTrace(const ProductState* SCCRoot);
 
+            inline set<ExpT> GatherTermsInIndex(const ExpT& Exp);
+
+            void FoldTransMsgExp(const ExpT& Exp, const vector<GCmdRef>& Updates,
+                                 u32 CurrentIndex);
+
+            inline void MakeIndexTermInvariants(const ExpT& Precondition,
+                                                const set<ExpT>& IndexTerms);
+            inline void MakeBoundsInvariants();
+
         public:
             LTSChecker(LabelledTS* TheLTS);
             virtual ~LTSChecker();
 
-            vector<TraceBase*> BuildAQS(AQSConstructionMethod Method = 
-                                        AQSConstructionMethod::BreadthFirst);
+            // Returns true if no errors encountered
+            // false otherwise
+            bool BuildAQS(AQSConstructionMethod Method =
+                          AQSConstructionMethod::BreadthFirst,
+                          u32 NumErrors = UINT32_MAX);
+
             void ClearAQS();
 
-            StateBuchiAutomaton* MakeStateBuchiMonitor(const string& Name, 
+            StateBuchiAutomaton* MakeStateBuchiMonitor(const string& Name,
                                                        const vector<ExpT>& SymmIndices,
                                                        const ExpT& Constraint);
 
-            vector<TraceBase*> CheckLiveness(const string& BuchiMonitorName);
+            TraceBase* CheckLiveness(const string& BuchiMonitorName);
+
+            LabelledTS* GetLTS() const;
+            LTSCompiler* GetCompiler() const;
+            AQStructure* GetAQS() const;
+            ProductStructure* GetPS() const;
+
+            const unordered_map<const StateVec*, ExpT> GetAllErrorStates() const;
+            TraceBase* MakeTraceToError(const StateVec* ErrorState);
+            const vector<string>& GetBuchiMonitorNames() const;
         };
 
-        extern void ApplyUpdates(const vector<LTSAssignRef>& Updates, 
-                                 const StateVec* InputState, 
+        // Returns false if exception encountered
+        extern bool ApplyUpdates(const vector<LTSAssignRef>& Updates,
+                                 const StateVec* InputState,
                                  StateVec *OutputState);
 
+        // Returns null if exception encountered
         extern StateVec* ExecuteCommand(const GCmdRef& Cmd,
                                         const StateVec* InputState);
 
+        // returns <null, true> if command cannot be executed
+        // returns <statevec, true> if command CAN be executed
+        // returns <null, false> if command CAN be executed
+        // but results in an exception when actually executing it
+        // or if an error was encountered evaluating the guard of Cmd
         extern StateVec* TryExecuteCommand(const GCmdRef& Cmd,
-                                           const StateVec* InputState);
+                                           const StateVec* InputState,
+                                           bool& Exception);
 
     } /* end namespace MC */
 } /* end namespace ESMC */
@@ -234,5 +287,5 @@ namespace ESMC {
 
 #endif /* ESMC_LTS_CHECKER_HPP_ */
 
-// 
+//
 // LTSChecker.hpp ends here

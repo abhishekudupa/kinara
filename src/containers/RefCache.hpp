@@ -1,13 +1,13 @@
-// RefCache.hpp --- 
-// 
+// RefCache.hpp ---
+//
 // Filename: RefCache.hpp
 // Author: Abhishek Udupa
 // Created: Thu Jul 24 11:01:32 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,15 +32,15 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
 #if !defined ESMC_REF_CACHE_HPP_
 #define ESMC_REF_CACHE_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include <unordered_set>
 #include <vector>
 
@@ -102,6 +102,32 @@ namespace ESMC {
             }
         }
 
+        inline PtrType Find(const PtrType& Obj)
+        {
+            auto it = Cache.find(Obj);
+            if (it == Cache.end()) {
+                return PtrType::NullPtr;
+            } else {
+                return (*it);
+            }
+        }
+
+        // assumes the value is not already
+        // in the cache
+        inline PtrType Put(const PtrType& Obj)
+        {
+            Cache.insert(Obj);
+            return Obj;
+        }
+
+        template <typename T, typename... ArgTypes>
+        inline PtrType Put(ArgTypes&&... Args)
+        {
+            PtrType NewObj = new T(forward<ArgTypes>(Args)...);
+            Cache.insert(NewObj);
+            return NewObj;
+        }
+
         inline void GC()
         {
             if (NUMWEAKREFS < 0) {
@@ -131,5 +157,5 @@ namespace ESMC {
 
 #endif /* ESMC_REF_CACHE_HPP_ */
 
-// 
+//
 // RefCache.hpp ends here

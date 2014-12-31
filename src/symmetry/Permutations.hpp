@@ -1,13 +1,13 @@
-// Permutations.hpp --- 
-// 
+// Permutations.hpp ---
+//
 // Filename: Permutations.hpp
 // Author: Abhishek Udupa
 // Created: Mon Jul 28 12:52:11 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -45,7 +45,7 @@
 #include <boost/functional/hash.hpp>
 #include <iterator>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
     namespace Symm {
@@ -76,7 +76,7 @@ namespace ESMC {
             sstr << ">";
             return sstr.str();
         }
-        
+
         class DomainPermuter
         {
         private:
@@ -99,8 +99,8 @@ namespace ESMC {
             inline void InvertPerm(const vector<u08>& Perm, vector<u08>& OutPerm) const;
 
         public:
-            DomainPermuter(u32 DomainSize, u32 Offset, 
-                               bool Compact = false);
+            DomainPermuter(u32 DomainSize, u32 Offset,
+                           bool Compact = false);
             ~DomainPermuter();
 
             // Accessors
@@ -122,11 +122,11 @@ namespace ESMC {
             u32 GetInvPermIdx(u32 Idx) const;
         };
 
-        
+
         class PermutationSet
         {
         public:
-            class iterator 
+            class iterator
             {
                 friend class PermutationSet;
             private:
@@ -141,7 +141,7 @@ namespace ESMC {
 
                 iterator& operator ++ ();
                 iterator operator ++ (int Dummy);
-                
+
                 iterator& operator -- ();
                 iterator operator -- (int Dummy);
 
@@ -174,17 +174,14 @@ namespace ESMC {
             vector<u32> CachedIndices;
             vector<u08> CachedPerm;
 
-            inline void GetPermForIndex(u32 Index);
-            inline void GetPermForIndex(u32 Index, vector<u08>& OutVec) const;
-            inline u32 GetIndexForPerm(const vector<u08>& Perm) const;
 
         public:
             PermutationSet(const vector<u32>& DomainSizes, bool Compact);
             ~PermutationSet();
-            
+
             u32 GetSize() const;
             u32 GetPermVecSize() const;
-            
+
             iterator GetIterator(u32 Idx) const;
             iterator GetIteratorForInv(u32 Idx) const;
             iterator Compose(const iterator& Perm, u32 Idx);
@@ -192,6 +189,11 @@ namespace ESMC {
 
             const iterator& Begin() const;
             const iterator& End() const;
+
+            void GetPermForIndex(u32 Index);
+            void GetPermForIndex(u32 Index, vector<u08>& OutVec) const;
+
+            u32 GetIndexForPerm(const vector<u08>& Perm) const;
 
             void Print(u32 PermIdx, ostream& Out) const;
         };
@@ -201,5 +203,5 @@ namespace ESMC {
 
 #endif /* ESMC_PERMUTATIONS_HPP_ */
 
-// 
+//
 // Permutations.hpp ends here

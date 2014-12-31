@@ -1,13 +1,13 @@
-// LTSTypes.hpp --- 
-// 
-// Filename: LTSTypes.hpp
+// LTSDecls.hpp ---
+//
+// Filename: LTSDecls.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug  8 13:34:49 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,15 +32,15 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
-#if !defined ESMC_LTS_TYPES_HPP_
-#define ESMC_LTS_TYPES_HPP_
+#if !defined ESMC_LTS_DECLS_HPP_
+#define ESMC_LTS_DECLS_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../expr/Expressions.hpp"
 
 #include "LTSTermSemanticizer.hpp"
@@ -54,7 +54,7 @@ namespace ESMC {
             None, Weak, Strong
         };
 
-        
+
         enum class SplatFairnessType {
             None, Group, Individual
         };
@@ -75,16 +75,12 @@ namespace ESMC {
         class DetEFSM;
         class ChannelEFSM;
 
-        class MonitorBase;
-        class SafetyMonitor;
-        class BuchiMonitor;
-
         class LTSState;
 
         class LTSAssignBase;
         class LTSAssignSimple;
         class LTSAssignParam;
-        
+
         typedef CSmartPtr<LTSAssignBase> LTSAssignRef;
 
         class AutomatonTransitionBase;
@@ -108,11 +104,12 @@ namespace ESMC {
         class LTSGuardedCommand;
         typedef CSmartPtr<LTSGuardedCommand> GCmdRef;
 
-        typedef Exprs::ExprTypeRef ExprTypeRef;
         typedef Exprs::Expr<LTSExtensionT, LTSTermSemanticizer> ExpT;
         typedef Exprs::ExprMgr<LTSExtensionT, LTSTermSemanticizer> MgrT;
+        typedef typename LTSTermSemanticizer<LTSExtensionT>::LExpT LExpT;
         typedef Exprs::ExpressionVisitorBase<LTSExtensionT, LTSTermSemanticizer> VisitorBaseT;
 
+        typedef Exprs::ExpressionBase<LTSExtensionT, LTSTermSemanticizer> ExpBaseT;
         typedef Exprs::VarExpression<LTSExtensionT, LTSTermSemanticizer> VarExpT;
         typedef Exprs::ConstExpression<LTSExtensionT, LTSTermSemanticizer> ConstExpT;
         typedef Exprs::BoundVarExpression<LTSExtensionT, LTSTermSemanticizer> BoundVarExpT;
@@ -120,24 +117,12 @@ namespace ESMC {
         typedef Exprs::QuantifiedExpressionBase<LTSExtensionT, LTSTermSemanticizer> QExpT;
         typedef Exprs::EQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> EQExpT;
         typedef Exprs::AQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> AQExpT;
-
-        // types
-        typedef Exprs::ExprBoolType ExprBoolType;
-        typedef Exprs::ExprIntType ExprIntType;
-        typedef Exprs::ExprScalarType ExprScalarType;
-        typedef Exprs::ExprSymmetricType ExprSymmetricType;
-        typedef Exprs::ExprRangeType ExprRangeType;
-        typedef Exprs::ExprEnumType ExprEnumType;
-        typedef Exprs::ExprRecordType ExprRecordType;
-        typedef Exprs::ExprArrayType ExprArrayType;
-        typedef Exprs::ExprParametricType ExprParametricType;
-        typedef Exprs::ExprUnionType ExprUnionType;
-        typedef Exprs::ExprFieldAccessType ExprFieldAccessType;
+        typedef unordered_set<ExpT, Exprs::ExpressionPtrHasher> FastExpSetT;
 
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-#endif /* ESMC_LTS_TYPES_HPP_ */
+#endif /* ESMC_LTS_DECLS_HPP_ */
 
-// 
-// LTSTypes.hpp ends here
+//
+// LTSDecls.hpp ends here

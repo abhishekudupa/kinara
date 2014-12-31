@@ -1,13 +1,13 @@
-// PingPong.cpp --- 
-// 
+// PingPong.cpp ---
+//
 // Filename: PingPong.cpp
 // Author: Abhishek Udupa
 // Created: Tue Aug  5 10:51:04 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,12 +32,12 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
-// we create a simple model: 
+// we create a simple model:
 // There are two symmetric processes,
 // and a server. The processes send messages
 // with increasing payloads to the server
@@ -51,6 +51,7 @@
 #include "../../src/uflts/LTSTransitions.hpp"
 #include "../../src/mc/LTSChecker.hpp"
 #include "../../src/mc/OmegaAutomaton.hpp"
+#include "../../src/mc/Trace.hpp"
 
 using namespace ESMC;
 using namespace LTS;
@@ -61,14 +62,14 @@ int main()
 {
     auto TheLTS = new LabelledTS();
 
-    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 3);
+    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 2);
     auto ParamExp = TheLTS->MakeVar("ClientID", ClientIDType);
     vector<ExpT> Params = { ParamExp };
     auto TrueExp = TheLTS->MakeTrue();
 
     // Add the message types
-    vector<pair<string, ExprTypeRef>> MsgFields;
-    auto RangeType = TheLTS->MakeRangeType(0, 9);
+    vector<pair<string, TypeRef>> MsgFields;
+    auto RangeType = TheLTS->MakeRangeType(0, 1);
     MsgFields.push_back(make_pair("Data", RangeType));
 
     auto DataMsgType = TheLTS->MakeMsgTypes(Params, TrueExp, "DataMsg", MsgFields, true);
@@ -82,10 +83,10 @@ int main()
 
     auto ClientIDParam = TheLTS->MakeVar("ClientID", ClientIDType);
     auto ClientEFSM = TheLTS->MakeGenEFSM("Client", Params, TrueExp, LTSFairnessType::Strong);
-    
-    auto C2SChan = TheLTS->MakeChannel("C2SChan", vector<ExpT>(), TrueExp, 2, false, 
+
+    auto C2SChan = TheLTS->MakeChannel("C2SChan", vector<ExpT>(), TrueExp, 2, false,
                                        false, false, false, LTSFairnessType::Strong);
-    auto S2CChan = TheLTS->MakeChannel("S2CChan", Params, TrueExp, 1, false, true, 
+    auto S2CChan = TheLTS->MakeChannel("S2CChan", Params, TrueExp, 1, false, true,
                                        false, false, LTSFairnessType::Strong);
 
     C2SChan->AddMsgs(Params, TrueExp, DataMsgType, Params, LTSFairnessType::Strong, LossDupFairnessType::None);
@@ -114,10 +115,10 @@ int main()
     auto DataAccExp = TheLTS->MakeOp(LTSOps::OpField, DataMsgExp, DataAccFieldExp);
     ServerInputUpdates.push_back(new LTSAssignSimple(LastMsgExp, DataAccExp));
     ServerInputUpdates.push_back(new LTSAssignSimple(LastReqExp, ParamExp));
-    
 
-    Server->AddInputTransitions(Params, TrueExp, "InitState", "SendState", 
-                                TrueExp, ServerInputUpdates, "InMsg", 
+
+    Server->AddInputTransitions(Params, TrueExp, "InitState", "SendState",
+                                TrueExp, ServerInputUpdates, "InMsg",
                                 DataMsgTypeP, Params);
 
     vector<LTSAssignRef> ServerOutputUpdates;
@@ -128,10 +129,10 @@ int main()
     ServerOutputUpdates.push_back(new LTSAssignSimple(LastReqExp, TheLTS->MakeVal("clear", ClientIDType)));
     ServerOutputUpdates.push_back(new LTSAssignSimple(LastMsgExp, TheLTS->MakeVal("clear", RangeType)));
     auto ServerGuard = TheLTS->MakeOp(LTSOps::OpEQ, LastReqExp, ParamExp);
-    
-    Server->AddOutputTransitions(Params, TrueExp, "SendState", "InitState", ServerGuard, 
-                                 ServerOutputUpdates, "OutMsg", AckMsgType, Params, 
-                                 LTSFairnessType::Strong, SplatFairnessType::Individual, 
+
+    Server->AddOutputTransitions(Params, TrueExp, "SendState", "InitState", ServerGuard,
+                                 ServerOutputUpdates, "OutMsg", AckMsgType, Params,
+                                 LTSFairnessType::Strong, SplatFairnessType::Individual,
                                  "RspFairness");
 
     // Client structure
@@ -153,8 +154,8 @@ int main()
     auto CountExp = TheLTS->MakeVar("Count", RangeType);
     auto ZeroExp = TheLTS->MakeVal("0", RangeType);
     auto OneExp = TheLTS->MakeVal("1", RangeType);
-    auto MaxExp = TheLTS->MakeVal("9", RangeType);
-    auto CountIncExp = TheLTS->MakeOp(LTSOps::OpITE, 
+    auto MaxExp = TheLTS->MakeVal("1", RangeType);
+    auto CountIncExp = TheLTS->MakeOp(LTSOps::OpITE,
                                       TheLTS->MakeOp(LTSOps::OpEQ, CountExp, MaxExp),
                                       ZeroExp,
                                       TheLTS->MakeOp(LTSOps::OpADD, CountExp, OneExp));
@@ -163,7 +164,7 @@ int main()
     DataAccFieldExp = TheLTS->MakeVar("Data", FAType);
     DataAccExp = TheLTS->MakeOp(LTSOps::OpField, DataMsgExp, DataAccFieldExp);
 
-    ClientOutputUpdates.push_back(new LTSAssignSimple(DataAccExp, CountExp));    
+    ClientOutputUpdates.push_back(new LTSAssignSimple(DataAccExp, CountExp));
     ClientEFSM->AddOutputTransition("InitState", "RecvState", TrueExp, ClientOutputUpdates, "OutMsg", DataMsgType, Params);
 
     auto RecvMsgExp = TheLTS->MakeVar("InMsg", AckMsgTypeP);
@@ -173,7 +174,7 @@ int main()
     vector<LTSAssignRef> ClientInputUpdates;
     ClientInputUpdates.push_back(new LTSAssignSimple(LastMsgExp, RecvMsgAccExp));
     ClientEFSM->AddInputTransition("RecvState", "DecideState", TrueExp, ClientInputUpdates, "InMsg", AckMsgTypeP, Params);
-    
+
     vector<LTSAssignRef> ClientDecideUpdates;
     ClientDecideUpdates.push_back(new LTSAssignSimple(CountExp, CountIncExp));
     ClientDecideUpdates.push_back(new LTSAssignSimple(LastMsgExp, TheLTS->MakeVal("clear", RangeType)));
@@ -189,14 +190,14 @@ int main()
     cout << Server->ToString() << endl;
 
     TheLTS->FreezeAutomata();
-    
+
     vector<InitStateRef> InitStates;
     vector<LTSAssignRef> InitUpdates;
 
     auto ClientType = TheLTS->GetEFSMType("Client");
     auto ServerType = TheLTS->GetEFSMType("Server");
 
-    auto ClientStateVar = TheLTS->MakeOp(LTSOps::OpIndex, 
+    auto ClientStateVar = TheLTS->MakeOp(LTSOps::OpIndex,
                                          TheLTS->MakeVar("Client", ClientType),
                                          ParamExp);
     auto ServerStateVar = TheLTS->MakeVar("Server", ServerType);
@@ -212,7 +213,7 @@ int main()
 
 
     vector<ExpT> ClientUpdParams = { TheLTS->MakeVar("UpdClientParam", ClientIDType) };
-    ClientStateVar = TheLTS->MakeOp(LTSOps::OpIndex, 
+    ClientStateVar = TheLTS->MakeOp(LTSOps::OpIndex,
                                     TheLTS->MakeVar("Client", ClientType),
                                     ClientUpdParams[0]);
 
@@ -231,20 +232,20 @@ int main()
     TheLTS->AddInitStates(InitStates);
 
     auto BoundVarExp = TheLTS->MakeBoundVar(0, ClientIDType);
-    auto ClientExp = TheLTS->MakeOp(LTSOps::OpIndex, 
+    auto ClientExp = TheLTS->MakeOp(LTSOps::OpIndex,
                                     TheLTS->MakeVar("Client", ClientType),
                                     BoundVarExp);
     ClientDotCount = TheLTS->MakeOp(LTSOps::OpField, ClientExp,
                                     TheLTS->MakeVar("Count", FAType));
 
-    auto BodyExp = TheLTS->MakeOp(LTSOps::OpAND, 
-                                  TheLTS->MakeOp(LTSOps::OpGE, 
+    auto BodyExp = TheLTS->MakeOp(LTSOps::OpAND,
+                                  TheLTS->MakeOp(LTSOps::OpGE,
                                                  ClientDotCount,
                                                  ZeroExp),
                                   TheLTS->MakeOp(LTSOps::OpLE,
                                                  ClientDotCount,
                                                  MaxExp));
-    
+
     auto QExp = TheLTS->MakeForAll({ ClientIDType }, BodyExp);
     TheLTS->AddInvariant(QExp);
 
@@ -257,7 +258,7 @@ int main()
         cout << Var->ToString() << " : " << endl;
         cout << Var->GetType()->ToString() << endl;
     }
-    
+
     cout << "State vector size is " << TheLTS->GetStateVectorSize() << " bytes." << endl;
 
     cout << "Guarded Commands:" << endl;
@@ -279,14 +280,25 @@ int main()
     cout << "Invariant:" << endl;
     cout << TheLTS->GetInvariant() << endl;
 
-    cout << "Channel Buffer variables to sort:" << endl;
-    for (auto const& BufferExp : TheLTS->GetChanBuffersToSort()) {
-        cout << BufferExp.first->ToString() << endl;
-        cout << BufferExp.second->ToString() << endl;
-    }
+    // cout << "Channel Buffer variables to sort:" << endl;
+    // for (auto const& BufferExp : TheLTS->GetChanBuffersToSort()) {
+    //     cout << BufferExp.first->ToString() << endl;
+    //     cout << BufferExp.second->ToString() << endl;
+    // }
 
     auto Checker = new LTSChecker(TheLTS);
-    Checker->BuildAQS();
+    auto Safe = Checker->BuildAQS(AQSConstructionMethod::DepthFirst);
+    if (!Safe) {
+        // Build a trace to the error state
+        auto const& ErrorStates = Checker->GetAllErrorStates();
+        cout << "Found " << ErrorStates.size() << " error states" << endl;
+        for (auto const& ErrorState : ErrorStates) {
+            auto Trace = Checker->MakeTraceToError(ErrorState.first);
+            cout << Trace->ToString() << endl;
+            delete Trace;
+            break;
+        }
+    }
 
     auto Monitor = Checker->MakeStateBuchiMonitor("GFZero", Params, TrueExp);
     Monitor->AddState("InitState", true, false);
@@ -295,7 +307,7 @@ int main()
 
     ClientStateVar = Monitor->MakeOp(LTSOps::OpIndex, Monitor->MakeVar("Client", ClientType),
                                      Params[0]);
-    ClientDotCount = Monitor->MakeOp(LTSOps::OpField, ClientStateVar, 
+    ClientDotCount = Monitor->MakeOp(LTSOps::OpField, ClientStateVar,
                                      Monitor->MakeVar("Count", FAType));
 
     auto ClientCountZero = Monitor->MakeOp(LTSOps::OpEQ, ClientDotCount, ZeroExp);
@@ -311,5 +323,5 @@ int main()
     delete Checker;
 }
 
-// 
+//
 // PingPong.cpp ends here

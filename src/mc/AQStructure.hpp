@@ -1,13 +1,13 @@
-// AQStructure.hpp --- 
-// 
+// AQStructure.hpp ---
+//
 // Filename: AQStructure.hpp
 // Author: Abhishek Udupa
 // Created: Tue Aug 19 11:30:01 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -49,7 +49,7 @@
 #include <boost/pool/object_pool.hpp>
 #include <boost/functional/hash.hpp>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 #include "StateVec.hpp"
 
@@ -84,7 +84,7 @@ namespace ESMC {
 
         } /* end namespace Detail */
 
-        
+
         template <typename STATETYPE>
         class AnnotatedEdge
         {
@@ -119,7 +119,7 @@ namespace ESMC {
             {
                 // Nothing here
             }
-            
+
             inline AnnotatedEdge& operator = (const AnnotatedEdge& Other)
             {
                 if (&Other == this) {
@@ -133,7 +133,7 @@ namespace ESMC {
 
             inline bool operator == (const AnnotatedEdge& Other) const
             {
-                return (Target == Other.Target && 
+                return (Target == Other.Target &&
                         Permutation == Other.Permutation &&
                         GCmdIndex == Other.GCmdIndex);
             }
@@ -164,7 +164,7 @@ namespace ESMC {
 
 
         namespace Detail {
-            
+
             template <typename STATETYPE>
             class AnnotatedEdgeHash
             {
@@ -189,7 +189,7 @@ namespace ESMC {
             class AnnotatedEdgePtrEquals
             {
             public:
-                inline bool operator () (const AnnotatedEdge<STATETYPE>* Ptr1, 
+                inline bool operator () (const AnnotatedEdge<STATETYPE>* Ptr1,
                                          const AnnotatedEdge<STATETYPE>* Ptr2) const
                 {
                     return (*Ptr1 == *Ptr2);
@@ -203,9 +203,9 @@ namespace ESMC {
             struct AQSFibDataT
             {
                 const StateVec* StateVector;
-                u32 DistanceFromOrigin;
+                u64 DistanceFromOrigin;
 
-                inline AQSFibDataT(const StateVec* SV, u32 DistanceFromOrigin)
+                inline AQSFibDataT(const StateVec* SV, u64 DistanceFromOrigin)
                     : StateVector(SV), DistanceFromOrigin(DistanceFromOrigin)
                 {
                     // Nothing here
@@ -216,7 +216,7 @@ namespace ESMC {
             {
                 // Use a > comparator, since boost fib heaps are max-heaps
                 // rather than the text-book min-heaps.
-                inline bool operator () (const AQSFibDataT& Data1, 
+                inline bool operator () (const AQSFibDataT& Data1,
                                          const AQSFibDataT& Data2) const
                 {
                     return (Data1.DistanceFromOrigin > Data2.DistanceFromOrigin);
@@ -226,7 +226,7 @@ namespace ESMC {
         } /* end namespace Detail */
 
         typedef AnnotatedEdge<StateVec> AQSEdge;
-        typedef sparse_hash_set<AQSEdge*, 
+        typedef sparse_hash_set<AQSEdge*,
                                 Detail::AQSEdgePtrHasher,
                                 Detail::AQSEdgePtrEquals> AQSEdgeHashSetT;
 
@@ -246,13 +246,6 @@ namespace ESMC {
             boost::pool<>* EdgePool;
             LabelledTS* TheLTS;
 
-            // An error state (if any)
-            const StateVec* ErrorState;
-            u32 ErrorDepth;
-            // A deadlock state (if any)
-            const StateVec* DeadlockState;
-            u32 DeadlockDepth;
-
         public:
             AQStructure(LabelledTS* TheLTS);
             virtual ~AQStructure();
@@ -260,7 +253,7 @@ namespace ESMC {
             StateVec* Find(StateVec* SV) const;
             void Insert(StateVec* SV);
             void InsertInitState(StateVec* SV);
-            void AddEdge(StateVec* Source, StateVec* Target, 
+            void AddEdge(StateVec* Source, StateVec* Target,
                          u32 Permutation, u32 GCmdIndex);
             u64 GetNumStates() const;
             u64 GetNumEdges() const;
@@ -269,21 +262,14 @@ namespace ESMC {
 
             LabelledTS* GetLTS() const;
 
-            // Tracking for error states
-            void AddErrorState(const StateVec* ErrorState, u32 Depth);
-            void AddDeadlockState(const StateVec* DeadlockState, u32 Depth);
-
-            const StateVec* GetErrorState() const;
-            const StateVec* GetDeadlockState() const;
-
             // Path finding methods
-            AQSPermPath* FindPath(const set<const StateVec*>& Origins, 
+            AQSPermPath* FindPath(const set<const StateVec*>& Origins,
                                   const StateVec* Target) const;
-            AQSPermPath* FindPath(const set<const StateVec*>& Origins, 
+            AQSPermPath* FindPath(const set<const StateVec*>& Origins,
                                   const function<bool(const StateVec*)>& TargetPred) const;
             // On edges
             AQSPermPath* FindPath(const set<const StateVec*>& Origins,
-                                  const function<const StateVec*(const StateVec*, 
+                                  const function<const StateVec*(const StateVec*,
                                                                  const AQSEdge*)>&
                                   TargetEdgePred) const;
 
@@ -294,48 +280,39 @@ namespace ESMC {
                                                                  const AQSEdge*)>&
                                   TargetEdgePred) const;
 
-            // Shortest path without cost functions
-            // is the same as a BFS path, so we set up the forwards
-            template <typename... ArgTypes>
-            inline AQSPermPath* FindShortestPath(ArgTypes&&... Args)
-            {
-                return FindPath(forward<ArgTypes>(Args)...);
-            }
-
-
             // Shortest paths with cost functions
             AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
                                           const StateVec* Target,
-                                          const function<u32(const StateVec*, const AQSEdge*)>&
+                                          const function<u64(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
 
             AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
                                           const function<bool(const StateVec*)>& TargetPred,
-                                          const function<u32(const StateVec*, const AQSEdge*)>&
+                                          const function<u64(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
 
             AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
                                           const function<const StateVec*(const StateVec*,
-                                                                         const AQSEdge*)>& 
+                                                                         const AQSEdge*)>&
                                           TargetEdgePred,
-                                          const function<u32(const StateVec*, const AQSEdge*)>&
+                                          const function<u64(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
 
             // Find a shortest path from one of the initial states
             AQSPermPath* FindShortestPath(const StateVec* Target,
-                                          const function<u32(const StateVec*, const AQSEdge*)>&
+                                          const function<u64(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
             AQSPermPath* FindShortestPath(const function<bool(const StateVec*)>& TargetPred,
-                                          const function<u32(const StateVec*, const AQSEdge*)>&
+                                          const function<u64(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
             AQSPermPath* FindShortestPath(const function<const StateVec*(const StateVec*,
-                                                                         const AQSEdge*)>& 
+                                                                         const AQSEdge*)>&
                                           TargetEdgePred,
-                                          const function<u32(const StateVec*, const AQSEdge*)>&
+                                          const function<u64(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
         };
 
-        // A bitfield structure for the status bits 
+        // A bitfield structure for the status bits
         // in the product state
         struct ThreadedGraphStatusT
         {
@@ -361,7 +338,7 @@ namespace ESMC {
             u32 IndexID;
 
         public:
-            // Status variables that do not affect the 
+            // Status variables that do not affect the
             // identity of this node
             mutable ThreadedGraphStatusT Status;
 
@@ -379,6 +356,7 @@ namespace ESMC {
             u32 GetIndexID() const;
             u64 Hash() const;
             bool operator == (const ProductState& Other) const;
+            bool Equals(const ProductState* Other) const;
 
             void ClearMarkings() const;
 
@@ -393,7 +371,7 @@ namespace ESMC {
             void MarkAccepting() const;
             void MarkNotAccepting() const;
             bool IsAccepting() const;
-            
+
             void MarkDeleted() const;
             void MarkNotDeleted() const;
             bool IsDeleted() const;
@@ -425,7 +403,7 @@ namespace ESMC {
             class ProductStatePtrEquals
             {
             public:
-                inline bool operator () (const ProductState* Ptr1, 
+                inline bool operator () (const ProductState* Ptr1,
                                          const ProductState* Ptr2) const
                 {
                     return (*Ptr1 == *Ptr2);
@@ -434,7 +412,7 @@ namespace ESMC {
 
             class ProductStatePtrFullEquals
             {
-                inline bool operator () (const ProductState* Ptr1, 
+                inline bool operator () (const ProductState* Ptr1,
                                          const ProductState* Ptr2) const
                 {
                     return (Ptr1->GetMonitorState() == Ptr2->GetMonitorState() &&
@@ -443,7 +421,7 @@ namespace ESMC {
                 }
             };
 
-            struct PSFibDataT 
+            struct PSFibDataT
             {
                 const ProductState* State;
                 u32 DistanceFromOrigin;
@@ -459,7 +437,7 @@ namespace ESMC {
             {
                 // Use a > comparator, since boost fib heaps are max-heaps
                 // rather than the text-book min-heaps.
-                inline bool operator () (const PSFibDataT& Data1, 
+                inline bool operator () (const PSFibDataT& Data1,
                                          const PSFibDataT& Data2) const
                 {
                     return (Data1.DistanceFromOrigin > Data2.DistanceFromOrigin);
@@ -469,7 +447,7 @@ namespace ESMC {
         } /* end namespace Detail */
 
         typedef AnnotatedEdge<ProductState> ProductEdge;
-        typedef sparse_hash_set<ProductEdge*, 
+        typedef sparse_hash_set<ProductEdge*,
                                 Detail::ProductEdgePtrHasher,
                                 Detail::ProductEdgePtrEquals> ProductEdgeHashSetT;
 
@@ -508,7 +486,7 @@ namespace ESMC {
 
             const vector<ProductState*>& GetInitialStates() const;
             const ProductEdgeSetT& GetEdges(ProductState* State) const;
-            
+
             u32 GetNumStates() const;
             u32 GetNumEdges() const;
             void ClearAllMarkings() const;
@@ -532,44 +510,37 @@ namespace ESMC {
                                                                     const ProductEdge*)>&
                                  TargetEdgePred) const;
 
-            // Shortest paths without cost functions = BFS = FindPath
-            template <typename... ArgTypes>
-            inline PSPermPath* FindShortestPath(ArgTypes&&... Args)
-            {
-                return FindPath(forward<ArgTypes>(Args)...);
-            }
-
-            // Actual shortest paths with cost functions            
+            // Actual shortest paths with cost functions
             PSPermPath* FindShortestPath(const set<const ProductState*>& Origins,
                                          const ProductState* Target,
-                                         const function<u32(const ProductState*, 
+                                         const function<u64(const ProductState*,
                                                             const ProductEdge*)>&
                                          CostFunction) const;
             PSPermPath* FindShortestPath(const set<const ProductState*>& Origins,
                                          const function<bool(const ProductState*)>& TargetPred,
-                                         const function<u32(const ProductState*, 
+                                         const function<u64(const ProductState*,
                                                             const ProductEdge*)>&
                                          CostFunction) const;
             PSPermPath* FindShortestPath(const set<const ProductState*>& Origins,
                                          const function<const ProductState*(const ProductState*,
                                                                             const ProductEdge*)>&
                                          TargetEdgePred,
-                                         const function<u32(const ProductState*, 
+                                         const function<u64(const ProductState*,
                                                             const ProductEdge*)>&
                                          CostFunction) const;
             // From the initial states
             PSPermPath* FindShortestPath(const ProductState* Target,
-                                         const function<u32(const ProductState*, 
+                                         const function<u64(const ProductState*,
                                                             const ProductEdge*)>&
                                          CostFunction) const;
             PSPermPath* FindShortestPath(const function<bool(const ProductState*)>& TargetPred,
-                                         const function<u32(const ProductState*, 
+                                         const function<u64(const ProductState*,
                                                             const ProductEdge*)>&
                                          CostFunction) const;
             PSPermPath* FindShortestPath(const function<const ProductState*(const ProductState*,
                                                                             const ProductEdge*)>&
                                          TargetEdgePred,
-                                         const function<u32(const ProductState*, 
+                                         const function<u64(const ProductState*,
                                                             const ProductEdge*)>&
                                          CostFunction) const;
         };
@@ -579,5 +550,5 @@ namespace ESMC {
 
 #endif /* ESMC_AQ_STRUCTURE_HPP_ */
 
-// 
+//
 // AQStructure.hpp ends here

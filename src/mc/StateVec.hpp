@@ -1,13 +1,13 @@
-// StateVec.hpp --- 
-// 
+// StateVec.hpp ---
+//
 // Filename: StateVec.hpp
 // Author: Abhishek Udupa
 // Created: Mon Jul 28 08:34:10 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -42,14 +42,14 @@
 
 #include <boost/pool/pool.hpp>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
     namespace MC {
 
         class StateFactory;
 
-        class StateVec 
+        class StateVec
         {
             friend class StateFactory;
 
@@ -68,20 +68,9 @@ namespace ESMC {
 
             u16 ReadShort(u32 Offset) const;
             void WriteShort(u32 Offset, u16 Value);
-            
+
             u32 ReadWord(u32 Offset) const;
             void WriteWord(u32 Offset, u32 Value);
-
-            u08 ReadByteMsg(u32 Offset) const;
-            void WriteByteMsg(u32 Offset, u08 Value);
-
-            u16 ReadShortMsg(u32 Offset) const;
-            void WriteShortMsg(u32 Offset, u16 Value);
-            
-            u32 ReadWordMsg(u32 Offset) const;
-            void WriteWordMsg(u32 Offset, u32 Value);
-
-            u32 GetMsgSize() const;
 
             u08& operator [] (u32 Offset);
             const u08& operator [] (u32 Offset) const;
@@ -93,9 +82,6 @@ namespace ESMC {
             StateVec* Clone() const;
             u08* GetStateBuffer();
             const u08* GetStateBuffer() const;
-            u08* GetMsgBuffer();
-            const u08* GetMsgBuffer() const;
-            void ClearMsgBuffer();
             StateFactory* GetFactory() const;
             void Set(const StateVec& Other);
             void Recycle() const;
@@ -110,22 +96,17 @@ namespace ESMC {
             boost::pool<>* StateVecPool;
             boost::pool<>* StateVecBufferPool;
             u32 NumActiveStates;
-            u32 MsgSize;
-            u08* MsgBuffer;
 
             u08* GetStateBuffer(bool Clear = true);
             void ReleaseStateBuffer(u08* BufferPtr);
             StateVec* MakeState(const StateVec* Other);
-            u08* GetMsgBuffer();
-            void ClearMsgBuffer();
 
         public:
-            StateFactory(u32 StateSize, u32 MsgSize);
+            StateFactory(u32 StateSize);
             ~StateFactory();
             StateVec* MakeState();
             void TakeState(const StateVec* StatePtr);
             u32 GetSize() const;
-            u32 GetMsgSize() const;
             u32 GetNumActiveStates() const;
         };
 
@@ -134,5 +115,5 @@ namespace ESMC {
 
 #endif /* ESMC_STATE_VEC_HPP_ */
 
-// 
+//
 // StateVec.hpp ends here

@@ -1,13 +1,13 @@
-// Trace.hpp --- 
-// 
+// Trace.hpp ---
+//
 // Filename: Trace.hpp
 // Author: Abhishek Udupa
 // Created: Mon Aug 25 15:10:30 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -43,14 +43,19 @@
 #include <vector>
 #include <boost/functional/hash.hpp>
 #include <unordered_set>
+#include <tuple>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
+#include "../uflts/LTSDecls.hpp"
 
 namespace ESMC {
     namespace MC {
 
+        using LTS::GCmdRef;
         using LTS::LabelledTS;
+        using LTS::ExpT;
         using Symm::Canonicalizer;
+        using LTS::LTSAssignRef;
 
         namespace Detail {
 
@@ -71,16 +76,31 @@ namespace ESMC {
             typedef pair<const ProductState*, u32> PSPermPairT;
             // for storing unwound states
             typedef unordered_set<PSPermPairT, PSPermPairHasher> PSPermSetT;
-            typedef pair<u32, PSPermPairT> UnwoundEdgeT;
+            // Product state, inverse permutation, inverse sort permutation
+            typedef tuple<const ProductState*, u32, u32> BFSQueueEntryT;
+
+            class BFSQueueEntryHasher
+            {
+            public:
+                inline u64 operator () (const BFSQueueEntryT& Entry) const
+                {
+                    u64 Retval = 0;
+                    boost::hash_combine(Retval, get<0>(Entry));
+                    boost::hash_combine(Retval, get<1>(Entry));
+                    boost::hash_combine(Retval, get<2>(Entry));
+                    return Retval;
+                }
+            };
+
             // For storing unwound edges
             // unwound(first) <-- unwound(second.second) with command (second.first)
-            typedef unordered_map<PSPermPairT, UnwoundEdgeT,
-                                  PSPermPairHasher> UnwoundPredMapT;
+            typedef unordered_map<BFSQueueEntryT, pair<u32, BFSQueueEntryT>,
+                                  BFSQueueEntryHasher> UnwoundPredMapT;
 
         } /* end namespace detail */
 
         // A straightforward permuted path
-        // where states are successors modulo some 
+        // where states are successors modulo some
         // permutation
         // Assumption: nodes and edges are NOT owned by me
         template <typename STATETYPE>
@@ -88,7 +108,7 @@ namespace ESMC {
         {
         public:
             typedef AnnotatedEdge<STATETYPE>* PathElemType;
-            
+
         private:
             const STATETYPE* Origin;
             vector<PathElemType> PathElems;
@@ -117,15 +137,15 @@ namespace ESMC {
             }
         };
 
-        class TraceBase 
+        class TraceBase
         {
         protected:
             StateVecPrinter* Printer;
-            
+
         public:
             TraceBase(StateVecPrinter* Printer);
             virtual ~TraceBase();
-            
+
             StateVecPrinter* GetPrinter() const;
 
             virtual string ToString(u32 Verbosity = 0) const = 0;
@@ -161,11 +181,11 @@ namespace ESMC {
             }
 
         private:
-            static inline const StateVec* 
-            UnwindPermPath(AQSPermPath* PermPath, 
+            static inline const StateVec*
+            UnwindPermPath(AQSPermPath* PermPath,
                            LTSChecker* Checker,
                            vector<TraceElemT>& PathElems);
-            
+
             static inline const ProductState*
             UnwindPermPath(PSPermPath* PermPath,
                            LTSChecker* Checker,
@@ -176,14 +196,15 @@ namespace ESMC {
             ExpandSCC(const ProductState* SCCRoot, LTSChecker* Checker);
 
             // returns a pair of states:
-            // 1. The state corresponding to the unwinding of the root state
-            // 2. The permuted state in the product structure corresponding 
-            //    to the last unwound state in the path (for subsequent calls to 
+            // 1. The permuted state in the product structure corresponding
+            //    to the last unwound state in the path (for subsequent calls to
             //    DoUnwoundBFS)
-            static inline pair<const ProductState*, const ProductState*>
-            DoUnwoundBFS(const ProductState* Root, 
+            // 2. The inverse permutation along the path is returned in InvPermAlongPathOut
+            static inline const ProductState*
+            DoUnwoundBFS(const ProductState* CanonicalRoot,
                          const LTSChecker* Checker,
                          u32& InvPermAlongPathOut,
+                         u32& InvSortPermForRoot,
                          const function<bool(u32, const ProductState*)>& MatchPred,
                          vector<PSTraceElemT>& PathElems,
                          const unordered_set<const ProductState*>& Bounds);
@@ -195,16 +216,18 @@ namespace ESMC {
 
         public:
             static SafetyViolation* MakeSafetyViolation(const StateVec* ErrorState,
-                                                        LTSChecker* Checker);
+                                                        LTSChecker* Checker,
+                                                        const ExpT& BlownInvariant);
             static DeadlockViolation* MakeDeadlockViolation(const StateVec* ErrorState,
                                                             LTSChecker* Checker);
-            static MCExceptionTrace* MakeMCExceptionTrace(const StateVec* ErrorState,
-                                                          MCExceptionType ExceptionType,
-                                                          u32 CmdID,
-                                                          LTSChecker* Checker);
-
             // Accepts the root of a fair accepting (green) SCC.
             static LivenessViolation* MakeLivenessViolation(const ProductState* SCCRoot,
+                                                            LTSChecker* Checker);
+
+            static SafetyViolation* MakeSafetyViolation(AQSPermPath* PermPath,
+                                                        LTSChecker* Checker,
+                                                        const ExpT& BlownInvariant);
+            static DeadlockViolation* MakeDeadlockViolation(AQSPermPath* PermPath,
                                                             LTSChecker* Checker);
         };
 
@@ -215,16 +238,19 @@ namespace ESMC {
         protected:
             const StateVec* InitialState;
             vector<TraceElemT> TraceElems;
+            ExpT BlownInvariant;
 
             SafetyViolation(const StateVec* InitialState,
                             const vector<TraceElemT>& TraceElems,
-                            StateVecPrinter* Printer);
+                            StateVecPrinter* Printer,
+                            const ExpT& BlownInvariant);
 
         public:
             virtual ~SafetyViolation();
             const StateVec* GetInitialState() const;
             const vector<TraceElemT>& GetTraceElems() const;
             virtual string ToString(u32 Verbosity = 0) const override;
+            const ExpT& GetInvariantBlown() const;
         };
 
         class DeadlockViolation : public SafetyViolation
@@ -234,29 +260,10 @@ namespace ESMC {
         protected:
             DeadlockViolation(const StateVec* InitialState,
                               const vector<TraceElemT>& TraceElems,
-                              StateVecPrinter* Printer);
+                              StateVecPrinter* Printer,
+                              const ExpT& BlownInvariant);
         public:
             virtual ~DeadlockViolation();
-        };
-
-        class MCExceptionTrace : public SafetyViolation
-        {
-            friend class TraceBase;
-
-        private:
-            MCExceptionType ExceptionType;
-            u32 CmdID;
-
-        protected:
-            MCExceptionTrace(const StateVec* InitialState,
-                             const vector<TraceElemT>& TraceElems,
-                             MCExceptionType ExceptionType,
-                             u32 CmdID,
-                             StateVecPrinter* Printer);
-
-        public:
-            virtual ~MCExceptionTrace();
-            virtual string ToString(u32 Verbosity = 0) const override;
         };
 
         class LivenessViolation : public TraceBase
@@ -267,11 +274,21 @@ namespace ESMC {
             const ProductState* InitialState;
             const ProductStructure* ThePS;
             vector<PSTraceElemT> StemPath;
+            // The updates that need to be made
+            // after executing the last command in the stem
+            // to get the true stem last state
+            vector<LTSAssignRef> StemSortPermutation;
             vector<PSTraceElemT> LoopPath;
+            // The updates to be made after executing the
+            // last command in the loop to get back to the
+            // last state of the stem
+            vector<LTSAssignRef> LoopSortPermutation;
 
             LivenessViolation(const ProductState* InitialState,
                               const vector<PSTraceElemT>& Stem,
-                              const vector<PSTraceElemT>& Lasso,
+                              const vector<LTSAssignRef>& StemSortPermutation,
+                              const vector<PSTraceElemT>& Loop,
+                              const vector<LTSAssignRef>& LoopSortPermutation,
                               StateVecPrinter* Printer,
                               const ProductStructure* ThePS);
 
@@ -283,6 +300,8 @@ namespace ESMC {
             const vector<PSTraceElemT>& GetLoop() const;
 
             virtual string ToString(u32 Verbosity = 0) const override;
+            const vector<LTSAssignRef>& GetStemSortPermutation() const;
+            const vector<LTSAssignRef>& GetLoopSortPermutation() const;
         };
 
     } /* end namespace MC */
@@ -290,5 +309,5 @@ namespace ESMC {
 
 #endif /* ESMC_TRACE_HPP_ */
 
-// 
+//
 // Trace.hpp ends here

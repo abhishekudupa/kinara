@@ -18,7 +18,7 @@
 # PROJECT_EXT_LIBS:
 #   for each lib in PROJECT_EXT_LIBS, a variable called lib_FULL_PATH containing the full path of target to be built
 #   for each lib in PROJECT_EXT_LIBS, a variable called lib_MAKE_DIR containing the directory to call make on
-#   
+#
 # PROJECT_LIBS
 # PROJECT_EXECUTABLES
 # A target called toplevel which builds all the required targets
@@ -110,7 +110,7 @@ ifeq "x$(VERBOSE_BUILD)" "x"
 	echo "$(DEPPRINTNAME) `basename $<`"; \
 	$(CXX) -MM -MF $@ -MT "$(OBJ_DIR)/$(strip $(patsubst %.cpp, %.o, $(notdir $<)))" \
 	-MT "$(OBJ_DIR)/$(strip $(patsubst %.cpp, %.d, $(notdir $<)))" $(CXXFLAGS) $<
-else 
+else
 	@set -e; rm -f $@; \
 	echo "Calculating dependencies for `basename $<`..."; \
 	$(CXX) -MM -MF $@ -MT "$(OBJ_DIR)/$(strip $(patsubst %.cpp, %.o, $(notdir $<)))" \
@@ -139,20 +139,22 @@ ifeq "x$(VERBOSE_BUILD)" "x"
         $(foreach path, $($(1)_LIB_PATHS), -Wl,-rpath $(path)) \
 		$(foreach path, $($(1)_LIB_PATHS), -L $(path)) \
 		$(foreach lib, $($(1)_DEP_LIBS), -l$(lib)) \
-		$(foreach lib, $($(1)_SYS_LIBS), -l$(lib))
-else 
+		$(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) \
+        -L/usr/local/lib/
+else
 	$(LD) $(CXXFLAGS) $(OPTFLAGS) $(addprefix $(OBJ_DIR)/, $($(1)_OBJS)) -o $(BIN_DIR)/$(1) \
         $(foreach path, $($(1)_LIB_PATHS), -Wl,-rpath $(path)) \
 		$(foreach path, $($(1)_LIB_PATHS), -L $(path)) \
 		$(foreach lib, $($(1)_DEP_LIBS), -l$(lib)) \
-		$(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) 
+		$(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) \
+        -L/usr/local/lib/
 endif
 endef
 
-define template_ext_lib_build = 
+define template_ext_lib_build =
 $(lib$(1)_FULL_PATH):
 	$(MAKE) -C $(lib$(1)_MAKE_DIR)
-endef 
+endef
 
 define template_ext_lib_clean =
 	$(MAKE) -C $(lib$(1)_MAKE_DIR) clean
@@ -166,18 +168,20 @@ ifeq "x$(VERBOSE_BUILD)" "x"
 	@echo "$(LDPRINTNAME) `basename $(LIB_DIR)/lib$(1).so`"; \
 	$(LD) -shared $(OPTFLAGS) $(LDFLAGS) $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS)) \
     $(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) \
-	-o $(LIB_DIR)/lib$(1).so
-else 
+	-o $(LIB_DIR)/lib$(1).so \
+    -L/usr/local/lib/
+else
 	$(LD) -shared $(OPTFLAGS) $(LDFLAGS) $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS)) \
 	$(foreach lib, $($(1)_SYS_LIBS), -l$(lib)) \
-	-o $(LIB_DIR)/lib$(1).so
+	-o $(LIB_DIR)/lib$(1).so \
+    -L/usr/local/lib/
 endif
 
 $(LIB_DIR)/lib$(1).a:	$(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS))
 ifeq "x$(VERBOSE_BUILD)" "x"
 	@echo "$(ARPRINTNAME) `basename $(LIB_DIR)/lib$(1).a`"; \
 	$(AR) rcs $(LIB_DIR)/lib$(1).a $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS))
-else 
+else
 	$(AR) rcs $(LIB_DIR)/lib$(1).a $(addprefix $(OBJ_DIR)/, $(lib$(1)_OBJS))
 endif
 endef
@@ -224,7 +228,7 @@ distclean: clean
 		$(MAKE) -C $(lib$(lib)_MAKE_DIR) clean;)
 
 # include the dep files, but only if
-# we're in the actual build level, i.e, 
+# we're in the actual build level, i.e,
 # don't include it in the initial make
 ifneq ($(MAKECMDGOALS), clean)
 ifneq ($(MAKECMDGOALS), distclean)

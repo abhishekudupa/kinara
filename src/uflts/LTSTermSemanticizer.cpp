@@ -1,13 +1,13 @@
-// LTSTermSemanticizer.cpp --- 
-// 
+// LTSTermSemanticizer.cpp ---
+//
 // Filename: LTSTermSemanticizer.cpp
 // Author: Abhishek Udupa
 // Created: Sat Jul 26 15:58:15 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -43,7 +43,7 @@
 
 namespace ESMC {
     namespace LTS {
-        
+
         const i64 LTSOps::OpEQ;
         const i64 LTSOps::OpNOT;
         const i64 LTSOps::OpITE;
@@ -70,7 +70,7 @@ namespace ESMC {
         const i64 LTSOps::OpField;
 
         const i64 LTSOps::UFOffset;
-        
+
         // Temporal operators
         const i64 LTSOps::OpTemporalX;
         const i64 LTSOps::OpTemporalU;
@@ -79,11 +79,11 @@ namespace ESMC {
 
         namespace Detail {
 
-            const Exprs::ExprTypeRef InvalidType = Exprs::ExprTypeRef::NullPtr;
+            const TypeRef InvalidType = TypeRef::NullPtr;
 
             const string BoundVarPrefix = "dbvar";
 
-            const unordered_map<i64, string> OpCodeToNameMap = 
+            const unordered_map<i64, string> OpCodeToNameMap =
                 { { LTSOps::OpEQ, "=" },
                   { LTSOps::OpNOT, "not" },
                   { LTSOps::OpITE, "ite" },
@@ -103,256 +103,30 @@ namespace ESMC {
                   { LTSOps::OpLT, "<" },
                   { LTSOps::OpLE, "<=" } };
 
-            // implementation of Z3 context wrapper
-            Z3CtxWrapper::Z3CtxWrapper(Z3_context Ctx)
-                : Ctx(Ctx)
-            {
-                // Nothing here
-            }
-
-            Z3CtxWrapper::Z3CtxWrapper()
-            {
-                auto Cfg = Z3_mk_config();
-                Ctx = Z3_mk_context_rc(Cfg);
-                Z3_del_config(Cfg);
-            }
-
-            Z3CtxWrapper::~Z3CtxWrapper()
-            {
-                if (Ctx != nullptr) {
-                    Z3_del_context(Ctx);
-                    Ctx = nullptr;
-                }
-            }
-
-            Z3CtxWrapper::operator Z3_context () const
-            {
-                return Ctx;
-            }
-
-            Z3_context Z3CtxWrapper::GetCtx() const
-            {
-                return Ctx;
-            }
-
-            // Implementation of Z3Expr
-            Z3Expr Z3Expr::NullExpr;
-
-            Z3Expr::Z3Expr()
-                : Ctx(Z3Ctx::NullPtr), AST(nullptr)
-            {
-                // Nothing here
-            }
-
-            Z3Expr::Z3Expr(const Z3Expr& Other)
-                : Ctx(Other.Ctx), AST(Other.AST)
-            {
-                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
-                    Z3_inc_ref(*Ctx, AST);
-                }
-            }
-
-            Z3Expr::Z3Expr(Z3Ctx Ctx, Z3_ast AST)
-                : Ctx(Ctx), AST(AST)
-            {
-                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
-                    Z3_inc_ref(*Ctx, AST);
-                }
-            }
-
-            Z3Expr::Z3Expr(Z3Expr&& Other)
-                : Ctx(Z3Ctx::NullPtr), AST(nullptr)
-            {
-                swap(Ctx, Other.Ctx);
-                swap(AST, Other.AST);
-            }
-
-            Z3Expr::~Z3Expr()
-            {
-                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
-                    Z3_dec_ref(*Ctx, AST);
-                }
-            }
-
-            Z3Expr& Z3Expr::operator = (Z3Expr Other)
-            {
-                swap(Ctx, Other.Ctx);
-                swap(AST, Other.AST);
-                return *this;
-            }
-
-            bool Z3Expr::operator == (const Z3Expr& Other) const
-            {
-                return ((Ctx != Z3Ctx::NullPtr) && (Other.Ctx != Z3Ctx::NullPtr) &&
-                        (Ctx == (Other.Ctx)) && 
-                        (Z3_is_eq_ast(*Ctx, AST, Other.AST)));
-            }
-
-            string Z3Expr::ToString() const
-            {
-                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
-                    return Z3_ast_to_string(*Ctx, AST);
-                } else {
-                    return "nullexpr";
-                }
-            }
-
-            u64 Z3Expr::Hash() const
-            {
-                if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
-                    return (Z3_get_ast_hash(*Ctx, AST));
-                } else {
-                    return 0;
-                }
-            }
-
-            Z3Expr::operator Z3_ast() const
-            {
-                return AST;
-            }
-
-            Z3_ast Z3Expr::GetAST() const
-            {
-                return AST;
-            }
-
-            const Z3Ctx& Z3Expr::GetCtx() const
-            {
-                return Ctx;
-            }
-
-            // implementation of Z3Sort
-            Z3Sort Z3Sort::NullSort;
-
-            Z3Sort::Z3Sort()
-                : Ctx(Z3Ctx::NullPtr), Sort(nullptr)
-            {
-                // Nothing here
-            }
-
-            Z3Sort::Z3Sort(Z3Ctx Ctx, Z3_sort Sort)
-                : Ctx(Ctx), Sort(Sort)
-            {
-                if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
-                    Z3_inc_ref(*Ctx, Z3_sort_to_ast(*Ctx, Sort));
-                }
-            }
-
-            Z3Sort::Z3Sort(const Z3Sort& Other)
-                : Ctx(Other.Ctx), Sort(Other.Sort), 
-                  FuncDecls(Other.FuncDecls)
-            {
-                if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
-                    Z3_inc_ref(*Ctx, Z3_sort_to_ast(*Ctx, Sort));
-                }
-                for (auto const& FuncDecl : FuncDecls) {
-                    Z3_inc_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl.second));
-                }
-            }
-
-            Z3Sort::Z3Sort(Z3Sort&& Other)
-                : Ctx(Z3Ctx::NullPtr), Sort(nullptr)
-            {
-                swap(Ctx, Other.Ctx);
-                swap(Sort, Other.Sort);
-                swap(FuncDecls, Other.FuncDecls);
-            }
-
-            Z3Sort::~Z3Sort()
-            {
-                if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
-                    Z3_dec_ref(*Ctx, Z3_sort_to_ast(*Ctx, Sort));
-                }
-                for (auto const& FuncDecl : FuncDecls) {
-                    Z3_dec_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl.second));
-                }
-                FuncDecls.clear();
-            }
-
-            void Z3Sort::AddFuncDecl(Z3_func_decl Decl) const
-            {
-                Z3_inc_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, Decl));
-                string Name(Z3_get_symbol_string(*Ctx, Z3_get_decl_name(*Ctx, Decl)));
-                auto it = FuncDecls.find(Name);
-                if (it != FuncDecls.end()) {
-                    Z3_dec_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, it->second));
-                }
-                FuncDecls[Name] = Decl;
-            }
-
-            void Z3Sort::AddFuncDecls(u32 NumDecls, Z3_func_decl *Decls) const
-            {
-                for (u32 i = 0; i < NumDecls; ++i) {
-                    AddFuncDecl(Decls[i]);
-                }
-            }
-            
-            Z3_func_decl Z3Sort::GetFuncDecl(const string& Name) const
-            {
-                auto it = FuncDecls.find(Name);
-                if (it == FuncDecls.end()) {
-                    throw ESMCError((string)"Request to get function decl \"" + 
-                                    Name + "\" which does not exist in Z3Sort");
-                }
-                return it->second;
-            }
-
-            Z3Sort& Z3Sort::operator = (Z3Sort Other)
-            {
-                swap(Ctx, Other.Ctx);
-                swap(Sort, Other.Sort);
-                swap(FuncDecls, Other.FuncDecls);
-                return *this;
-            }
-
-            bool Z3Sort::operator == (const Z3Sort& Other) const
-            {
-                return ((Ctx != Z3Ctx::NullPtr) && (Other.Ctx != Z3Ctx::NullPtr) &&
-                        (Ctx == Other.Ctx) && 
-                        (Z3_is_eq_sort(*Ctx, Sort, Other.Sort)));
-            }
-
-            string Z3Sort::ToString() const
-            {
-                if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
-                    return Z3_sort_to_string(*Ctx, Sort);
-                } else {
-                    return "nullsort";
-                }
-            }
-
-            u64 Z3Sort::Hash() const
-            {
-                if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
-                    return Z3_get_ast_hash(*Ctx, Z3_sort_to_ast(*Ctx, Sort));
-                } else {
-                    return 0;
-                }
-            }
-
-            Z3Sort::operator Z3_sort () const
-            {
-                return Sort;
-            }
-
-            Z3_sort Z3Sort::GetSort() const
-            {
-                return Sort;
-            }
-
-            const Z3Ctx& Z3Sort::GetCtx() const
-            {
-                return Ctx;
-            }
+            const unordered_set<i64> LTSReservedOps =
+                { { LTSOps::OpEQ, LTSOps::OpNOT, LTSOps::OpITE, LTSOps::OpOR,
+                    LTSOps::OpAND, LTSOps::OpIMPLIES, LTSOps::OpIFF, LTSOps::OpXOR,
+                    LTSOps::OpADD, LTSOps::OpSUB, LTSOps::OpMINUS, LTSOps::OpMUL,
+                    LTSOps::OpDIV, LTSOps::OpMOD, LTSOps::OpGT, LTSOps::OpGE,
+                    LTSOps::OpLE, LTSOps::OpLT, LTSOps::OpIndex, LTSOps::OpField,
+                    LTSOps::OpTemporalX, LTSOps::OpTemporalG, LTSOps::OpTemporalU,
+                    LTSOps::OpTemporalF } };
 
         } /* end namespace Detail */
 
         // The LTSLoweredContext implementation
-        
+
         using namespace Detail;
+        using namespace TP;
 
         LTSLoweredContext::LTSLoweredContext()
             : Ctx(new Z3CtxWrapper())
+        {
+            Assumptions.push_back(AssumptionSetT());
+        }
+
+        LTSLoweredContext::LTSLoweredContext(const Z3Ctx& Ctx)
+            : Ctx(Ctx)
         {
             Assumptions.push_back(AssumptionSetT());
         }
@@ -362,7 +136,7 @@ namespace ESMC {
             // Nothing here
         }
 
-        const Z3Sort& LTSLoweredContext::GetZ3Sort(const ExprTypeRef& LTSType) const
+        const Z3Sort& LTSLoweredContext::GetZ3Sort(const TypeRef& LTSType) const
         {
             auto it = LTSTypeToSort.find(LTSType);
             if (it == LTSTypeToSort.end()) {
@@ -372,32 +146,32 @@ namespace ESMC {
             }
         }
 
-        void LTSLoweredContext::AddZ3Sort(const ExprTypeRef& LTSType, 
+        void LTSLoweredContext::AddZ3Sort(const TypeRef& LTSType,
                                           const Z3Sort& Sort) const
         {
             if (GetZ3Sort(LTSType) != Z3Sort::NullSort) {
-                throw ExprTypeError((string)"Z3 sort for type \"" + LTSType->ToString() + 
+                throw ExprTypeError((string)"Z3 sort for type \"" + LTSType->ToString() +
                                     "\" already exists");
             }
             LTSTypeToSort[LTSType] = Sort;
         }
 
-        const ExprTypeRef& LTSLoweredContext::GetLTSType(const string& VarName) const
+        const TypeRef& LTSLoweredContext::GetLTSType(const string& VarName) const
         {
             auto it = VarNameToLTSType.find(VarName);
             if (it == VarNameToLTSType.end()) {
-                return ExprTypeRef::NullPtr;
+                return TypeRef::NullPtr;
             } else {
                 return it->second;
             }
         }
 
-        void LTSLoweredContext::AddLTSType(const string& VarName, const ExprTypeRef& LTSType) const
+        void LTSLoweredContext::AddLTSType(const string& VarName, const TypeRef& LTSType) const
         {
-            if (GetLTSType(VarName) != ExprTypeRef::NullPtr) {
-                throw ExprTypeError((string)"Error, variable named \"" + VarName + "\"" + 
+            if (GetLTSType(VarName) != TypeRef::NullPtr) {
+                throw ExprTypeError((string)"Error, variable named \"" + VarName + "\"" +
                                     " has already been registed with a type in the context!");
-            } 
+            }
             VarNameToLTSType[VarName] = LTSType;
         }
 
@@ -416,10 +190,10 @@ namespace ESMC {
             Assumptions.push_back(AssumptionSetT());
         }
 
-        LTSLoweredContext::AssumptionSetT 
+        LTSLoweredContext::AssumptionSetT
         LTSLoweredContext::PopAssumptionScope() const
         {
-            auto&& Scope = Assumptions.back();
+            auto Scope = Assumptions.back();
             Assumptions.pop_back();
             return Scope;
         }
@@ -429,7 +203,7 @@ namespace ESMC {
             return Assumptions.back();
         }
 
-        const vector<LTSLoweredContext::AssumptionSetT>& 
+        const vector<LTSLoweredContext::AssumptionSetT>&
         LTSLoweredContext::GetAllAssumptions() const
         {
             return Assumptions;
@@ -445,21 +219,21 @@ namespace ESMC {
             return Ctx;
         }
 
-        ostream& operator << (const Detail::Z3Expr& Expr, ostream& Out) 
+        ostream& operator << (const Z3Expr& Expr, ostream& Out)
         {
             Out << Expr.ToString();
             return Out;
         }
 
-        ostream& operator << (const Detail::Z3Sort& Sort, ostream& Out) 
+        ostream& operator << (const Z3Sort& Sort, ostream& Out)
         {
             Out << Sort.ToString();
             return Out;
         }
-        
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
 
-// 
+//
 // LTSTermSemanticizer.cpp ends here

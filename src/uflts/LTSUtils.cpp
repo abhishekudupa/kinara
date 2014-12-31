@@ -1,13 +1,13 @@
-// LTSUtils.cpp --- 
-// 
+// LTSUtils.cpp ---
+//
 // Filename: LTSUtils.cpp
 // Author: Abhishek Udupa
 // Created: Fri Aug 15 12:14:12 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -41,11 +41,14 @@
 
 namespace ESMC {
     namespace LTS {
+
+        using namespace Decls;
+
         namespace Detail {
 
             MsgTransformer::MsgTransformer(MgrT* Mgr, const string& MsgVarName,
-                                           const ExprTypeRef& MsgRecType, 
-                                           const ExprTypeRef& UnifiedMType)
+                                           const TypeRef& MsgRecType,
+                                           const TypeRef& UnifiedMType)
                 : VisitorBaseT("MessageTransformer"),
                   Mgr(Mgr), MsgVarName(MsgVarName), MsgRecType(MsgRecType),
                   UnifiedMType(UnifiedMType)
@@ -91,28 +94,28 @@ namespace ESMC {
                 }
 
                 auto OpCode = Exp->GetOpCode();
-                if (OpCode == LTSOps::OpField && 
+                if (OpCode == LTSOps::OpField &&
                     OldChildren[0]->Is<Exprs::VarExpression>() &&
                     OldChildren[0]->As<Exprs::VarExpression>()->GetVarName() == MsgVarName &&
                     OldChildren[0]->As<Exprs::VarExpression>()->GetVarType() == MsgRecType) {
-                    
-                    ExprTypeRef ActMsgRecType = nullptr;
-                    if (MsgRecType->Is<ExprRecordType>()) {
+
+                    TypeRef ActMsgRecType = nullptr;
+                    if (MsgRecType->Is<RecordType>()) {
                         ActMsgRecType = MsgRecType;
-                    } else if (MsgRecType->Is<ExprParametricType>()) {
-                        ActMsgRecType = MsgRecType->SAs<ExprParametricType>()->GetBaseType();
+                    } else if (MsgRecType->Is<ParametricType>()) {
+                        ActMsgRecType = MsgRecType->SAs<ParametricType>()->GetBaseType();
                     } else {
-                        throw ESMCError((string)"MsgTransformer: Message type \"" + 
-                                        MsgRecType->ToString() + "\" is not a parametric " + 
+                        throw ESMCError((string)"MsgTransformer: Message type \"" +
+                                        MsgRecType->ToString() + "\" is not a parametric " +
                                         "type or a record type");
                     }
 
-                    auto MTypeAsUnion = UnifiedMType->As<ExprUnionType>();
+                    auto MTypeAsUnion = UnifiedMType->As<UnionType>();
                     auto FieldVarExp = OldChildren[1]->As<VarExpression>();
                     auto const& OldFieldName = FieldVarExp->GetVarName();
-                    auto const& NewFieldName = MTypeAsUnion->MapFromMemberField(ActMsgRecType, 
+                    auto const& NewFieldName = MTypeAsUnion->MapFromMemberField(ActMsgRecType,
                                                                                 OldFieldName);
-                    auto FAType = Mgr->MakeType<Exprs::ExprFieldAccessType>();
+                    auto FAType = Mgr->MakeType<FieldAccessType>();
                     auto NewFieldVar = Mgr->MakeVar(NewFieldName, FAType);
                     ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpField, NewChildren[0], NewFieldVar));
                 } else {
@@ -136,125 +139,229 @@ namespace ESMC {
                 ExpStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
             }
 
-            ExpT MsgTransformer::Do(MgrT* Mgr, 
+            ExpT MsgTransformer::Do(MgrT* Mgr,
                                     const ExpT& Exp,
                                     const string& MsgVarName,
-                                    const ExprTypeRef& MsgRecType,
-                                    const ExprTypeRef& UnifiedMType)
+                                    const TypeRef& MsgRecType,
+                                    const TypeRef& UnifiedMType)
             {
                 MsgTransformer TheTransformer(Mgr, MsgVarName, MsgRecType, UnifiedMType);
                 Exp->Accept(&TheTransformer);
                 return TheTransformer.ExpStack[0];
             }
 
-            QuantifierUnroller::QuantifierUnroller(MgrT* Mgr)
-                : VisitorBaseT("QuantifierUnroller"), Mgr(Mgr)
+            ArrayRValueTransformer::ArrayRValueTransformer(MgrT* Mgr)
+                : VisitorBaseT("ArrayRValueTransformer"), Mgr(Mgr)
             {
                 // Nothing here
             }
 
-            QuantifierUnroller::~QuantifierUnroller()
+            ArrayRValueTransformer::~ArrayRValueTransformer()
             {
                 // Nothing here
             }
 
-            void QuantifierUnroller::VisitVarExpression(const VarExpT* Exp) 
+            void ArrayRValueTransformer::VisitVarExpression(const VarExpT* Exp)
             {
                 ExpStack.push_back(Exp);
             }
 
-            void QuantifierUnroller::VisitBoundVarExpression(const BoundVarExpT* Exp)
+            void ArrayRValueTransformer::VisitBoundVarExpression(const BoundVarExpT* Exp)
             {
                 ExpStack.push_back(Exp);
             }
 
-            void QuantifierUnroller::VisitConstExpression(const ConstExpT* Exp) 
+            void ArrayRValueTransformer::VisitConstExpression(const ConstExpT* Exp)
             {
                 ExpStack.push_back(Exp);
             }
 
-            void QuantifierUnroller::VisitOpExpression(const OpExpT* Exp)
+            void ArrayRValueTransformer::VisitOpExpression(const OpExpT* Exp)
             {
                 VisitorBaseT::VisitOpExpression(Exp);
-                auto const& Children = Exp->GetChildren();
-                const u32 NumChildren = Children.size();
 
+                auto OpCode = Exp->GetOpCode();
+                auto const& Children = Exp->GetChildren();
+
+                const u32 NumChildren = Exp->GetChildren().size();
                 vector<ExpT> NewChildren(NumChildren);
                 for (u32 i = 0; i < NumChildren; ++i) {
                     NewChildren[NumChildren - i - 1] = ExpStack.back();
                     ExpStack.pop_back();
                 }
-                
-                ExpStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
-            }
 
-            inline vector<ExpT>
-            QuantifierUnroller::UnrollQuantifier(const QExpT* Exp)
-            {
-                vector<ExpT> Retval;
-                auto const& QVarTypes = Exp->GetQVarTypes();
-                auto const& QBody = Exp->GetQExpression();
-                const u32 NumQVars = QVarTypes.size();
-
-                vector<vector<string>> QVarElems;
-                for (auto const& QVarType : QVarTypes) {
-                    QVarElems.push_back(QVarType->GetElements());
+                if (OpCode != LTSOps::OpIndex) {
+                    ExpStack.push_back(Mgr->MakeExpr(OpCode, NewChildren));
+                    return;
                 }
-                auto&& CP = CrossProduct<string>(QVarElems.begin(), 
-                                                  QVarElems.end());
-                for (auto const& CPElem : CP) {
-                    MgrT::SubstMapT SubstMap;
-                    for (u32 i = 0; i < NumQVars; ++i) {
-                        auto const& BoundVarExp = Mgr->MakeBoundVar(QVarTypes[i], i);
-                        auto const& ValExp = Mgr->MakeVal(CPElem[i], QVarTypes[i]);
-                        SubstMap[BoundVarExp] = ValExp;
+
+                // An index op
+                auto ArrType = Children[0]->GetType()->SAs<ArrayType>();
+                auto IndexType = ArrType->GetIndexType();
+                auto ValueType = ArrType->GetValueType();
+                auto const& IndexElems = IndexType->GetElementsNoUndef();
+                const u32 IndexCardinality = IndexElems.size();
+
+                if (IndexCardinality == 1) {
+                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpIndex, NewChildren[0],
+                                                     Mgr->MakeVal(IndexElems[0], IndexType)));
+                } else {
+                    auto AccExp = Mgr->MakeExpr(LTSOps::OpIndex, NewChildren[0],
+                                                Mgr->MakeVal(IndexElems.back(), IndexType));
+                    for (u32 i = 0; i < IndexCardinality - 1; ++i) {
+
+                        auto CurVal = Mgr->MakeVal(IndexElems[IndexCardinality - i - 2],
+                                                   IndexType);
+
+                        AccExp = Mgr->MakeExpr(LTSOps::OpITE,
+                                               Mgr->MakeExpr(LTSOps::OpEQ,
+                                                             NewChildren[1], CurVal),
+                                               Mgr->MakeExpr(LTSOps::OpIndex,
+                                                             NewChildren[0], CurVal),
+                                               AccExp);
                     }
-
-                    Retval.push_back(Mgr->Substitute(SubstMap, QBody));
+                    ExpStack.push_back(AccExp);
                 }
-                return Retval;
             }
 
-            void QuantifierUnroller::VisitEQuantifiedExpression(const EQExpT* Exp)
+            void ArrayRValueTransformer::VisitEQuantifiedExpression(const EQExpT* Exp)
             {
-                Exp->GetQExpression()->Accept(this);
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const& QExpr = Exp->GetQExpression();
+                QExpr->Accept(this);
                 auto NewExp = ExpStack.back();
                 ExpStack.pop_back();
-                auto NewQExp = Mgr->MakeExists(Exp->GetQVarTypes(), NewExp);
-                auto&& UnrolledExps = 
-                    UnrollQuantifier(NewQExp->SAs<Exprs::QuantifiedExpressionBase>());
-                if (UnrolledExps.size() == 1) {
-                    ExpStack.push_back(UnrolledExps[0]);
-                } else {
-                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpOR, UnrolledExps));
-                }
+                ExpStack.push_back(Mgr->MakeExists(QVarTypes, NewExp));
             }
 
-            void QuantifierUnroller::VisitAQuantifiedExpression(const AQExpT* Exp)
+            void ArrayRValueTransformer::VisitAQuantifiedExpression(const AQExpT* Exp)
             {
-                Exp->GetQExpression()->Accept(this);
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const& QExpr = Exp->GetQExpression();
+                QExpr->Accept(this);
                 auto NewExp = ExpStack.back();
                 ExpStack.pop_back();
-                auto NewQExp = Mgr->MakeForAll(Exp->GetQVarTypes(), NewExp);
-                auto&& UnrolledExps = 
-                    UnrollQuantifier(NewQExp->SAs<Exprs::QuantifiedExpressionBase>());
-                if (UnrolledExps.size() == 1) {
-                    ExpStack.push_back(UnrolledExps[0]);
-                } else {
-                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpAND, UnrolledExps));
-                }
+                ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewExp));
             }
 
-            ExpT QuantifierUnroller::Do(MgrT* Mgr, const ExpT& Exp)
+            ExpT ArrayRValueTransformer::Do(MgrT* Mgr, const ExpT& Exp)
             {
-                QuantifierUnroller Unroller(Mgr);
-                Exp->Accept(&Unroller);
-                return Unroller.ExpStack[0];
+                ArrayRValueTransformer TheTransformer(Mgr);
+                Exp->Accept(&TheTransformer);
+                return TheTransformer.ExpStack[0];
             }
 
-        } /* end namespace Detail */
+            ExpressionPermuter::ExpressionPermuter(MgrT* Mgr, const vector<u08>& PermVec,
+                                                   const map<TypeRef, u32>& TypeOffsets)
+                : VisitorBaseT("ExpressionPermuter"),
+                  Mgr(Mgr), PermVec(PermVec), TypeOffsets(TypeOffsets)
+            {
+                // Nothing here
+            }
+
+            ExpressionPermuter::~ExpressionPermuter()
+            {
+                // Nothing here
+            }
+
+            void ExpressionPermuter::VisitVarExpression(const VarExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void ExpressionPermuter::VisitConstExpression(const ConstExpT* Exp)
+            {
+                auto const& Type = Exp->GetType();
+                if (!Type->Is<SymmetricType>()) {
+                    ExpStack.push_back(Exp);
+                    return;
+                }
+
+                auto TypeAsSym = Type->SAs<SymmetricType>();
+                // Symmetric type. Permute
+                auto const& ConstVal = Exp->GetConstValue();
+                auto ConstIdx = TypeAsSym->GetMemberIdx(ConstVal);
+                if (ConstIdx == 0) {
+                    // the undef value permutes to itself
+                    ExpStack.push_back(Exp);
+                    return;
+                }
+
+                // otherwise, decrease the index by 1
+                --ConstIdx;
+
+                auto it = TypeOffsets.find(Type);
+
+                if (it == TypeOffsets.end()) {
+                    throw ESMCError((string)"Could not find offset for type: " +
+                                    Type->ToString() + "\nIn Expression Permuter, on " +
+                                    "expression:\n" + Exp->ToString());
+                }
+                auto Offset = it->second;
+                auto PermutedIdx = PermVec[Offset + ConstIdx] + 1;
+                auto const& PermutedVal = TypeAsSym->GetMember(PermutedIdx);
+                ExpStack.push_back(Mgr->MakeVal(PermutedVal, Type));
+            }
+
+            void ExpressionPermuter::VisitBoundVarExpression(const BoundVarExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void ExpressionPermuter::VisitOpExpression(const OpExpT* Exp)
+            {
+                VisitorBaseT::VisitOpExpression(Exp);
+
+                auto OpCode = Exp->GetOpCode();
+                auto const& Children = Exp->GetChildren();
+                const u32 NumChildren = Children.size();
+
+                vector<ExpT> NewChildren(NumChildren);
+
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    NewChildren[NumChildren - i - 1] = ExpStack.back();
+                    ExpStack.pop_back();
+                }
+
+                ExpStack.push_back(Mgr->MakeExpr(OpCode, NewChildren));
+            }
+
+            void ExpressionPermuter::VisitEQuantifiedExpression(const EQExpT* Exp)
+            {
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const& QExpr = Exp->GetQExpression();
+
+                QExpr->Accept(this);
+
+                auto NewExp = ExpStack.back();
+                ExpStack.pop_back();
+                ExpStack.push_back(Mgr->MakeExists(QVarTypes, NewExp));
+            }
+
+            void ExpressionPermuter::VisitAQuantifiedExpression(const AQExpT* Exp)
+            {
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const& QExpr = Exp->GetQExpression();
+
+                QExpr->Accept(this);
+
+                auto NewExp = ExpStack.back();
+                ExpStack.pop_back();
+                ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewExp));
+            }
+
+            ExpT ExpressionPermuter::Do(MgrT* Mgr, const ExpT& Exp,
+                                        const vector<u08>& PermVec,
+                                        const map<TypeRef, u32>& TypeOffsets)
+            {
+                ExpressionPermuter ThePermuter(Mgr, PermVec, TypeOffsets);
+                Exp->Accept(&ThePermuter);
+                return ThePermuter.ExpStack[0];
+            }
+
+        } /* End namespace Detail */
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
-// 
+//
 // LTSUtils.cpp ends here

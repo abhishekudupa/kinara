@@ -1,13 +1,13 @@
-// LTSEvaluator.hpp --- 
-// 
-// Filename: LTSEvaluator.hpp
+// TimeValue.hpp ---
+//
+// Filename: TimeValue.hpp
 // Author: Abhishek Udupa
-// Created: Mon Jul 28 14:11:39 2014 (-0400)
-// 
-// 
+// Created: Wed Jan 15 14:49:47 2014 (-0500)
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,25 +32,49 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
-#if !defined ESMC_LTS_EVALUATOR_HPP_
-#define ESMC_LTS_EVALUATOR_HPP_
 
-#include "../common/FwdDecls.hpp"
+#if !defined ESMC_TIME_VALUE_HPP_
+#define ESMC_TIME_VALUE_HPP_
+
+#include "../common/ESMCFwdDecls.hpp"
+#include <sys/time.h>
 
 namespace ESMC {
-    namespace LTS {
 
-        
+    class TimeValue
+    {
+    private:
+        struct timespec Value;
+        // private constructors
+        TimeValue(const struct timespec& Value);
+        TimeValue(time_t sec, long nsec);
+        void Initialize(const TimeValue& Other);
 
-    } /* end namespace LTS */
-} /* end namespace ESMC */
+    public:
+        // Default constructor
+        TimeValue();
+        // Assignment operator
+        TimeValue& operator = (const TimeValue& Other);
+        // Subtraction
+        TimeValue operator - (const TimeValue& Other) const;
+        TimeValue operator + (const TimeValue& Other) const;
+        TimeValue operator += (const TimeValue& Other);
+        string ToString() const;
+        u64 InMicroSeconds() const;
 
-#endif /* ESMC_LTS_EVALUATOR_HPP_ */
+        static TimeValue GetTimeValue(clockid_t ClockID);
+    };
 
-// 
-// LTSEvaluator.hpp ends here
+    extern ostream& operator << (ostream& str, const TimeValue& TV);
+
+} /* End namespace ESMC */
+
+#endif /* ESMC_TIME_VALUE_HPP_ */
+
+//
+// TimeValue.hpp ends here

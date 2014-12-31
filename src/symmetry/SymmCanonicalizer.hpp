@@ -1,13 +1,13 @@
-// SymmCanonicalizer.hpp --- 
-// 
+// SymmCanonicalizer.hpp ---
+//
 // Filename: SymmCanonicalizer.hpp
 // Author: Abhishek Udupa
 // Created: Sun Aug 17 17:36:42 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -42,7 +42,7 @@
 
 #include <vector>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 
 #include "Permutations.hpp"
 
@@ -51,12 +51,14 @@ namespace ESMC {
 
         using ESMC::MC::StateFactory;
         using ESMC::MC::StateVec;
-        using ESMC::Exprs::ExprTypeRef;
+        using ESMC::LTS::TypeRef;
         using ESMC::LTS::LabelledTS;
         using ESMC::LTS::ExpT;
         using ESMC::MC::StateVecPrinter;
         using ESMC::MC::ProductState;
         using ESMC::MC::ProcessIndexSet;
+        using ESMC::LTS::ChannelEFSM;
+        using ESMC::LTS::LTSAssignRef;
 
         extern const u32 MaxExplicitSize;
 
@@ -69,7 +71,7 @@ namespace ESMC {
             u32 TypeOffset;
             // Size of the permutation, essentially, this means
             // apply the permutation contained in the range
-            // [TypeOffset, TypeOffset + PermSize) of the 
+            // [TypeOffset, TypeOffset + PermSize) of the
             // permutation vector
             u32 PermSize;
 
@@ -85,7 +87,7 @@ namespace ESMC {
             u32 GetTypeOffset() const;
             u32 GetPermSize() const;
 
-            static PermuterBase* MakePermuter(u32 Offset, const ExprTypeRef& Type,
+            static PermuterBase* MakePermuter(u32 Offset, const TypeRef& Type,
                                               const LabelledTS* TheLTS);
         };
 
@@ -99,7 +101,7 @@ namespace ESMC {
             vector<PermuterBase*> ElemPermuters;
 
         public:
-            ArrayPermuter(u32 Offset, const ExprTypeRef& ArrayType,
+            ArrayPermuter(u32 Offset, const TypeRef& ArrType,
                           const LabelledTS* TheLTS);
             virtual ~ArrayPermuter();
 
@@ -118,7 +120,7 @@ namespace ESMC {
             vector<PermuterBase*> ElemPermuters;
 
         public:
-            RecordPermuter(u32 Offset, const ExprTypeRef& RecordType,
+            RecordPermuter(u32 Offset, const TypeRef& RecType,
                            const LabelledTS* TheLTS);
             virtual ~RecordPermuter();
 
@@ -135,7 +137,7 @@ namespace ESMC {
             u32 TypeSize;
 
         public:
-            MTypePermuter(u32 Offset, const ExprTypeRef& Type, 
+            MTypePermuter(u32 Offset, const TypeRef& Type,
                           const LabelledTS* TheLTS);
 
             virtual ~MTypePermuter();
@@ -147,7 +149,7 @@ namespace ESMC {
         class SymmTypePermuter : public PermuterBase
         {
         public:
-            SymmTypePermuter(u32 Offset, const ExprTypeRef& Type,
+            SymmTypePermuter(u32 Offset, const TypeRef& Type,
                              const LabelledTS* TheLTS);
             virtual ~SymmTypePermuter();
 
@@ -161,7 +163,7 @@ namespace ESMC {
         public:
             NoOpPermuter();
             virtual ~NoOpPermuter();
-            
+
             virtual void Permute(const StateVec* InStateVector,
                                  StateVec* OutStateVector,
                                  const PermutationSet::iterator& CurPerm) override;
@@ -173,14 +175,26 @@ namespace ESMC {
         private:
             u32 Offset;
             u32 ElemSize;
-            ExpT CountExp;
+            u32 Capacity;
+            u32 PermVecOffset;
+            vector<u08> LastPermutation;
+            vector<u08> IdentityPermutation;
+            vector<u08> ScratchPermutation;
+            ChannelEFSM* ChanEFSM;
+            u32 InstanceID;
 
         public:
-            ChanBufferSorter(u32 Offset, const ExprTypeRef& ChanBufferType,
-                             const ExpT& CountExp);
+            ChanBufferSorter(u32 Offset, const TypeRef& ChanBufferType,
+                             u32 Capacity, u32 PermVecOffset,
+                             ChannelEFSM* ChanEFSM, u32 InstanceID);
             ~ChanBufferSorter();
 
-            void Sort(StateVec* OutStateVector);
+            void Sort(StateVec* OutStateVector, bool RememberPerm);
+            void ApplyPermutation(StateVec* OutStateVector, const vector<u08>& PermVec);
+            const vector<u08>& GetLastPermutation() const;
+            u32 GetCapacity() const;
+            u32 GetPermVecOffset() const;
+            vector<LTSAssignRef> GetUpdatesForPermutation(const vector<u08>& PermVec) const;
         };
 
         class Canonicalizer
@@ -189,27 +203,37 @@ namespace ESMC {
             vector<PermuterBase*> Permuters;
             vector<ChanBufferSorter*> Sorters;
             PermutationSet* PermSet;
+            PermutationSet* SortPermSet;
             StateVecPrinter* Printer;
+            mutable vector<u08> LastSortPermutation;
 
         public:
             Canonicalizer(const LabelledTS* TheLTS, StateVecPrinter* Printer);
             ~Canonicalizer();
-            
+
             StateVec* Canonicalize(const StateVec* InputVector, u32& PermID) const;
+            StateVec* SortChans(const StateVec* InputVector, bool RememberPerm, u32& PermID) const;
+
             StateVec* ApplyPermutation(const StateVec* InputVector, u32 PermID) const;
             ProductState* ApplyPermutation(const ProductState* InputPS, u32 PermID,
                                            const ProcessIndexSet* ProcIdxSet) const;
-            StateVec* ApplyInvPermutation(const StateVec* InputVector, u32 PermID) const;
-            StateVec* SortChans(const StateVec* InputVector) const;
+
+            void ApplySort(StateVec* InputVector, u32 SortPermID) const;
+            void ApplySort(ProductState* InputPS, u32 SortPermID) const;
+            void Sort(StateVec* InputVector) const;
+            void Sort(ProductState* InputPS) const;
+
             PermutationSet* GetPermSet() const;
+            PermutationSet* GetSortPermSet() const;
             bool StatesEquivalent(const StateVec* SV1, const StateVec* SV2) const;
             StateVecPrinter* GetPrinter() const;
+            vector<LTSAssignRef> GetChanUpdatesForPermutation(u32 PermIdx) const;
         };
-        
+
     } /* end namespace Symm */
 } /* end namespace ESMC */
 
 #endif /* ESMC_SYMM_CANONICALIZER_HPP_ */
 
-// 
+//
 // SymmCanonicalizer.hpp ends here

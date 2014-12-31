@@ -1,13 +1,13 @@
-// LTSChecker.cpp --- 
-// 
+// LTSChecker.cpp ---
+//
 // Filename: LTSChecker.cpp
 // Author: Abhishek Udupa
 // Created: Tue Aug 19 04:03:22 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -46,6 +46,7 @@
 #include "../uflts/LTSTransitions.hpp"
 #include "../uflts/LTSFairnessSet.hpp"
 #include "../uflts/LTSEFSMBase.hpp"
+#include "../uflts/LTSUtils.hpp"
 
 #include "LTSChecker.hpp"
 #include "Compiler.hpp"
@@ -108,7 +109,7 @@ namespace ESMC {
                 return (State == Other.State && LastFired == Other.LastFired);
             }
 
-            i64& DFSStackEntry::GetLastFired() 
+            i64& DFSStackEntry::GetLastFired()
             {
                 return LastFired;
             }
@@ -140,10 +141,10 @@ namespace ESMC {
                                              LTSChecker* Checker)
                 : FairSet(FairSet), NumInstances(FairSet->GetNumInstances()),
                   IsStrong(FairSet->GetFairnessType() == FairSetFairnessType::Strong),
-                  SysIdxSet(SysIdxSet), Enabled(false), 
+                  SysIdxSet(SysIdxSet), Enabled(false),
                   Executed(false), Disabled(false),
                   ClassID(FairSet->GetEFSM()->GetClassID()),
-                  GCmdsToRespondTo(SysIdxSet->GetNumTrackedIndices(), 
+                  GCmdsToRespondTo(SysIdxSet->GetNumTrackedIndices(),
                                    vector<bool>(GuardedCommands.size())),
                   GCmdIDsToRespondTo(NumInstances),
                   Checker(Checker),
@@ -158,7 +159,7 @@ namespace ESMC {
                     if (InstanceID < 0) {
                         continue;
                     }
-                    
+
                     u32 i = 0;
                     for (auto const& Cmd : GuardedCommands) {
                         auto const& FairObjs = Cmd->GetFairnessObjs();
@@ -208,7 +209,7 @@ namespace ESMC {
 
                 // cout << "Fairness Checker for fairness set: "
                 //      << FairSet->GetName() << " on EFSM "
-                //      << FairSet->GetEFSM()->GetName() << " with tracked index " 
+                //      << FairSet->GetEFSM()->GetName() << " with tracked index "
                 //      << TrackedIndex << endl;
                 // cout << "Considering state:" << endl;
                 // Checker->Printer->PrintState(State, cout);
@@ -223,7 +224,7 @@ namespace ESMC {
                     if (!GCmdsToRespondTo[TrackedIndex][GCmdIndex]) {
                         continue;
                     }
-                    // This command causes this state to be marked 
+                    // This command causes this state to be marked
                     // enabled
 
                     // cout << "Marking as Enabled, because command "
@@ -232,7 +233,7 @@ namespace ESMC {
                     Enabled = true;
                     EnabledPerInstance[InstanceID] = true;
                     AtLeastOneEnabled = true;
-                    
+
                     if (NextState->IsInSCC(SCCID)) {
                         // auto PermSet = Checker->TheCanonicalizer->GetPermSet();
                         // cout << "Marking as Executed, because, next state is in SCC"
@@ -319,8 +320,8 @@ namespace ESMC {
         using namespace Detail;
 
         // Extern helper function definitions
-        void ApplyUpdates(const vector<LTSAssignRef>& Updates, 
-                          const StateVec* InputState, 
+        bool ApplyUpdates(const vector<LTSAssignRef>& Updates,
+                          const StateVec* InputState,
                           StateVec* OutputState)
         {
             for (auto const& Update : Updates) {
@@ -328,47 +329,225 @@ namespace ESMC {
                 auto const& RHS = Update->GetRHS();
                 auto const& LHSInterp = LHS->ExtensionData.Interp->SAs<LValueInterpreter>();
                 auto const& RHSInterp = RHS->ExtensionData.Interp;
-                LHSInterp->Update(RHSInterp, InputState, OutputState);
+                auto Status = LHSInterp->Update(RHSInterp, InputState, OutputState);
+                if (!Status) {
+                    return false;
+                }
             }
-            return;
+            return true;
         }
 
         StateVec* ExecuteCommand(const GCmdRef& Cmd,
                                  const StateVec* InputState)
         {
             auto Retval = InputState->Clone();
-            Retval->ClearMsgBuffer();
             auto const& Updates = Cmd->GetUpdates();
-            ApplyUpdates(Updates, InputState, Retval);
-            return Retval;
+            auto Status = ApplyUpdates(Updates, InputState, Retval);
+            if (!Status) {
+                Retval->Recycle();
+                return nullptr;
+            } else {
+                return Retval;
+            }
         }
 
         StateVec* TryExecuteCommand(const GCmdRef& Cmd,
-                                    const StateVec* InputState)
+                                    const StateVec* InputState,
+                                    bool& Exception)
         {
+            Exception = false;
+
             auto const& Guard = Cmd->GetGuard();
             auto GuardInterp = Guard->ExtensionData.Interp;
-            auto Res = GuardInterp->EvaluateScalarNE(InputState);
+            auto Res = GuardInterp->Evaluate(InputState);
             if (Res == UndefValue) {
-                throw ESMCError((string)"Undefined value obtained while evaluating guard");
+                Exception = true;
+                return nullptr;
             } else if (Res == 0) {
                 return nullptr;
             } else {
-                return ExecuteCommand(Cmd, InputState);
+                auto OutState = ExecuteCommand(Cmd, InputState);
+                if (OutState == nullptr) {
+                    Exception = true;
+                    return nullptr;
+                }
+                return OutState;
+            }
+        }
+
+        inline set<ExpT> LTSChecker::GatherTermsInIndex(const ExpT& Exp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+
+            // first, gather array terms which are indexed by a variable
+            auto&& ArrayTerms =
+                Mgr->Gather(Exp,
+                            [&] (const ExpBaseT* ExpPtr) -> bool
+                            {
+                                auto ExpAsOp = ExpPtr->As<OpExpression>();
+                                if (ExpAsOp == nullptr) {
+                                    return false;
+                                }
+                                if (ExpAsOp->GetOpCode() != LTSOps::OpIndex) {
+                                    return false;
+                                }
+                                auto const& Children = ExpAsOp->GetChildren();
+                                if (!Children[1]->Is<ConstExpression>()) {
+                                    return true;
+                                }
+                                return false;
+                            });
+
+            // Now, gather the terms used as index
+            set<ExpT> Retval;
+            for (auto const& ArrayTerm : ArrayTerms) {
+                auto ExpAsOp = ArrayTerm->SAs<OpExpression>();
+                auto const& Children = ExpAsOp->GetChildren();
+                Retval.insert(Children[1]);
+            }
+
+            return Retval;
+        }
+
+        inline void LTSChecker::MakeIndexTermInvariants(const ExpT& Precondition,
+                                                        const set<ExpT>& IndexTerms)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            for (auto const& IndexTerm : IndexTerms) {
+                auto const& IndexType = IndexTerm->GetType();
+                auto Invar = Mgr->MakeExpr(LTSOps::OpEQ, IndexTerm,
+                                           Mgr->MakeVal(IndexType->GetClearValue(),
+                                                        IndexType));
+                Invar = Mgr->MakeExpr(LTSOps::OpNOT, Invar);
+                Invar = Mgr->MakeExpr(LTSOps::OpIMPLIES, Precondition, Invar);
+                Invar = Mgr->Simplify(Invar);
+                BoundsInvariants.insert(Invar);
+            }
+        }
+
+        inline void LTSChecker::MakeBoundsInvariants()
+        {
+            auto Mgr = TheLTS->GetMgr();
+            // First, ALL index terms used in guards must never be undef
+            for (auto const& Cmd : GuardedCommands) {
+                auto const& Guard = Cmd->GetGuard();
+                auto&& IndexTerms = GatherTermsInIndex(Guard);
+                MakeIndexTermInvariants(Mgr->MakeTrue(), IndexTerms);
+            }
+
+            // Second, IF the guard of a guarded command is true, then ALL
+            // the index terms used in the LHS or RHS of updates can never
+            // be undef
+
+            for (auto const& Cmd : GuardedCommands) {
+                auto const& Guard = Cmd->GetGuard();
+                auto const& Updates = Cmd->GetUpdates();
+
+                for (auto const& Update : Updates) {
+                    auto const& LHS = Update->GetLHS();
+                    auto const& RHS = Update->GetRHS();
+
+                    auto&& IndexTermsLHS = GatherTermsInIndex(LHS);
+                    MakeIndexTermInvariants(Guard, IndexTermsLHS);
+                    auto&& IndexTermsRHS = GatherTermsInIndex(RHS);
+                    MakeIndexTermInvariants(Guard, IndexTermsRHS);
+                }
+            }
+
+            // Third, IF the guard of a guarded command is true, then
+            // the RHS of every update to a range typed term must be within
+            // the bounds of the range type
+
+            for (auto const& Cmd : GuardedCommands) {
+                auto const& Guard = Cmd->GetGuard();
+                auto const& Updates = Cmd->GetUpdates();
+
+                for (auto const& Update : Updates) {
+                    auto const& LHS = Update->GetLHS();
+                    auto const& RHS = Update->GetRHS();
+
+                    auto LValType = LHS->GetType();
+                    if (!LValType->Is<RangeType>()) {
+                        continue;
+                    }
+
+                    // This is a range typed update
+                    auto TypeAsRange = LValType->SAs<RangeType>();
+                    auto RangeLow = TypeAsRange->GetLow();
+                    auto RangeHigh = TypeAsRange->GetHigh();
+
+                    auto LowVal = Mgr->MakeVal(to_string(RangeLow), TypeAsRange);
+                    auto HighVal = Mgr->MakeVal(to_string(RangeHigh), TypeAsRange);
+
+                    auto LowConstraint = Mgr->MakeExpr(LTSOps::OpGE, RHS, LowVal);
+                    auto HighConstraint = Mgr->MakeExpr(LTSOps::OpLE, RHS, HighVal);
+
+                    auto BoundsConstraint = Mgr->MakeExpr(LTSOps::OpAND, LowConstraint,
+                                                          HighConstraint);
+                    BoundsConstraint = Mgr->MakeExpr(LTSOps::OpIMPLIES, Guard, BoundsConstraint);
+                    auto Simplified = Mgr->Simplify(BoundsConstraint);
+                    BoundsInvariants.insert(Simplified);
+                }
+            }
+
+            // Finally, it must be possible to evaluate the invariant
+            // on ANY state, without exception
+            auto&& IndexTerms = GatherTermsInIndex(TheLTS->InvariantExp);
+            MakeIndexTermInvariants(Mgr->MakeTrue(), IndexTerms);
+            set<ExpT> SimplifiedBoundsInvars;
+
+            for (auto const& Invar : BoundsInvariants) {
+                SimplifiedBoundsInvars.insert(Mgr->Simplify(Invar));
+            }
+
+            BoundsInvariants = SimplifiedBoundsInvars;
+
+            // compile and lower the invariants
+            for (auto const& Invar : BoundsInvariants) {
+                Compiler->CompileExp(Invar, TheLTS);
+                LoweredBoundsInvars[Invar] = TransformArrayRValue(Invar);
+            }
+        }
+
+        inline void LTSChecker::RecordErrorState(const StateVec* ErrorState)
+        {
+            if (ErrorStates.find(ErrorState) != ErrorStates.end()) {
+                return;
+            }
+
+            bool FoundBlown = false;
+            for (auto const& Invar : BoundsInvariants) {
+                auto Interp = Invar->ExtensionData.Interp;
+                auto Res = Interp->Evaluate(ErrorState);
+                if (Res == UndefValue) {
+                    continue;
+                } else if (Res == 0) {
+                    FoundBlown = true;
+                    ErrorStates[ErrorState] = Invar;
+                    break;
+                }
+            }
+
+            if (!FoundBlown) {
+                ostringstream sstr;
+                Printer->PrintState(ErrorState, sstr);
+                throw InternalError((string)"Could not find the bounds invariant that " +
+                                    "was blown in call to LTSChecker::RecordErrorState()\n" +
+                                    "The State:\n" + sstr.str() + "\nCould not find bounds " +
+                                    "invariant that was blown for the state listed above.\n" +
+                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
             }
         }
 
         LTSChecker::LTSChecker(LabelledTS* TheLTS)
-            : TheLTS(TheLTS), AQS(nullptr), ThePS(nullptr),
-              ExceptionState(nullptr)
+            : TheLTS(TheLTS), AQS(nullptr), ThePS(nullptr)
         {
             // Freeze the LTS in any case
             TheLTS->Freeze();
 
             Compiler = new LTSCompiler();
             Compiler->CompileLTS(TheLTS);
-            Factory = new StateFactory(TheLTS->StateVectorSize,
-                                       TheLTS->GetUnifiedMType()->GetByteSize());
+            Factory = new StateFactory(TheLTS->StateVectorSize);
             Printer = new StateVecPrinter(TheLTS, Compiler);
             TheCanonicalizer = new Canonicalizer(TheLTS, Printer);
             GuardedCommands = TheLTS->GetGuardedCmds();
@@ -376,7 +555,7 @@ namespace ESMC {
             NumGuardedCmds = GuardedCommands.size();
 
             NumProcesses = 0;
-            
+
             vector<vector<vector<ExpT>>> ProcessInsts(TheLTS->AllEFSMs.size());
             FairnessCheckers = vector<vector<Detail::FairnessChecker*>>(TheLTS->AllEFSMs.size());
 
@@ -398,7 +577,7 @@ namespace ESMC {
 
                 for (auto const& NameFS : AllFairnessSets) {
                     auto const& FS = NameFS.second;
-                    auto CurChecker = new FairnessChecker(FS, SysIdxSet, 
+                    auto CurChecker = new FairnessChecker(FS, SysIdxSet,
                                                           GuardedCommands, this);
                     if (FS->GetFairnessType() == FairSetFairnessType::Strong) {
                         FairnessCheckers[ClassID].push_back(CurChecker);
@@ -409,6 +588,19 @@ namespace ESMC {
                 }
             }
 
+            auto Mgr = TheLTS->GetMgr();
+            // Make the deadlock freedom invariant
+            vector<ExpT> DLFDisjunctions;
+            for (auto const& Cmd : GuardedCommands) {
+                DLFDisjunctions.push_back(Cmd->GetGuard());
+            }
+
+            DeadlockFreeInvariant = MakeDisjunction(DLFDisjunctions, Mgr);
+            DeadlockFreeInvariant = Mgr->Simplify(DeadlockFreeInvariant);
+
+            // Make the invariant on undef and bounds
+            MakeBoundsInvariants();
+            LoweredInvariant = TransformArrayRValue(TheLTS->InvariantExp);
         }
 
         LTSChecker::~LTSChecker()
@@ -437,24 +629,34 @@ namespace ESMC {
             }
         }
 
-        inline const GCmdRef& LTSChecker::GetNextEnabledCmd(StateVec* State, i64& LastFired)
+        inline const GCmdRef& LTSChecker::GetNextEnabledCmd(StateVec* State, i64& LastFired,
+                                                            bool& Exception)
         {
-            while(++LastFired < NumGuardedCmds) {
-                auto const& Guard = GuardedCommands[LastFired]->GetGuard();
-                auto GRes = Guard->ExtensionData.Interp->EvaluateScalarNE(State);
+            Exception = false;
+            set<u32>::iterator it;
+            if (LastFired == -1) {
+                it = InterpretedCommands.begin();
+            } else {
+                it = next(InterpretedCommands.find(LastFired));
+            }
+            while (it != InterpretedCommands.end()) {
+                auto CurCmdID = *it;
+                auto const& Guard = GuardedCommands[CurCmdID]->GetGuard();
+                auto GRes = Guard->ExtensionData.Interp->Evaluate(State);
                 if (GRes == UndefValue) {
-                    throw MCException(MCExceptionType::MCUNDEFVALUE, (u32)LastFired);
+                    Exception = true;
+                    return GCmdRef::NullPtr;
                 } else if (GRes != 0) {
-                    return GuardedCommands[LastFired];
+                    LastFired = CurCmdID;
+                    return GuardedCommands[CurCmdID];
                 }
+                ++it;
             }
             return GCmdRef::NullPtr;
         }
 
-        inline void LTSChecker::DoDFS(StateVec *Root)
+        inline void LTSChecker::DoDFS(StateVec *Root, u32 NumErrors)
         {
-            ExceptionState = nullptr;
-            
             stack<DFSStackEntry> DFSStack;
             AQS->InsertInitState(Root);
             DFSStack.push(DFSStackEntry(Root));
@@ -462,7 +664,7 @@ namespace ESMC {
             while (DFSStack.size() > 0) {
                 auto& CurEntry = DFSStack.top();
                 auto State = CurEntry.GetState();
-                
+
                 // cout << "Considering State:" << endl;
                 // cout << "--------------------------------------------------------" << endl;
                 // Printer->PrintState(State, cout);
@@ -471,30 +673,43 @@ namespace ESMC {
                 auto& LastFired = CurEntry.GetLastFired();
                 bool Deadlocked = (LastFired == -1);
                 StateVec* NextState = nullptr;
+                // StateVec* TempNextState = nullptr;
 
-                try {
-                    auto const& Cmd = GetNextEnabledCmd(State, LastFired);
-                    
-                    if (Cmd == GCmdRef::NullPtr) {
-                        if (Deadlocked) {
-                            // Remember this state, but continue on
-                            // with the AQS construction, we'll report
-                            // all counter-examples later
-                            AQS->AddDeadlockState(State, DFSStack.size());
-                        }
-                        // cout << "No more successors, popping from stack!" << endl;
-                        // Done exploring this state
-                        DFSStack.pop();
-                        continue;
+                bool Exception = false;
+                auto const& Cmd = GetNextEnabledCmd(State, LastFired, Exception);
+
+                if (Exception) {
+                    RecordErrorState(State);
+                    if (ErrorStates.size() >= NumErrors) {
+                        return;
                     }
-                
-                    // Successors remain to be explored
-                    NextState = ExecuteCommand(Cmd, State);
-                } catch (const MCException& Exc) {
-                    ExceptionState = State;
-                    ExceptionType = Exc.GetType();
-                    ExceptionCmdID = LastFired;
-                    return;
+                } else if (Cmd == GCmdRef::NullPtr) {
+                    if (Deadlocked) {
+                        ErrorStates[State] = DeadlockFreeInvariant;
+                    }
+                    if (ErrorStates.size() >= NumErrors) {
+                        return;
+                    }
+                    // cout << "No more successors, popping from stack!" << endl;
+                    // Done exploring this state
+                    DFSStack.pop();
+                    continue;
+                }
+
+                // Successors remain to be explored
+                NextState = ExecuteCommand(Cmd, State);
+
+                if (NextState == nullptr) {
+                    // An exception was encountered firing this
+                    // command on the State. Store it, and pop from
+                    // stack, since only one error is remembered
+                    // per state
+                    RecordErrorState(State);
+                    if (ErrorStates.size() >= NumErrors) {
+                        return;
+                    }
+                    DFSStack.pop();
+                    continue;
                 }
 
                 // cout << "Firing guarded command:" << endl;
@@ -503,23 +718,25 @@ namespace ESMC {
                 // cout << "--------------------------------------------------------" << endl;
                 // Printer->PrintState(NextState, cout);
                 // cout << "--------------------------------------------------------" << endl;
-                // auto TempNextState = NextState->Clone();
-                
+                // TempNextState = NextState->Clone();
+
+
                 u32 PermID;
                 auto CanonState = TheCanonicalizer->Canonicalize(NextState, PermID);
 
-                // cout << "Canonicalized Next State:" << endl;
+                // cout << "Canonicalized Next State with Permutation ID "
+                //      << PermID << ":" << endl;
                 // cout << "--------------------------------------------------------" << endl;
                 // if (CanonState->Equals(*TempNextState)) {
-                //     cout << "Canonicalized state is the same as uncanonicalized state!" 
+                //     cout << "Canonicalized state is the same as uncanonicalized state!"
                 //          << endl;
                 // } else {
                 //     Printer->PrintState(CanonState, cout);
                 // }
                 // cout << "--------------------------------------------------------" << endl;
                 // TempNextState->Recycle();
-                
-                
+
+
                 auto ExistingState = AQS->Find(CanonState);
 
                 if (ExistingState == nullptr) {
@@ -534,22 +751,28 @@ namespace ESMC {
                     // This is a new state, check for error
                     auto const& Invar = TheLTS->GetInvariant();
                     auto Interp = Invar->ExtensionData.Interp;
-                    auto InvarRes = Interp->EvaluateScalarNE(CanonState);
+                    auto InvarRes = Interp->Evaluate(CanonState);
                     if (InvarRes == UndefValue) {
-                        throw ESMCError((string)"Obtained undefined value when " + 
-                                        "evaluating invariant");
+                        RecordErrorState(CanonState);
+                        if (ErrorStates.size() >= NumErrors) {
+                            return;
+                        }
+                        DFSStack.pop();
                     } else if (InvarRes == 0) {
-                        AQS->AddErrorState(CanonState, DFSStack.size());
+                        ErrorStates[CanonState] = Invar;
+                        if (ErrorStates.size() >= NumErrors) {
+                            return;
+                        }
+                        DFSStack.pop();
                     }
                     continue;
-
                 } else {
                     // Successor already explored, add edge
                     // and continue
                     // cout << "Successor has been previously encountered." << endl;
                     // auto InvPermID = PermSet->GetIteratorForInv(PermID).GetIndex();
 
-                    // We do not invert. Since all transformations call for the 
+                    // We do not invert. Since all transformations call for the
                     // inverse of the inverse anyway!
                     AQS->AddEdge(State, ExistingState, PermID, LastFired);
                     CanonState->Recycle();
@@ -558,9 +781,8 @@ namespace ESMC {
             }
         }
 
-        inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots)
+        inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots, u32 NumErrors)
         {
-            ExceptionState = nullptr;
             deque<StateVec*> BFSQueue(Roots.begin(), Roots.end());
             for (auto State : BFSQueue) {
                 AQS->InsertInitState(State);
@@ -573,28 +795,30 @@ namespace ESMC {
                 BFSQueue.pop_front();
 
                 bool Deadlocked = true;
-                const u32 NumCommands = GuardedCommands.size();
 
-                for (u32 i = 0; i < NumCommands; ++i) {
+                for (auto i : InterpretedCommands) {
 
                     auto const& Cmd = GuardedCommands[i];
 
                     StateVec* NextState = nullptr;
+                    bool Exception = false;
 
-                    try {
-                        NextState = TryExecuteCommand(Cmd, CurState);
-                    } catch (const MCException& Exc) {
-                        ExceptionState = CurState;
-                        ExceptionType = Exc.GetType();
-                        ExceptionCmdID = Exc.GetCmdID();
-                        return;
+                    NextState = TryExecuteCommand(Cmd, CurState, Exception);
+                    if (Exception) {
+                        Deadlocked = false;
+                        RecordErrorState(CurState);
+                        if (ErrorStates.size() >= NumErrors) {
+                            return;
+                        }
+                        // Already an error. Don't try any more commands
+                        break;
                     }
 
                     if (NextState != nullptr) {
                         u32 PermID = 0;
                         Deadlocked = false;
                         auto CanonNextState = TheCanonicalizer->Canonicalize(NextState, PermID);
-                        
+
                         auto ExistingState = AQS->Find(CanonNextState);
                         if (ExistingState != nullptr) {
                             AQS->AddEdge(CurState, ExistingState, PermID, i);
@@ -606,7 +830,7 @@ namespace ESMC {
                             //      << endl;
                             // Printer->PrintState(CanonNextState, cout);
                             // cout << "-------------------------------------------------------"
-                            //      << endl;                                
+                            //      << endl;
 
                             AQS->Insert(CanonNextState);
                             AQS->AddEdge(CurState, CanonNextState, PermID, i);
@@ -615,34 +839,56 @@ namespace ESMC {
                             // New state, check for errors;
                             auto const& Invar = TheLTS->GetInvariant();
                             auto Interp = Invar->ExtensionData.Interp;
-                            auto InvarRes = Interp->EvaluateScalarNE(CanonNextState);
+                            auto InvarRes = Interp->Evaluate(CanonNextState);
                             if (InvarRes == UndefValue) {
-                                throw ESMCError((string)"Undefined value obtained in " + 
-                                                "evaluation of invariant");
+                                RecordErrorState(CanonNextState);
+                                if (ErrorStates.size() >= NumErrors) {
+                                    return;
+                                }
+                                // Remove it from the queue
+                                BFSQueue.pop_back();
+
                             } else if (InvarRes == 0) {
                                 // Again, remember this state, but continue
                                 // on with the AQS construction
-                                // We only want the first one to be stored
-                                // so use itercount
-                                AQS->AddErrorState(CanonNextState, IterCount);
+                                ErrorStates[CanonNextState] = Invar;
+                                if (ErrorStates.size() >= NumErrors) {
+                                    return;
+                                }
+                                BFSQueue.pop_back();
                             }
                         }
                     }
                 }
 
                 if (Deadlocked) {
-                    // State has no successors
-                    AQS->AddDeadlockState(CurState, IterCount);
+                    ErrorStates[CurState] = DeadlockFreeInvariant;
+                    if (ErrorStates.size() >= NumErrors) {
+                        return;
+                    }
                 }
             }
         }
 
-        vector<TraceBase*> LTSChecker::BuildAQS(AQSConstructionMethod Method)
+        bool LTSChecker::BuildAQS(AQSConstructionMethod Method,
+                                  u32 NumErrors)
         {
             vector<TraceBase*> Retval;
 
             if (AQS != nullptr) {
-                return Retval;
+                return (ErrorStates.size() == 0);
+            }
+
+            // Gather the commands that are relevant
+            InterpretedCommands.clear();
+
+            // cout << "Interpreted Commands:" << endl;
+
+            for (auto const& Cmd : GuardedCommands) {
+                if (Cmd->IsFullyInterpreted()) {
+                    InterpretedCommands.insert(Cmd->GetCmdID());
+                    // cout << Cmd->ToString() << endl << endl;
+                }
             }
 
             AQS = new AQStructure(TheLTS);
@@ -652,13 +898,12 @@ namespace ESMC {
 
             for (auto const& ISGen : ISGens) {
                 auto CurState = Factory->MakeState();
-                CurState->ClearMsgBuffer();
                 ApplyUpdates(ISGen, ZeroState, CurState);
 
-                cout << "Initial State:" << endl;
-                cout << "--------------------------------------------------------" << endl;
-                Printer->PrintState(CurState, cout);
-                cout << "--------------------------------------------------------" << endl;
+                // cout << "Initial State:" << endl;
+                // cout << "--------------------------------------------------------" << endl;
+                // Printer->PrintState(CurState, cout);
+                // cout << "--------------------------------------------------------" << endl;
 
                 u32 CanonPerm = 0;
                 auto CanonState = TheCanonicalizer->Canonicalize(CurState, CanonPerm);
@@ -669,72 +914,89 @@ namespace ESMC {
                 for (auto InitState : InitStates) {
                     auto ExistingState = AQS->Find(InitState);
                     if (ExistingState == nullptr) {
-                        DoDFS(InitState);
+                        DoDFS(InitState, NumErrors);
                     } else if (ExistingState != InitState) {
                         InitState->Recycle();
                     }
                 }
             } else {
-                DoBFS(InitStates);
+                DoBFS(InitStates, NumErrors);
             }
 
-            // Did we hit an exception while building AQS?
-            if (ExceptionState != nullptr) {
-                auto CurTrace = 
-                    TraceBase::MakeMCExceptionTrace(ExceptionState, ExceptionType, 
-                                                    ExceptionCmdID, this);
-                Retval.push_back(CurTrace);
-                return Retval;
-            }
+            // TODO: Handle any violations found during model checking
 
             cout << "AQS Built!" << endl;
-            cout << "AQS contains " << AQS->GetNumStates() << " states and " 
+            cout << "AQS contains " << AQS->GetNumStates() << " states and "
                  << AQS->GetNumEdges() << " edges." << endl;
             cout << Factory->GetNumActiveStates() << " active states from state factory." << endl;
-
-            // Do we have errors?
-            // We currently only report at most one error trace 
-            // and at most one deadlock trace
-            auto ErrorState = AQS->GetErrorState();
-            auto DeadlockState = AQS->GetDeadlockState();
-
-            if (ErrorState != nullptr) {
-                auto CurTrace = TraceBase::MakeSafetyViolation(ErrorState, this);
-                Retval.push_back(CurTrace);
+            if (ErrorStates.size() > 0) {
+                cout << "One or more safety/deadlock violations found!" << endl;
+                return false;
             }
-            if (DeadlockState != nullptr) {
-                auto CurTrace = TraceBase::MakeDeadlockViolation(DeadlockState, this);
-                Retval.push_back(CurTrace);
-            }
-
-            return Retval;
+            return true;
         }
 
-        void LTSChecker::ClearAQS() 
+        const unordered_map<const StateVec*, ExpT> LTSChecker::GetAllErrorStates() const
+        {
+            return ErrorStates;
+        }
+
+        AQStructure* LTSChecker::GetAQS() const
+        {
+            return AQS;
+        }
+
+        ProductStructure* LTSChecker::GetPS() const
+        {
+            return ThePS;
+        }
+
+        TraceBase* LTSChecker::MakeTraceToError(const StateVec* ErrorState)
+        {
+            auto it = ErrorStates.find(ErrorState);
+            if (it == ErrorStates.end()) {
+                throw ESMCError((string)"Argument to LTSChecker::MakeTraceToError() is " +
+                                "not marked as an error state by the checker");
+            }
+            auto const& BlownInvariant = it->second;
+            if (BlownInvariant == DeadlockFreeInvariant) {
+                return TraceBase::MakeDeadlockViolation(ErrorState, this);
+            } else {
+                return TraceBase::MakeSafetyViolation(ErrorState, this, BlownInvariant);
+            }
+        }
+
+        void LTSChecker::ClearAQS()
         {
             if (AQS != nullptr) {
                 delete AQS;
                 AQS = nullptr;
-            } 
+                ZeroState->Recycle();
+                delete Factory;
+                Factory = new StateFactory(TheLTS->StateVectorSize);
+                ZeroState = Factory->MakeState();
+                ErrorStates.clear();
+            }
             if (ThePS != nullptr) {
                 delete ThePS;
                 ThePS = nullptr;
             }
         }
 
-        StateBuchiAutomaton* 
-        LTSChecker::MakeStateBuchiMonitor(const string& Name, 
-                                          const vector<ExpT>& SymmIndices, 
+        StateBuchiAutomaton*
+        LTSChecker::MakeStateBuchiMonitor(const string& Name,
+                                          const vector<ExpT>& SymmIndices,
                                           const ExpT& Constraint)
         {
             if (AllBuchiAutomata.find(Name) != AllBuchiAutomata.end()) {
-                throw ESMCError((string)"Monitor named \"" + Name + "\" already exists " + 
+                throw ESMCError((string)"Monitor named \"" + Name + "\" already exists " +
                                 "in the LTS Checker");
             }
-            auto Retval = new StateBuchiAutomaton(TheLTS, Name, SymmIndices, 
+            auto Retval = new StateBuchiAutomaton(TheLTS, Name, SymmIndices,
                                                   Constraint, Compiler);
             AllBuchiAutomata[Name] = Retval;
             StateBuchiAutomata[Name] = Retval;
+            BuchiMonitorNames.push_back(Name);
             return Retval;
         }
 
@@ -744,7 +1006,7 @@ namespace ESMC {
             ThePS = new ProductStructure(NumProcesses, Monitor);
             auto MonIndexSet = Monitor->GetIndexSet();
             auto PermSet = TheCanonicalizer->GetPermSet();
-            
+
             for (u32 i = 0; i < MonIndexSet->GetNumIndexVectors(); ++i) {
                 for (auto const& MonInitState : Monitor->GetInitialStates()) {
                     for (auto const& AQSInitState : AQS->GetInitStates()) {
@@ -752,7 +1014,7 @@ namespace ESMC {
                     }
                 }
             }
-            
+
             // A BFS over the initial states
             auto const& InitStates = ThePS->GetInitialStates();
             BFSQueue.insert(BFSQueue.begin(), InitStates.begin(), InitStates.end());
@@ -776,7 +1038,7 @@ namespace ESMC {
                     auto NextIndexID = MonIndexSet->Permute(IndexID, PermIt.GetPerm());
                     for (auto const& NextMonState : MonitorNextStates) {
                         bool New;
-                        auto NextPS = 
+                        auto NextPS =
                             ThePS->AddState(NextSVPtr, NextMonState, NextIndexID, New);
                         if (New) {
                             BFSQueue.push_back(NextPS);
@@ -800,14 +1062,14 @@ namespace ESMC {
             // since the classes will not change
             const u32 ClassID = SysIdxSet->GetClassID(IndexID);
 
-            // cout << "Doing threaded BFS on product state:" 
+            // cout << "Doing threaded BFS on product state:"
             //      << endl;
             // Printer->PrintState(SCCRoot, cout);
             // cout << "With threaded tracked index " << IndexID << endl;
 
             BFSQueue.push_back(make_pair(SCCRoot, IndexID));
             auto PermSet = TheCanonicalizer->GetPermSet();
-            
+
             while (BFSQueue.size() > 0) {
                 auto const& CurEntry = BFSQueue.front();
 
@@ -845,7 +1107,7 @@ namespace ESMC {
             // cout << "Threaded BFS done!" << endl;
         }
 
-        inline bool LTSChecker::CheckSCCFairness(const ProductState *SCCRoot, 
+        inline bool LTSChecker::CheckSCCFairness(const ProductState *SCCRoot,
                                                  vector<const ProductState*>& UnfairStates)
         {
             for (auto FCheckers : FairnessCheckers) {
@@ -879,7 +1141,7 @@ namespace ESMC {
                             // Weak fairness, nothing to do
                             return false;
                         } else {
-                            // Find the states that cause this 
+                            // Find the states that cause this
                             // particular fairness to fail
                             // i.e., states where this fairness
                             // is enabled
@@ -906,7 +1168,8 @@ namespace ESMC {
             u32 CurSCCID = 0;
 
             for (auto InitState : ThePS->GetInitialStates()) {
-                if (InitState->IsDeleted()) {
+                if (InitState->DFSNum != -1 || InitState->IsDeleted()) {
+                    // already explored this initial state
                     continue;
                 }
 
@@ -957,7 +1220,7 @@ namespace ESMC {
                         continue;
                     }
 
-                    // We only get here if we've popped a state 
+                    // We only get here if we've popped a state
                     // from the DFS stack.
                     if (CurState->LowLink == CurState->DFSNum) {
                         u32 NumStatesInSCC = 0;
@@ -977,7 +1240,20 @@ namespace ESMC {
                         } while (SCCState != CurState);
 
                         if (NumStatesInSCC == 1) {
-                            SCCState->MarkNotInSCC();
+                            auto const& Edges = ThePS->GetEdges(SCCState);
+                            bool SelfLoop = false;
+                            for (auto const& Edge : Edges) {
+                                if (Edge->GetTarget() == SCCState) {
+                                    SelfLoop = true;
+                                    // TODO Maybe put a break
+                                }
+                            }
+                            if (!SelfLoop) {
+                                SCCState->MarkNotInSCC();
+                            } else {
+                                Retval.push_back(CurState);
+                                ++CurSCCID;
+                            }
                         } else if (!FoundAccepting) {
                             // Unmark all the SCCs
                             for (auto SCCState : SCCStateVec) {
@@ -998,6 +1274,8 @@ namespace ESMC {
                             // }
 
                             Retval.push_back(CurState);
+                            // cout << "[Checker:] Found SCC with " << NumStatesInSCC
+                            //      << " states" << endl;
                             ++CurSCCID;
                         }
                     }
@@ -1006,34 +1284,31 @@ namespace ESMC {
             return Retval;
         }
 
-        vector<TraceBase*> LTSChecker::CheckLiveness(const string& BuchiMonitorName) 
+        TraceBase* LTSChecker::CheckLiveness(const string& BuchiMonitorName)
         {
-            vector<TraceBase*> Retval;
-
             auto it = AllBuchiAutomata.find(BuchiMonitorName);
             if (it == AllBuchiAutomata.end()) {
-                throw ESMCError((string)"Buchi Monitor with name \"" + BuchiMonitorName + 
+                throw ESMCError((string)"Buchi Monitor with name \"" + BuchiMonitorName +
                                 "\" was not found to check liveness property");
             }
             if (AQS == nullptr) {
                 throw ESMCError((string)"AQS not built to check liveness property!");
             }
 
-            if (AQS->GetErrorState() != nullptr || 
-                AQS->GetDeadlockState() != nullptr) {
-                throw ESMCError((string)"AQS contains one or more deadlocked and/or " + 
+            if (ErrorStates.size() > 0) {
+                throw ESMCError((string)"AQS contains one or more deadlocked and/or " +
                                 "error states. Liveness checks aborted due to this!");
             }
-            
+
             auto Monitor = it->second->As<StateBuchiAutomaton>();
             if (Monitor == nullptr) {
-                throw InternalError((string)"Monitor \"" + BuchiMonitorName + "\" is not " + 
-                                    "a state based Buchi Monitor, other monitor types " + 
+                throw InternalError((string)"Monitor \"" + BuchiMonitorName + "\" is not " +
+                                    "a state based Buchi Monitor, other monitor types " +
                                     "are not supported just yet!");
             }
 
             Monitor->Freeze();
-            
+
             if (ThePS != nullptr) {
                 delete ThePS;
                 ThePS = nullptr;
@@ -1060,7 +1335,7 @@ namespace ESMC {
                     UnfairStates.clear();
                     auto IsFair = CheckSCCFairness(SCCRoot, UnfairStates);
                     if (!IsFair && UnfairStates.size() > 0) {
-                        AllUnfairStates.insert(UnfairStates.begin(), 
+                        AllUnfairStates.insert(UnfairStates.begin(),
                                                UnfairStates.end());
                         // Not fair, due to a strong fairness
                         FixPoint = false;
@@ -1080,18 +1355,32 @@ namespace ESMC {
                         // Fair, turn this into a counterexample
                         cout << "Found fair accepting SCC" << endl;
                         auto Trace = TraceBase::MakeLivenessViolation(SCCRoot, this);
-                        Retval.push_back(Trace);
-                        return Retval;
+                        return Trace;
                     }
                 }
             }
 
             cout << "No liveness violations found! :-)" << endl;
-            return Retval;
+            return nullptr;
+        }
+
+        const vector<string>& LTSChecker::GetBuchiMonitorNames() const
+        {
+            return BuchiMonitorNames;
+        }
+
+        LabelledTS* LTSChecker::GetLTS() const
+        {
+            return TheLTS;
+        }
+
+        LTSCompiler* LTSChecker::GetCompiler() const
+        {
+            return Compiler;
         }
 
     } /* end namespace MC */
 } /* end namespace ESMC */
 
-// 
+//
 // LTSChecker.cpp ends here

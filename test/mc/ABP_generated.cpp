@@ -15,33 +15,33 @@ int main()
 {
     auto TheLTS = new LabelledTS();
 
-    vector<pair<string, ExprTypeRef>> SendFields;
+    vector<pair<string, TypeRef>> SendFields;
     SendFields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 5)));
     auto SendPort = TheLTS->MakeMsgType("SendPort", SendFields, false);
     auto SendPortExp = TheLTS->MakeVar("SendPort", SendPort);
-    vector<pair<string, ExprTypeRef>> ForwardInputChannelFields;
+    vector<pair<string, TypeRef>> ForwardInputChannelFields;
     ForwardInputChannelFields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 1)));
     ForwardInputChannelFields.push_back(make_pair("Field1", TheLTS->MakeRangeType(0, 5)));
     auto ForwardInputChannelPort = TheLTS->MakeMsgType("ForwardInputChannelPort", ForwardInputChannelFields, false);
     auto ForwardInputChannelPortExp = TheLTS->MakeVar("ForwardInputChannelPort", ForwardInputChannelPort);
-    vector<pair<string, ExprTypeRef>> ForwardOutputChannelFields;
+    vector<pair<string, TypeRef>> ForwardOutputChannelFields;
     ForwardOutputChannelFields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 1)));
     ForwardOutputChannelFields.push_back(make_pair("Field1", TheLTS->MakeRangeType(0, 5)));
     auto ForwardOutputChannelPort = TheLTS->MakeMsgType("ForwardOutputChannelPort", ForwardOutputChannelFields, false);
     auto ForwardOutputChannelPortExp = TheLTS->MakeVar("ForwardOutputChannelPort", ForwardOutputChannelPort);
-    vector<pair<string, ExprTypeRef>> TimeoutFields;
+    vector<pair<string, TypeRef>> TimeoutFields;
     TimeoutFields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto TimeoutPort = TheLTS->MakeMsgType("TimeoutPort", TimeoutFields, false);
     auto TimeoutPortExp = TheLTS->MakeVar("TimeoutPort", TimeoutPort);
-    vector<pair<string, ExprTypeRef>> ReceiveFields;
+    vector<pair<string, TypeRef>> ReceiveFields;
     ReceiveFields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 5)));
     auto ReceivePort = TheLTS->MakeMsgType("ReceivePort", ReceiveFields, false);
     auto ReceivePortExp = TheLTS->MakeVar("ReceivePort", ReceivePort);
-    vector<pair<string, ExprTypeRef>> BackwardInputChannelFields;
+    vector<pair<string, TypeRef>> BackwardInputChannelFields;
     BackwardInputChannelFields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 1)));
     auto BackwardInputChannelPort = TheLTS->MakeMsgType("BackwardInputChannelPort", BackwardInputChannelFields, false);
     auto BackwardInputChannelPortExp = TheLTS->MakeVar("BackwardInputChannelPort", BackwardInputChannelPort);
-    vector<pair<string, ExprTypeRef>> BackwardOutputChannelFields;
+    vector<pair<string, TypeRef>> BackwardOutputChannelFields;
     BackwardOutputChannelFields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 1)));
     auto BackwardOutputChannelPort = TheLTS->MakeMsgType("BackwardOutputChannelPort", BackwardOutputChannelFields, false);
     auto BackwardOutputChannelPortExp = TheLTS->MakeVar("BackwardOutputChannelPort", BackwardOutputChannelPort);
@@ -310,11 +310,11 @@ int main()
     cout << "Invariant:" << endl;
     cout << TheLTS->GetInvariant() << endl;
 
-    cout << "Channel Buffer variables to sort:" << endl;
-    for (auto const& BufferExp : TheLTS->GetChanBuffersToSort()) {
-        cout << BufferExp.first->ToString() << endl;
-        cout << BufferExp.second->ToString() << endl;
-    }
+    // cout << "Channel Buffer variables to sort:" << endl;
+    // for (auto const& BufferExp : TheLTS->GetChanBuffersToSort()) {
+    //     cout << BufferExp.first->ToString() << endl;
+    //     cout << BufferExp.second->ToString() << endl;
+    // }
 
     auto Checker = new LTSChecker(TheLTS);
     Checker->BuildAQS();

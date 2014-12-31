@@ -1,13 +1,13 @@
-// SymbolTable.hpp --- 
-// 
+// SymbolTable.hpp ---
+//
 // Filename: SymbolTable.hpp
 // Author: Abhishek Udupa
 // Created: Thu Jul 24 10:42:42 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,15 +32,15 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
 #if !defined ESMC_SYMBOL_TABLE_HPP_
 #define ESMC_SYMBOL_TABLE_HPP_
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
 
@@ -48,9 +48,11 @@
 #include <vector>
 
 namespace ESMC {
-    namespace LTS {
-        
-        class DeclBase : public RefCountable
+    namespace Decls {
+
+        using namespace LTS;
+
+        class STDeclBase : public RefCountable
         {
         private:
             string DeclName;
@@ -62,15 +64,15 @@ namespace ESMC {
             virtual void ComputeHashValue() const = 0;
 
         public:
-            DeclBase(const string& DeclName);
-            virtual ~DeclBase();
+            STDeclBase(const string& DeclName);
+            virtual ~STDeclBase();
 
             const string& GetDeclName() const;
 
             u64 Hash() const;
 
-            virtual bool Equals(const DeclBase& Other) const = 0;
-            virtual const Exprs::ExprTypeRef& GetType() const = 0;
+            virtual bool Equals(const STDeclBase& Other) const = 0;
+            virtual const TypeRef& GetType() const = 0;
 
             template <typename T>
             inline T* As()
@@ -103,90 +105,90 @@ namespace ESMC {
             }
         };
 
-        typedef CSmartPtr<DeclBase> DeclRef;
+        typedef CSmartPtr<STDeclBase> DeclRef;
 
-        class ParamDecl : public DeclBase
+        class ParamDecl : public STDeclBase
         {
         private:
-            Exprs::ExprTypeRef ParamType;
+            TypeRef ParamType;
 
         protected:
             virtual void ComputeHashValue() const override;
 
         public:
-            ParamDecl(const string& Name, const Exprs::ExprTypeRef& Type);
+            ParamDecl(const string& Name, const TypeRef& Type);
             virtual ~ParamDecl();
 
-            virtual bool Equals(const DeclBase& Other) const override;
-            virtual const Exprs::ExprTypeRef& GetType() const override;
+            virtual bool Equals(const STDeclBase& Other) const override;
+            virtual const TypeRef& GetType() const override;
         };
 
-        class MsgDeclBase : public DeclBase
+        class MsgSTDeclBase : public STDeclBase
         {
         private:
-            Exprs::ExprTypeRef MsgType;
+            TypeRef MsgType;
 
         protected:
             virtual void ComputeHashValue() const override;
-            
+
         public:
-            MsgDeclBase(const string& Name, const Exprs::ExprTypeRef& Type);
-            virtual ~MsgDeclBase();
-            
-            virtual bool Equals(const DeclBase& Other) const override;
-            virtual const Exprs::ExprTypeRef& GetType() const override;
+            MsgSTDeclBase(const string& Name, const TypeRef& Type);
+            virtual ~MsgSTDeclBase();
+
+            virtual bool Equals(const STDeclBase& Other) const override;
+            virtual const TypeRef& GetType() const override;
             virtual bool IsInput() const = 0;
             virtual bool IsOutput() const = 0;
         };
 
-        class InMsgDecl : public MsgDeclBase
+        class InMsgDecl : public MsgSTDeclBase
         {
-            using MsgDeclBase::MsgDeclBase;
+            using MsgSTDeclBase::MsgSTDeclBase;
             virtual ~InMsgDecl();
 
             virtual bool IsInput() const override;
             virtual bool IsOutput() const override;
         };
 
-        class OutMsgDecl : public MsgDeclBase
+        class OutMsgDecl : public MsgSTDeclBase
         {
-            using MsgDeclBase::MsgDeclBase;
+            using MsgSTDeclBase::MsgSTDeclBase;
             virtual ~OutMsgDecl();
 
             virtual bool IsInput() const override;
             virtual bool IsOutput() const override;
         };
 
-        class VarDecl : public DeclBase
+        class VarDecl : public STDeclBase
         {
         private:
-            Exprs::ExprTypeRef VarType;
+            TypeRef VarType;
 
         protected:
             virtual void ComputeHashValue() const override;
 
         public:
-            VarDecl(const string& Name, const Exprs::ExprTypeRef& Type);
+            VarDecl(const string& Name, const TypeRef& Type);
             virtual ~VarDecl();
 
-            virtual bool Equals(const DeclBase& Other) const override;
-            virtual const Exprs::ExprTypeRef& GetType() const override;
+            virtual bool Equals(const STDeclBase& Other) const override;
+            virtual const TypeRef& GetType() const override;
         };
 
-        class StateDecl : public DeclBase
+        class StateDecl : public STDeclBase
         {
         private:
-            Exprs::ExprTypeRef Type;
+            TypeRef Type;
 
         protected:
             virtual void ComputeHashValue() const override;
-            
+
         public:
-            StateDecl(const Exprs::ExprTypeRef& Type);
+            StateDecl(const TypeRef& Type);
             virtual ~StateDecl();
 
-            virtual bool Equals(const DeclBase& Other) const override;
-            virtual const Exprs::ExprTypeRef& GetType() const override;            
+            virtual bool Equals(const STDeclBase& Other) const override;
+            virtual const TypeRef& GetType() const override;
         };
 
         class SymtabScope : public RefCountable
@@ -221,19 +223,18 @@ namespace ESMC {
             ScopeRef Pop();
             ScopeRef Top() const;
             ScopeRef Bot() const;
-            
+
             void Bind(const string& Name, const DeclRef& Decl);
             const DeclRef& Lookup(const string& Name) const;
             const DeclRef& LookupTop(const string& Name) const;
 
             SymbolTable& operator = (const SymbolTable& Other);
         };
-        
-    } /* end namespace LTS */
+
+    } /* end namespace Decls */
 } /* end namespace ESMC */
 
 #endif /* ESMC_SYMBOL_TABLE_HPP_ */
 
-// 
+//
 // SymbolTable.hpp ends here
-

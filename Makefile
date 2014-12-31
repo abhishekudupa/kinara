@@ -9,49 +9,59 @@ BASE_SRC_DIR=$(PROJECT_ROOT)/src
 CXX?=g++
 
 CXXFLAGS=-std=c++11 -Wall -pedantic -fopenmp -pipe
-CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/z3-4.3.1/src/api
+CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/z3/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/sparsehash
 
 ifeq "x$(CXX)" "xg++"
 CXXFLAGS+=-Wno-unused-local-typedefs
+else
+CXXFLAGS+=-Wno-gnu-folding-constant
 endif
 
 PROJECT_MODULES= \
 	common \
 	containers \
+	decls \
 	expr \
 	hash \
 	main \
 	mc \
+	symexec \
 	symmetry \
+	synth \
+	tpinterface \
 	uflts \
 	utils \
 
 
 PROJECT_EXECUTABLES=esmc
-esmc_SYS_LIBS=z3 rt boost_system
+esmc_LINK_LIBS_COMMON=z3 rt boost_system
+esmc_LINK_LIBS_LTO=esmc
+
 esmc_DEP_LIBS=esmc
 esmc_EXT_LIBS=boost z3
-libboost_FULL_PATH=$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/install.ph
-libboost_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/boost-local/
-libz3_FULL_PATH=$(PROJECT_ROOT)/thirdparty/z3-4.3.1/install/libz3.so
-libz3_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/z3-4.3.1/
-esmc_OBJS=main.o
+
 esmc_LIB_PATHS= \
-	$(PROJECT_ROOT)/thirdparty/z3-4.3.1/install \
+	$(PROJECT_ROOT)/thirdparty/z3/install \
 	$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/lib \
 	$(PROJECT_ROOT)/lib/$(BUILD_SUFFIX)
 
+esmc_OBJS=main.o
+
+libboost_FULL_PATH=$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/install.ph
+libboost_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/boost-local/
+libz3_FULL_PATH=$(PROJECT_ROOT)/thirdparty/z3/install/libz3.so
+libz3_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/z3/
 
 PROJECT_LIBS=esmc
 
 libesmc_OBJS= \
 	AQStructure.o \
 	Compiler.o \
-	ExprTypes.o \
 	IndexSet.o \
 	LabelledTS.o \
+	LTSAnalyses.o \
 	LTSAssign.o \
 	LTSAutomaton.o \
 	LTSChannelEFSM.o \
@@ -60,20 +70,25 @@ libesmc_OBJS= \
 	LTSEFSMBase.o \
 	LTSExtensions.o \
 	LTSFairnessSet.o \
+	LTSSemTypes.o \
 	LTSState.o \
 	LTSTermSemanticizer.o \
 	LTSTransitions.o \
 	LTSUtils.o \
 	OmegaAutomaton.o \
 	Permutations.o \
+	ResourceLimitManager.o \
+	Solver.o \
 	SpookyHash.o \
 	StateVec.o \
 	StateVecPrinter.o \
 	SymbolTable.o \
 	SymmCanonicalizer.o \
+	TheoremProver.o \
+	TimeValue.o \
 	Trace.o \
 	UIDGenerator.o \
-	ZeroPage.o \
+	Z3Objects.o \
 
 
 PROJECT_EXT_LIBS=boost z3
@@ -84,4 +99,3 @@ libesmc_EXT_LIBS= \
 
 
 include $(PROJECT_ROOT)/Makefile.util
-

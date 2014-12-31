@@ -15,39 +15,39 @@ int main()
 {
     auto TheLTS = new LabelledTS();
 
-    vector<pair<string, ExprTypeRef>> C2Fields;
+    vector<pair<string, TypeRef>> C2Fields;
     C2Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 5)));
     auto C2Port = TheLTS->MakeMsgType("C2Port", C2Fields, false);
     auto C2PortExp = TheLTS->MakeVar("C2Port", C2Port);
-    vector<pair<string, ExprTypeRef>> Leader1Fields;
+    vector<pair<string, TypeRef>> Leader1Fields;
     Leader1Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto Leader1Port = TheLTS->MakeMsgType("Leader1Port", Leader1Fields, false);
     auto Leader1PortExp = TheLTS->MakeVar("Leader1Port", Leader1Port);
-    vector<pair<string, ExprTypeRef>> C3Fields;
+    vector<pair<string, TypeRef>> C3Fields;
     C3Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 5)));
     auto C3Port = TheLTS->MakeMsgType("C3Port", C3Fields, false);
     auto C3PortExp = TheLTS->MakeVar("C3Port", C3Port);
-    vector<pair<string, ExprTypeRef>> Leader2Fields;
+    vector<pair<string, TypeRef>> Leader2Fields;
     Leader2Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto Leader2Port = TheLTS->MakeMsgType("Leader2Port", Leader2Fields, false);
     auto Leader2PortExp = TheLTS->MakeVar("Leader2Port", Leader2Port);
-    vector<pair<string, ExprTypeRef>> C1Fields;
+    vector<pair<string, TypeRef>> C1Fields;
     C1Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 5)));
     auto C1Port = TheLTS->MakeMsgType("C1Port", C1Fields, false);
     auto C1PortExp = TheLTS->MakeVar("C1Port", C1Port);
-    vector<pair<string, ExprTypeRef>> Leader3Fields;
+    vector<pair<string, TypeRef>> Leader3Fields;
     Leader3Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto Leader3Port = TheLTS->MakeMsgType("Leader3Port", Leader3Fields, false);
     auto Leader3PortExp = TheLTS->MakeVar("Leader3Port", Leader3Port);
-    vector<pair<string, ExprTypeRef>> Elect1Fields;
+    vector<pair<string, TypeRef>> Elect1Fields;
     Elect1Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto Elect1Port = TheLTS->MakeMsgType("Elect1Port", Elect1Fields, false);
     auto Elect1PortExp = TheLTS->MakeVar("Elect1Port", Elect1Port);
-    vector<pair<string, ExprTypeRef>> Elect2Fields;
+    vector<pair<string, TypeRef>> Elect2Fields;
     Elect2Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto Elect2Port = TheLTS->MakeMsgType("Elect2Port", Elect2Fields, false);
     auto Elect2PortExp = TheLTS->MakeVar("Elect2Port", Elect2Port);
-    vector<pair<string, ExprTypeRef>> Elect3Fields;
+    vector<pair<string, TypeRef>> Elect3Fields;
     Elect3Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto Elect3Port = TheLTS->MakeMsgType("Elect3Port", Elect3Fields, false);
     auto Elect3PortExp = TheLTS->MakeVar("Elect3Port", Elect3Port);
@@ -288,11 +288,11 @@ int main()
     cout << "Invariant:" << endl;
     cout << TheLTS->GetInvariant() << endl;
 
-    cout << "Channel Buffer variables to sort:" << endl;
-    for (auto const& BufferExp : TheLTS->GetChanBuffersToSort()) {
-        cout << BufferExp.first->ToString() << endl;
-        cout << BufferExp.second->ToString() << endl;
-    }
+    // cout << "Channel Buffer variables to sort:" << endl;
+    // for (auto const& BufferExp : TheLTS->GetChanBuffersToSort()) {
+    //     cout << BufferExp.first->ToString() << endl;
+    //     cout << BufferExp.second->ToString() << endl;
+    // }
 
     auto Checker = new LTSChecker(TheLTS);
     Checker->BuildAQS();

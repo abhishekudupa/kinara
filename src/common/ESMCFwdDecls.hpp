@@ -1,13 +1,13 @@
-// FwdDecls.hpp --- 
-// 
-// Filename: FwdDecls.hpp
+// ESMCESMCFwdDecls.hpp ---
+//
+// Filename: ESMCESMCFwdDecls.hpp
 // Author: Abhishek Udupa
 // Created: Sun Jun 29 13:46:14 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,17 +32,17 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
 // Forward declarations of classes and types
 
-#if !defined ESMC_FWD_DECLS_HPP_
-#define ESMC_FWD_DECLS_HPP_
+#if !defined ESMC_ESMC_FWD_DECLS_HPP_
+#define ESMC_ESMC_FWD_DECLS_HPP_
 
-#include "Types.hpp"
+#include "ESMCTypes.hpp"
 #include <list>
 
 namespace ESMC {
@@ -62,7 +62,7 @@ namespace ESMC {
         template <typename ExtType, template <typename> class SemType> class VarExpression;
         template <typename ExtType, template <typename> class SemType> class BoundVarExpression;
         template <typename ExtType, template <typename> class SemType> class OpExpression;
-        template <typename ExtType, 
+        template <typename ExtType,
                   template <typename> class SemType> class QuantifiedExpressionBase;
         template <typename ExtType, template <typename> class SemType> class AQuantifiedExpression;
         template <typename ExtType, template <typename> class SemType> class EQuantifiedExpression;
@@ -89,13 +89,35 @@ namespace ESMC {
         // Expression Visitors
         template <typename E, template <typename> class S> class ExpressionVisitorBase;
 
-        class ExprTypeBase;
-        class ExprFuncType;
-        
-        typedef CSmartPtr<ExprTypeBase> ExprTypeRef;
     } /* end namespace Exprs */
-    
+
+    namespace Decls {
+
+        class SymbolTable;
+        class SymtabScope;
+
+        typedef SmartPtr<SymtabScope> ScopeRef;
+
+    } /* end namespace Decls */
+
     namespace LTS {
+
+        class TypeBase;
+        class FuncType;
+        class ScalarType;
+        class BoolType;
+        class IntType;
+        class RangeType;
+        class EnumType;
+        class SymmetricType;
+        class RecordType;
+        class ArrayType;
+        class UnionType;
+        class ParametricType;
+        class FieldAccessType;
+
+        typedef CSmartPtr<TypeBase> TypeRef;
+
 
         class LabelledTS;
         class EFSMBase;
@@ -103,6 +125,10 @@ namespace ESMC {
         class ChannelEFSM;
         class GeneralEFSM;
         class DetEFSM;
+
+        class SymmetricMessageDecl;
+
+        typedef CSmartPtr<SymmetricMessageDecl> SymmMsgDeclRef;
 
         template <typename E> class LTSTermSemantizer;
         class LTSLoweredContext;
@@ -114,7 +140,25 @@ namespace ESMC {
 
         typedef CSmartPtr<LTSAssignBase> LTSAssignRef;
 
-        class LTSGuardedCommand;        
+        class AutomatonTransitionBase;
+        class LTSTransitionBase;
+        class LTSTransitionInput;
+        class LTSTransitionOutput;
+        class LTSTransitionInternal;
+        class LTSInitState;
+
+        typedef CSmartPtr<LTSTransitionBase> LTSTransRef;
+        typedef CSmartPtr<LTSInitState> InitStateRef;
+
+        class LTSSymbTransitionBase;
+        class LTSSymbIOTransitionBase;
+        class LTSSymbInputTransition;
+        class LTSSymbOutputTransition;
+        class LTSSymbInternalTransition;
+
+        typedef CSmartPtr<LTSSymbTransitionBase> LTSSymbTransRef;
+
+        class LTSGuardedCommand;
         typedef CSmartPtr<LTSGuardedCommand> GCmdRef;
 
     } /* end namespace LTS */
@@ -133,8 +177,9 @@ namespace ESMC {
 
         class RValueInterpreter;
         class LValueInterpreter;
+        class UFInterpreter;
         class AQStructure;
-        template <typename STATETYPE> 
+        template <typename STATETYPE>
         class AnnotatedEdge;
 
         typedef AnnotatedEdge<StateVec> AQSEdge;
@@ -144,15 +189,15 @@ namespace ESMC {
         class StateVecPrinter;
 
         typedef AnnotatedEdge<ProductState> ProductEdge;
-        
+
         class BuchiAutomatonBase;
         class StateBuchiAutomaton;
         class MsgBuchiAutomaton;
-        
+
         class IndexVector;
         class ProcessIndexSet;
         class SystemIndexSet;
-        
+
         // Traces
         typedef pair<LTS::GCmdRef, const StateVec*> TraceElemT;
         typedef pair<LTS::GCmdRef, const ProductState*> PSTraceElemT;
@@ -183,20 +228,42 @@ namespace ESMC {
 
     } /* end namespace Symm */
 
+    namespace TP {
+
+        class Z3Object;
+        class Z3CtxWrapper;
+        class Z3Expr;
+        class Z3Sort;
+        class Z3Model;
+        class Z3Solver;
+
+        typedef CSmartPtr<Z3CtxWrapper> Z3Ctx;
+
+        class Z3TheoremProver;
+        typedef SmartPtr<Z3TheoremProver> Z3TPRef;
+
+    } /* end namespace TP */
+
+    namespace Synth {
+        class Solver;
+    } /* end namespace Synth */
+
+    namespace Analyses {
+        class TraceAnalyses;
+    }
+
     // UID Generators
     class UIDGenerator;
 
+    template <typename... ArgTypes>
+    constexpr bool TruePred(ArgTypes&&... Args) { return true; }
+
+    template <typename... ArgTypes>
+    constexpr bool FalsePred(ArgTypes&&... Args) { return false; }
+
 } /* end namespace */
 
-#endif /* ESMC_FWD_DECLS_HPP_ */
+#endif /* ESMC_ESMC_FWD_DECLS_HPP_ */
 
-// 
-// FwdDecls.hpp ends here
-
-
-
-
-
-
-
-
+//
+// ESMCESMCFwdDecls.hpp ends here

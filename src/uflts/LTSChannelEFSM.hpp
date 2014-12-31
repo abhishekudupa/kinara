@@ -1,13 +1,13 @@
-// LTSChannelEFSM.hpp --- 
-// 
+// LTSChannelEFSM.hpp ---
+//
 // Filename: LTSChannelEFSM.hpp
 // Author: Abhishek Udupa
 // Created: Fri Aug 15 12:05:23 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,18 +32,16 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
 #if !defined ESMC_LTS_CHANNEL_EFSM_HPP_
 #define ESMC_LTS_CHANNEL_EFSM_HPP_
 
-#include "LTSTypes.hpp"
+#include "LTSDecls.hpp"
 #include "LTSState.hpp"
-#include "SymbolTable.hpp"
-
 #include "LTSEFSMBase.hpp"
 
 namespace ESMC {
@@ -60,10 +58,10 @@ namespace ESMC {
             bool Duplicating;
             bool Blocking;
 
-            ExprTypeRef ArrayType;
-            ExprTypeRef ValType;
-            ExprTypeRef IndexType;
-            ExprTypeRef CountType;
+            TypeRef ArrType;
+            TypeRef ValType;
+            TypeRef IndexType;
+            TypeRef CountType;
 
             ExpT ArrayExp;
             ExpT IndexExp;
@@ -81,120 +79,130 @@ namespace ESMC {
 
             inline void MakeInputTransition(u32 InstanceID,
                                             const MgrT::SubstMapT& SubstMap,
-                                            const ExprTypeRef& MessageType,
-                                            LossDupFairnessType LossDupFairness);
+                                            const TypeRef& MessageType,
+                                            const set<string>& AddToFairnessSets);
 
             inline void MakeOutputTransition(u32 InstanceID,
                                              const MgrT::SubstMapT& SubstMap,
-                                             const ExprTypeRef& MessageType,
-                                             LTSFairnessType MessageFairness,
-                                             LossDupFairnessType LossDupFairness);
+                                             const TypeRef& MessageType,
+                                             const set<string>& NonDupOutputFairnessSets,
+                                             const set<string>& DupOutputFairnessSets);
 
         public:
             ChannelEFSM(LabelledTS* TheLTS, const string& Name,
                         const vector<ExpT>& Params, const ExpT& Constraint,
-                        u32 Capacity, bool Lossy = false, bool Ordered = true, 
+                        u32 Capacity, bool Lossy = false, bool Ordered = true,
                         bool Duplicating = false,
-                        bool Blocking = false, LTSFairnessType 
+                        bool Blocking = false, LTSFairnessType
                         Fairness = LTSFairnessType::None);
-            
+
             virtual ~ChannelEFSM();
-            
+            u32 GetCapacity() const;
+
             virtual void FreezeStates() override;
             virtual void FreezeVars() override;
             virtual void AddFairnessSet(const string& Name, FairSetFairnessType Fairness) override;
 
-            void AddMsg(const ExprTypeRef& MessageType,
+            void AddMsg(const TypeRef& MessageType,
                         const vector<ExpT>& Params = vector<ExpT>(),
                         LTSFairnessType MessageFairness = LTSFairnessType::None,
                         LossDupFairnessType LossDupFairness = LossDupFairnessType::None);
 
             void AddMsgs(const vector<ExpT> NewParams,
-                         const ExpT& Constraint,    
-                         const ExprTypeRef& MessageType,
+                         const ExpT& Constraint,
+                         const TypeRef& MessageType,
                          const vector<ExpT>& MessageParams = vector<ExpT>(),
                          LTSFairnessType MessageFairness = LTSFairnessType::None,
                          LossDupFairnessType LossDupFairness = LossDupFairnessType::None);
 
 
-            virtual void AddInputMsg(const ExprTypeRef& MessageType,
-                                     const vector<ExpT>& Params = vector<ExpT>()) override;
+            virtual SymmMsgDeclRef
+            AddInputMsg(const TypeRef& MessageType,
+                        const vector<ExpT>& Params = vector<ExpT>()) override;
 
-            virtual void AddInputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
-                                      const ExprTypeRef& MessageType,
-                                      const vector<ExpT>& MessageParams) override;
+            virtual SymmMsgDeclRef
+            AddInputMsgs(const vector<ExpT>& NewParams,
+                         const ExpT& Constraint,
+                         const TypeRef& MessageType,
+                         const vector<ExpT>& MessageParams) override;
 
-            virtual void AddOutputMsg(const ExprTypeRef& MessageType,
-                                      const vector<ExpT>& Params = vector<ExpT>()) override;
+            virtual SymmMsgDeclRef
+            AddOutputMsg(const TypeRef& MessageType,
+                         const vector<ExpT>& Params = vector<ExpT>()) override;
 
-            virtual void AddOutputMsgs(const vector<ExpT>& NewParams, const ExpT& Constraint,
-                                       const ExprTypeRef& MessageType,
-                                       const vector<ExpT>& MessageParams) override;
+            virtual SymmMsgDeclRef
+            AddOutputMsgs(const vector<ExpT>& NewParams,
+                          const ExpT& Constraint,
+                          const TypeRef& MessageType,
+                          const vector<ExpT>& MessageParams) override;
 
-            virtual void AddVariable(const string& VarName, const ExprTypeRef& VarType) override;
+            virtual void AddVariable(const string& VarName, const TypeRef& VarType) override;
 
             virtual void AddInputTransition(const string& InitState,
-                                            const string& FinalState,
                                             const ExpT& Guard,
                                             const vector<LTSAssignRef>& Updates,
                                             const string& MessageName,
-                                            const ExprTypeRef& MessageType,
-                                            const vector<ExpT>& MessageParams) override;
+                                            const TypeRef& MessageType,
+                                            const vector<ExpT>& MessageParams,
+                                            bool Tentative = false) override;
 
             virtual void AddInputTransitions(const vector<ExpT>& TransParams,
                                              const ExpT& Constraint,
                                              const string& InitState,
-                                             const string& FinalState,
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
-                                             const ExprTypeRef& MessageType,
-                                             const vector<ExpT>& MessageParams) override;
+                                             const TypeRef& MessageType,
+                                             const vector<ExpT>& MessageParams,
+                                             bool Tentative = false) override;
 
             virtual void AddOutputTransition(const string& InitState,
-                                             const string& FinalState,
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
                                              const string& MessageName,
-                                             const ExprTypeRef& MessageType,
+                                             const TypeRef& MessageType,
                                              const vector<ExpT>& MessageParams,
-                                             const set<string>& AddToFairnessSets = 
-                                             set<string>()) override;
+                                             const set<string>& AddToFairnessSets =
+                                             set<string>(),
+                                             bool Tentative = false) override;
 
             virtual void AddOutputTransitions(const vector<ExpT>& TransParams,
                                               const ExpT& Constraint,
                                               const string& InitState,
-                                              const string& FinalState,
                                               const ExpT& Guard,
                                               const vector<LTSAssignRef>& Updates,
                                               const string& MessageName,
-                                              const ExprTypeRef& MessageType,
+                                              const TypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
                                               LTSFairnessType MessageFairness,
                                               SplatFairnessType SplatFairness,
-                                              const string& SplatFairnessName) override;
+                                              const string& SplatFairnessName,
+                                              bool Tentative = false) override;
 
             virtual void AddInternalTransition(const string& InitState,
-                                               const string& FinalState,
                                                const ExpT& Guard,
                                                const vector<LTSAssignRef>& Updates,
-                                               const set<string>& AddToFairnessSets = 
-                                               set<string>()) override;
+                                               const set<string>& AddToFairnessSets =
+                                               set<string>(),
+                                               bool Tentative = false) override;
 
             virtual void AddInternalTransitions(const vector<ExpT>& TransParams,
                                                 const ExpT& Constraint,
                                                 const string& InitState,
-                                                const string& FinalState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
                                                 LTSFairnessType MessageFairness,
                                                 SplatFairnessType SplatFairness,
-                                                const string& SplatFairnessName) override;
+                                                const string& SplatFairnessName,
+                                                bool Tentative = false) override;
+
+            vector<LTSAssignRef> GetUpdatesForPermutation(const vector<u08>& Permutation,
+                                                          u32 InstanceID) const;
         };
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LTS_CHANNEL_EFSM_HPP_ */
 
-// 
+//
 // LTSChannelEFSM.hpp ends here

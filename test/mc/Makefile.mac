@@ -7,111 +7,22 @@ BASE_GEN_DIR=$(PROJECT_ROOT)
 BASE_SRC_DIR=$(PROJECT_ROOT)
 
 CXX?=g++
+CXXFLAGS+=-std=c++11 -Wall -pedantic -Wno-gnu-folding-constant -pipe
+CXXFLAGS+=-I/usr/local/Cellar/google-sparsehash/2.0.2/include/sparsehash/ -I/usr/local/include/
 
-CXXFLAGS+=-std=c++11 -Wall -pedantic -pipe
-CXXFLAGS+=-I/usr/local/Cellar/google-sparsehash/2.0.2/include/sparsehash/
-
-PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP ABP_generated MSI_generated Fischer LeaderElection MSI MSIC2D
-
-PingPongChan_SYS_LIBS=esmc z3 boost_system
-PingPongChan_EXT_LIBS=boost z3 esmc
-
-PingPongChanBug_SYS_LIBS=$(PingPongChan_SYS_LIBS)
-PingPongChanBug_EXT_LIBS=$(PingPongChan_EXT_LIBS)
-
-Elevator_SYS_LIBS=esmc z3 boost_system
-Elevator_EXT_LIBS=boost z3 esmc
-
-ElevatorMissingEdges_SYS_LIBS=esmc z3 boost_system
-ElevatorMissingEdges_EXT_LIBS=boost z3 esmc
-
-Flip_SYS_LIBS=esmc z3 boost_system
-Flip_EXT_LIBS=boost z3 esmc
-
-FlipSimple_SYS_LIBS=esmc z3 boost_system
-FlipSimple_EXT_LIBS=boost z3 esmc
-
-ABP_SYS_LIBS=esmc z3 boost_system
-ABP_EXT_LIBS=boost z3 esmc
-
-ABP_generated_SYS_LIBS=esmc z3 boost_system
-ABP_generated_EXT_LIBS=boost z3 esmc
-
-MSI_SYS_LIBS=esmc z3 boost_system
-MSI_EXT_LIBS=boost z3 esmc
-
-MSIC2D_SYS_LIBS=$(MSI_SYS_LIBS)
-MSIC2D_EXT_LIBS=$(MSI_EXT_LIBS)
-
-MSI_no_busy_data_no_pending_unblock_e_SYS_LIBS=esmc z3 boost_system
-MSI_no_busy_data_no_pending_unblock_e_EXT_LIBS=boost z3 esmc
-
-MSI_generated_SYS_LIBS=esmc z3 boost_system
-MSI_generated_EXT_LIBS=boost z3 esmc
-
-Fischer_SYS_LIBS=esmc z3 boost_system
-Fischer_EXT_LIBS=boost z3 esmc
-
-LeaderElection_SYS_LIBS=esmc z3 boost_system
-LeaderElection_EXT_LIBS=boost z3 esmc
-
+PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP \
+	ABP_generated MSI Fischer LeaderElection Dijkstra4 MSI_no_busy_data_no_pending_unblock_e \
+	MSIC2D PingPongChanSynth MSISynth
+#	WeakestPreconditionTest
+#	WeakestPreconditionArrayTest
+#   ElevatorBug
 
 libesmc_FULL_PATH=$(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)/libesmc.so
 libesmc_MAKE_DIR=$(PROJECT_ROOT)/../../
 
-PingPongChan_OBJS=PingPongChan.o
-PingPongChanBug_OBJS=PingPongChanBug.o
-Flip_OBJS=Flip.o
-FlipSimple_OBJS=FlipSimple.o
-Elevator_OBJS=Elevator.o
-ABP_OBJS=ABP.o
-ABP_generated_OBJS=ABP_generated.o
-MSI_OBJS=MSI.o
-MSI_no_busy_data_no_pending_unblock_e_OBJS=MSI_no_busy_data_no_pending_unblock_e.o
-MSI_generated_OBJS=MSI_generated.o
-Fischer_OBJS=Fischer.o
-LeaderElection_OBJS=LeaderElection.o
-MSIC2D_OBJS=MSIC2D.o
-
-
-PingPongChan_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
-
-PingPongChanBug_LIB_PATHS=$(PingPongChan_LIB_PATHS)
-
-Elevator_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
-
-ABP_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
-
-ABP_generated_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
-
-MSI_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
-
-MSI_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
-
-MSIC2D_LIB_PATHS=$(MSI_LIB_PATHS)
-
-MSI_no_busy_data_no_pending_unblock_e_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
-
-MSI_generated_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
-
-Fischer_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
-
-LeaderElection_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
-
-Flip_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
-
-FlipSimple_LIB_PATHS= \
-    $(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)
+$(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_SYS_LIBS=esmc z3 boost_system))
+$(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_EXT_LIBS=boost z3 esmc))
+$(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_OBJS=$(exec).o))
+$(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_LIB_PATHS=$(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)))
 
 include $(PROJECT_ROOT)/../../Makefile.mac.util

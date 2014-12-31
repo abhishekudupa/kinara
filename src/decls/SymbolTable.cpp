@@ -1,13 +1,13 @@
-// SymbolTable.cpp --- 
-// 
+// SymbolTable.cpp ---
+//
 // Filename: SymbolTable.cpp
 // Author: Abhishek Udupa
 // Created: Sun Jul 27 19:20:38 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,38 +32,37 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
-#include "../expr/ExprTypes.hpp"
-
-#include "SymbolTable.hpp"
-
 #include <boost/functional/hash.hpp>
 
-namespace ESMC {
-    namespace LTS {
+#include "../uflts/LTSDecls.hpp"
+#include "SymbolTable.hpp"
 
-        DeclBase::DeclBase(const string& DeclName)
+namespace ESMC {
+    namespace Decls {
+
+        STDeclBase::STDeclBase(const string& DeclName)
             : DeclName(DeclName),
               HashCode(0), HashValid(false)
         {
             // Nothing here
         }
-        
-        DeclBase::~DeclBase()
+
+        STDeclBase::~STDeclBase()
         {
             // Nothing here
         }
 
-        const string& DeclBase::GetDeclName() const
+        const string& STDeclBase::GetDeclName() const
         {
             return DeclName;
         }
 
-        u64 DeclBase::Hash() const 
+        u64 STDeclBase::Hash() const
         {
             if (!HashValid) {
                 ComputeHashValue();
@@ -72,11 +71,11 @@ namespace ESMC {
             return HashCode;
         }
 
-        ParamDecl::ParamDecl(const string& Name, const Exprs::ExprTypeRef& Type)
-            : DeclBase(Name), ParamType(Type)
+        ParamDecl::ParamDecl(const string& Name, const TypeRef& Type)
+            : STDeclBase(Name), ParamType(Type)
         {
-            if (!(Type->Is<Exprs::ExprSymmetricType>() ||
-                  Type->Is<Exprs::ExprRangeType>())) {
+            if (!(Type->Is<SymmetricType>() ||
+                  Type->Is<RangeType>())) {
                 throw ESMCError("Parameters can only be range or symmetric types");
             }
         }
@@ -94,12 +93,12 @@ namespace ESMC {
             boost::hash_combine(HashCode, ParamType->Hash());
         }
 
-        const Exprs::ExprTypeRef& ParamDecl::GetType() const
+        const TypeRef& ParamDecl::GetType() const
         {
             return ParamType;
         }
 
-        bool ParamDecl::Equals(const DeclBase& Other) const
+        bool ParamDecl::Equals(const STDeclBase& Other) const
         {
             if (!Other.Is<ParamDecl>()) {
                 return false;
@@ -109,20 +108,20 @@ namespace ESMC {
                     OtherPtr->GetType() == ParamType);
         }
 
-        MsgDeclBase::MsgDeclBase(const string& Name, const Exprs::ExprTypeRef& Type)
-            : DeclBase(Name), MsgType(Type)
+        MsgSTDeclBase::MsgSTDeclBase(const string& Name, const TypeRef& Type)
+            : STDeclBase(Name), MsgType(Type)
         {
-            if (!Type->Is<Exprs::ExprRecordType>()) {
+            if (!Type->Is<RecordType>()) {
                 throw ESMCError((string)"Message decls must be record types");
             }
         }
 
-        MsgDeclBase::~MsgDeclBase() 
+        MsgSTDeclBase::~MsgSTDeclBase()
         {
             // Nothing here
         }
 
-        void MsgDeclBase::ComputeHashValue() const
+        void MsgSTDeclBase::ComputeHashValue() const
         {
             HashCode = 0;
             boost::hash_combine(HashCode, "Msg");
@@ -132,18 +131,18 @@ namespace ESMC {
             boost::hash_combine(HashCode, IsOutput());
         }
 
-        const Exprs::ExprTypeRef& MsgDeclBase::GetType() const
+        const TypeRef& MsgSTDeclBase::GetType() const
         {
             return MsgType;
         }
 
-        bool MsgDeclBase::Equals(const DeclBase& Other) const
+        bool MsgSTDeclBase::Equals(const STDeclBase& Other) const
         {
-            if (!Other.Is<MsgDeclBase>()) {
+            if (!Other.Is<MsgSTDeclBase>()) {
                 return false;
             }
 
-            auto OtherPtr = Other.As<MsgDeclBase>();
+            auto OtherPtr = Other.As<MsgSTDeclBase>();
             return (OtherPtr->GetDeclName() == GetDeclName() &&
                     OtherPtr->GetType() == MsgType &&
                     OtherPtr->IsInput() == IsInput() &&
@@ -154,7 +153,7 @@ namespace ESMC {
         {
             // Nothing here
         }
-        
+
         bool InMsgDecl::IsInput() const
         {
             return true;
@@ -169,7 +168,7 @@ namespace ESMC {
         {
             // Nothing here
         }
-        
+
         bool OutMsgDecl::IsInput() const
         {
             return false;
@@ -179,9 +178,9 @@ namespace ESMC {
         {
             return true;
         }
-        
-        VarDecl::VarDecl(const string& Name, const Exprs::ExprTypeRef& Type)
-            : DeclBase(Name), VarType(Type)
+
+        VarDecl::VarDecl(const string& Name, const TypeRef& Type)
+            : STDeclBase(Name), VarType(Type)
         {
             // Nothing here
         }
@@ -199,7 +198,7 @@ namespace ESMC {
             boost::hash_combine(HashCode, VarType->Hash());
         }
 
-        bool VarDecl::Equals(const DeclBase& Other) const
+        bool VarDecl::Equals(const STDeclBase& Other) const
         {
             if (!Other.Is<VarDecl>()) {
                 return false;
@@ -209,19 +208,19 @@ namespace ESMC {
                     OtherPtr->GetType() == VarType);
         }
 
-        const Exprs::ExprTypeRef& VarDecl::GetType() const
+        const TypeRef& VarDecl::GetType() const
         {
             return VarType;
         }
 
-        StateDecl::StateDecl(const Exprs::ExprTypeRef& Type)
-            : DeclBase("state"), Type(Type)
+        StateDecl::StateDecl(const TypeRef& Type)
+            : STDeclBase("state"), Type(Type)
         {
-            if (!Type->Is<Exprs::ExprEnumType>()) {
+            if (!Type->Is<EnumType>()) {
                 throw ESMCError((string)"State variable must be of enumerated type");
             }
         }
-        
+
         StateDecl::~StateDecl()
         {
             // Nothing here
@@ -234,17 +233,17 @@ namespace ESMC {
             boost::hash_combine(HashCode, Type->Hash());
         }
 
-        bool StateDecl::Equals(const DeclBase& Other) const
+        bool StateDecl::Equals(const STDeclBase& Other) const
         {
             if (!Other.Is<StateDecl>()) {
                 return false;
             }
-            
+
             auto OtherPtr = Other.As<StateDecl>();
             return (OtherPtr->Type == Type);
         }
 
-        const Exprs::ExprTypeRef& StateDecl::GetType() const
+        const TypeRef& StateDecl::GetType() const
         {
             return Type;
         }
@@ -279,7 +278,7 @@ namespace ESMC {
             if (it == DeclMap.end()) {
                 return DeclRef::NullPtr;
             } else {
-                return it->second; 
+                return it->second;
             }
         }
 
@@ -355,9 +354,9 @@ namespace ESMC {
             ScopeStack = Other.ScopeStack;
             return *this;
         }
-        
-    } /* end namespace LTS */
+
+    } /* end namespace Decls */
 } /* end namespace ESMC */
 
-// 
+//
 // SymbolTable.cpp ends here

@@ -1,13 +1,13 @@
-// TestChan.cpp --- 
-// 
+// TestChan.cpp ---
+//
 // Filename: TestChan.cpp
 // Author: Abhishek Udupa
 // Created: Tue Aug 12 00:23:05 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -69,7 +69,7 @@ int main()
     auto MType2 = TheLTS->MakeMsgTypes(Params, TrueExp, "MType2", Rec2Fields, true);
 
     TheLTS->FreezeMsgs();
-    
+
     vector<ExpT> ChanParams;
     ChanParams = { TheLTS->MakeVar("ChanID", ChanSymmType) };
 
@@ -78,31 +78,15 @@ int main()
 
     auto Chan2 = TheLTS->MakeChannel("Chan2", ChanParams, TrueExp, 3, true, true, true, false, LTSFairnessType::Strong);
     Chan2->AddMsgs(Params, TrueExp, MType2, Params, LTSFairnessType::Strong, LossDupFairnessType::NotAlwaysLostOrDup);
-    
+
     cout << Chan1->ToString() << endl;
     cout << endl << endl << endl << endl;
     cout << Chan2->ToString() << endl;
-    
+
     TheLTS->FreezeAutomata();
 
     delete TheLTS;
 }
 
-// 
+//
 // TestChan.cpp ends here
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

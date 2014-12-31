@@ -1,0 +1,7 @@
+bin/debug/*
+bin/opt/*
+bin/prof/*
+bin/lto/*
+bin/fulllto/*
+log*
+core

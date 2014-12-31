@@ -1,13 +1,13 @@
-// LTSTermSemanticizer.hpp --- 
-// 
+// LTSTermSemanticizer.hpp ---
+//
 // Filename: LTSTermSemanticizer.hpp
 // Author: Abhishek Udupa
 // Created: Thu Jul 24 18:49:24 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -42,30 +42,34 @@
 #define ESMC_LTS_TERM_SEMANTICIZER_HPP_
 
 #include <unordered_map>
+#include <unordered_set>
 #include <set>
 #include <vector>
 #include <z3.h>
 #include <map>
+#include <type_traits>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/multiprecision/cpp_int.hpp>
 
-#include "../common/FwdDecls.hpp"
+#include "../common/ESMCFwdDecls.hpp"
 #include "../containers/RefCountable.hpp"
 #include "../containers/SmartPtr.hpp"
 #include "../containers/RefCache.hpp"
 #include "../utils/UIDGenerator.hpp"
 #include "../expr/SemanticizerUtils.hpp"
 #include "../expr/Expressions.hpp"
-#include "../expr/ExprTypes.hpp"
+#include "../tpinterface/Z3Objects.hpp"
+#include "../utils/CombUtils.hpp"
 
+#include "LTSSemTypes.hpp"
 
 namespace ESMC {
     namespace LTS {
 
-        struct LTSOps 
+        struct LTSOps
         {
             static const i64 OpEQ = 1000;
             static const i64 OpNOT = 1001;
@@ -91,7 +95,7 @@ namespace ESMC {
             // Syntactic operators for symmetry, etc
             static const i64 OpIndex = 1018;
             static const i64 OpField = 1019;
-            
+
 
             static const i64 UFOffset = 1000000;
 
@@ -103,7 +107,7 @@ namespace ESMC {
         };
 
         static inline string MangleName(const string& Name,
-                                        const vector<Exprs::ExprTypeRef> ArgTypes)
+                                        const vector<TypeRef> ArgTypes)
         {
             string Retval = Name;
             for (auto const& Arg : ArgTypes) {
@@ -113,109 +117,25 @@ namespace ESMC {
         }
 
         namespace Detail {
+
             using namespace ESMC::Exprs;
             extern const unordered_map<i64, string> OpCodeToNameMap;
+            extern const unordered_set<i64> LTSReservedOps;
             extern const string BoundVarPrefix;
-            extern const ExprTypeRef InvalidType;
+            extern const TypeRef InvalidType;
 
-            typedef unordered_map<i64, ExprTypeRef> UFID2TypeMapT;
+            typedef unordered_map<i64, TypeRef> UFID2TypeMapT;
 
-            // A wrapper for ref counting Z3 contexts
-            class Z3CtxWrapper : public RefCountable
-            {
-            private:
-                Z3_context Ctx;
-
-            public:
-                Z3CtxWrapper(Z3_context Ctx);
-                Z3CtxWrapper();
-                virtual ~Z3CtxWrapper();
-
-                operator Z3_context () const;
-                Z3_context GetCtx() const;
-            };
-
-            typedef SmartPtr<Z3CtxWrapper> Z3Ctx;
-
-            class Z3Expr
-            {
-            protected:
-                Z3Ctx Ctx;
-
-            private:
-                Z3_ast AST;
-            
-            public:
-                Z3Expr();
-                Z3Expr(const Z3Expr& Other);
-                Z3Expr(Z3Ctx Ctx, Z3_ast AST);
-                Z3Expr(Z3Expr&& Other);
-                virtual ~Z3Expr();
-
-                Z3Expr& operator = (Z3Expr Other);
-                bool operator == (const Z3Expr& Other) const;
-            
-                string ToString() const;
-                u64 Hash() const;
-
-
-                // unsafe! use only if you know what you're doing
-                operator Z3_ast () const;
-                Z3_ast GetAST() const;
-                const Z3Ctx& GetCtx() const;
-
-                static Z3Expr NullExpr;
-            };
-
-            class Z3ExprHasher
-            {
-            public:
-                inline u64 operator () (const Z3Expr& Expr) const
-                {
-                    return Expr.Hash();
-                }
-            };
-            
-            class Z3Sort
-            {
-            protected:
-                Z3Ctx Ctx;
-                
-            private:
-                Z3_sort Sort;
-                mutable unordered_map<string, Z3_func_decl> FuncDecls;
-
-            public:
-                Z3Sort();
-                Z3Sort(const Z3Sort& Other);
-                Z3Sort(Z3Ctx Ctx, Z3_sort Sort);
-                Z3Sort(Z3Sort&& Other);
-                virtual ~Z3Sort();
-
-                // Helper to add ref counted func decls
-                // as in the case for enums and records
-                void AddFuncDecl(Z3_func_decl Decl) const;
-                void AddFuncDecls(u32 NumDecls, Z3_func_decl* Decls) const;
-
-                Z3_func_decl GetFuncDecl(const string& Name) const;
-
-                Z3Sort& operator = (Z3Sort Other);
-                bool operator == (const Z3Sort& Other) const;
-
-                string ToString() const;
-                u64 Hash() const;
-
-                // unsafe! for internal use only
-                operator Z3_sort () const;
-                Z3_sort GetSort() const;
-                const Z3Ctx& GetCtx() const;
-
-                static Z3Sort NullSort;
-            };
         } /* end namespace Detail */
 
         using namespace Detail;
+        using namespace TP;
         using namespace Exprs;
+
+        static inline bool IsLTSReserved(i64 OpCode)
+        {
+            return (Detail::LTSReservedOps.find(OpCode) != Detail::LTSReservedOps.end());
+        }
 
         // A context class for remembering type info
         // etc about lowered expressions, so that if and when
@@ -227,20 +147,21 @@ namespace ESMC {
             typedef unordered_set<Z3Expr, Z3ExprHasher> AssumptionSetT;
 
         private:
-            mutable map<ExprTypeRef, Z3Sort> LTSTypeToSort;
-            mutable map<string, ExprTypeRef> VarNameToLTSType;
+            mutable unordered_map<TypeRef, Z3Sort, TypePtrHasher> LTSTypeToSort;
+            mutable map<string, TypeRef> VarNameToLTSType;
             Z3Ctx Ctx;
             mutable vector<AssumptionSetT> Assumptions;
 
         public:
             LTSLoweredContext();
+            LTSLoweredContext(const Z3Ctx& Ctx);
             virtual ~LTSLoweredContext();
 
-            const Z3Sort& GetZ3Sort(const ExprTypeRef& LTSType) const;
-            void AddZ3Sort(const ExprTypeRef& LTSType, const Z3Sort& Sort) const;
+            const Z3Sort& GetZ3Sort(const TypeRef& LTSType) const;
+            void AddZ3Sort(const TypeRef& LTSType, const Z3Sort& Sort) const;
 
-            const ExprTypeRef& GetLTSType(const string& VarName) const;
-            void AddLTSType(const string& VarName, const ExprTypeRef& LTSType) const;
+            const TypeRef& GetLTSType(const string& VarName) const;
+            void AddLTSType(const string& VarName, const TypeRef& LTSType) const;
             void PushAssumptionScope() const;
             AssumptionSetT PopAssumptionScope() const;
             void AddAssumption(const Z3Expr& Assumption) const;
@@ -260,30 +181,30 @@ namespace ESMC {
                 const UFID2TypeMapT& UFMap;
                 typedef Expr<E, S> ExpT;
 
-                ExprTypeRef BoolType;
-                ExprTypeRef IntType;
+                TypeRef BoolType;
+                TypeRef IntType;
 
-                vector<vector<ExprTypeRef>> ScopeStack;
+                vector<vector<TypeRef>> ScopeStack;
 
                 inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp);
 
             public:
-                TypeChecker(const UFID2TypeMapT& UFMap, const ExprTypeRef& BoolType,
-                            const ExprTypeRef& IntType);
+                TypeChecker(const UFID2TypeMapT& UFMap, const TypeRef& BoolType,
+                            const TypeRef& IntType);
                 virtual ~TypeChecker();
-                
+
                 inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
                 inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
-                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
+                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
                     override;
                 inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
                 inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>*
                                                                Exp) override;
                 inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
                                                                Exp) override;
-                
+
                 static inline void Do(const ExpT& Exp, const UFID2TypeMapT& UFMap,
-                                      const ExprTypeRef& BoolType, const ExprTypeRef& IntType);
+                                      const TypeRef& BoolType, const TypeRef& IntType);
             };
 
             template <typename E, template <typename> class S>
@@ -298,17 +219,17 @@ namespace ESMC {
             public:
                 Canonicalizer();
                 virtual ~Canonicalizer();
-                
+
                 inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
                 inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
-                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
+                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
                     override;
                 inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
                 inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>*
                                                                Exp) override;
                 inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
                                                                Exp) override;
-                
+
                 static inline ExpT Do(const ExpT& Exp);
             };
 
@@ -329,14 +250,14 @@ namespace ESMC {
 
                 inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
                 inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
-                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
+                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
                     override;
                 inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
                 inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>*
                                                                Exp) override;
                 inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
                                                                Exp) override;
-                
+
                 static inline string Do(const ExpT& Exp, const UFID2TypeMapT& UFMap);
                 static inline string TypeToString(const TypeT& Type);
             };
@@ -349,30 +270,30 @@ namespace ESMC {
                 typedef ExprMgr<E, S> MgrType;
 
                 vector<ExpT> ExpStack;
-                ExprTypeRef BoolType;
-                ExprTypeRef IntType;
+                TypeRef BoolType;
+                TypeRef IntType;
                 MgrType* Mgr;
 
                 inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp);
 
             public:
-                Simplifier(MgrType* Mgr, const ExprTypeRef& BoolType, 
-                           const ExprTypeRef& IntType);
+                Simplifier(MgrType* Mgr, const TypeRef& BoolType,
+                           const TypeRef& IntType);
                 ~Simplifier();
 
                 inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
                 inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
-                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
+                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
                     override;
                 inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
                 inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>*
                                                                Exp) override;
                 inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
                                                                Exp) override;
-                
-                static inline ExpT Do(MgrType* Mgr, const ExpT& Exp, 
-                                      const ExprTypeRef& BoolType,
-                                      const ExprTypeRef& IntType);
+
+                static inline ExpT Do(MgrType* Mgr, const ExpT& Exp,
+                                      const TypeRef& BoolType,
+                                      const TypeRef& IntType);
             };
 
             template <typename E, template <typename> class S>
@@ -385,7 +306,7 @@ namespace ESMC {
                 LTSLCRef LTSCtx;
 
                 inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp);
-                inline const Z3Sort& LowerType(const ExprTypeRef& Type);
+                inline const Z3Sort& LowerType(const TypeRef& Type);
 
             public:
                 Lowerer(const UFID2TypeMapT& UFMap, const LTSLCRef& LTSCtx);
@@ -393,14 +314,14 @@ namespace ESMC {
 
                 inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
                 inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
-                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) 
+                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
                     override;
                 inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
                 inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>*
                                                                Exp) override;
                 inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
                                                                Exp) override;
-                
+
                 static inline Z3Expr Do(const ExpT& Exp, const UFID2TypeMapT& UFMap,
                                         const LTSLCRef& LTSCtx);
             };
@@ -431,16 +352,76 @@ namespace ESMC {
                        const LTSLCRef& LTSCtx, MgrT* Mgr);
                 ~Raiser();
 
-                static inline ExpT 
+                static inline ExpT
                 Do(const LExpT& LExp, const unordered_map<string, i64>& UFNameToIDMap,
                    const LTSLCRef& LTSCtx, MgrT* Mgr);
+            };
+
+
+            template <typename E, template <typename> class S>
+            class DeBruijnShifter : public ExpressionVisitorBase<E, S>
+            {
+            private:
+                typedef ExprMgr<E, S> MgrT;
+                typedef Expr<E, S> ExpT;
+
+                vector<ExpT> ExpStack;
+                MgrT* Mgr;
+                i32 ShiftValue;
+
+            public:
+                DeBruijnShifter(MgrT* Mgr, i32 ShiftValue);
+                virtual ~DeBruijnShifter();
+
+                inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+                inline virtual void
+                VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) override;
+                inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+                inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+                inline virtual void
+                VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) override;
+                inline virtual void
+                VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override;
+
+                static ExpT Do(MgrT* Mgr, const ExpT& Exp, i32 ShiftValue);
+            };
+
+            // A class that unrolls quantifiers
+            template <typename E, template <typename> class S>
+            class QuantifierUnroller : public ExpressionVisitorBase<E, S>
+            {
+            private:
+                typedef ExprMgr<E, S> MgrT;
+                typedef Expr<E, S> ExpT;
+
+                vector<ExpT> ExpStack;
+                MgrT* Mgr;
+                bool IncludeUndef;
+
+                inline vector<ExpT> UnrollQuantifier(const QuantifiedExpressionBase<E, S>* Exp);
+
+            public:
+                inline QuantifierUnroller(MgrT* Mgr, bool IncludeUndef);
+                inline virtual ~QuantifierUnroller();
+
+                inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+                inline virtual void
+                VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) override;
+                inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+                inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+                inline virtual void
+                VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) override;
+                inline virtual void
+                VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override;
+
+                static ExpT Do(MgrT* Mgr, const ExpT& Exp, bool IncludeUndef);
             };
 
             // Implementation of type checker
             template <typename E, template <typename> class S>
             TypeChecker<E, S>::TypeChecker(const UFID2TypeMapT& UFMap,
-                                           const ExprTypeRef& BoolType,
-                                           const ExprTypeRef& IntType)
+                                           const TypeRef& BoolType,
+                                           const TypeRef& IntType)
                 : ExpressionVisitorBase<E, S>("LTSTermTypeChecker"),
                   UFMap(UFMap), BoolType(BoolType), IntType(IntType)
             {
@@ -462,10 +443,10 @@ namespace ESMC {
                 }
                 auto Type = Exp->GetVarType();
 
-                if (Type->template Is<ExprFuncType>()) {
+                if (Type->template Is<FuncType>()) {
                     throw ExprTypeError("Cannot create variables of function types");
                 }
-                
+
                 Exp->SetType(Type);
             }
 
@@ -489,49 +470,49 @@ namespace ESMC {
                 auto Type = Exp->GetConstType();
 
                 auto ActType = Type;
-                if (ActType->template As<ExprBoolType>() != nullptr) {
+                if (ActType->template As<BooleanType>() != nullptr) {
                     boost::algorithm::to_lower(ConstVal);
                     if (ConstVal != "true" && ConstVal != "false") {
                         throw ExprTypeError("Unknown constant string");
                     }
                     Exp->SetType(Exp->GetConstType());
-                } else if(ActType->template As<ExprRangeType>() != nullptr ||
-                          ActType->template As<ExprIntType>() != nullptr) {
+                } else if(ActType->template As<RangeType>() != nullptr ||
+                          ActType->template As<IntegerType>() != nullptr) {
                     // if (!boost::algorithm::all(ConstVal, boost::algorithm::is_digit())) {
                     //     throw ExprTypeError((string)"Invalid value " + ConstVal);
                     // }
                     // Commented out the check above, lexical cast should handle it!
                     boost::multiprecision::cpp_int Val = 0;
                     Val = boost::lexical_cast<boost::multiprecision::cpp_int>(ConstVal);
-                    if (ActType->template As<ExprRangeType>() != nullptr) {
-                        auto RangeType = ActType->template SAs<ExprRangeType>();
+                    if (ActType->template As<RangeType>() != nullptr) {
+                        auto RType = ActType->template SAs<RangeType>();
 
-                        if (Val < RangeType->GetLow() ||
-                            Val > RangeType->GetHigh()) {
+                        if (Val < RType->GetLow() ||
+                            Val > RType->GetHigh()) {
                             throw ExprTypeError((string)"Value " + ConstVal + " is out of bounds");
                         }
                     }
                     Exp->SetType(ActType);
-                } else if(ActType->template As<ExprEnumType>() != nullptr) {
-                    auto EnumType = ActType->template SAs<ExprEnumType>();
-                    if (!EnumType->IsMember(ConstVal)) {
+                } else if(ActType->template As<EnumType>() != nullptr) {
+                    auto EType = ActType->template SAs<EnumType>();
+                    if (!EType->IsMember(ConstVal)) {
                         throw ExprTypeError((string)"Value " + ConstVal + " is not valid");
                     }
                     Exp->SetType(ActType);
-                } else if(ActType->template As<ExprSymmetricType>() != nullptr) {
-                    auto SymmType = ActType->template SAs<ExprSymmetricType>();
+                } else if(ActType->template As<SymmetricType>() != nullptr) {
+                    auto SymmType = ActType->template SAs<SymmetricType>();
                     if (!SymmType->IsMember(ConstVal)) {
                         throw ExprTypeError((string)"Value " + ConstVal + " is not valid");
                     }
                     Exp->SetType(ActType);
                 } else {
-                    throw ExprTypeError((string)"Only boolean, range, enum and symmetric type " + 
+                    throw ExprTypeError((string)"Only boolean, range, enum and symmetric type " +
                                         "constants are currently supported");
                 }
             }
 
-            static inline const ExprTypeRef& GetTypeForBoundVar
-            (const vector<vector<ExprTypeRef>>& ScopeStack,
+            static inline const TypeRef& GetTypeForBoundVar
+            (const vector<vector<TypeRef>>& ScopeStack,
              i64 VarIdx)
             {
                 i64 LeftIdx = VarIdx;
@@ -545,11 +526,11 @@ namespace ESMC {
                     }
                 }
                 // Unbound variable
-                return ExprTypeRef::NullPtr;                
+                return TypeRef::NullPtr;
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             TypeChecker<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
             {
                 auto PrevType = Exp->GetType();
@@ -558,28 +539,28 @@ namespace ESMC {
                 }
 
                 auto Type = Exp->GetVarType();
-                if (Type->template Is<ExprScalarType>()) {
+                if (Type->template Is<ScalarType>()) {
                     auto Idx = Exp->GetVarIdx();
                     auto ExpectedType = GetTypeForBoundVar(ScopeStack, Idx);
                     if (ExpectedType != InvalidType && ExpectedType != Type) {
-                        throw ExprTypeError((string)"Bound variable with index " + to_string(Idx) + 
+                        throw ExprTypeError((string)"Bound variable with index " + to_string(Idx) +
                                             " has an ambiguous type");
                     }
                     Exp->SetType(Type);
                 } else {
-                    throw ExprTypeError((string)"Only scalar types " + 
+                    throw ExprTypeError((string)"Only scalar types " +
                                         "may be used as quanfiers");
                 }
             }
 
-            static inline bool CheckTypeCompat(const ExprTypeRef& ExpType, 
-                                               const ExprTypeRef& ActType)
+            static inline bool CheckTypeCompat(const TypeRef& ExpType,
+                                               const TypeRef& ActType)
             {
                 if (ExpType == ActType) {
                     return true;
                 } else {
-                    if (ExpType->As<ExprIntType>() != nullptr &&
-                        ActType->As<ExprIntType>() != nullptr) {
+                    if (ExpType->As<IntegerType>() != nullptr &&
+                        ActType->As<IntegerType>() != nullptr) {
                         return true;
                     } else {
                         return false;
@@ -598,29 +579,29 @@ namespace ESMC {
             static inline bool CheckCompatibility(const T& Collection, const V& Value)
             {
                 return all_of(Collection.begin(), Collection.end(),
-                              [&] (const V& i) -> bool 
+                              [&] (const V& i) -> bool
                               { return CheckTypeCompat(i, Value); });
             }
 
             static inline void CheckNumArgs(u32 Expected, u32 Actual, const string& OpName)
             {
                 if (Expected != Actual) {
-                    throw ExprTypeError(OpName + " must be applied to exactly " + 
+                    throw ExprTypeError(OpName + " must be applied to exactly " +
                                         to_string(Expected) + " arguments");
                 }
             }
 
-            static inline bool CheckAllScalar(const vector<ExprTypeRef>& Types)
+            static inline bool CheckAllScalar(const vector<TypeRef>& Types)
             {
                 return all_of(Types.begin(), Types.end(),
-                              [] (const ExprTypeRef& Type) -> bool 
+                              [] (const TypeRef& Type) -> bool
                               {
-                                  return (Type->Is<ExprScalarType>());
+                                  return (Type->Is<ScalarType>());
                               });
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             TypeChecker<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
             {
                 auto PrevType = Exp->GetType();
@@ -628,7 +609,7 @@ namespace ESMC {
                     return;
                 }
 
-                vector<ExprTypeRef> ChildTypes;
+                vector<TypeRef> ChildTypes;
                 auto const& Children = Exp->GetChildren();
                 for (auto const& Child : Children) {
                     Child->Accept(this);
@@ -662,10 +643,15 @@ namespace ESMC {
 
                 case LTSOps::OpITE: {
                     CheckNumArgs(3, ChildTypes.size(), "ite");
-                    if (!CheckTypeCompat(BoolType, ChildTypes[0]) || 
+                    if (!CheckTypeCompat(BoolType, ChildTypes[0]) ||
                         (!CheckTypeCompat(ChildTypes[1], ChildTypes[2]))) {
-                        throw ExprTypeError((string)"ite op requires a boolean predicate " + 
+                        throw ExprTypeError((string)"ite op requires a boolean predicate " +
                                             "and the types of the branches to match");
+                    }
+                    if (!ChildTypes[1]->template Is<ScalarType>() ||
+                        !ChildTypes[2]->template Is<ScalarType>()) {
+                        throw ExprTypeError((string)"ite op requires both branches to be " +
+                                            "scalar typed");
                     }
                     Exp->SetType(ChildTypes[1]);
                     break;
@@ -683,9 +669,9 @@ namespace ESMC {
                     }
 
                     if (!all_of(ChildTypes.begin(), ChildTypes.end(),
-                                [&] (const ExprTypeRef& i) -> bool 
+                                [&] (const TypeRef& i) -> bool
                                 { return CheckTypeCompat(i, BoolType); })) {
-                        throw ExprTypeError((string)"implies, xor, iff, and, or ops need " + 
+                        throw ExprTypeError((string)"implies, xor, iff, and, or ops need " +
                                             "all operands to be boolean");
                     }
                     Exp->SetType(BoolType);
@@ -698,7 +684,7 @@ namespace ESMC {
                         throw ExprTypeError((string)"add/sub/mul ops need at least two operands");
                     }
                     if (!all_of(ChildTypes.begin(), ChildTypes.end(),
-                                [&] (const ExprTypeRef& i) -> bool 
+                                [&] (const TypeRef& i) -> bool
                                 { return CheckTypeCompat(i, IntType); })) {
                         throw ExprTypeError((string)"add/sub/mul ops need integer arguments");
                     }
@@ -713,7 +699,7 @@ namespace ESMC {
                 case LTSOps::OpGT: {
                     CheckNumArgs(2, ChildTypes.size(), "div/mod/cmp");
                     if (!all_of(ChildTypes.begin(), ChildTypes.end(),
-                                [&] (const ExprTypeRef& i) -> bool 
+                                [&] (const TypeRef& i) -> bool
                                 { return CheckTypeCompat(IntType, i); })) {
                         throw ExprTypeError("div/mod/cmp operators expect integer operands");
                     }
@@ -734,38 +720,49 @@ namespace ESMC {
                 case LTSOps::OpIndex: {
                     CheckNumArgs(2, ChildTypes.size(), "Index");
                     auto Type1 = ChildTypes[0];
-                    auto ArrayType = Type1->template As<ExprArrayType>();
+                    auto ArrType = Type1->template As<ArrayType>();
 
-                    if (ArrayType == nullptr) {
-                        throw ExprTypeError((string)"Index operator can only be " + 
+                    if (ArrType == nullptr) {
+                        throw ExprTypeError((string)"Index operator can only be " +
                                             "applied to array types");
                     }
 
-                    ExprTypeRef ExpIndexType;
+                    TypeRef ExpIndexType;
 
-                    ExpIndexType = ArrayType->GetIndexType();
-                    
+                    ExpIndexType = ArrType->GetIndexType();
+
                     if (!CheckTypeCompat(ExpIndexType, ChildTypes[1])) {
                         throw ExprTypeError("Invalid type for index expression");
                     }
+                    if (Children[1]->template Is<ConstExpression>() &&
+                        ChildTypes[1]->template Is<SymmetricType>()) {
+                        auto const& ConstVal =
+                            Children[1]->template SAs<ConstExpression>()->GetConstValue();
+                        auto const& TypeName =
+                            ChildTypes[1]->template SAs<SymmetricType>()->GetName();
+                        if (ConstVal == "clear" || ConstVal == (TypeName + "::clear")) {
+                            throw ExprTypeError((string)"Indexing with undefined value into " +
+                                                "a symmetric array");
+                        }
+                    }
 
-                    ExprTypeRef ElemType;
+                    TypeRef ElemType;
 
-                    ElemType = ArrayType->GetValueType();
+                    ElemType = ArrType->GetValueType();
                     Exp->SetType(ElemType);
                     break;
                 }
                 case LTSOps::OpField: {
                     CheckNumArgs(2, ChildTypes.size(), "Field");
 
-                    if (!ChildTypes[0]->template Is<ExprRecordType>() &&
-                        !ChildTypes[0]->template Is<ExprParametricType>()) {
-                        throw ExprTypeError((string)"Field access only allowed on " + 
+                    if (!ChildTypes[0]->template Is<RecordType>() &&
+                        !ChildTypes[0]->template Is<ParametricType>()) {
+                        throw ExprTypeError((string)"Field access only allowed on " +
                                             "record or parametric types");
                     }
 
-                    if (!ChildTypes[1]->template Is<ExprFieldAccessType>()) {
-                        throw ExprTypeError((string)"Record Field accesses must be made with " + 
+                    if (!ChildTypes[1]->template Is<FieldAccessType>()) {
+                        throw ExprTypeError((string)"Record Field accesses must be made with " +
                                             "variables of type FieldAccessType");
                     }
 
@@ -773,21 +770,21 @@ namespace ESMC {
                     if (FieldExp == nullptr) {
                         throw ExprTypeError("Field access expression must be a VarExpression");
                     }
-                    
+
                     auto const& FieldName = FieldExp->GetVarName();
 
-                    const ExprRecordType* RecType = nullptr;
-                    if (ChildTypes[0]->template Is<ExprRecordType>()) {
-                        RecType = ChildTypes[0]->template SAs<ExprRecordType>();
+                    const RecordType* RecType = nullptr;
+                    if (ChildTypes[0]->template Is<RecordType>()) {
+                        RecType = ChildTypes[0]->template SAs<RecordType>();
                     } else {
                         // Must be a parametric base type
-                        auto PType = ChildTypes[0]->template SAs<ExprParametricType>();
-                        RecType = PType->GetBaseType()->template As<ExprRecordType>();
+                        auto PType = ChildTypes[0]->template SAs<ParametricType>();
+                        RecType = PType->GetBaseType()->template As<RecordType>();
                     }
                     auto ValType = RecType->GetTypeForMember(FieldName);
-                    if (ValType == ExprTypeRef::NullPtr) {
-                        throw ExprTypeError((string)"Field name \"" + 
-                                            FieldName + "\" is invalid for " + 
+                    if (ValType == TypeRef::NullPtr) {
+                        throw ExprTypeError((string)"Field name \"" +
+                                            FieldName + "\" is invalid for " +
                                             "record type \"" + RecType->GetName() + "\"");
                     }
 
@@ -801,8 +798,8 @@ namespace ESMC {
                     if (it == UFMap.end()) {
                         throw ExprTypeError((string)"Unknown opcode " + to_string(OpCode));
                     }
-                    auto FuncType = it->second->template As<ExprFuncType>();
-                    auto const& ArgTypes = FuncType->GetArgTypes();
+                    auto FunType = it->second->template As<FuncType>();
+                    auto const& ArgTypes = FunType->GetArgTypes();
                     if (ChildTypes.size() != ArgTypes.size()) {
                         throw ExprTypeError((string)"Incorrect number of arguments for UF");
                     }
@@ -811,20 +808,20 @@ namespace ESMC {
                             throw ExprTypeError("Incorrect type for argument of UF");
                         }
                     }
-                    Exp->SetType(FuncType->GetFuncType());
+                    Exp->SetType(FunType->GetEvalType());
                 }
                 }
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             TypeChecker<E, S>::VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
             {
                 auto const& QVarTypes = Exp->GetQVarTypes();
                 for (auto const& QVarType : QVarTypes) {
-                    if (!QVarType->template Is<ExprScalarType>()) {
-                        throw ExprTypeError((string)"Quantified variables must have scalar " + 
-                                            "types. \"" + QVarType->ToString() + "\" is not " + 
+                    if (!QVarType->template Is<ScalarType>()) {
+                        throw ExprTypeError((string)"Quantified variables must have scalar " +
+                                            "types. \"" + QVarType->ToString() + "\" is not " +
                                             "a scalar type");
                     }
                 }
@@ -837,30 +834,30 @@ namespace ESMC {
                 if (QExpr->GetType() != BoolType) {
                     throw ExprTypeError("Body of quantified expression needs to be boolean");
                 }
-                
+
                 Exp->SetType(BoolType);
                 ScopeStack.pop_back();
                 return;
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             TypeChecker<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
             {
                 VisitQuantifiedExpression(Exp);
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             TypeChecker<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
             {
                 VisitQuantifiedExpression(Exp);
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             TypeChecker<E, S>::Do(const ExpT& Exp, const UFID2TypeMapT& UFMap,
-                                  const ExprTypeRef& BoolType, const ExprTypeRef& IntType)
+                                  const TypeRef& BoolType, const TypeRef& IntType)
             {
                 TypeChecker Checker(UFMap, BoolType, IntType);
                 Exp->Accept(&Checker);
@@ -882,28 +879,28 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Stringifier<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
             {
                 StringStack.push_back(Exp->GetVarName());
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Stringifier<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
             {
                 StringStack.push_back(Exp->GetConstValue());
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Stringifier<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
             {
                 StringStack.push_back(BoundVarPrefix + to_string(Exp->GetVarIdx()));
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Stringifier<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
             {
                 ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
@@ -937,10 +934,10 @@ namespace ESMC {
                 } else {
                     auto it2 = UFMap.find(Exp->GetOpCode());
                     if (it2 == UFMap.end()) {
-                        throw InternalError((string)"Could not find operator with code " + 
+                        throw InternalError((string)"Could not find operator with code " +
                                             to_string(Exp->GetOpCode()));
                     }
-                    OpString = it2->second->template As<ExprFuncType>()->GetName();
+                    OpString = it2->second->template As<FuncType>()->GetName();
                 }
 
                 string Retval = (string)"(" + OpString;
@@ -959,7 +956,7 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Stringifier<E, S>::VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
             {
                 auto const& QVarTypes = Exp->GetQVarTypes();
@@ -976,7 +973,7 @@ namespace ESMC {
                         ExpString += " ";
                     }
                     First = false;
-                    ExpString += "(" + TypeToString(QVarType) + ")";
+                    ExpString += TypeToString(QVarType);
                 }
                 ExpString += ") ";
                 Exp->GetQExpression()->Accept(this);
@@ -985,21 +982,21 @@ namespace ESMC {
                 StringStack.pop_back();
                 StringStack.push_back(ExpString);
             }
-            
+
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Stringifier<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
             {
                 VisitQuantifiedExpression(Exp);
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Stringifier<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
             {
                 VisitQuantifiedExpression(Exp);
             }
-            
+
             template <typename E, template <typename> class S>
             inline string
             Stringifier<E, S>::Do(const ExpT& Exp, const UFID2TypeMapT& UFMap)
@@ -1016,7 +1013,7 @@ namespace ESMC {
                 return Type->ToString();
             }
 
-            
+
             // Implementation of Canonicalizer
             template <typename E, template <typename> class S>
             inline Canonicalizer<E, S>::Canonicalizer()
@@ -1057,10 +1054,10 @@ namespace ESMC {
             Canonicalizer<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
             {
                 ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
-                
+
                 auto const OpCode = Exp->GetOpCode();
                 const u32 NumChildren = Exp->GetChildren().size();
-                
+
                 vector<ExpT> NewChildren(NumChildren);
                 for (u32 i = 0; i < NumChildren; ++i) {
                     NewChildren[NumChildren - i - 1] = ExpStack.back();
@@ -1076,23 +1073,23 @@ namespace ESMC {
                 case LTSOps::OpADD:
                 case LTSOps::OpMUL:
                     sort(NewChildren.begin(), NewChildren.end(), ExpressionPtrCompare());
-                    ExpStack.push_back(new OpExpression<E, S>(nullptr, OpCode, 
+                    ExpStack.push_back(new OpExpression<E, S>(nullptr, OpCode,
                                                               NewChildren, Exp->ExtensionData));
                     break;
 
                 case LTSOps::OpNOT:
                     if (NewChildren[0]->template As<OpExpression>() != nullptr &&
-                        NewChildren[0]->template 
+                        NewChildren[0]->template
                         SAs<OpExpression>()->GetOpCode() == LTSOps::OpNOT) {
 
-                        ExpStack.push_back((NewChildren[0]->template 
+                        ExpStack.push_back((NewChildren[0]->template
                                             SAs<OpExpression>()->GetChildren())[0]);
                     } else {
                         ExpStack.push_back(new OpExpression<E, S>(nullptr, OpCode,
                                                                   NewChildren, Exp->ExtensionData));
                     }
                     break;
-                    
+
                 default:
                     ExpStack.push_back(new OpExpression<E, S>(nullptr, OpCode, NewChildren,
                                                               Exp->ExtensionData));
@@ -1109,11 +1106,11 @@ namespace ESMC {
                 ExpStack.pop_back();
                 if (Exp->IsForAll()) {
                     ExpStack.push_back(new AQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
-                                                                       NewQExpr, 
+                                                                       NewQExpr,
                                                                        Exp->ExtensionData));
                 } else {
                     ExpStack.push_back(new EQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
-                                                                       NewQExpr, 
+                                                                       NewQExpr,
                                                                        Exp->ExtensionData));
                 }
             }
@@ -1140,12 +1137,12 @@ namespace ESMC {
                 Exp->Accept(&TheCanonicalizer);
                 return TheCanonicalizer.ExpStack[0];
             }
-            
+
             // Implementation of Simplifier
             template <typename E, template <typename> class S>
             inline Simplifier<E, S>::Simplifier(MgrType* Mgr,
-                                                const ExprTypeRef& BoolType,
-                                                const ExprTypeRef& IntType)
+                                                const TypeRef& BoolType,
+                                                const TypeRef& IntType)
                 : ExpressionVisitorBase<E, S>("LTSTermSimplifier"),
                   BoolType(BoolType), IntType(IntType), Mgr(Mgr)
             {
@@ -1188,9 +1185,9 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            static inline vector<Expr<E, S>> PurgeBool(const vector<Expr<E, S>>& ExpVec, 
-                                                       const bool Value, 
-                                                       const ExprTypeRef& BoolType)
+            static inline vector<Expr<E, S>> PurgeBool(const vector<Expr<E, S>>& ExpVec,
+                                                       const bool Value,
+                                                       const TypeRef& BoolType)
             {
                 vector<Expr<E, S>> Retval;
                 const string PurgeString = Value ? "true" : "false";
@@ -1240,9 +1237,10 @@ namespace ESMC {
                 return false;
             }
 
+
             template <typename E, template <typename> class S>
-            static inline bool HasBool(const vector<Expr<E, S>>& ExpVec, 
-                                       const bool Value, const ExprTypeRef& BoolType)
+            static inline bool HasBool(const vector<Expr<E, S>>& ExpVec,
+                                       const bool Value, const TypeRef& BoolType)
             {
                 const string MatchString = Value ? "true" : "false";
                 for (auto const& Exp : ExpVec) {
@@ -1254,6 +1252,39 @@ namespace ESMC {
                 }
 
                 return false;
+            }
+
+            template <typename E, template <typename> class S>
+            static inline bool AllOfOp(const vector<Expr<E, S>>& ExpVec,
+                                       i64 OpCode)
+            {
+                return all_of(ExpVec.begin(), ExpVec.end(),
+                              [&] (const Expr<E, S>& Exp) -> bool
+                              {
+                                  auto ExpAsOp = Exp->template As<OpExpression>();
+                                  if (ExpAsOp != nullptr) {
+                                      return (ExpAsOp->GetOpCode() == OpCode);
+                                  }
+                                  return false;
+                              });
+            }
+
+            template <typename E, template <typename> class S>
+            static inline vector<Expr<E, S>>
+            GetAllChildren(const vector<Expr<E, S>>& ExpVec)
+            {
+                vector<Expr<E, S>> Retval;
+                for (auto const& Exp : ExpVec) {
+                    auto ExpAsOp = Exp->template As<OpExpression>();
+                    if (ExpAsOp == nullptr) {
+                        throw InternalError((string)"Attempted to flatten non-op " +
+                                            "expression.\nAt: " + __FILE__ + ":" +
+                                            to_string(__LINE__));
+                    }
+                    auto const& Children = ExpAsOp->GetChildren();
+                    Retval.insert(Retval.end(), Children.begin(), Children.end());
+                }
+                return Retval;
             }
 
             template <typename E, template <typename> class S>
@@ -1269,12 +1300,12 @@ namespace ESMC {
             Simplifier<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
             {
                 ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
-                
+
                 const u32 NumChildren = Exp->GetChildren().size();
                 auto const OpCode = Exp->GetOpCode();
                 vector<ExpT> SimpChildren(NumChildren);
                 auto const& ExtData = Exp->ExtensionData;
-                
+
                 for(u32 i = 0; i < NumChildren; ++i) {
                     SimpChildren[NumChildren - i - 1] = ExpStack.back();
                     ExpStack.pop_back();
@@ -1295,9 +1326,9 @@ namespace ESMC {
                             ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                         }
                     } else {
-                        auto const& Val1 = 
+                        auto const& Val1 =
                             SimpChildren[0]->template SAs<ConstExpression>()->GetConstValue();
-                        auto const& Val2 = 
+                        auto const& Val2 =
                             SimpChildren[1]->template SAs<ConstExpression>()->GetConstValue();
                         auto Result = (Val1 == Val2 ? "true" : "false");
                         ExpStack.push_back(Mgr->MakeVal(Result, BoolType));
@@ -1308,7 +1339,7 @@ namespace ESMC {
                     if (!CheckAllConstant(SimpChildren)) {
                         ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                     } else {
-                        auto const& Val = 
+                        auto const& Val =
                             SimpChildren[0]->template SAs<ConstExpression>()->GetConstValue();
                         auto Result = (Val == "true" ? "false" : "true");
                         ExpStack.push_back(Mgr->MakeVal(Result, BoolType));
@@ -1319,7 +1350,7 @@ namespace ESMC {
                     if (SimpChildren[1]->Equals(SimpChildren[2])) {
                         ExpStack.push_back(SimpChildren[1]);
                     } else if (SimpChildren[0]->template As<ConstExpression>() != nullptr) {
-                        if (SimpChildren[0]->template 
+                        if (SimpChildren[0]->template
                             SAs<ConstExpression>()->GetConstValue() == "true") {
                             ExpStack.push_back(SimpChildren[1]);
                         } else {
@@ -1339,6 +1370,9 @@ namespace ESMC {
                             ExpStack.push_back(Mgr->MakeVal("false", BoolType));
                         } else if (RedChildren.size() == 1) {
                             ExpStack.push_back(RedChildren[0]);
+                        } else if (AllOfOp(RedChildren, LTSOps::OpOR)) {
+                            auto&& FlattenedChildren = GetAllChildren(RedChildren);
+                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
                             ExpStack.push_back(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
                         }
@@ -1354,6 +1388,9 @@ namespace ESMC {
                             ExpStack.push_back(Mgr->MakeVal("true", BoolType));
                         } else if (RedChildren.size() == 1) {
                             ExpStack.push_back(RedChildren[0]);
+                        } else if (AllOfOp(RedChildren, LTSOps::OpAND)) {
+                            auto&& FlattenedChildren = GetAllChildren(RedChildren);
+                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
                             ExpStack.push_back(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
                         }
@@ -1375,7 +1412,7 @@ namespace ESMC {
                         if (ConVal == "false") {
                             vector<ExpT> NewChildren;
                             NewChildren.push_back(SimpChildren[0]);
-                            ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpNOT, 
+                            ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpNOT,
                                                              NewChildren));
                         } else {
                             ExpStack.push_back(SimpChildren[1]);
@@ -1389,7 +1426,7 @@ namespace ESMC {
                     if (CheckAllConstant(SimpChildren)) {
                         auto AExp = SimpChildren[0]->template SAs<ConstExpression>();
                         auto BExp = SimpChildren[0]->template SAs<ConstExpression>();
-                        
+
                         auto AVal = AExp->GetConstValue();
                         auto BVal = BExp->GetConstValue();
 
@@ -1399,7 +1436,7 @@ namespace ESMC {
                             ExpStack.push_back(Mgr->MakeVal("true", BoolType));
                         }
                     }
-                    
+
                     if (SimpChildren[0]->template As<ConstExpression>() != nullptr) {
                         auto AExp = SimpChildren[0]->template SAs<ConstExpression>();
                         auto const& AVal = AExp->GetConstValue();
@@ -1429,8 +1466,8 @@ namespace ESMC {
                     if (CheckAllConstant(SimpChildren)) {
                         i64 SumVal = 0;
                         for (auto const& Exp : SimpChildren) {
-                            auto Val = 
-                                boost::lexical_cast<i64>(Exp->template 
+                            auto Val =
+                                boost::lexical_cast<i64>(Exp->template
                                                          SAs<ConstExpression>()->GetConstValue());
                             SumVal += Val;
                         }
@@ -1439,6 +1476,9 @@ namespace ESMC {
                         auto&& RedChildren = PurgeInt(SimpChildren, 0);
                         if (RedChildren.size() == 1) {
                             ExpStack.push_back(RedChildren[0]);
+                        } else if (AllOfOp(RedChildren, LTSOps::OpADD)) {
+                            auto&& FlattenedChildren = GetAllChildren(RedChildren);
+                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
                             ExpStack.push_back(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
                         }
@@ -1447,17 +1487,20 @@ namespace ESMC {
 
                 case LTSOps::OpSUB:
                     if (CheckAllConstant(SimpChildren)) {
-                        i64 DiffVal = 
+                        i64 DiffVal =
                             (boost::lexical_cast<i64>(SimpChildren[0]->template
                                                       SAs<ConstExpression>()->GetConstValue()) -
-                             boost::lexical_cast<i64>(SimpChildren[1]->template 
+                             boost::lexical_cast<i64>(SimpChildren[1]->template
                                                       SAs<ConstExpression>()->GetConstValue()));
                         ExpStack.push_back(Mgr->MakeVal(to_string(DiffVal), IntType));
                     } else {
                         if (SimpChildren[1]->template As<ConstExpression>() != nullptr &&
-                            boost::lexical_cast<i64>(SimpChildren[1]->template 
+                            boost::lexical_cast<i64>(SimpChildren[1]->template
                                                      SAs<ConstExpression>()->GetConstValue()) == 0) {
                             ExpStack.push_back(SimpChildren[0]);
+                        } else if (AllOfOp(SimpChildren, LTSOps::OpSUB)) {
+                            auto&& FlattenedChildren = GetAllChildren(SimpChildren);
+                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
                             ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                         }
@@ -1479,8 +1522,8 @@ namespace ESMC {
                     if (CheckAllConstant(SimpChildren)) {
                         i64 ProdVal = 1;
                         for (auto const& Exp : SimpChildren) {
-                            auto Val = 
-                                boost::lexical_cast<i64>(Exp->template 
+                            auto Val =
+                                boost::lexical_cast<i64>(Exp->template
                                                          SAs<ConstExpression>()->GetConstValue());
                             ProdVal *= Val;
                         }
@@ -1492,6 +1535,10 @@ namespace ESMC {
                             auto&& RedChildren = PurgeInt(SimpChildren, 1);
                             if (RedChildren.size() == 1) {
                                 ExpStack.push_back(RedChildren[0]);
+                            } else if (AllOfOp(RedChildren, LTSOps::OpMUL)) {
+                                auto&& FlattenedChildren = GetAllChildren(RedChildren);
+                                ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren,
+                                                             ExtData));
                             } else {
                                 ExpStack.push_back(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
                             }
@@ -1504,24 +1551,24 @@ namespace ESMC {
                     if (CheckAllConstant(SimpChildren)) {
                         i64 DivVal;
                         if (OpCode == LTSOps::OpDIV) {
-                            DivVal = 
-                                (boost::lexical_cast<i64>(SimpChildren[0]->template 
+                            DivVal =
+                                (boost::lexical_cast<i64>(SimpChildren[0]->template
                                                           SAs<ConstExpression>()->GetConstValue()) /
                                  boost::lexical_cast<i64>(SimpChildren[1]->template
                                                           SAs<ConstExpression>()->GetConstValue()));
                         } else {
-                            DivVal = 
-                                (boost::lexical_cast<i64>(SimpChildren[0]->template 
+                            DivVal =
+                                (boost::lexical_cast<i64>(SimpChildren[0]->template
                                                           SAs<ConstExpression>()->GetConstValue()) %
                                  boost::lexical_cast<i64>(SimpChildren[1]->template
                                                           SAs<ConstExpression>()->GetConstValue()));
-                            
+
                         }
                         ExpStack.push_back(Mgr->MakeVal(to_string(DivVal), IntType));
                     } else {
                         if (SimpChildren[1]->template As<ConstExpression>() != nullptr) {
-                            auto Val = 
-                                boost::lexical_cast<i64>(SimpChildren[1]->template 
+                            auto Val =
+                                boost::lexical_cast<i64>(SimpChildren[1]->template
                                                          SAs<ConstExpression>()->GetConstValue());
                             if (Val == 0) {
                                 throw ExprTypeError("Division by zero during simplification");
@@ -1537,29 +1584,29 @@ namespace ESMC {
                         }
                     }
                     break;
-                    
+
                 case LTSOps::OpGT:
                 case LTSOps::OpGE:
                 case LTSOps::OpLT:
                 case LTSOps::OpLE:
                     if (CheckAllConstant(SimpChildren)) {
-                        auto Val1 = 
+                        auto Val1 =
                             boost::lexical_cast<i64>(SimpChildren[0]->template
                                                      SAs<ConstExpression>()->GetConstValue());
-                        auto Val2 = 
+                        auto Val2 =
                             boost::lexical_cast<i64>(SimpChildren[1]->template
                                                      SAs<ConstExpression>()->GetConstValue());
                         string ResString;
                         if (OpCode == LTSOps::OpGT) {
-                            ResString = Val1 > Val2 ? "true" : "false"; 
+                            ResString = Val1 > Val2 ? "true" : "false";
                         } else if (OpCode == LTSOps::OpGE) {
-                            ResString = Val1 >= Val2 ? "true" : "false"; 
+                            ResString = Val1 >= Val2 ? "true" : "false";
                         } else if (OpCode == LTSOps::OpLT) {
-                            ResString = Val1 < Val2 ? "true" : "false"; 
+                            ResString = Val1 < Val2 ? "true" : "false";
                         } else /* if (OpCode == LTSOps::OpLE) */ {
-                            ResString = Val1 <= Val2 ? "true" : "false"; 
+                            ResString = Val1 <= Val2 ? "true" : "false";
                         }
-                        
+
                         ExpStack.push_back(Mgr->MakeVal(ResString, BoolType));
                     } else {
                         ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
@@ -1579,6 +1626,13 @@ namespace ESMC {
                 Exp->GetQExpression()->Accept(this);
                 auto NewQExpr = ExpStack.back();
                 ExpStack.pop_back();
+
+                if (NewQExpr->template Is<ConstExpression>()) {
+                    ExpStack.push_back(NewQExpr);
+                    return;
+                }
+
+                // Not a constant
                 if (Exp->IsForAll()) {
                     ExpStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(),
                                                        NewQExpr, Exp->ExtensionData));
@@ -1603,10 +1657,10 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            inline typename Simplifier<E, S>::ExpT 
-            Simplifier<E, S>::Do(MgrType* Mgr, const ExpT& Exp, 
-                                 const ExprTypeRef& BoolType,
-                                 const ExprTypeRef& IntType)
+            inline typename Simplifier<E, S>::ExpT
+            Simplifier<E, S>::Do(MgrType* Mgr, const ExpT& Exp,
+                                 const TypeRef& BoolType,
+                                 const TypeRef& IntType)
             {
                 Simplifier<E, S> TheSimplifier(Mgr, BoolType, IntType);
                 Exp->Accept(&TheSimplifier);
@@ -1630,7 +1684,7 @@ namespace ESMC {
 
             template <typename E, template <typename> class S>
             inline const Z3Sort&
-            Lowerer<E, S>::LowerType(const ExprTypeRef& Type)
+            Lowerer<E, S>::LowerType(const TypeRef& Type)
             {
                 auto Ctx = LTSCtx->GetZ3Ctx();
                 auto const& CachedSort = LTSCtx->GetZ3Sort(Type);
@@ -1640,13 +1694,13 @@ namespace ESMC {
 
                 Z3Sort LoweredSort;
                 // We need to actually lower this
-                if (Type->template Is<ExprBoolType>()) {
+                if (Type->template Is<BooleanType>()) {
                     LoweredSort = Z3Sort(Ctx, Z3_mk_bool_sort(*Ctx));
-                } else if (Type->template Is<ExprRangeType>()) {
+                } else if (Type->template Is<RangeType>()) {
                     LoweredSort = Z3Sort(Ctx, Z3_mk_int_sort(*Ctx));
-                } else if (Type->template Is<ExprEnumType>()) {
+                } else if (Type->template Is<EnumType>()) {
 
-                    auto TypeAsEnum = Type->template SAs<ExprEnumType>();
+                    auto TypeAsEnum = Type->template SAs<EnumType>();
                     auto const& Members = TypeAsEnum->GetElements();
                     auto const& TypeName = TypeAsEnum->GetName();
                     vector<string> QualifiedNames;
@@ -1659,26 +1713,36 @@ namespace ESMC {
                     Z3_func_decl* ConstFuncs = new Z3_func_decl[NumConsts];
                     Z3_func_decl* ConstTests = new Z3_func_decl[NumConsts];
 
+                    for (u32 i = 0; i < NumConsts; ++i) {
+                        ConstNames[i] = Z3_mk_string_symbol(*Ctx, QualifiedNames[i].c_str());
+                    }
+
                     auto Z3EnumSort = Z3_mk_enumeration_sort(*Ctx, Z3TypeName, NumConsts,
                                                              ConstNames, ConstFuncs, ConstTests);
 
                     LoweredSort = Z3Sort(Ctx, Z3EnumSort);
                     LoweredSort.AddFuncDecls(NumConsts, ConstFuncs);
                     LoweredSort.AddFuncDecls(NumConsts, ConstTests);
-                    
+
                     delete[] ConstNames;
                     delete[] ConstFuncs;
                     delete[] ConstTests;
 
-                } else if (Type->template Is<ExprSymmetricType>()) {
-                    auto TypeAsSymm = Type->template SAs<ExprEnumType>();
+                } else if (Type->template Is<SymmetricType>()) {
+                    auto TypeAsSymm = Type->template SAs<EnumType>();
                     auto const& Members = TypeAsSymm->GetElements();
                     auto const& TypeName = TypeAsSymm->GetName();
                     const u32 NumConsts = Members.size();
                     Z3_symbol Z3TypeName = Z3_mk_string_symbol(*Ctx, TypeName.c_str());
+
+                    // We need to add a constructor for the undef value
                     Z3_symbol* ConstNames = new Z3_symbol[NumConsts];
                     Z3_func_decl* ConstFuncs = new Z3_func_decl[NumConsts];
                     Z3_func_decl* ConstTests = new Z3_func_decl[NumConsts];
+
+                    for (u32 i = 0; i < NumConsts; ++i) {
+                        ConstNames[i] = Z3_mk_string_symbol(*Ctx, Members[i].c_str());
+                    }
 
                     auto Z3EnumSort = Z3_mk_enumeration_sort(*Ctx, Z3TypeName, NumConsts,
                                                              ConstNames, ConstFuncs, ConstTests);
@@ -1686,13 +1750,20 @@ namespace ESMC {
                     LoweredSort = Z3Sort(Ctx, Z3EnumSort);
                     LoweredSort.AddFuncDecls(NumConsts, ConstFuncs);
                     LoweredSort.AddFuncDecls(NumConsts, ConstTests);
-                    
+
                     delete[] ConstNames;
                     delete[] ConstFuncs;
                     delete[] ConstTests;
 
-                } else if (Type->template Is<ExprRecordType>()) {
-                    auto TypeAsRec = Type->SAs<ExprRecordType>();
+                } else if (Type->template Is<RecordType>() ||
+                           Type->template Is<ParametricType>()) {
+                    const RecordType* TypeAsRec = nullptr;
+                    if (Type->template Is<RecordType>()) {
+                        TypeAsRec = Type->SAs<RecordType>();
+                    } else {
+                        TypeAsRec =
+                            Type->SAs<ParametricType>()->GetBaseType()->SAs<RecordType>();
+                    }
                     auto const& Members = TypeAsRec->GetMemberVec();
                     const u32 NumFields = Members.size();
 
@@ -1708,9 +1779,9 @@ namespace ESMC {
                     }
 
                     auto Z3RecSort = Z3_mk_tuple_sort(*Ctx, Z3TypeName, NumFields,
-                                                      FieldNames, FieldSorts, 
+                                                      FieldNames, FieldSorts,
                                                       &Constructor, ProjFuncs);
-                    
+
                     LoweredSort = Z3Sort(Ctx, Z3RecSort);
                     LoweredSort.AddFuncDecl(Constructor);
                     LoweredSort.AddFuncDecls(NumFields, ProjFuncs);
@@ -1719,16 +1790,16 @@ namespace ESMC {
                     delete[] FieldSorts;
                     delete[] ProjFuncs;
 
-                } else if (Type->template Is<ExprArrayType>()) {
-                    
-                    auto TypeAsArr = Type->template SAs<ExprArrayType>();
+                } else if (Type->template Is<ArrayType>()) {
+
+                    auto TypeAsArr = Type->template SAs<ArrayType>();
                     auto LoweredIdxSort = LowerType(TypeAsArr->GetIndexType());
                     auto LoweredValSort = LowerType(TypeAsArr->GetValueType());
                     auto Z3ArrSort = Z3_mk_array_sort(*Ctx, LoweredIdxSort, LoweredValSort);
                     LoweredSort = Z3Sort(Ctx, Z3ArrSort);
 
                 } else {
-                    throw ESMCError((string)"Cannot lower type \"" + Type->ToString() + 
+                    throw ESMCError((string)"Cannot lower type \"" + Type->ToString() +
                                     "\" into a Z3 type. Perhaps it's unbounded?");
                 }
 
@@ -1737,12 +1808,12 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Lowerer<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
             {
                 auto const& Type = Exp->GetVarType();
                 auto const& Name = Exp->GetVarName();
-                if (LTSCtx->GetLTSType(Name) == ExprTypeRef::NullPtr) {
+                if (LTSCtx->GetLTSType(Name) == TypeRef::NullPtr) {
                     LTSCtx->AddLTSType(Name, Type);
                 }
 
@@ -1752,8 +1823,8 @@ namespace ESMC {
                 auto Z3Sym = Z3_mk_string_symbol(*Ctx, Name.c_str());
                 Z3Expr LoweredExpr(Ctx, Z3_mk_const(*Ctx, Z3Sym, LoweredType));
 
-                if (Type->template Is<ExprRangeType>()) {
-                    auto TypeAsRange = Type->template SAs<ExprRangeType>();
+                if (Type->template Is<RangeType>()) {
+                    auto TypeAsRange = Type->template SAs<RangeType>();
                     auto LowString = to_string(TypeAsRange->GetLow());
                     auto HighString = to_string(TypeAsRange->GetHigh());
                     auto LowConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, LowString.c_str(),
@@ -1763,7 +1834,7 @@ namespace ESMC {
 
                     auto LowExp = Z3Expr(Ctx, Z3_mk_ge(*Ctx, LoweredExpr, LowConst));
                     auto HighExp = Z3Expr(Ctx, Z3_mk_le(*Ctx, LoweredExpr, HighConst));
-                    
+
                     auto AndArgs = new Z3_ast[2];
                     AndArgs[0] = LowExp;
                     AndArgs[1] = HighExp;
@@ -1776,43 +1847,50 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Lowerer<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
             {
                 auto const& Type = Exp->GetConstType();
                 auto const& Val = Exp->GetConstValue();
                 auto Ctx = LTSCtx->GetZ3Ctx();
 
-                if (Type->template Is<ExprIntType>()) {
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_numeral(*Ctx, Val.c_str(), 
+                if (Type->template Is<IntegerType>()) {
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_numeral(*Ctx, Val.c_str(),
                                                                  Z3_mk_int_sort(*Ctx))));
-                } else if (Type->template Is<ExprBoolType>()) {
-                    
+                } else if (Type->template Is<BooleanType>()) {
+
                     if (Val == "true") {
                         ExpStack.push_back(Z3Expr(Ctx, Z3_mk_true(*Ctx)));
                     } else {
                         ExpStack.push_back(Z3Expr(Ctx, Z3_mk_false(*Ctx)));
                     }
 
-                } else if (Type->template Is<ExprSymmetricType>()) {
+                } else if (Type->template Is<SymmetricType>()) {
+                    string ActualVal;
+                    if (Val == "clear") {
+                        ActualVal = Type->template SAs<SymmetricType>()->GetName() +
+                            "::clear";
+                    } else {
+                        ActualVal = Val;
+                    }
                     auto const& LoweredType = LowerType(Type);
-                    auto Decl = LoweredType.GetFuncDecl(Val);
+                    auto Decl = LoweredType.GetFuncDecl(ActualVal);
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_app(*Ctx, Decl, 0, nullptr)));
-                } else if (Type->template Is<ExprEnumType>()) {
+                } else if (Type->template Is<EnumType>()) {
                     // enum constants are unqualified
                     auto const& LoweredType = LowerType(Type);
-                    auto TypeAsEnum = Type->template SAs<ExprEnumType>();
+                    auto TypeAsEnum = Type->template SAs<EnumType>();
                     string QualifiedVal = TypeAsEnum->GetName() + "::" + Val;
                     auto Decl = LoweredType.GetFuncDecl(QualifiedVal);
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_app(*Ctx, Decl, 0, nullptr)));
                 } else {
-                    throw ESMCError((string)"Unexpected constant of type \"" + Type->ToString() + 
+                    throw ESMCError((string)"Unexpected constant of type \"" + Type->ToString() +
                                     "\". Cannot lower this kind of constant into a Z3Expr");
                 }
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Lowerer<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
             {
                 auto Ctx = LTSCtx->GetZ3Ctx();
@@ -1823,8 +1901,8 @@ namespace ESMC {
                 auto LoweredExpr = Z3Expr(Ctx, Z3_mk_bound(*Ctx, Index, LoweredSort));
                 ExpStack.push_back(LoweredExpr);
 
-                if (Type->template Is<ExprRangeType>()) {
-                    auto TypeAsRange = Type->template SAs<ExprRangeType>();
+                if (Type->template Is<RangeType>()) {
+                    auto TypeAsRange = Type->template SAs<RangeType>();
                     auto LowString = to_string(TypeAsRange->GetLow());
                     auto HighString = to_string(TypeAsRange->GetHigh());
                     auto LowConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, LowString.c_str(),
@@ -1834,7 +1912,7 @@ namespace ESMC {
 
                     auto LowExp = Z3Expr(Ctx, Z3_mk_ge(*Ctx, LoweredExpr, LowConst));
                     auto HighExp = Z3Expr(Ctx, Z3_mk_le(*Ctx, LoweredExpr, HighConst));
-                    
+
                     auto AndArgs = new Z3_ast[2];
                     AndArgs[0] = LowExp;
                     AndArgs[1] = HighExp;
@@ -1856,10 +1934,10 @@ namespace ESMC {
 
                 auto LoweredChildren = new Z3_ast[NumChildren];
                 vector<Z3Expr> LChildren(NumChildren);
-                
+
                 if (OpCode != LTSOps::OpField) {
                     ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
-                    
+
                     for (u32 i = 0; i < NumChildren; ++i) {
                         LChildren[NumChildren - i - 1] = ExpStack.back();
                         LoweredChildren[NumChildren - i - 1] = ExpStack.back();
@@ -1900,7 +1978,7 @@ namespace ESMC {
                 case LTSOps::OpXOR:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_xor(*Ctx, LChildren[0], LChildren[1])));
                     break;
-                    
+
                 case LTSOps::OpADD:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_add(*Ctx, NumChildren, LoweredChildren)));
                     break;
@@ -1916,7 +1994,7 @@ namespace ESMC {
                 case LTSOps::OpMUL:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_mul(*Ctx, NumChildren, LoweredChildren)));
                     break;
-                    
+
                 case LTSOps::OpDIV:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_div(*Ctx, LChildren[0], LChildren[1])));
                     break;
@@ -1940,9 +2018,34 @@ namespace ESMC {
                 case LTSOps::OpLE:
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_le(*Ctx, LChildren[0], LChildren[1])));
                     break;
-                    
+
                 case LTSOps::OpIndex: {
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_select(*Ctx, LChildren[0], LChildren[1])));
+                    auto const& ExpType = Exp->GetType();
+                    auto ExpTypeAsRange = ExpType->template As<RangeType>();
+                    Z3Expr LoweredExpr(Ctx, Z3_mk_select(*Ctx, LChildren[0], LChildren[1]));
+
+                    if (ExpTypeAsRange != nullptr) {
+                        auto RangeLow = ExpTypeAsRange->GetLow();
+                        auto RangeHigh = ExpTypeAsRange->GetHigh();
+                        Z3_ast AndArgs[2];
+
+                        auto LowString = to_string(RangeLow);
+                        auto HighString = to_string(RangeHigh);
+
+                        auto LowConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, LowString.c_str(),
+                                                                  Z3_mk_int_sort(*Ctx)));
+                        auto HighConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, HighString.c_str(),
+                                                                   Z3_mk_int_sort(*Ctx)));
+
+                        auto LowExp = Z3Expr(Ctx, Z3_mk_ge(*Ctx, LoweredExpr, LowConst));
+                        auto HighExp = Z3Expr(Ctx, Z3_mk_le(*Ctx, LoweredExpr, HighConst));
+
+                        AndArgs[0] = LowExp;
+                        AndArgs[1] = HighExp;
+
+                        LTSCtx->AddAssumption(Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs)));
+                    }
+                    ExpStack.push_back(LoweredExpr);
                     break;
                 }
 
@@ -1953,55 +2056,23 @@ namespace ESMC {
                     auto RecType = Children[0]->GetType();
                     auto const& LoweredRecSort = LowerType(RecType);
                     ExpStack.pop_back();
-                    
-                    auto const& FieldName = 
-                        Children[0]->template As<ESMC::Exprs::VarExpression>()->GetVarName();
-                    
+
+                    auto const& FieldName =
+                        Children[1]->template As<ESMC::Exprs::VarExpression>()->GetVarName();
+
                     auto FieldFunc = LoweredRecSort.GetFuncDecl(FieldName);
                     Z3_ast FuncArgs[1];
                     FuncArgs[0] = RecExp;
                     auto LoweredExpr = Z3Expr(Ctx, Z3_mk_app(*Ctx, FieldFunc, 1, FuncArgs));
                     ExpStack.push_back(LoweredExpr);
-                    break;
-                }
-                default: {
-                    // This must be an uninterpreted function
-                    auto it = UFMap.find(OpCode);
-                    if (it == UFMap.end()) {
-                        throw ExprTypeError((string)"Opcode " + to_string(OpCode) + 
-                                            " unrecognized. " + 
-                                            "This is not a standard operation, nor has it been " + 
-                                            "registered as an uninterpreted function");
-                    }
-                    // create an uninterpreted function application
-                    auto FuncType = it->second->template As<Exprs::ExprFuncType>();
-                    auto const& DomainTypes = FuncType->GetArgTypes();
-                    const u32 DomainSize = DomainTypes.size();
-                    Z3_sort* DomainSorts = new Z3_sort[DomainSize];
-                    for (u32 i = 0; i < DomainSize; ++i) {
-                        DomainSorts[i] = LowerType(DomainTypes[i]);
-                    }
-                    auto const& RangeType = FuncType->GetFuncType();
-                    Z3Sort RangeSort = LowerType(RangeType);
-                    auto MangledFuncName = MangleName(FuncType->GetName(), DomainTypes);
-                    auto FuncSym = Z3_mk_string_symbol(*Ctx, MangledFuncName.c_str());
-                    auto FuncDecl = Z3_mk_func_decl(*Ctx, FuncSym, DomainSize, 
-                                                    DomainSorts, RangeSort);
-                    Z3_inc_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl));
-                    delete[] DomainSorts;
 
-                    // Make the application
-                    auto AppExp = Z3Expr(Ctx, Z3_mk_app(*Ctx, FuncDecl, 
-                                                        NumChildren, 
-                                                        LoweredChildren));
-                    // Make the constraints on the application
-                    // if necessary
-                    auto RangeTypeAsRange = RangeType->template As<ESMC::Exprs::ExprRangeType>();
-                    if (RangeTypeAsRange != nullptr) {
-                        auto RangeLow = RangeTypeAsRange->GetLow();
-                        auto RangeHigh = RangeTypeAsRange->GetHigh();
+                    auto const& ExpType = Exp->GetType();
+                    auto ExpTypeAsRange = ExpType->template As<RangeType>();
+                    if (ExpTypeAsRange != nullptr) {
+                        auto RangeLow = ExpTypeAsRange->GetLow();
+                        auto RangeHigh = ExpTypeAsRange->GetHigh();
                         Z3_ast AndArgs[2];
-                        
+
                         auto LowString = to_string(RangeLow);
                         auto HighString = to_string(RangeHigh);
 
@@ -2010,14 +2081,49 @@ namespace ESMC {
                         auto HighConst = Z3Expr(Ctx, Z3_mk_numeral(*Ctx, HighString.c_str(),
                                                                    Z3_mk_int_sort(*Ctx)));
 
-                        auto LowExp = Z3Expr(Ctx, Z3_mk_ge(*Ctx, AppExp, LowConst));
-                        auto HighExp = Z3Expr(Ctx, Z3_mk_le(*Ctx, AppExp, HighConst));
-                    
+                        auto LowExp = Z3Expr(Ctx, Z3_mk_ge(*Ctx, LoweredExpr, LowConst));
+                        auto HighExp = Z3Expr(Ctx, Z3_mk_le(*Ctx, LoweredExpr, HighConst));
+
                         AndArgs[0] = LowExp;
                         AndArgs[1] = HighExp;
 
                         LTSCtx->AddAssumption(Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs)));
                     }
+
+                    break;
+                }
+                default: {
+                    // This must be an uninterpreted function
+                    auto it = UFMap.find(OpCode);
+                    if (it == UFMap.end()) {
+                        throw ExprTypeError((string)"Opcode " + to_string(OpCode) +
+                                            " unrecognized. " +
+                                            "This is not a standard operation, nor has it been " +
+                                            "registered as an uninterpreted function");
+                    }
+                    // create an uninterpreted function application
+                    auto FunType = it->second->template As<FuncType>();
+                    auto const& DomainTypes = FunType->GetArgTypes();
+                    const u32 DomainSize = DomainTypes.size();
+                    Z3_sort* DomainSorts = new Z3_sort[DomainSize];
+                    for (u32 i = 0; i < DomainSize; ++i) {
+                        DomainSorts[i] = LowerType(DomainTypes[i]);
+                    }
+                    auto const& RType = FunType->GetEvalType();
+                    Z3Sort RangeSort = LowerType(RType);
+                    auto MangledFuncName = MangleName(FunType->GetName(), DomainTypes);
+                    auto FuncSym = Z3_mk_string_symbol(*Ctx, MangledFuncName.c_str());
+                    auto FuncDecl = Z3_mk_func_decl(*Ctx, FuncSym, DomainSize,
+                                                    DomainSorts, RangeSort);
+                    Z3_inc_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl));
+                    delete[] DomainSorts;
+
+                    // Make the application
+                    auto AppExp = Z3Expr(Ctx, Z3_mk_app(*Ctx, FuncDecl,
+                                                        NumChildren,
+                                                        LoweredChildren));
+
+                    Z3_dec_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl));
 
                     ExpStack.push_back(AppExp);
                     break;
@@ -2028,7 +2134,7 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Lowerer<E, S>::VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
             {
                 auto Ctx = LTSCtx->GetZ3Ctx();
@@ -2051,27 +2157,35 @@ namespace ESMC {
 
                 auto const& QVarTypes = Exp->GetQVarTypes();
                 const u32 NumQVars = QVarTypes.size();
-                
+
                 Z3_sort* QVarSorts = new Z3_sort[NumQVars];
                 Z3_symbol* QVarNames = new Z3_symbol[NumQVars];
-                
+
                 for (u32 i = 0; i < NumQVars; ++i) {
                     QVarSorts[i] = LowerType(QVarTypes[i]);
                     QVarNames[i] = Z3_mk_string_symbol(*Ctx, ("DBVar_" + to_string(i)).c_str());
                 }
 
-                AndArgs = new Z3_ast[2];
-                AndArgs[0] = AssumptionLExp;
-                AndArgs[1] = LoweredQExpr;
+                Z3_ast AndArgs2[2];
+                AndArgs2[0] = AssumptionLExp;
+                AndArgs2[1] = LoweredQExpr;
 
-                auto ActualBody = Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs));
+                auto ActualBody = Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs2));
 
                 if (Exp->IsForAll()) {
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_forall(*Ctx, 0, 0, nullptr, 
+                    auto ActualBody = Z3Expr(Ctx,
+                                             Z3_mk_implies(*Ctx, AssumptionLExp,
+                                                           LoweredQExpr));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_forall(*Ctx, 0, 0, nullptr,
                                                                 NumQVars, QVarSorts,
                                                                 QVarNames, ActualBody)));
                 } else {
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_exists(*Ctx, 0, 0, nullptr, 
+                    Z3_ast AndArgs3[2];
+                    AndArgs3[0] = AssumptionLExp;
+                    AndArgs3[1] = LoweredQExpr;
+                    auto ActualBody = Z3Expr(Ctx,
+                                             Z3_mk_and(*Ctx, 2, AndArgs3));
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_exists(*Ctx, 0, 0, nullptr,
                                                                 NumQVars, QVarSorts,
                                                                 QVarNames, ActualBody)));
                 }
@@ -2079,16 +2193,16 @@ namespace ESMC {
                 delete[] QVarSorts;
                 delete[] QVarNames;
             }
-            
+
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Lowerer<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
             {
                 VisitQuantifiedExpression(Exp);
             }
 
             template <typename E, template <typename> class S>
-            inline void 
+            inline void
             Lowerer<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
             {
                 VisitQuantifiedExpression(Exp);
@@ -2110,7 +2224,7 @@ namespace ESMC {
                 //     AndArgs[i] = Assumptions[i];
                 // }
                 // AndArgs[NumAssumptions] = TheLowerer.ExpStack.back();
-                
+
                 // auto Retval = Z3Expr(Ctx, Z3_mk_and(*Ctx, NumAssumptions + 1, AndArgs));
                 // delete[] AndArgs;
                 auto Retval = TheLowerer.ExpStack.back();
@@ -2134,8 +2248,8 @@ namespace ESMC {
             }
 
             template <typename E, template <typename> class S>
-            typename Raiser<E, S>::ExpT 
-            Raiser<E, S>::RaiseOpExpr(const LExpT& LExp) 
+            typename Raiser<E, S>::ExpT
+            Raiser<E, S>::RaiseOpExpr(const LExpT& LExp)
             {
                 auto App = Z3_to_app(*Ctx, LExp);
                 auto AppDecl = Z3_get_app_decl(*Ctx, App);
@@ -2154,10 +2268,10 @@ namespace ESMC {
                     if (NumArgs == 0) {
                         // A variable
                         auto Type = LTSCtx->GetLTSType(DeclName);
-                        if (Type == ExprTypeRef::NullPtr) {
-                            throw ExprTypeError((string)"Could not resolve type of variable \"" + 
-                                                DeclName + "\" from the LTS context when " + 
-                                                "trying to raise Z3 expression:\n" + 
+                        if (Type == TypeRef::NullPtr) {
+                            throw ExprTypeError((string)"Could not resolve type of variable \"" +
+                                                DeclName + "\" from the LTS context when " +
+                                                "trying to raise Z3 expression:\n" +
                                                 Z3_ast_to_string(*Ctx, LExp));
                         }
 
@@ -2166,9 +2280,9 @@ namespace ESMC {
                         // An actual uninterpreted function
                         auto it = UFNameToIDMap.find(DeclName);
                         if (it == UFNameToIDMap.end()) {
-                            throw ExprTypeError((string)"Could not resolve mangled " + 
-                                                "uninterpreted function \"" + DeclName + "\", " + 
-                                                "when trying to raise Z3 expression:\n" + 
+                            throw ExprTypeError((string)"Could not resolve mangled " +
+                                                "uninterpreted function \"" + DeclName + "\", " +
+                                                "when trying to raise Z3 expression:\n" +
                                                 Z3_ast_to_string(*Ctx, LExp));
                         }
                         auto OpCode = it->second;
@@ -2214,7 +2328,7 @@ namespace ESMC {
 
                 case Z3_OP_UMINUS:
                     return Mgr->MakeExpr(LTSOps::OpMINUS, RaisedChildren);
-                    
+
                 case Z3_OP_MUL:
                     return Mgr->MakeExpr(LTSOps::OpMUL, RaisedChildren);
 
@@ -2223,7 +2337,7 @@ namespace ESMC {
 
                 case Z3_OP_MOD:
                     return Mgr->MakeExpr(LTSOps::OpMOD, RaisedChildren);
-                    
+
                 case Z3_OP_LT:
                     return Mgr->MakeExpr(LTSOps::OpLT, RaisedChildren);
 
@@ -2240,7 +2354,7 @@ namespace ESMC {
                     return Mgr->MakeExpr(LTSOps::OpIndex, RaisedChildren);
 
                 case Z3_OP_DT_RECOGNISER: {
-                    auto FAType = Mgr->template MakeType<Exprs::ExprFieldAccessType>();
+                    auto FAType = Mgr->template MakeType<FieldAccessType>();
                     return Mgr->MakeExpr(LTSOps::OpField, RaisedChildren[0],
                                          Mgr->MakeVar(DeclName, FAType));
                 }
@@ -2248,22 +2362,26 @@ namespace ESMC {
                 case Z3_OP_DT_CONSTRUCTOR: {
                     // Find out the type name
                     vector<string> SplitComps;
-                    boost::algorithm::split(SplitComps, DeclName, 
+                    boost::algorithm::split(SplitComps, DeclName,
                                             boost::algorithm::is_any_of(":"),
                                             boost::algorithm::token_compress_on);
                     auto TypeName = SplitComps[0];
                     auto Type = Mgr->GetNamedType(TypeName);
-                    if (Type == ExprTypeRef::NullPtr) {
+                    if (Type == TypeRef::NullPtr) {
                         throw InternalError((string)"Could not resolve type \"" + TypeName +
-                                            "\" when attempting to raise expression:\n" + 
+                                            "\" when attempting to raise expression:\n" +
                                             Z3_ast_to_string(*Ctx, LExp));
                     }
-                    return Mgr->MakeVal(DeclName, Type);
+                    if (SplitComps[1] == "clear") {
+                        return Mgr->MakeVal("clear", Type);
+                    } else {
+                        return Mgr->MakeVal(DeclName, Type);
+                    }
                 }
 
                 default:
-                    throw InternalError((string)"Unknown/Unhandled Z3 op kind with code: " + 
-                                        to_string(AppKind) + "\nAt: " + __FILE__ + ":" + 
+                    throw InternalError((string)"Unknown/Unhandled Z3 op kind with code: " +
+                                        to_string(AppKind) + "\nAt: " + __FILE__ + ":" +
                                         to_string(__LINE__));
                 }
             }
@@ -2277,16 +2395,16 @@ namespace ESMC {
                 auto Kind = Z3_get_sort_kind(*Ctx, Sort);
                 if (Kind == Z3_INT_SORT) {
                     return Mgr->MakeVal(Z3_get_numeral_string(*Ctx, LExp),
-                                        Mgr->template MakeType<ExprIntType>());
+                                        Mgr->template MakeType<IntegerType>());
                 } else {
-                    throw ExprTypeError((string)"Unknown numeral kind " + to_string(Kind) + 
-                                        ", when raising Z3 expression:\n" + 
+                    throw ExprTypeError((string)"Unknown numeral kind " + to_string(Kind) +
+                                        ", when raising Z3 expression:\n" +
                                         Z3_ast_to_string(*Ctx, LExp));
                 }
             }
 
             template <typename E, template <typename> class S>
-            typename Raiser<E, S>::ExpT 
+            typename Raiser<E, S>::ExpT
             Raiser<E, S>::RaiseExpr(const LExpT& LExp)
             {
                 auto Kind = Z3_get_ast_kind(*Ctx, LExp);
@@ -2297,12 +2415,12 @@ namespace ESMC {
                     return RaiseConstExpr(LExp);
                 case Z3_VAR_AST:
                 case Z3_QUANTIFIER_AST:
-                    throw ExprTypeError((string)"Bound variables and quantified expressions " + 
+                    throw ExprTypeError((string)"Bound variables and quantified expressions " +
                                         "cannot be raised");
                 default:
-                    throw ExprTypeError((string)"Unhandled Z3 AST kind: " + 
-                                        to_string(Kind) + ". The Z3 expression is:\n" + 
-                                        Z3_ast_to_string(*Ctx, LExp) + "\nThis was unexpected." + 
+                    throw ExprTypeError((string)"Unhandled Z3 AST kind: " +
+                                        to_string(Kind) + ". The Z3 expression is:\n" +
+                                        Z3_ast_to_string(*Ctx, LExp) + "\nThis was unexpected." +
                                         "\nAt: " + __FILE__ + ":" + to_string(__LINE__));
                 }
             }
@@ -2317,8 +2435,225 @@ namespace ESMC {
                 return Retval;
             }
 
+            template <typename E, template <typename> class S>
+            inline DeBruijnShifter<E, S>::DeBruijnShifter(MgrT* Mgr, i32 ShiftValue)
+                : ExpressionVisitorBase<E, S>("DeBruijnShifter"),
+                  Mgr(Mgr), ShiftValue(ShiftValue)
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline DeBruijnShifter<E, S>::~DeBruijnShifter()
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            DeBruijnShifter<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            DeBruijnShifter<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            DeBruijnShifter<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+            {
+                auto OldIdx = Exp->GetVarIdx();
+                auto const& Type = Exp->GetVarType();
+                ExpStack.push_back(Mgr->MakeBoundVar(Type, OldIdx + ShiftValue));
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            DeBruijnShifter<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+            {
+                ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+                auto const& OldChildren = Exp->GetChildren();
+                const u32 NumChildren = OldChildren.size();
+                vector<ExpT> NewChildren(NumChildren);
+
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    NewChildren[NumChildren - i - 1] = ExpStack.back();
+                    ExpStack.pop_back();
+                }
+
+                ExpStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            DeBruijnShifter<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto NewBody = ExpStack.back();
+                ExpStack.pop_back();
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                ExpStack.push_back(Mgr->MakeExists(QVarTypes, NewBody));
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            DeBruijnShifter<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto NewBody = ExpStack.back();
+                ExpStack.pop_back();
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewBody));
+            }
+
+            template <typename E, template <typename> class S>
+            inline typename DeBruijnShifter<E, S>::ExpT
+            DeBruijnShifter<E, S>::Do(MgrT* Mgr, const ExpT& Exp, i32 ShiftValue)
+            {
+                DeBruijnShifter<E, S> TheShifter(Mgr, ShiftValue);
+                Exp->Accept(&TheShifter);
+                return TheShifter.ExpStack[0];
+            }
+
+            // implementation of quantifier unroller
+            template <typename E, template <typename> class S>
+            inline QuantifierUnroller<E, S>::QuantifierUnroller(MgrT* Mgr, bool IncludeUndef)
+                : ExpressionVisitorBase<E, S>("QuantifierUnroller"), Mgr(Mgr),
+                  IncludeUndef(IncludeUndef)
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline QuantifierUnroller<E, S>::~QuantifierUnroller()
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline void QuantifierUnroller<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            QuantifierUnroller<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            QuantifierUnroller<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void QuantifierUnroller<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+            {
+                ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+                auto const& Children = Exp->GetChildren();
+                const u32 NumChildren = Children.size();
+
+                vector<ExpT> NewChildren(NumChildren);
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    NewChildren[NumChildren - i - 1] = ExpStack.back();
+                    ExpStack.pop_back();
+                }
+
+                ExpStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
+            }
+
+            template <typename E, template <typename> class S>
+            inline vector<typename QuantifierUnroller<E, S>::ExpT>
+            QuantifierUnroller<E, S>::UnrollQuantifier(const QuantifiedExpressionBase<E, S>* Exp)
+            {
+                vector<ExpT> Retval;
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                auto const& QBody = Exp->GetQExpression();
+                const u32 NumQVars = QVarTypes.size();
+
+                vector<vector<string>> QVarElems;
+                for (auto const& QVarType : QVarTypes) {
+                    if (IncludeUndef) {
+                        QVarElems.push_back(QVarType->GetElements());
+                    } else {
+                        QVarElems.push_back(QVarType->GetElementsNoUndef());
+                    }
+                }
+                auto&& CP = CrossProduct<string>(QVarElems.begin(),
+                                                  QVarElems.end());
+                for (auto const& CPElem : CP) {
+                    typename MgrT::SubstMapT SubstMap;
+                    for (u32 i = 0; i < NumQVars; ++i) {
+                        auto const& BoundVarExp =
+                            Mgr->MakeBoundVar(QVarTypes[i], NumQVars - i - 1);
+                        auto const& ValExp = Mgr->MakeVal(CPElem[i], QVarTypes[i]);
+                        SubstMap[BoundVarExp] = ValExp;
+                    }
+                    auto SubstExp = Mgr->Substitute(SubstMap, QBody);
+                    // We also need to replace higher number debruijn indices
+                    // by lower numbered ones
+                    Retval.push_back(Mgr->template ApplyTransform<DeBruijnShifter<E, S>>(SubstExp,
+                                                                                         -NumQVars));
+                }
+                return Retval;
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            QuantifierUnroller<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>*
+                                                                 Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto NewExp = ExpStack.back();
+                ExpStack.pop_back();
+                auto NewQExp = Mgr->MakeExists(Exp->GetQVarTypes(), NewExp);
+                auto&& UnrolledExps =
+                    UnrollQuantifier(NewQExp->template SAs<Exprs::QuantifiedExpressionBase>());
+                if (UnrolledExps.size() == 1) {
+                    ExpStack.push_back(UnrolledExps[0]);
+                } else {
+                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpOR, UnrolledExps));
+                }
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            QuantifierUnroller<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
+                                                                 Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto NewExp = ExpStack.back();
+                ExpStack.pop_back();
+                auto NewQExp = Mgr->MakeForAll(Exp->GetQVarTypes(), NewExp);
+                auto&& UnrolledExps =
+                    UnrollQuantifier(NewQExp->template SAs<Exprs::QuantifiedExpressionBase>());
+                if (UnrolledExps.size() == 1) {
+                    ExpStack.push_back(UnrolledExps[0]);
+                } else {
+                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpAND, UnrolledExps));
+                }
+            }
+
+            template <typename E, template <typename> class S>
+            inline typename QuantifierUnroller<E, S>::ExpT
+            QuantifierUnroller<E, S>::Do(MgrT* Mgr, const ExpT& Exp, bool IncludeUndef)
+            {
+                QuantifierUnroller Unroller(Mgr, IncludeUndef);
+                Exp->Accept(&Unroller);
+                return Unroller.ExpStack[0];
+            }
+
         } /* end namespace Detail */
- 
+
         template <typename E>
         class LTSTermSemanticizer
         {
@@ -2330,18 +2665,31 @@ namespace ESMC {
             UIDGenerator UFUIDGen;
 
             MgrType* Mgr;
-            Exprs::ExprTypeRef BoolType;
-            Exprs::ExprTypeRef IntType;
-            
+            TypeRef BoolType;
+            TypeRef IntType;
+
+            RefCache<TypeBase, TypePtrHasher, TypePtrEquals, CSmartPtr> TypeCache;
+            unordered_map<string, TypeRef> NamedTypes;
+
         public:
             typedef LTSOps Ops;
             typedef Exprs::Expr<E, ESMC::LTS::LTSTermSemanticizer> ExpT;
-            typedef Detail::Z3Expr LExpT;
-            typedef Exprs::ExprTypeRef TypeT;
+            typedef Z3Expr LExpT;
+            typedef TypeRef TypeT;
             static const TypeT InvalidType;
 
-            LTSTermSemanticizer(MgrType* Mgr, const TypeT& BoolType, const TypeT& IntType);
+            LTSTermSemanticizer(MgrType* Mgr);
             ~LTSTermSemanticizer();
+
+            template <typename T, typename... ArgTypes>
+            inline TypeRef MakeType(ArgTypes&&... Args);
+            inline TypeRef InstantiateType(const TypeRef& ParamType,
+                                           const vector<ExpT>& ParamInsts);
+
+            inline TypeRef MakeBoolType();
+            inline TypeRef MakeIntType();
+
+            inline TypeRef GetNamedType(const string& TypeName) const;
 
             inline void TypeCheck(const ExpT& Exp) const;
             inline ExpT Canonicalize(const ExpT& Exp);
@@ -2352,28 +2700,132 @@ namespace ESMC {
             inline i64 RegisterUninterpretedFunction(const string& Name,
                                                      const vector<TypeT>& DomTypes,
                                                      const TypeT& RangeType);
+            inline TypeT LookupUninterpretedFunction(i64 OpCode) const;
 
             inline ExpT RaiseExpr(MgrType* Mgr, const LExpT& LExp, const LTSLCRef& LTSCtx);
             inline LExpT LowerExpr(const ExpT& Exp, const LTSLCRef& ExpCtx);
             inline ExpT ElimQuantifiers(MgrType* Mgr, const ExpT& Exp);
+            inline ExpT UnrollQuantifiers(MgrType* Mgr, const ExpT& Exp, bool IncludeUndef);
         };
 
-        
+
         // Implementation of LTSTermSemanticizer
 
         template <typename E>
-        LTSTermSemanticizer<E>::LTSTermSemanticizer(MgrType* Mgr,
-                                                    const Exprs::ExprTypeRef& BoolType,
-                                                    const Exprs::ExprTypeRef& IntType)
-            : UFUIDGen(LTSOps::UFOffset), Mgr(Mgr), BoolType(BoolType), IntType(IntType)
+        LTSTermSemanticizer<E>::LTSTermSemanticizer(MgrType* Mgr)
+            : UFUIDGen(LTSOps::UFOffset), Mgr(Mgr)
         {
             // Nothing here
+            BoolType = TypeCache.template Get<BooleanType>();
+            IntType = TypeCache.template Get<IntegerType>();
         }
 
         template <typename E>
         LTSTermSemanticizer<E>::~LTSTermSemanticizer()
         {
             // Nothing here
+        }
+
+        template <typename E>
+        template <typename T, typename... ArgTypes>
+        inline TypeRef
+        LTSTermSemanticizer<E>::MakeType(ArgTypes&&... Args)
+        {
+            auto Retval = TypeCache.Get<T>(forward<ArgTypes>(Args)...);
+            Retval->GetOrSetTypeID();
+            string TypeName = "";
+            if (Retval->template Is<EnumType>()) {
+                TypeName = Retval->template SAs<EnumType>()->GetName();
+            } else if (Retval->template Is<SymmetricType>()) {
+                TypeName = Retval->template SAs<SymmetricType>()->GetName();
+            } else if (Retval->template Is<RecordType>()) {
+                TypeName = Retval->template SAs<RecordType>()->GetName();
+            }
+
+            if (TypeName != "") {
+                auto it = NamedTypes.find(TypeName);
+                if (it != NamedTypes.end() && it->second != Retval) {
+                    throw ExprTypeError((string)"A type named \"" + TypeName + "\" has already " +
+                                        "been created");
+                } else if (it != NamedTypes.end()) {
+                    return Retval;
+                }
+                NamedTypes[TypeName] = Retval;
+            }
+            return Retval;
+        }
+
+        template <typename E>
+        inline TypeRef
+        LTSTermSemanticizer<E>::InstantiateType(const TypeRef& ParamType,
+                                                const vector<ExpT>& ParamInsts)
+        {
+            auto TypeAsPType = ParamType->template As<ParametricType>();
+            if (TypeAsPType == nullptr) {
+                throw ExprTypeError((string)"Cannot instantiate non-parametric type " +
+                                    ParamType->ToString());
+            }
+            auto const& ExpectedTypes = TypeAsPType->GetParameterTypes();
+            const u32 NumExpected = ExpectedTypes.size();
+            const u32 NumGot = ParamInsts.size();
+
+            if (NumExpected != NumGot) {
+                throw ExprTypeError((string)"Parametric type \"" + TypeAsPType->GetName() +
+                                    "\" expects " + to_string(NumExpected) + " parameters, " +
+                                    "but was attempted to be instantiated with " +
+                                    to_string(NumGot) + " parameters");
+            }
+
+            for (u32 i = 0; i < NumExpected; ++i) {
+                if (!ParamInsts[i]->template Is<ConstExpression>()) {
+                    throw ExprTypeError((string)"Parameter at position " + to_string(i) +
+                                        " is not a constant value in instantiation of type " +
+                                        TypeAsPType->GetName());
+                }
+                if (ParamInsts[i]->GetType() != ExpectedTypes[i]) {
+                    throw ExprTypeError((string)"Parameter types don't match at position " +
+                                        to_string(i) + " in instantiation of type " +
+                                        TypeAsPType->GetName());
+                }
+            }
+
+            string InstName = TypeAsPType->GetName();
+            for (u32 i = 0; i < NumExpected; ++i) {
+                InstName += ((string)"[" +
+                             ParamInsts[i]->template SAs<ConstExpression>()->GetConstValue() +
+                             "]");
+            }
+            auto BaseRecType = TypeAsPType->GetBaseType()->template SAs<RecordType>();
+            auto Retval = TypeCache.template Get<RecordType>(InstName,
+                                                             BaseRecType->GetMemberVec());
+            Retval->GetOrSetTypeID();
+            return Retval;
+        }
+
+        template <typename E>
+        inline TypeRef
+        LTSTermSemanticizer<E>::MakeBoolType()
+        {
+            return TypeCache.template Get<BooleanType>();
+        }
+
+        template <typename E>
+        inline TypeRef
+        LTSTermSemanticizer<E>::MakeIntType()
+        {
+            return TypeCache.template Get<IntegerType>();
+        }
+
+        template <typename E>
+        inline TypeRef
+        LTSTermSemanticizer<E>::GetNamedType(const string& TypeName) const
+        {
+            auto it = NamedTypes.find(TypeName);
+            if (it == NamedTypes.end()) {
+                return TypeRef::NullPtr;
+            } else {
+                return it->second;
+            }
         }
 
         template <typename E>
@@ -2386,7 +2838,51 @@ namespace ESMC {
         inline typename LTSTermSemanticizer<E>::ExpT
         LTSTermSemanticizer<E>::Canonicalize(const ExpT& Exp)
         {
-            return Detail::Canonicalizer<E, LTS::LTSTermSemanticizer>::Do(Exp);
+            // audupa: 12/03/14, we don't need to canonicalize the
+            // entire expression, just the children, because the
+            // children themselves are guaranteed to be canonicalized
+            // already
+
+            // return Detail::Canonicalizer<E, LTS::LTSTermSemanticizer>::Do(Exp);
+
+            auto ExpAsOp = Exp->template As<OpExpression>();
+            if (ExpAsOp == nullptr) {
+                return Exp;
+            }
+            auto OpCode = ExpAsOp->GetOpCode();
+            auto const& Children = ExpAsOp->GetChildren();
+            switch (OpCode) {
+            case LTSOps::OpEQ:
+            case LTSOps::OpOR:
+            case LTSOps::OpAND:
+            case LTSOps::OpIFF:
+            case LTSOps::OpXOR:
+            case LTSOps::OpADD:
+            case LTSOps::OpMUL:
+                {
+                    vector<ExpT> NewChildren = Children;
+                    sort(NewChildren.begin(), NewChildren.end(), ExpressionPtrCompare());
+                    return new OpExpression<E, ESMC::LTS::LTSTermSemanticizer>(nullptr,
+                                                                               OpCode,
+                                                                               NewChildren,
+                                                                               Exp->ExtensionData);
+                }
+                break;
+
+            case LTSOps::OpNOT:
+                {
+                    auto ChildAsOp = Children[0]->template As<OpExpression>();
+                    if (ChildAsOp != nullptr && ChildAsOp->GetOpCode() == LTSOps::OpNOT) {
+                        return ((ChildAsOp->GetChildren())[0]);
+                    } else {
+                        return Exp;
+                    }
+                }
+                break;
+
+            default:
+                return Exp;
+            }
         }
 
         template <typename E>
@@ -2395,7 +2891,7 @@ namespace ESMC {
         {
             return Detail::Simplifier<E, LTS::LTSTermSemanticizer>::Do(Mgr, Exp, BoolType, IntType);
         }
-        
+
         template <typename E>
         inline string
         LTSTermSemanticizer<E>::ExprToString(const ExpT& Exp) const
@@ -2411,7 +2907,7 @@ namespace ESMC {
         }
 
         template <typename E>
-        inline i64 
+        inline i64
         LTSTermSemanticizer<E>::RegisterUninterpretedFunction(const string& Name,
                                                               const vector<TypeT>& DomTypes,
                                                               const TypeT& RangeType)
@@ -2420,17 +2916,15 @@ namespace ESMC {
             // We only support scalar functions currently
             if (!all_of(DomTypes.begin(), DomTypes.end(),
                         [](const TypeT& Type) -> bool
-                        { return (Type->template Is<Exprs::ExprBoolType>() ||
-                                  Type->template Is<Exprs::ExprIntType>() ||
-                                  Type->template Is<Exprs::ExprRangeType>() ||
-                                  Type->template Is<Exprs::ExprEnumType>() ||
-                                  Type->template Is<Exprs::ExprSymmetricType>()); })) {
+                        {
+                            return (Type->template Is<ScalarType>());
+                        })) {
                 throw ESMCError((string)"Only functions from scalars -> scalars are " +
                                 "currently supported");
             }
-            
+
             if (UFNameToIDMap.find(MangledName) == UFNameToIDMap.end()) {
-                auto Type = Mgr->template MakeType<Exprs::ExprFuncType>(Name, DomTypes, RangeType);
+                auto Type = MakeType<FuncType>(Name, DomTypes, RangeType);
                 auto UFID = UFUIDGen.GetUID();
                 UFNameToIDMap[MangledName] = UFID;
                 UFMap[UFID] = Type;
@@ -2440,12 +2934,12 @@ namespace ESMC {
                 auto UFID = it->second;
                 auto it2 = UFMap.find(UFID);
                 assert(it2 != UFMap.end());
-                                
-                auto Type = it2->second->template As<Exprs::ExprFuncType>();
+
+                auto Type = it2->second->template As<FuncType>();
 
                 assert (Type != nullptr);
-                if (Type->GetFuncType() != RangeType) {
-                    throw Exprs::ExprTypeError((string)"Redeclaration of function " + 
+                if (Type->GetEvalType() != RangeType) {
+                    throw Exprs::ExprTypeError((string)"Redeclaration of function " +
                                                Name + " with variant return type");
                 }
                 return UFID;
@@ -2453,8 +2947,20 @@ namespace ESMC {
         }
 
         template <typename E>
+        inline typename LTSTermSemanticizer<E>::TypeT
+        LTSTermSemanticizer<E>::LookupUninterpretedFunction(i64 OpCode) const
+        {
+            auto it = UFMap.find(OpCode);
+            if (it == UFMap.end()) {
+                throw ExprTypeError((string)"No uninterpreted function corresponds to " +
+                                    "opcode = " + to_string(OpCode));
+            }
+            return it->second;
+        }
+
+        template <typename E>
         inline typename LTSTermSemanticizer<E>::ExpT
-        LTSTermSemanticizer<E>::RaiseExpr(MgrType* Mgr, const LExpT& LExp, 
+        LTSTermSemanticizer<E>::RaiseExpr(MgrType* Mgr, const LExpT& LExp,
                                           const LTSLCRef& LTSCtx)
         {
             return Raiser<E, ESMC::LTS::LTSTermSemanticizer>::Do(LExp, UFNameToIDMap,
@@ -2491,14 +2997,14 @@ namespace ESMC {
             Z3_apply_result_inc_ref(*Ctx, Res);
 
             vector<ExpT> RaisedExprs;
-            
+
             auto NumGoals = Z3_apply_result_get_num_subgoals(*Ctx, Res);
             for (u32 i = 0; i < NumGoals; ++i) {
                 auto CurGoal = Z3_apply_result_get_subgoal(*Ctx, Res, i);
                 auto NumExprs = Z3_goal_size(*Ctx, CurGoal);
                 for (u32 j = 0; j < NumExprs; j++) {
                     auto CurFormula = Z3_goal_formula(*Ctx, CurGoal, j);
-                    Detail::Z3Expr CurExpr = Detail::Z3Expr(Ctx, CurFormula);
+                    Z3Expr CurExpr(Ctx, CurFormula);
                     RaisedExprs.push_back(RaiseExpr(CurExpr, LTSCtx));
                 }
             }
@@ -2511,8 +3017,17 @@ namespace ESMC {
             }
         }
 
+        template <typename E>
+        inline typename LTSTermSemanticizer<E>::ExpT
+        LTSTermSemanticizer<E>::UnrollQuantifiers(MgrType* Mgr, const ExpT& Exp,
+                                                  bool IncludeUndef)
+        {
+            return Detail::QuantifierUnroller<E, ESMC::LTS::LTSTermSemanticizer>::Do(Mgr, Exp,
+                                                                                     IncludeUndef);
+        }
+
         template<typename E>
-        const typename LTSTermSemanticizer<E>::TypeT LTSTermSemanticizer<E>::InvalidType = 
+        const typename LTSTermSemanticizer<E>::TypeT LTSTermSemanticizer<E>::InvalidType =
             LTSTermSemanticizer<E>::TypeT::NullPtr;
 
         // A helper routine to check if an expression is an LVAlue
@@ -2536,14 +3051,14 @@ namespace ESMC {
             return false;
         }
 
-        extern ostream& operator << (const Detail::Z3Expr& Expr, ostream& Out);
-        extern ostream& operator << (const Detail::Z3Sort& Sort, ostream& Out);
-        
-        
+        extern ostream& operator << (const Z3Expr& Expr, ostream& Out);
+        extern ostream& operator << (const Z3Sort& Sort, ostream& Out);
+
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LTS_TERM_SEMANTICIZER_HPP_ */
 
-// 
+//
 // LTSTermSemanticizer.hpp ends here

@@ -15,47 +15,47 @@ int main()
 {
     auto TheLTS = new LabelledTS();
 
-    vector<pair<string, ExprTypeRef>> Write1Fields;
+    vector<pair<string, TypeRef>> Write1Fields;
     Write1Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 2)));
     auto Write1Port = TheLTS->MakeMsgType("Write1Port", Write1Fields, false);
     auto Write1PortExp = TheLTS->MakeVar("Write1Port", Write1Port);
-    vector<pair<string, ExprTypeRef>> Request1Fields;
+    vector<pair<string, TypeRef>> Request1Fields;
     Request1Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto Request1Port = TheLTS->MakeMsgType("Request1Port", Request1Fields, false);
     auto Request1PortExp = TheLTS->MakeVar("Request1Port", Request1Port);
-    vector<pair<string, ExprTypeRef>> Enter1Fields;
+    vector<pair<string, TypeRef>> Enter1Fields;
     Enter1Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto Enter1Port = TheLTS->MakeMsgType("Enter1Port", Enter1Fields, false);
     auto Enter1PortExp = TheLTS->MakeVar("Enter1Port", Enter1Port);
-    vector<pair<string, ExprTypeRef>> Exit1Fields;
+    vector<pair<string, TypeRef>> Exit1Fields;
     Exit1Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto Exit1Port = TheLTS->MakeMsgType("Exit1Port", Exit1Fields, false);
     auto Exit1PortExp = TheLTS->MakeVar("Exit1Port", Exit1Port);
-    vector<pair<string, ExprTypeRef>> Write2Fields;
+    vector<pair<string, TypeRef>> Write2Fields;
     Write2Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 2)));
     auto Write2Port = TheLTS->MakeMsgType("Write2Port", Write2Fields, false);
     auto Write2PortExp = TheLTS->MakeVar("Write2Port", Write2Port);
-    vector<pair<string, ExprTypeRef>> Request2Fields;
+    vector<pair<string, TypeRef>> Request2Fields;
     Request2Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto Request2Port = TheLTS->MakeMsgType("Request2Port", Request2Fields, false);
     auto Request2PortExp = TheLTS->MakeVar("Request2Port", Request2Port);
-    vector<pair<string, ExprTypeRef>> Enter2Fields;
+    vector<pair<string, TypeRef>> Enter2Fields;
     Enter2Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto Enter2Port = TheLTS->MakeMsgType("Enter2Port", Enter2Fields, false);
     auto Enter2PortExp = TheLTS->MakeVar("Enter2Port", Enter2Port);
-    vector<pair<string, ExprTypeRef>> Exit2Fields;
+    vector<pair<string, TypeRef>> Exit2Fields;
     Exit2Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto Exit2Port = TheLTS->MakeMsgType("Exit2Port", Exit2Fields, false);
     auto Exit2PortExp = TheLTS->MakeVar("Exit2Port", Exit2Port);
-    vector<pair<string, ExprTypeRef>> TickFields;
+    vector<pair<string, TypeRef>> TickFields;
     TickFields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 0)));
     auto TickPort = TheLTS->MakeMsgType("TickPort", TickFields, false);
     auto TickPortExp = TheLTS->MakeVar("TickPort", TickPort);
-    vector<pair<string, ExprTypeRef>> Read1Fields;
+    vector<pair<string, TypeRef>> Read1Fields;
     Read1Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 2)));
     auto Read1Port = TheLTS->MakeMsgType("Read1Port", Read1Fields, false);
     auto Read1PortExp = TheLTS->MakeVar("Read1Port", Read1Port);
-    vector<pair<string, ExprTypeRef>> Read2Fields;
+    vector<pair<string, TypeRef>> Read2Fields;
     Read2Fields.push_back(make_pair("Field0", TheLTS->MakeRangeType(0, 2)));
     auto Read2Port = TheLTS->MakeMsgType("Read2Port", Read2Fields, false);
     auto Read2PortExp = TheLTS->MakeVar("Read2Port", Read2Port);
@@ -290,11 +290,11 @@ int main()
     cout << "Invariant:" << endl;
     cout << TheLTS->GetInvariant() << endl;
 
-    cout << "Channel Buffer variables to sort:" << endl;
-    for (auto const& BufferExp : TheLTS->GetChanBuffersToSort()) {
-        cout << BufferExp.first->ToString() << endl;
-        cout << BufferExp.second->ToString() << endl;
-    }
+    // cout << "Channel Buffer variables to sort:" << endl;
+    // for (auto const& BufferExp : TheLTS->GetChanBuffersToSort()) {
+    //     cout << BufferExp.first->ToString() << endl;
+    //     cout << BufferExp.second->ToString() << endl;
+    // }
 
     auto Checker = new LTSChecker(TheLTS);
     Checker->BuildAQS();

@@ -1,13 +1,13 @@
-// OmegaAutomaton.cpp --- 
-// 
+// OmegaAutomaton.cpp ---
+//
 // Filename: OmegaAutomaton.cpp
 // Author: Abhishek Udupa
 // Created: Tue Aug 26 02:31:46 2014 (-0400)
-// 
-// 
+//
+//
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
-// 
+//
 // Redistribution and use in source and binary forms, with or without
 // modification, are permitted provided that the following conditions are met:
 // 1. Redistributions of source code must retain the above copyright
@@ -21,7 +21,7 @@
 // 4. Neither the name of the University of Pennsylvania nor the
 //    names of its contributors may be used to endorse or promote products
 //    derived from this software without specific prior written permission.
-// 
+//
 // THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDER ''AS IS'' AND ANY
 // EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 // WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,8 +32,8 @@
 // ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 // (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 // SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-// 
-// 
+//
+//
 
 // Code:
 
@@ -52,13 +52,13 @@ namespace ESMC {
         using LTS::SymbolTable;
         using LTS::LabelledTS;
         using LTS::ExpT;
-        using LTS::ExprTypeRef;
+        using LTS::TypeRef;
         using Symm::PermutationSet;
 
         inline void BuchiAutomatonBase::AssertStatesFrozen() const
         {
             if (!StatesFrozen) {
-                throw ESMCError((string)"The requested operation can only be performed " + 
+                throw ESMCError((string)"The requested operation can only be performed " +
                                 "after the states of the Buchi Automaton have been frozen");
             }
         }
@@ -66,7 +66,7 @@ namespace ESMC {
         inline void BuchiAutomatonBase::AssertStatesNotFrozen() const
         {
             if (StatesFrozen) {
-                throw ESMCError((string)"The requested operation can only be performed " + 
+                throw ESMCError((string)"The requested operation can only be performed " +
                                 "before the states of the Buchi Automaton have been frozen");
             }
         }
@@ -74,22 +74,22 @@ namespace ESMC {
         BuchiAutomatonBase::BuchiAutomatonBase(LabelledTS* TheLTS, const string& Name,
                                                const vector<ExpT>& SymmIndices,
                                                const ExpT& Constraint)
-            : Name(Name), SymmIndices(SymmIndices), Constraint(Constraint), 
+            : Name(Name), SymmIndices(SymmIndices), Constraint(Constraint),
               TheLTS(TheLTS), StatesFrozen(false), NumStates(0)
         {
             SymTab.Pop();
             SymTab.Push(TheLTS->SymTab.Bot());
-            // Push another scope to avoid polluting the 
+            // Push another scope to avoid polluting the
             // symbol table of the LTS with my parameters
             SymTab.Push();
             LTS::CheckParams(SymmIndices, Constraint, SymTab, TheLTS->GetMgr(), true);
             // Create the substitution maps for each permutation
             // starting from the canonical initial index values
-            SymmInsts = LTS::InstantiateParams(SymmIndices, Constraint, 
+            SymmInsts = LTS::InstantiateParams(SymmIndices, Constraint,
                                                TheLTS->GetMgr());
             TheIndexSet = new ProcessIndexSet(SymmInsts);
         }
-        
+
         BuchiAutomatonBase::~BuchiAutomatonBase()
         {
             delete TheIndexSet;
@@ -101,7 +101,7 @@ namespace ESMC {
 
             auto StateUID = StateUIDGenerator.GetUID();
             if (StateNameToStateID.find(StateName) != StateNameToStateID.end()) {
-                throw ESMCError((string)"State with name \"" + StateName + "\" already " + 
+                throw ESMCError((string)"State with name \"" + StateName + "\" already " +
                                 "exists in Buchi Automaton \"" + Name + "\".");
             }
             StateNameToStateID[StateName] = StateUID;
@@ -120,7 +120,7 @@ namespace ESMC {
         {
             auto it = StateNameToStateID.find(StateName);
             if (it == StateNameToStateID.end()) {
-                throw ESMCError((string)"Unknown state name \"" + StateName + "\"" + 
+                throw ESMCError((string)"Unknown state name \"" + StateName + "\"" +
                                 " referenced in Buchi monitor \"" + Name + "\"");
             }
             return it->second;
@@ -130,7 +130,7 @@ namespace ESMC {
         {
             auto it = StateIDToStateName.find(StateID);
             if (it == StateIDToStateName.end()) {
-                throw ESMCError((string)"Unknown StateID " + to_string(StateID) + 
+                throw ESMCError((string)"Unknown StateID " + to_string(StateID) +
                                 " in referenced in Buchi monitor \"" + Name + "\"");
             }
             return it->second;
@@ -141,7 +141,7 @@ namespace ESMC {
             if (StatesFrozen) {
                 return;
             }
-            
+
             StatesFrozen = true;
         }
 
@@ -169,7 +169,7 @@ namespace ESMC {
         inline void StateBuchiAutomaton::AssertFrozen() const
         {
             if (!Frozen) {
-                throw ESMCError((string)"The requested operation can only be performed " + 
+                throw ESMCError((string)"The requested operation can only be performed " +
                                 "after the Buchi Automaton has been frozen");
             }
         }
@@ -177,10 +177,10 @@ namespace ESMC {
         inline void StateBuchiAutomaton::AssertNotFrozen() const
         {
             if (Frozen) {
-                throw ESMCError((string)"The requested operation can only be performed " + 
+                throw ESMCError((string)"The requested operation can only be performed " +
                                 "before the Buchi Automaton has been frozen");
             }
-        }        
+        }
 
         StateBuchiAutomaton::StateBuchiAutomaton(LabelledTS* TheLTS, const string& Name,
                                                  const vector<ExpT>& SymmIndices,
@@ -204,41 +204,50 @@ namespace ESMC {
             }
 
             BuchiAutomatonBase::FreezeStates();
-            Transitions = 
+            Transitions =
                 vector<vector<vector<pair<ExpT, u32>>>>(TheIndexSet->GetNumIndexVectors(),
                                                         vector<vector<pair<ExpT, u32>>>(NumStates));
         }
 
-        void StateBuchiAutomaton::AddTransition(const string& InitState, 
-                                                const string& FinalState, 
+        void StateBuchiAutomaton::AddTransition(const string& InitState,
+                                                const string& FinalState,
                                                 const ExpT& Guard)
         {
             AssertStatesFrozen();
             AssertNotFrozen();
-            
+
             auto Mgr = TheLTS->GetMgr();
 
-            if (!Guard->GetType()->Is<Exprs::ExprBoolType>()) {
-                throw ESMCError((string)"Guards for Buchi Automaton transitions " + 
+            if (!Guard->GetType()->Is<BooleanType>()) {
+                throw ESMCError((string)"Guards for Buchi Automaton transitions " +
                                 "must be Boolean valued");
             }
 
             LTS::CheckExpr(Guard, SymTab, Mgr);
-            auto UnrolledGuard = 
-                Mgr->ApplyTransform<LTS::Detail::QuantifierUnroller>(Guard);
+            auto UnrolledGuard = Mgr->UnrollQuantifiers(Guard, false);
 
             auto it = StateNameToStateID.find(InitState);
             if (it == StateNameToStateID.end()) {
-                throw ESMCError((string)"Initial state \"" + InitState + "\"" + 
+                throw ESMCError((string)"Initial state \"" + InitState + "\"" +
                                 " for Buchi Automaton transition undefined");
             }
             auto InitStateID = it->second;
             it = StateNameToStateID.find(FinalState);
             if (it == StateNameToStateID.end()) {
-                throw ESMCError((string)"Final state \"" + FinalState + "\"" + 
+                throw ESMCError((string)"Final state \"" + FinalState + "\"" +
                                 " for Buchi Automaton transition undefined");
             }
             auto FinalStateID = it->second;
+
+            auto const& ExistingTransitions = Transitions[0][InitStateID];
+            for (auto const& Transition : ExistingTransitions) {
+                if (Transition.second == FinalStateID) {
+                    throw ESMCError((string)"Parallel edges in Buchi monitor between " +
+                                    "states " + InitState + " and " + FinalState +
+                                    ".\nMake a disjunctive guard instead");
+                }
+            }
+
             u32 InstIdx = 0;
             for (auto const& SymmInst : SymmInsts) {
                 // Create a substitution map for this instance
@@ -255,41 +264,41 @@ namespace ESMC {
             }
         }
 
-        ExpT StateBuchiAutomaton::MakeVar(const string& Name, const ExprTypeRef& Type)
+        ExpT StateBuchiAutomaton::MakeVar(const string& Name, const TypeRef& Type)
         {
             auto Retval = TheLTS->MakeVar(Name, Type);
             LTS::CheckExpr(Retval, SymTab, TheLTS->GetMgr());
             return Retval;
         }
 
-        ExpT StateBuchiAutomaton::MakeBoundVar(i64 Idx, const ExprTypeRef& Type)
+        ExpT StateBuchiAutomaton::MakeBoundVar(i64 Idx, const TypeRef& Type)
         {
             return TheLTS->MakeBoundVar(Idx, Type);
         }
 
-        ExpT StateBuchiAutomaton::MakeVal(const string& Value, const ExprTypeRef& Type)
+        ExpT StateBuchiAutomaton::MakeVal(const string& Value, const TypeRef& Type)
         {
             return TheLTS->MakeVal(Value, Type);
         }
 
-        ExpT StateBuchiAutomaton::MakeExists(const vector<ExprTypeRef>& QVarTypes, 
+        ExpT StateBuchiAutomaton::MakeExists(const vector<TypeRef>& QVarTypes,
                                              const ExpT& Body)
         {
             return TheLTS->MakeExists(QVarTypes, Body);
         }
 
-        ExpT StateBuchiAutomaton::MakeForAll(const vector<ExprTypeRef>& QVarTypes, const ExpT& Body)
+        ExpT StateBuchiAutomaton::MakeForAll(const vector<TypeRef>& QVarTypes, const ExpT& Body)
         {
             return TheLTS->MakeForAll(QVarTypes, Body);
         }
 
-        const ExprTypeRef& StateBuchiAutomaton::GetNamedType(const string& TypeName)
+        const TypeRef& StateBuchiAutomaton::GetNamedType(const string& TypeName)
         {
             return TheLTS->GetNamedType(TypeName);
         }
 
 
-        vector<u32> StateBuchiAutomaton::GetNextStates(u32 CurState, u32 IndexID, 
+        vector<u32> StateBuchiAutomaton::GetNextStates(u32 CurState, u32 IndexID,
                                                        const StateVec* StateVector) const
         {
             auto const& TransVec = Transitions[IndexID][CurState];
@@ -297,12 +306,32 @@ namespace ESMC {
 
             for (auto const& Trans : TransVec) {
                 auto Interp = Trans.first->ExtensionData.Interp;
-                if (Interp->EvaluateScalar(StateVector) != 0) {
+                if (Interp->Evaluate(StateVector) != 0) {
                     Retval.push_back(Trans.second);
                 }
             }
-            
+
             return Retval;
+        }
+
+        const ExpT& StateBuchiAutomaton::GetGuardForTransition(u32 FromState,
+                                                               u32 ToState,
+                                                               u32 IndexID) const
+        {
+            if (FromState >= NumStates || ToState >= NumStates) {
+                throw ESMCError((string)"State IDs out of bounds for Buchi monitor");
+            }
+            auto const& TransVec = Transitions[IndexID][FromState];
+            for (auto const& Transition : TransVec) {
+                if (ToState == Transition.second) {
+                    return Transition.first;
+                }
+            }
+
+            auto it1 = StateIDToStateName.find(FromState);
+            auto it2 = StateIDToStateName.find(ToState);
+            throw ESMCError((string)"No transition between states: " +
+                            it1->second + " to " + it2->second);
         }
 
         void StateBuchiAutomaton::Freeze()
@@ -318,5 +347,5 @@ namespace ESMC {
     } /* end namespace MC */
 } /* end namespace ESMC */
 
-// 
+//
 // OmegaAutomaton.cpp ends here
