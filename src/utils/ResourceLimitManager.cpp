@@ -188,7 +188,7 @@ namespace ESMC {
         TimerInterval = TimerIntervalNS;
     }
 
-    bool ResourceLimitManager::QueryStart()
+    void ResourceLimitManager::QueryStart()
     {
         // install handlers IF resource limits are specified
         if (MemLimit != UINT64_MAX ||

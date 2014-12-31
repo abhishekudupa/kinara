@@ -88,7 +88,7 @@ namespace ESMC {
         static u64 GetCPULimit();
         static void SetTimerInterval(u64 TimerIntervalNS);
         static u64 GetTimerFrequency();
-        static bool QueryStart();
+        static void QueryStart();
         static void QueryEnd();
         static bool CheckTimeOut();
         static bool CheckMemOut();
