@@ -129,6 +129,7 @@ namespace ESMC {
             auto LoweredAssertion = Mgr->LowerExpr(UnrolledExp, LTSCtx);
             Z3_solver_assert(*Ctx, Solver, LoweredAssertion);
             auto const& Assumptions = LTSCtx->GetAllAssumptions();
+            assert(Assumptions.size() == 1);
             for (auto const& AssumptionSet : Assumptions) {
                 for (auto const& Assumption : AssumptionSet) {
                     Z3_solver_assert(*Ctx, Solver, Assumption);
@@ -262,7 +263,6 @@ namespace ESMC {
 
         void Z3TheoremProver::Interrupt()
         {
-            cout << "Interrupting Z3 now!" << endl << endl;
             Z3_interrupt(*Ctx);
         }
 

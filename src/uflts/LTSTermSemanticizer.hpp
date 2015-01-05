@@ -96,14 +96,15 @@ namespace ESMC {
             static const i64 OpIndex = 1018;
             static const i64 OpField = 1019;
 
+            // Syntactic operations for symbolic execution ONLY
+            static const i64 OpSelect = 1020;
+            static const i64 OpProject = 1021;
+
+            // Store and update
+            static const i64 OpStore = 1022;
+            static const i64 OpUpdate = 1023;
 
             static const i64 UFOffset = 1000000;
-
-            // Temporal operators
-            static const i64 OpTemporalX = 1020;
-            static const i64 OpTemporalU = 1021;
-            static const i64 OpTemporalF = 1022;
-            static const i64 OpTemporalG = 1023;
         };
 
         static inline string MangleName(const string& Name,
@@ -478,10 +479,6 @@ namespace ESMC {
                     Exp->SetType(Exp->GetConstType());
                 } else if(ActType->template As<RangeType>() != nullptr ||
                           ActType->template As<IntegerType>() != nullptr) {
-                    // if (!boost::algorithm::all(ConstVal, boost::algorithm::is_digit())) {
-                    //     throw ExprTypeError((string)"Invalid value " + ConstVal);
-                    // }
-                    // Commented out the check above, lexical cast should handle it!
                     boost::multiprecision::cpp_int Val = 0;
                     Val = boost::lexical_cast<boost::multiprecision::cpp_int>(ConstVal);
                     if (ActType->template As<RangeType>() != nullptr) {
@@ -717,7 +714,10 @@ namespace ESMC {
                     }
                     Exp->SetType(IntType);
                 }
-                case LTSOps::OpIndex: {
+
+                // Index and select are handled identically
+                case LTSOps::OpIndex:
+                case LTSOps::OpSelect: {
                     CheckNumArgs(2, ChildTypes.size(), "Index");
                     auto Type1 = ChildTypes[0];
                     auto ArrType = Type1->template As<ArrayType>();
@@ -752,7 +752,10 @@ namespace ESMC {
                     Exp->SetType(ElemType);
                     break;
                 }
-                case LTSOps::OpField: {
+
+                // Project and field are handled identically
+                case LTSOps::OpField:
+                case LTSOps::OpProject: {
                     CheckNumArgs(2, ChildTypes.size(), "Field");
 
                     if (!ChildTypes[0]->template Is<RecordType>() &&
@@ -790,6 +793,73 @@ namespace ESMC {
 
                     Exp->SetType(ValType);
                     break;
+                }
+
+                case LTSOps::OpStore: {
+                    CheckNumArgs(3, ChildTypes.size(), "Store");
+
+                    if (!ChildTypes[0]->template Is<ArrayType>()) {
+                        throw ExprTypeError((string)"Store op must have array expression " +
+                                            "as first argument");
+                    }
+                    auto ArrType = ChildTypes[0]->template SAs<ArrayType>();
+                    auto IndexType = ArrType->GetIndexType();
+                    auto ValueType = ArrType->GetValueType();
+
+                    if (!CheckTypeCompat(IndexType, ChildTypes[1])) {
+                        throw ExprTypeError((string)"Invalid type for index expression");
+                    }
+                    if (!CheckTypeCompat(ValueType, ChildTypes[2])) {
+                        throw ExprTypeError((string)"Invalid type for value expression in Store " +
+                                            "expression");
+                    }
+
+                    // All good. This evaluates to a value of the array type
+                    Exp->SetType(ArrType);
+                    break;
+                }
+
+                case LTSOps::OpUpdate: {
+                    CheckNumArgs(3, ChildTypes.size(), "Update");
+
+                    if (!ChildTypes[0]->template Is<RecordType>() &&
+                        !ChildTypes[0]->template Is<ParametricType>()) {
+                        throw ExprTypeError((string)"Update expression must be applied on a " +
+                                            "record or parametric type");
+                    }
+
+                    if (!ChildTypes[1]->template Is<FieldAccessType>()) {
+                        throw ExprTypeError((string)"Record field accesses must be made with " +
+                                            "variables of type FieldAccessType");
+                    }
+
+                    auto FieldExp = Children[1]->template As<VarExpression>();
+                    if (FieldExp == nullptr) {
+                        throw ExprTypeError((string)"Field access expression must be a VarExpression");
+                    }
+
+                    auto const& FieldName = FieldExp->GetVarName();
+
+                    const RecordType* RecType = nullptr;
+                    if (ChildTypes[0]->template Is<RecordType>()) {
+                        RecType = ChildTypes[0]->template SAs<RecordType>();
+                    } else {
+                        auto PType = ChildTypes[0]->template SAs<ParametricType>();
+                        RecType = PType->GetBaseType()->template As<RecordType>();
+                    }
+
+                    auto ValType = RecType->GetTypeForMember(FieldName);
+                    if (ValType == TypeRef::NullPtr) {
+                        throw ExprTypeError((string)"Field name \"" +
+                                            FieldName + "\" is invalid for " +
+                                            "record type \"" + RecType->GetName() + "\"");
+                    }
+
+                    if (!CheckTypeCompat(ValType, ChildTypes[2])) {
+                        throw ExprTypeError((string)"Invalid type for value in update expression");
+                    }
+
+                    Exp->SetType(RecType);
                 }
 
                 default: {
@@ -1487,20 +1557,30 @@ namespace ESMC {
 
                 case LTSOps::OpSUB:
                     if (CheckAllConstant(SimpChildren)) {
-                        i64 DiffVal =
-                            (boost::lexical_cast<i64>(SimpChildren[0]->template
-                                                      SAs<ConstExpression>()->GetConstValue()) -
-                             boost::lexical_cast<i64>(SimpChildren[1]->template
-                                                      SAs<ConstExpression>()->GetConstValue()));
+                        i64 FirstVal = boost::lexical_cast<i64>(SimpChildren[0]->template
+                                                                SAs<ConstExpression>()->GetConstValue());
+                        i64 ToSubtract = 0;
+                        for (u32 i = 1; i < NumChildren; ++i) {
+                            ToSubtract += boost::lexical_cast<i64>(SimpChildren[i]->template
+                                                                   SAs<ConstExpression>()->GetConstValue());
+                        }
+                        i64 DiffVal = FirstVal - ToSubtract;
                         ExpStack.push_back(Mgr->MakeVal(to_string(DiffVal), IntType));
                     } else {
-                        if (SimpChildren[1]->template As<ConstExpression>() != nullptr &&
-                            boost::lexical_cast<i64>(SimpChildren[1]->template
-                                                     SAs<ConstExpression>()->GetConstValue()) == 0) {
+                        auto it = SimpChildren.begin();
+                        ++it;
+                        if (all_of(it, SimpChildren.end(),
+                                   [&] (const ExpT& Exp) -> bool
+                                   {
+                                       if (Exp->template Is<ConstExpression>()) {
+                                           auto ExpAsConst = Exp->template SAs<ConstExpression>();
+                                           auto const& ConstVal = ExpAsConst->GetConstValue();
+                                           return (boost::lexical_cast<i64>(ConstVal) == 0);
+                                       } else {
+                                           return false;
+                                       }
+                                   })) {
                             ExpStack.push_back(SimpChildren[0]);
-                        } else if (AllOfOp(SimpChildren, LTSOps::OpSUB)) {
-                            auto&& FlattenedChildren = GetAllChildren(SimpChildren);
-                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
                             ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                         }
@@ -1613,9 +1693,105 @@ namespace ESMC {
                     }
                     break;
 
+                case LTSOps::OpSelect: {
+                    if (SimpChildren[0]->template Is<OpExpression>()) {
+                        auto Child0AsOp = SimpChildren[0]->template SAs<OpExpression>();
+                        if (Child0AsOp->GetOpCode() == LTSOps::OpStore) {
+                            // Store to the same index?
+                            if (SimpChildren[1] == (Child0AsOp->GetChildren())[1]) {
+                                // replace by the stored value itself
+                                ExpStack.push_back((Child0AsOp->GetChildren())[2]);
+                            } else {
+                                // if they're two different constants,
+                                // then they're guaranteed to be different
+                                // in which case, the write is irrelevant
+                                if (SimpChildren[1]->template Is<ConstExpression>() &&
+                                    (Child0AsOp->GetChildren())[1]->template Is<ConstExpression>()) {
+                                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpSelect,
+                                                                     (Child0AsOp->GetChildren())[0],
+                                                                     SimpChildren[1]));
+                                } else {
+                                    ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                                }
+                            }
+                        } else {
+                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                        }
+                    } else {
+                        ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                    }
+                }
+                    break;
+
+                case LTSOps::OpStore: {
+                    if (SimpChildren[0]->template Is<OpExpression>()) {
+                        auto Child0AsOp = SimpChildren[0]->template SAs<OpExpression>();
+                        if (Child0AsOp->GetOpCode() == LTSOps::OpStore) {
+                            if ((Child0AsOp->GetChildren())[1] == SimpChildren[1]) {
+                                // write over write, disregard the earlier write
+                                ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpStore,
+                                                                 (Child0AsOp->GetChildren())[0],
+                                                                 SimpChildren[1],
+                                                                 SimpChildren[2]));
+                            } else {
+                                ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                            }
+                        } else {
+                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                        }
+                    } else {
+                        ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                    }
+                }
+                    break;
+
+                case LTSOps::OpProject: {
+                    if (SimpChildren[0]->template Is<OpExpression>()) {
+                        auto Child0AsOp = SimpChildren[0]->template SAs<OpExpression>();
+                        if (Child0AsOp->GetOpCode() == LTSOps::OpUpdate) {
+                            auto const& ChildFieldExp = (Child0AsOp->GetChildren())[1];
+                            if (ChildFieldExp == SimpChildren[1]) {
+                                // read after write, just feed in the value written
+                                ExpStack.push_back((Child0AsOp->GetChildren())[2]);
+                            } else {
+                                // the update is irrelevant
+                                ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpProject,
+                                                                 (Child0AsOp->GetChildren())[0],
+                                                                 SimpChildren[1]));
+                            }
+                        } else {
+                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                        }
+                    } else {
+                        ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                    }
+                }
+                    break;
+
+                case LTSOps::OpUpdate: {
+                    if (SimpChildren[0]->template Is<OpExpression>()) {
+                        auto Child0AsOp = SimpChildren[0]->template SAs<OpExpression>();
+                        if (Child0AsOp->GetOpCode() == LTSOps::OpUpdate) {
+                            auto const& ChildFieldExp = (Child0AsOp->GetChildren())[1];
+                            if (ChildFieldExp == SimpChildren[1]) {
+                                // Write over write
+                                ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpUpdate,
+                                                                 (Child0AsOp->GetChildren())[0],
+                                                                 SimpChildren[1], SimpChildren[2]));
+                            } else {
+                                ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                            }
+                        } else {
+                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                        }
+                    } else {
+                        ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                    }
+                }
+                    break;
+
                 default:
                     ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
-
                 }
             }
 
@@ -1935,7 +2111,9 @@ namespace ESMC {
                 auto LoweredChildren = new Z3_ast[NumChildren];
                 vector<Z3Expr> LChildren(NumChildren);
 
-                if (OpCode != LTSOps::OpField) {
+                if (OpCode != LTSOps::OpField &&
+                    OpCode != LTSOps::OpProject &&
+                    OpCode != LTSOps::OpUpdate) {
                     ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
 
                     for (u32 i = 0; i < NumChildren; ++i) {
@@ -2019,7 +2197,8 @@ namespace ESMC {
                     ExpStack.push_back(Z3Expr(Ctx, Z3_mk_le(*Ctx, LChildren[0], LChildren[1])));
                     break;
 
-                case LTSOps::OpIndex: {
+                case LTSOps::OpIndex:
+                case LTSOps::OpSelect: {
                     auto const& ExpType = Exp->GetType();
                     auto ExpTypeAsRange = ExpType->template As<RangeType>();
                     Z3Expr LoweredExpr(Ctx, Z3_mk_select(*Ctx, LChildren[0], LChildren[1]));
@@ -2049,7 +2228,8 @@ namespace ESMC {
                     break;
                 }
 
-                case LTSOps::OpField: {
+                case LTSOps::OpField:
+                case LTSOps::OpProject: {
                     // Visit the record expression
                     Children[0]->Accept(this);
                     auto RecExp = ExpStack.back();
@@ -2092,6 +2272,55 @@ namespace ESMC {
 
                     break;
                 }
+
+                case LTSOps::OpStore: {
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_store(*Ctx, LChildren[0],
+                                                               LChildren[1], LChildren[2])));
+                    break;
+                }
+
+                case LTSOps::OpUpdate: {
+                    Children[0]->Accept(this);
+                    auto RecExp = ExpStack.back();
+                    ExpStack.pop_back();
+
+                    Children[2]->Accept(this);
+                    auto UpdateExp = ExpStack.back();
+                    ExpStack.pop_back();
+
+                    auto RecType = Children[0]->GetType();
+                    auto const& RecTypeName = RecType->template SAs<RecordType>()->GetName();
+                    auto const& RecMembers = RecType->template SAs<RecordType>()->GetMemberVec();
+                    const u32 NumMembers = RecMembers.size();
+                    auto const& LoweredRecSort = LowerType(RecType);
+                    auto const& FieldName = Children[1]->template As<VarExpression>()->GetVarName();
+
+                    vector<Z3Expr> AppArgVec(NumMembers);
+                    Z3_ast* AppArgs = new Z3_ast[NumMembers];
+
+                    for (u32 i = 0; i < NumMembers; ++i) {
+                        auto const& Member = RecMembers[i];
+                        if (Member.first == FieldName) {
+                            AppArgVec[i] = UpdateExp;
+                            AppArgs[i] = UpdateExp;
+                        } else {
+                            auto ProjectFunc = LoweredRecSort.GetFuncDecl(Member.first);
+                            Z3_ast ProjAppArgs[1];
+                            ProjAppArgs[0] = RecExp;
+                            Z3Expr ProjectExpr(Ctx, Z3_mk_app(*Ctx, ProjectFunc, 1, ProjAppArgs));
+                            AppArgVec[i] = ProjectExpr;
+                            AppArgs[i] = ProjectExpr;
+                        }
+                    }
+
+                    auto ConstructFunc = LoweredRecSort.GetFuncDecl(RecTypeName);
+                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_app(*Ctx, ConstructFunc,
+                                                             NumMembers, AppArgs)));
+                    delete[] AppArgs;
+                }
+                    break;
+
+
                 default: {
                     // This must be an uninterpreted function
                     auto it = UFMap.find(OpCode);

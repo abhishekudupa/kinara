@@ -54,9 +54,8 @@ namespace ESMC {
 
         Z3CtxWrapper::Z3CtxWrapper()
         {
+            Z3_global_param_set("model_evaluator.completion", "true");
             auto Cfg = Z3_mk_config();
-            Z3_set_param_value(Cfg, "MODEL", "true");
-            Z3_set_param_value(Cfg, "MODEL_COMPLETION", "true");
             // random_device rd;
             // auto Seed = rd() % (1 << 30);
             // cout << "Z3 Random Seed: " << Seed << endl << endl;

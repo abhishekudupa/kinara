@@ -118,14 +118,17 @@ namespace ESMC {
 
         inline void Solver::CheckedAssert(const ExpT& Assertion)
         {
+            auto const& TrueExp = TheLTS->MakeTrue();
             if (AssertedConstraints.find(Assertion) != AssertedConstraints.end()) {
-                // cout << "Not asserting previously asserted constraint:" << endl
-                //      << Assertion->ToString() << endl;
+                if (Assertion != TrueExp) {
+                    cout << "Not asserting previously asserted constraint:" << endl
+                         << Assertion->ToString() << endl;
+                }
                 return;
             }
 
             AssertedConstraints.insert(Assertion);
-            // cout << "Asserting: " << Assertion->ToString() << endl;
+            cout << "Asserting: " << Assertion->ToString() << endl;
             TP->Assert(Assertion, Options.UnrollQuantifiers);
         }
 
@@ -540,6 +543,7 @@ namespace ESMC {
                                                 UpdateRangeType);
             auto SumExp = MakeSum(PointIndicators, Mgr, UpdateRangeType);
             auto UpdateEQSum = Mgr->MakeExpr(LTSOps::OpEQ, UpdateIndicator, SumExp);
+            CurrentAssertions.insert(UpdateEQSum);
 
             // cout << "Creating update indicator for " << UpdateExp
             //      << endl << UpdateEQSum->ToString() << endl;
@@ -896,12 +900,13 @@ namespace ESMC {
                         continue;
                     } else if (Res == 0) {
                         FoundBlown = true;
-                        // cout << endl << "Blown invar: " << Invar->ToString() << endl;
+                        cout << endl << "Blown invar: " << Invar->ToString() << endl;
                         auto it = Checker->LoweredBoundsInvars.find(Invar);
                         if (it == Checker->LoweredBoundsInvars.end()) {
                             throw InternalError((string)"Could not find array transformed invariant " +
                                                 "for bounds invariant:\n" + Invar->ToString());
                         }
+                        cout << endl << "Lowered Blown invar: " << it->second->ToString() << endl;
                         ActualBlownInvariants.push_back(it->second);
                     }
                 }
@@ -918,6 +923,10 @@ namespace ESMC {
                                         "At: " + __FILE__ + ":" + to_string(__LINE__));
                 }
             } else {
+                cout << "Blown invar: " << Checker->TheLTS->InvariantExp->ToString()
+                     << endl;
+                cout << endl << "Lowered Blown invar: "
+                     << Checker->LoweredInvariant->ToString() << endl;
                 ActualBlownInvariants.push_back(Checker->LoweredInvariant);
             }
 
@@ -929,8 +938,8 @@ namespace ESMC {
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this, Trace, ActualBlownInvariant);
             for (auto const& Pred : WPConditions) {
-                // cout << "Obtained Safety Pre:" << endl
-                //      << Pred->ToString() << endl << endl;
+                cout << "Obtained Safety Pre:" << endl
+                     << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
 
@@ -999,8 +1008,7 @@ namespace ESMC {
                 GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
             }
 
-            // cout << "Done!" << endl << "Computing weakest pre... ";
-            // flush(cout);
+            cout << "Computing Weakest Pre of: " << GoodExp->ToString() << endl << endl;
 
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this,
@@ -1009,7 +1017,7 @@ namespace ESMC {
 
 
             for (auto const& Pred : WPConditions) {
-                // cout << "Obtained Pre:" << endl << Pred->ToString() << endl << endl;
+                cout << "Obtained Pre:" << endl << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
 
@@ -1057,8 +1065,8 @@ namespace ESMC {
         {
             auto Predicate =
                 TraceAnalyses::WeakestPreconditionForLiveness(this, Monitor, Trace);
-            cout << "Obtained predicate for liveness violation:" << endl
-                 << Predicate->ToString() << endl << endl;
+            // cout << "Obtained predicate for liveness violation:" << endl
+            //      << Predicate->ToString() << endl << endl;
             MakeAssertion(Predicate);
             delete Trace;
         }
@@ -1103,8 +1111,8 @@ namespace ESMC {
 
             auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundsVariable);
 
-            // cout << "Asserting Bounds Constraint: " << endl
-            //      << EQExp->ToString() << endl << endl;
+            cout << "Asserting Bounds Constraint: " << endl
+                 << EQExp->ToString() << endl << endl;
 
             TP->Assert(EQExp, Options.UnrollQuantifiers);
             for (auto const& Assertion : AssertedConstraints) {
@@ -1217,7 +1225,6 @@ namespace ESMC {
             ResourceLimitManager::QueryStart();
             ResourceLimitManager::AddOnLimitHandler([this](bool TimeOut) -> void
                                                     {
-                                                        cout << "In OnLimit Lambda" << endl << endl;
                                                         TP->Interrupt();
                                                     });
 
@@ -1262,7 +1269,9 @@ namespace ESMC {
                 if (TPRes == TPResult::UNSATISFIABLE) {
                     ++Bound;
                     cout << "UNSAT! Relaxed bound to " << Bound << endl;
-                    CurrentAssumptions.pop_front();
+                    if (CurrentAssumptions.size() > 0) {
+                        CurrentAssumptions.pop_front();
+                    }
                     continue;
                 } else if (TPRes == TPResult::UNKNOWN &&
                            !ResourceLimitManager::CheckMemOut() &&
@@ -1276,7 +1285,7 @@ namespace ESMC {
 
                 // all good. extract a model
                 auto const& Model = TP->GetModel();
-                // cout << "Model:" << endl << Model.ToString() << endl;
+                cout << "Model:" << endl << Model.ToString() << endl;
                 // PrintSolution();
                 Compiler->UpdateModel(Model, InterpretedOps, GuardIndicatorExps);
 

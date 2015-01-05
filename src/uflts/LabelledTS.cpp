@@ -955,6 +955,10 @@ namespace ESMC {
                     throw ESMCError((string)"Equality allowed only between scalar types");
                 }
             }
+            if (OpCode == LTSOps::OpStore || OpCode == LTSOps::OpUpdate) {
+                throw ESMCError((string)"Store and Update operators are not intended to be " +
+                                "used at the level of the labelled transition system");
+            }
             return Mgr->MakeExpr(OpCode, Operands);
         }
 

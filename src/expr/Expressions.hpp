@@ -636,6 +636,7 @@ namespace ESMC {
             template <typename... ArgTypes>
             inline ExpT UnrollQuantifiers(const ExpT& Exp, ArgTypes&&... Args);
             inline ExpT Simplify(const ExpT& Exp);
+            inline ExpT SimplifyFP(const ExpT& Exp);
             inline ExpT Substitute(const SubstMapT& Subst, const ExpT& Exp);
             inline ExpT TermSubstitute(const SubstMapT& Subst, const ExpT& Exp);
             inline ExpT BoundSubstitute(const SubstMapT& Subst, const ExpT& Exp);
@@ -2489,6 +2490,18 @@ namespace ESMC {
         {
             auto Retval = Sem->Simplify(Exp);
             return Retval;
+        }
+
+        template <typename E, template <typename> class S>
+        inline typename ExprMgr<E, S>::ExpT
+        ExprMgr<E, S>::SimplifyFP(const ExpT &Exp)
+        {
+            auto OldExp = Exp;
+            ExpT SimpExp = ExpT::NullPtr;
+            do {
+                SimpExp = Simplify(OldExp);
+            } while (SimpExp != OldExp);
+            return SimpExp;
         }
 
         template <typename E, template <typename> class S>

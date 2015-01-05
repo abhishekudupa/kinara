@@ -415,6 +415,11 @@ namespace ESMC {
             auto Mgr = TheLTS->GetMgr();
             for (auto const& IndexTerm : IndexTerms) {
                 auto const& IndexType = IndexTerm->GetType();
+                if (!IndexType->Is<SymmetricType>()) {
+                    continue;
+                }
+
+                // It is a symmetric type
                 auto Invar = Mgr->MakeExpr(LTSOps::OpEQ, IndexTerm,
                                            Mgr->MakeVal(IndexType->GetClearValue(),
                                                         IndexType));
@@ -686,9 +691,9 @@ namespace ESMC {
                 } else if (Cmd == GCmdRef::NullPtr) {
                     if (Deadlocked) {
                         ErrorStates[State] = DeadlockFreeInvariant;
-                    }
-                    if (ErrorStates.size() >= NumErrors) {
-                        return;
+                        if (ErrorStates.size() >= NumErrors) {
+                            return;
+                        }
                     }
                     // cout << "No more successors, popping from stack!" << endl;
                     // Done exploring this state

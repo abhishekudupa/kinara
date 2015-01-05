@@ -639,7 +639,13 @@ namespace ESMC {
         i64 NOTInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            return (SubEvals[0] == 0);
+            if (SubEvals[0] == UndefValue) {
+                return UndefValue;
+            } else if (SubEvals[0] == 0) {
+                return 1;
+            } else {
+                return 0;
+            }
         }
 
         ITEInterpreter::ITEInterpreter(const vector<RValueInterpreter*>& SubInterps,
@@ -659,7 +665,13 @@ namespace ESMC {
         i64 ITEInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            return (SubEvals[0] != 0 ? SubEvals[1] : SubEvals[2]);
+            if (SubEvals[0] == UndefValue) {
+                return UndefValue;
+            } else if (SubEvals[0] == 0) {
+                return SubEvals[1];
+            } else {
+                return SubEvals[2];
+            }
         }
 
         ORInterpreter::ORInterpreter(const vector<RValueInterpreter*>& SubInterps,
@@ -676,13 +688,17 @@ namespace ESMC {
 
         i64 ORInterpreter::Evaluate(const StateVec* StateVector) const
         {
+            bool Exception = false;
             EvaluateSubInterps(StateVector);
             for (auto SubEval : SubEvals) {
-                if (SubEval != 0) {
+                if (SubEval == UndefValue) {
+                    Exception = true;
+                } else if (SubEval != 0) {
                     return 1;
                 }
             }
-            return 0;
+
+            return (Exception ? UndefValue : 0);
         }
 
         ANDInterpreter::ANDInterpreter(const vector<RValueInterpreter*>& SubInterps,
@@ -699,13 +715,17 @@ namespace ESMC {
 
         i64 ANDInterpreter::Evaluate(const StateVec* StateVector) const
         {
+            bool Exception = false;
             EvaluateSubInterps(StateVector);
             for (auto SubEval : SubEvals) {
-                if (SubEval == 0) {
+                if (SubEval == UndefValue) {
+                    Exception = true;
+                } else if (SubEval == 0) {
                     return 0;
                 }
             }
-            return 1;
+
+            return (Exception ? UndefValue : 1);
         }
 
         IMPLIESInterpreter::IMPLIESInterpreter(const vector<RValueInterpreter*>& SubInterps,
@@ -723,7 +743,22 @@ namespace ESMC {
         i64 IMPLIESInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            return (SubEvals[0] == 0 || SubEvals[1] != 0);
+            if (SubEvals[0] == UndefValue) {
+                if (SubEvals[1] != UndefValue && SubEvals[1] != 0) {
+                    return 1;
+                } else {
+                    return UndefValue;
+                }
+            } else if (SubEvals[0] == 0) {
+                return 1;
+            } else {
+                // antecedent is true
+                if (SubEvals[1] == UndefValue) {
+                    return UndefValue;
+                } else {
+                    return SubEvals[1];
+                }
+            }
         }
 
         IFFInterpreter::IFFInterpreter(const vector<RValueInterpreter*>& SubInterps,
@@ -741,7 +776,11 @@ namespace ESMC {
         i64 IFFInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            return (SubEvals[0] == SubEvals[1]);
+            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
+                return UndefValue;
+            } else {
+                return (SubEvals[0] == SubEvals[1]);
+            }
         }
 
         XORInterpreter::XORInterpreter(const vector<RValueInterpreter*>& SubInterps,
@@ -759,7 +798,11 @@ namespace ESMC {
         i64 XORInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            return (SubEvals[0] != SubEvals[1]);
+            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
+                return UndefValue;
+            } else {
+                return (SubEvals[0] != SubEvals[1]);
+            }
         }
 
         ADDInterpreter::ADDInterpreter(const vector<RValueInterpreter*>& SubInterps,
@@ -778,8 +821,12 @@ namespace ESMC {
         {
             EvaluateSubInterps(StateVector);
             i64 Retval = 0;
+
             for (auto SubEval : SubEvals) {
                 Retval += SubEval;
+                if (SubEval == UndefValue) {
+                    return UndefValue;
+                }
             }
             return Retval;
         }
@@ -799,6 +846,7 @@ namespace ESMC {
         i64 SUBInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
+
             i64 Retval = 0;
             bool First = true;
             for (auto SubEval : SubEvals) {
@@ -807,6 +855,9 @@ namespace ESMC {
                     First = false;
                 } else {
                     Retval -= SubEval;
+                }
+                if (SubEval == UndefValue) {
+                    return UndefValue;
                 }
             }
             return Retval;
@@ -827,6 +878,10 @@ namespace ESMC {
         i64 MINUSInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
+            if (SubEvals[0] == UndefValue) {
+                return UndefValue;
+            }
+
             i64 Retval = 0;
             Retval = Retval - SubEvals[0];
             return Retval;
@@ -850,6 +905,9 @@ namespace ESMC {
             i64 Retval = 1;
             for (auto SubEval : SubEvals) {
                 Retval *= SubEval;
+                if (SubEval == UndefValue) {
+                    return UndefValue;
+                }
             }
             return Retval;
         }
@@ -869,6 +927,9 @@ namespace ESMC {
         i64 DIVInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
+            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
+                return UndefValue;
+            }
             return (SubEvals[0] / SubEvals[1]);
         }
 
@@ -887,6 +948,9 @@ namespace ESMC {
         i64 MODInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
+            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
+                return UndefValue;
+            }
             return (SubEvals[0] % SubEvals[1]);
         }
 
@@ -905,6 +969,9 @@ namespace ESMC {
         i64 GTInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
+            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
+                return UndefValue;
+            }
             return (SubEvals[0] > SubEvals[1]);
         }
 
@@ -923,6 +990,9 @@ namespace ESMC {
         i64 GEInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
+            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
+                return UndefValue;
+            }
             return (SubEvals[0] >= SubEvals[1]);
         }
 
@@ -941,6 +1011,9 @@ namespace ESMC {
         i64 LTInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
+            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
+                return UndefValue;
+            }
             return (SubEvals[0] < SubEvals[1]);
         }
 
@@ -959,6 +1032,9 @@ namespace ESMC {
         i64 LEInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
+            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
+                return UndefValue;
+            }
             return (SubEvals[0] <= SubEvals[1]);
         }
 

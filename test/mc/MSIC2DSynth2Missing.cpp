@@ -1562,7 +1562,7 @@ int main(int argc, char* argv[])
     auto AddressIndex2 = TheLTS->MakeBoundVar(5, AddressType);
 
     vector<TypeRef> InvQVarTypes = { AddressType, AddressType, DirIDType,
-                                         DirIDType, CacheIDType, CacheIDType };
+                                     DirIDType, CacheIDType, CacheIDType };
 
     auto CacheExp1 = TheLTS->MakeVar("Cache", CacheType);
     CacheExp1 = TheLTS->MakeOp(LTSOps::OpIndex, CacheExp1, CacheIndex1);

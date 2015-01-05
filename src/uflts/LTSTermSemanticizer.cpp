@@ -69,13 +69,13 @@ namespace ESMC {
         const i64 LTSOps::OpIndex;
         const i64 LTSOps::OpField;
 
-        const i64 LTSOps::UFOffset;
+        // Syntactic operators for symbolic execution
+        const i64 LTSOps::OpSelect;
+        const i64 LTSOps::OpProject;
+        const i64 LTSOps::OpStore;
+        const i64 LTSOps::OpUpdate;
 
-        // Temporal operators
-        const i64 LTSOps::OpTemporalX;
-        const i64 LTSOps::OpTemporalU;
-        const i64 LTSOps::OpTemporalF;
-        const i64 LTSOps::OpTemporalG;
+        const i64 LTSOps::UFOffset;
 
         namespace Detail {
 
@@ -101,7 +101,11 @@ namespace ESMC {
                   { LTSOps::OpGT, ">" },
                   { LTSOps::OpGE, ">=" },
                   { LTSOps::OpLT, "<" },
-                  { LTSOps::OpLE, "<=" } };
+                  { LTSOps::OpLE, "<=" },
+                  { LTSOps::OpSelect, "select" },
+                  { LTSOps::OpProject, "project" },
+                  { LTSOps::OpStore, "store" },
+                  { LTSOps::OpUpdate, "update" } };
 
             const unordered_set<i64> LTSReservedOps =
                 { { LTSOps::OpEQ, LTSOps::OpNOT, LTSOps::OpITE, LTSOps::OpOR,
@@ -109,8 +113,8 @@ namespace ESMC {
                     LTSOps::OpADD, LTSOps::OpSUB, LTSOps::OpMINUS, LTSOps::OpMUL,
                     LTSOps::OpDIV, LTSOps::OpMOD, LTSOps::OpGT, LTSOps::OpGE,
                     LTSOps::OpLE, LTSOps::OpLT, LTSOps::OpIndex, LTSOps::OpField,
-                    LTSOps::OpTemporalX, LTSOps::OpTemporalG, LTSOps::OpTemporalU,
-                    LTSOps::OpTemporalF } };
+                    LTSOps::OpSelect, LTSOps::OpProject, LTSOps::OpUpdate,
+                    LTSOps::OpStore } };
 
         } /* end namespace Detail */
 
