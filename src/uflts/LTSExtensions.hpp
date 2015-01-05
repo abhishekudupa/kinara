@@ -68,7 +68,7 @@ namespace ESMC {
             RValueInterpreter* Interp;
 
             LTSExtensionT();
-            virtual ~LTSExtensionT();
+            ~LTSExtensionT();
         };
 
         class LTSTypeExtensionT : public TypeExtensionBase

@@ -205,6 +205,68 @@ namespace ESMC {
             return;
         }
 
+        // Checks if an expression is based off of a message field
+        bool LabelledTS::HasMsgLValue(const ExpT& Exp) const
+        {
+            auto&& Vars =
+                Mgr->Gather(Exp,
+                            [&] (const ExpBaseT* Exp) -> bool
+                            {
+                                auto ExpAsVar = Exp->As<VarExpression>();
+                                if (ExpAsVar != nullptr) {
+                                    if (ExpAsVar->GetType() == UnifiedMsgType &&
+                                        ExpAsVar->GetVarName() == ProductMsgName) {
+                                        return true;
+                                    }
+                                }
+                                return false;
+                            });
+            return (Vars.size() > 0);
+        }
+
+        // Removes the dependence on the __trans_msg__ variable
+        // TODO: This currently does not support messages with
+        // non-scalar fields. The LabelledTS accordingly does not
+        // allow message types with non-scalar fields to be created.
+        // Fix this if it becomes necessary to support messages with
+        // non-scalar fields. So far, nothing seems to require this.
+        vector<GCmdRef> LabelledTS::ElimMsgFromCommands(const vector<GCmdRef>& Commands) const
+        {
+            vector<GCmdRef> Retval;
+            for (auto const& Cmd : Commands) {
+                MgrT::SubstMapT SubstMap;
+                auto const& Updates = Cmd->GetUpdates();
+                vector<LTSAssignRef> NewUpdates;
+                for (auto const& Update : Updates) {
+                    auto const& LHS = Update->GetLHS();
+                    auto const& RHS = Update->GetRHS();
+
+                    if (HasMsgLValue(LHS)) {
+                        auto NewSubstitution = Mgr->TermSubstitute(SubstMap, RHS);
+                        SubstMap[LHS] = NewSubstitution;
+                    } else {
+                        auto NewRHS = Mgr->TermSubstitute(SubstMap, RHS);
+                        auto SimpLHS = Mgr->Simplify(LHS);
+                        auto SimpRHS = Mgr->Simplify(NewRHS);
+                        NewUpdates.push_back(new LTSAssignSimple(SimpLHS, SimpRHS));
+                    }
+                }
+
+                set<LTSFairObjRef> FairObjSet(Cmd->GetFairnessObjs().begin(),
+                                              Cmd->GetFairnessObjs().end());
+
+                Retval.push_back(new LTSGuardedCommand(Cmd->GetMgr(),
+                                                       Cmd->GetGuardComps(),
+                                                       NewUpdates,
+                                                       Cmd->GetMsgType(),
+                                                       Cmd->GetMsgTypeID(),
+                                                       FairObjSet,
+                                                       Cmd->GetProductTransition()));
+                Retval.back()->SetCmdID(Cmd->GetCmdID());
+            }
+            return Retval;
+        }
+
         GCmdRef
         LabelledTS::MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const
         {
@@ -359,9 +421,7 @@ namespace ESMC {
             }
 
             // Compile the guarded commands
-            auto Compiler = new MC::LTSCompiler();
-            GuardedCommands = Compiler->CompileCommands(GuardedCommands, this);
-            delete Compiler;
+            GuardedCommands = ElimMsgFromCommands(GuardedCommands);
 
             // Build the invariant and final condition
             for (auto const& NameEFSM : AllEFSMs) {

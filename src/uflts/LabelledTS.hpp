@@ -125,6 +125,8 @@ namespace ESMC {
             void MakeMsgCanonMap();
             void InstantiateInitState(const InitStateRef& InitState);
             u32 GetAutomataClassUID();
+            bool HasMsgLValue(const ExpT& Exp) const;
+            vector<GCmdRef> ElimMsgFromCommands(const vector<GCmdRef>& Commands) const;
 
             ExpT InvariantExp;
             ExpT FinalCondExp;

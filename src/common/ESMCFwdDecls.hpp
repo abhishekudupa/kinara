@@ -173,6 +173,7 @@ namespace ESMC {
         class StateFactory;
         class LTSChecker;
         class LTSCompiler;
+        class CompileInfo;
         class StateVecPrinter;
 
         class RValueInterpreter;
@@ -181,6 +182,7 @@ namespace ESMC {
         class AQStructure;
         template <typename STATETYPE>
         class AnnotatedEdge;
+
 
         typedef AnnotatedEdge<StateVec> AQSEdge;
 

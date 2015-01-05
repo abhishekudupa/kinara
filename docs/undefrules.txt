@@ -1,0 +1,21 @@
+Rules for when an expression
+results in a well-defined value. The value
+itself might be the undef value though.
+
+VarExpression : true
+ConstExpression : true
+BoundVarExpression : NA
+OpExpression:
+  EQ : defined(right) & defined(left)
+  NOT : defined(right)
+  ITE : defined(condition) & ((condition & defined(ifexp)) | (!condition & defined(elseexp)))
+  OR : (defined(a) & a) | (defined(b) & b) | (defined(a) & defined(b))
+  AND : (defined(a) & !a) | (defined(b) & !b) | (defined(a) & defined(b))
+  IMPLIES: (defined(a) & !a) | (defined(b) & b) | (defined(a) & defined(b))
+  IFF : defined(a) & defined(b)
+  XOR : defined(a) & defined(b)
+  ArithOps : defined(a) & defined(b)
+  ComparisonOps : defined(a) & defined(b)
+  select/index : defined(a) & defined(i) & (i != undef)
+  project/field : defined(r)
+QuantifiedExpression: NA

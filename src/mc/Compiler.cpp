@@ -47,6 +47,7 @@
 #include "../tpinterface/TheoremProver.hpp"
 #include "../uflts/LTSFairnessSet.hpp"
 #include "../uflts/LTSUtils.hpp"
+#include "../uflts/LTSTransformers.hpp"
 
 #include "Compiler.hpp"
 #include "StateVec.hpp"
@@ -1233,6 +1234,7 @@ namespace ESMC {
 
         void LTSCompiler::CompileLTS(LabelledTS* TheLTS)
         {
+            auto Mgr = TheLTS->GetMgr();
             for (auto const& GCmd : TheLTS->GuardedCommands) {
                 CompileExp(GCmd->GetGuard(), TheLTS);
                 CompileExp(GCmd->GetFixedInterpretation(), TheLTS);
@@ -1240,6 +1242,20 @@ namespace ESMC {
                     CompileExp(Update->GetLHS(), TheLTS);
                     CompileExp(Update->GetRHS(), TheLTS);
                 }
+
+                // Lower the guards and commands to a form
+                // that we can symbolically execute without
+                // losing our sanity
+
+                auto LoweredGuard =
+                    Mgr->ApplyTransform<LTS::Detail::ArrayRValueTransformer>(GCmd->GetGuard());
+                GCmd->SetLoweredGuard(LoweredGuard);
+                vector<LTSAssignRef> LoweredUpdates;
+                for (auto const& Update : GCmd->GetUpdates()) {
+                    LoweredUpdates.push_back(ArrayTransformAssignment(Update->GetLHS(),
+                                                                      Update->GetRHS()));
+                }
+                GCmd->SetLoweredUpdates(LoweredUpdates);
             }
             CompileExp(TheLTS->InvariantExp, TheLTS);
             CompileExp(TheLTS->FinalCondExp, TheLTS);
@@ -1256,79 +1272,33 @@ namespace ESMC {
             }
         }
 
-        inline bool LTSCompiler::HasMsgLValue(const ExpT& Exp, ESMC::LTS::LabelledTS* TheLTS)
+        LTSAssignRef LTSCompiler::ArrayTransformAssignment(const ExpT& LHS,
+                                                           const ExpT& RHS) const
         {
-            auto Mgr = TheLTS->GetMgr();
-            auto&& Vars =
-                Mgr->Gather(Exp,
-                            [&] (const ExpBaseT* Exp) -> bool
-                            {
-                                auto ExpAsVar = Exp->As<VarExpression>();
-                                if (ExpAsVar != nullptr) {
-                                    if (ExpAsVar->GetType() == TheLTS->GetUnifiedMType() &&
-                                        ExpAsVar->GetVarName() == TheLTS->GetProductMsgName()) {
-                                        return true;
-                                    }
-                                }
-                                return false;
-                            });
-            return (Vars.size() > 0);
-        }
+            auto Mgr = LHS->GetMgr();
+            if (LHS->Is<VarExpression>()) {
+                return new LTSAssignSimple(LHS, RHS);
+            } else if (LHS->Is<OpExpression>()) {
+                auto LHSAsOp = LHS->SAs<OpExpression>();
+                auto OpCode = LHSAsOp->GetOpCode();
+                auto const& Children = LHSAsOp->GetChildren();
 
-        // Removes the dependence on the __trans_msg__ variable
-        // also populates the "lowered" updates. The lowering
-        // essentially unrolls array terms as required for the
-        // weakest precondition and other symbolic analyses.
-        vector<GCmdRef> LTSCompiler::CompileCommands(const vector<GCmdRef>& Commands,
-                                                     LabelledTS* TheLTS)
-        {
-            vector<GCmdRef> Retval;
-            auto Mgr = TheLTS->GetMgr();
-            for (auto const& Cmd : Commands) {
-                MgrT::SubstMapT SubstMap;
-                auto const& Updates = Cmd->GetUpdates();
-                vector<LTSAssignRef> NewUpdates;
-                for (auto const& Update : Updates) {
-                    auto const& LHS = Update->GetLHS();
-                    auto const& RHS = Update->GetRHS();
-
-                    if (HasMsgLValue(LHS, TheLTS)) {
-                        auto NewSubstitution = Mgr->TermSubstitute(SubstMap, RHS);
-                        SubstMap[LHS] = NewSubstitution;
-                    } else {
-                        auto NewRHS = Mgr->TermSubstitute(SubstMap, RHS);
-                        auto SimpLHS = Mgr->Simplify(LHS);
-                        auto SimpRHS = Mgr->Simplify(NewRHS);
-                        NewUpdates.push_back(new LTSAssignSimple(SimpLHS, SimpRHS));
-                    }
+                if (OpCode == LTSOps::OpIndex || OpCode == LTSOps::OpSelect) {
+                    auto StoreExp = Mgr->MakeExpr(LTSOps::OpStore, Children[0],
+                                                  Children[1], RHS);
+                    return ArrayTransformAssignment(Children[0], StoreExp);
+                } else if (OpCode == LTSOps::OpField || OpCode == LTSOps::OpProject) {
+                    auto UpdateExp = Mgr->MakeExpr(LTSOps::OpUpdate, Children[0],
+                                                   Children[1], RHS);
+                    return ArrayTransformAssignment(Children[0], UpdateExp);
+                } else {
+                    throw InternalError((string)"Non LValue obtained for LHS in " +
+                                        "LTSCompiler::ArrayTransformAssignment()");
                 }
-
-                set<LTSFairObjRef> FairObjSet(Cmd->GetFairnessObjs().begin(),
-                                              Cmd->GetFairnessObjs().end());
-
-                Retval.push_back(new LTSGuardedCommand(Cmd->GetMgr(),
-                                                       Cmd->GetGuardComps(),
-                                                       NewUpdates,
-                                                       Cmd->GetMsgType(),
-                                                       Cmd->GetMsgTypeID(),
-                                                       FairObjSet,
-                                                       Cmd->GetProductTransition()));
-                Retval.back()->SetCmdID(Cmd->GetCmdID());
+            } else {
+                throw InternalError((string)"Non LValue obtained for LHS in " +
+                                    "LTSCompiler::ArrayTransformAssignment()");
             }
-
-            // now we unroll array terms
-            for (auto const& Cmd : Retval) {
-                auto const& Updates = Cmd->GetUpdates();
-                auto&& LoweredUpdates = ExpandArrayUpdates(Updates);
-                Cmd->SetLoweredUpdates(LoweredUpdates);
-
-                // unroll the guard as well
-                auto const& Guard = Cmd->GetGuard();
-                auto LoweredGuard = TransformArrayRValue(Guard);
-                Cmd->SetLoweredGuard(LoweredGuard);
-            }
-
-            return Retval;
         }
 
         void LTSCompiler::UpdateModel(const Z3Model& Model,

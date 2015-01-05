@@ -36,6 +36,7 @@
 // Code:
 
 #include "LTSTransformers.hpp"
+#include "LTSDecls.hpp"
 
 namespace ESMC {
     namespace LTS {
@@ -253,7 +254,91 @@ namespace ESMC {
                 return ThePermuter.ExpStack[0];
             }
 
+
+            // Implementation of ArrayRValueTransformer
+            ArrayRValueTransformer::ArrayRValueTransformer(MgrT* Mgr)
+                : VisitorBaseT("ArrayRValueTransformer"), Mgr(Mgr)
+            {
+                // Nothing here
+            }
+
+            ArrayRValueTransformer::~ArrayRValueTransformer()
+            {
+                // Nothing here
+            }
+
+            void ArrayRValueTransformer::VisitVarExpression(const VarExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void ArrayRValueTransformer::VisitBoundVarExpression(const BoundVarExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void ArrayRValueTransformer::VisitConstExpression(const ConstExpT* Exp)
+            {
+                ExpStack.push_back(Exp);
+            }
+
+            void ArrayRValueTransformer::VisitOpExpression(const OpExpT* Exp)
+            {
+                auto OpCode = Exp->GetOpCode();
+                auto const& Children = Exp->GetChildren();
+                const u32 NumChildren = Children.size();
+                vector<ExpT> NewChildren(NumChildren);
+
+                for (u32 i = 0; i < NumChildren; ++i) {
+                    Children[i]->Accept(this);
+                    NewChildren[i] = ExpStack.back();
+                    ExpStack.pop_back();
+                }
+
+                if (OpCode == LTSOps::OpIndex) {
+                    // Transform this into a select expression
+                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpSelect, NewChildren[0],
+                                                     NewChildren[1]));
+                } else if (OpCode == LTSOps::OpField) {
+                    // Transform to a project expression
+                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpProject, NewChildren[0],
+                                                     NewChildren[1]));
+                } else {
+                    ExpStack.push_back(Mgr->MakeExpr(OpCode, NewChildren));
+                }
+            }
+
+            inline void ArrayRValueTransformer::VisitQuantifiedExpression(const QExpT* Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+                auto NewQExpr = ExpStack.back();
+                ExpStack.pop_back();
+                if (Exp->IsForAll()) {
+                    ExpStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
+                } else {
+                    ExpStack.push_back(Mgr->MakeExists(Exp->GetQVarTypes(), NewQExpr));
+                }
+            }
+
+            void ArrayRValueTransformer::VisitAQuantifiedExpression(const AQExpT* Exp)
+            {
+                VisitQuantifiedExpression(Exp);
+            }
+
+            void ArrayRValueTransformer::VisitEQuantifiedExpression(const EQExpT* Exp)
+            {
+                VisitQuantifiedExpression(Exp);
+            }
+
+            ExpT ArrayRValueTransformer::Do(MgrT* Mgr, const ExpT& Exp)
+            {
+                ArrayRValueTransformer TheTransformer(Mgr);
+                Exp->Accept(&TheTransformer);
+                return TheTransformer.ExpStack[0];
+            }
+
         } /* end namespace Detail */
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

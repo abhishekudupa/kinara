@@ -53,6 +53,13 @@ namespace ESMC {
 
         typedef const ExpressionBase<LTSExtensionT, LTSTermSemanticizer>* ExpPtrT;
 
+        class CompileInfo
+        {
+        public:
+            RValueInterpreter* Interp;
+
+        };
+
         class OffsetCompiler : public VisitorBaseT
         {
         public:
@@ -457,6 +464,10 @@ namespace ESMC {
 
             inline bool HasMsgLValue(const ExpT& Exp, LabelledTS* TheLTS);
 
+            LTSAssignRef ArrayTransformAssignment(const ExpT& LHS,
+                                                  const ExpT& RHS) const;
+
+
         public:
             LTSCompiler();
             ~LTSCompiler();
@@ -464,8 +475,6 @@ namespace ESMC {
             void RegisterInterp(RValueInterpreter* Interp);
             void CompileExp(const ExpT& Exp, LabelledTS* TheLTS);
             void CompileLTS(LabelledTS* TheLTS);
-            vector<GCmdRef> CompileCommands(const vector<GCmdRef>& Commands,
-                                            LabelledTS* TheLTS);
             void UpdateModel(const Z3Model& Model,
                              const unordered_set<i64>& InterpretedOps,
                              const unordered_map<i64, ExpT>& IndicatorExps);

@@ -186,9 +186,6 @@ namespace ESMC {
             map<string, MsgBuchiAutomaton*> MsgBuchiAutomata;
             vector<string> BuchiMonitorNames;
 
-            // Set of invariant expressions for bounds, etc.
-            set<ExpT> BoundsInvariants;
-            MgrT::SubstMapT LoweredBoundsInvars;
             // Lowered invariant from the LTS
             ExpT LoweredInvariant;
             ExpT DeadlockFreeInvariant;
@@ -224,16 +221,6 @@ namespace ESMC {
                                          vector<const ProductState*>& UnfairStates);
 
             inline unordered_set<const ProductState*> ExpandSCC(const ProductState* SCCRoot);
-            inline vector<TraceBase*> MakeFairTrace(const ProductState* SCCRoot);
-
-            inline set<ExpT> GatherTermsInIndex(const ExpT& Exp);
-
-            void FoldTransMsgExp(const ExpT& Exp, const vector<GCmdRef>& Updates,
-                                 u32 CurrentIndex);
-
-            inline void MakeIndexTermInvariants(const ExpT& Precondition,
-                                                const set<ExpT>& IndexTerms);
-            inline void MakeBoundsInvariants();
 
         public:
             LTSChecker(LabelledTS* TheLTS);

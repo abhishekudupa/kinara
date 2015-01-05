@@ -375,173 +375,173 @@ namespace ESMC {
             }
         }
 
-        inline set<ExpT> LTSChecker::GatherTermsInIndex(const ExpT& Exp)
-        {
-            auto Mgr = TheLTS->GetMgr();
+        // inline set<ExpT> LTSChecker::GatherTermsInIndex(const ExpT& Exp)
+        // {
+        //     auto Mgr = TheLTS->GetMgr();
 
-            // first, gather array terms which are indexed by a variable
-            auto&& ArrayTerms =
-                Mgr->Gather(Exp,
-                            [&] (const ExpBaseT* ExpPtr) -> bool
-                            {
-                                auto ExpAsOp = ExpPtr->As<OpExpression>();
-                                if (ExpAsOp == nullptr) {
-                                    return false;
-                                }
-                                if (ExpAsOp->GetOpCode() != LTSOps::OpIndex) {
-                                    return false;
-                                }
-                                auto const& Children = ExpAsOp->GetChildren();
-                                if (!Children[1]->Is<ConstExpression>()) {
-                                    return true;
-                                }
-                                return false;
-                            });
+        //     // first, gather array terms which are indexed by a variable
+        //     auto&& ArrayTerms =
+        //         Mgr->Gather(Exp,
+        //                     [&] (const ExpBaseT* ExpPtr) -> bool
+        //                     {
+        //                         auto ExpAsOp = ExpPtr->As<OpExpression>();
+        //                         if (ExpAsOp == nullptr) {
+        //                             return false;
+        //                         }
+        //                         if (ExpAsOp->GetOpCode() != LTSOps::OpIndex) {
+        //                             return false;
+        //                         }
+        //                         auto const& Children = ExpAsOp->GetChildren();
+        //                         if (!Children[1]->Is<ConstExpression>()) {
+        //                             return true;
+        //                         }
+        //                         return false;
+        //                     });
 
-            // Now, gather the terms used as index
-            set<ExpT> Retval;
-            for (auto const& ArrayTerm : ArrayTerms) {
-                auto ExpAsOp = ArrayTerm->SAs<OpExpression>();
-                auto const& Children = ExpAsOp->GetChildren();
-                Retval.insert(Children[1]);
-            }
+        //     // Now, gather the terms used as index
+        //     set<ExpT> Retval;
+        //     for (auto const& ArrayTerm : ArrayTerms) {
+        //         auto ExpAsOp = ArrayTerm->SAs<OpExpression>();
+        //         auto const& Children = ExpAsOp->GetChildren();
+        //         Retval.insert(Children[1]);
+        //     }
 
-            return Retval;
-        }
+        //     return Retval;
+        // }
 
-        inline void LTSChecker::MakeIndexTermInvariants(const ExpT& Precondition,
-                                                        const set<ExpT>& IndexTerms)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            for (auto const& IndexTerm : IndexTerms) {
-                auto const& IndexType = IndexTerm->GetType();
-                if (!IndexType->Is<SymmetricType>()) {
-                    continue;
-                }
+        // inline void LTSChecker::MakeIndexTermInvariants(const ExpT& Precondition,
+        //                                                 const set<ExpT>& IndexTerms)
+        // {
+        //     auto Mgr = TheLTS->GetMgr();
+        //     for (auto const& IndexTerm : IndexTerms) {
+        //         auto const& IndexType = IndexTerm->GetType();
+        //         if (!IndexType->Is<SymmetricType>()) {
+        //             continue;
+        //         }
 
-                // It is a symmetric type
-                auto Invar = Mgr->MakeExpr(LTSOps::OpEQ, IndexTerm,
-                                           Mgr->MakeVal(IndexType->GetClearValue(),
-                                                        IndexType));
-                Invar = Mgr->MakeExpr(LTSOps::OpNOT, Invar);
-                Invar = Mgr->MakeExpr(LTSOps::OpIMPLIES, Precondition, Invar);
-                Invar = Mgr->Simplify(Invar);
-                BoundsInvariants.insert(Invar);
-            }
-        }
+        //         // It is a symmetric type
+        //         auto Invar = Mgr->MakeExpr(LTSOps::OpEQ, IndexTerm,
+        //                                    Mgr->MakeVal(IndexType->GetClearValue(),
+        //                                                 IndexType));
+        //         Invar = Mgr->MakeExpr(LTSOps::OpNOT, Invar);
+        //         Invar = Mgr->MakeExpr(LTSOps::OpIMPLIES, Precondition, Invar);
+        //         Invar = Mgr->Simplify(Invar);
+        //         BoundsInvariants.insert(Invar);
+        //     }
+        // }
 
-        inline void LTSChecker::MakeBoundsInvariants()
-        {
-            auto Mgr = TheLTS->GetMgr();
-            // First, ALL index terms used in guards must never be undef
-            for (auto const& Cmd : GuardedCommands) {
-                auto const& Guard = Cmd->GetGuard();
-                auto&& IndexTerms = GatherTermsInIndex(Guard);
-                MakeIndexTermInvariants(Mgr->MakeTrue(), IndexTerms);
-            }
+        // inline void LTSChecker::MakeBoundsInvariants()
+        // {
+        //     auto Mgr = TheLTS->GetMgr();
+        //     // First, ALL index terms used in guards must never be undef
+        //     for (auto const& Cmd : GuardedCommands) {
+        //         auto const& Guard = Cmd->GetGuard();
+        //         auto&& IndexTerms = GatherTermsInIndex(Guard);
+        //         MakeIndexTermInvariants(Mgr->MakeTrue(), IndexTerms);
+        //     }
 
-            // Second, IF the guard of a guarded command is true, then ALL
-            // the index terms used in the LHS or RHS of updates can never
-            // be undef
+        //     // Second, IF the guard of a guarded command is true, then ALL
+        //     // the index terms used in the LHS or RHS of updates can never
+        //     // be undef
 
-            for (auto const& Cmd : GuardedCommands) {
-                auto const& Guard = Cmd->GetGuard();
-                auto const& Updates = Cmd->GetUpdates();
+        //     for (auto const& Cmd : GuardedCommands) {
+        //         auto const& Guard = Cmd->GetGuard();
+        //         auto const& Updates = Cmd->GetUpdates();
 
-                for (auto const& Update : Updates) {
-                    auto const& LHS = Update->GetLHS();
-                    auto const& RHS = Update->GetRHS();
+        //         for (auto const& Update : Updates) {
+        //             auto const& LHS = Update->GetLHS();
+        //             auto const& RHS = Update->GetRHS();
 
-                    auto&& IndexTermsLHS = GatherTermsInIndex(LHS);
-                    MakeIndexTermInvariants(Guard, IndexTermsLHS);
-                    auto&& IndexTermsRHS = GatherTermsInIndex(RHS);
-                    MakeIndexTermInvariants(Guard, IndexTermsRHS);
-                }
-            }
+        //             auto&& IndexTermsLHS = GatherTermsInIndex(LHS);
+        //             MakeIndexTermInvariants(Guard, IndexTermsLHS);
+        //             auto&& IndexTermsRHS = GatherTermsInIndex(RHS);
+        //             MakeIndexTermInvariants(Guard, IndexTermsRHS);
+        //         }
+        //     }
 
-            // Third, IF the guard of a guarded command is true, then
-            // the RHS of every update to a range typed term must be within
-            // the bounds of the range type
+        //     // Third, IF the guard of a guarded command is true, then
+        //     // the RHS of every update to a range typed term must be within
+        //     // the bounds of the range type
 
-            for (auto const& Cmd : GuardedCommands) {
-                auto const& Guard = Cmd->GetGuard();
-                auto const& Updates = Cmd->GetUpdates();
+        //     for (auto const& Cmd : GuardedCommands) {
+        //         auto const& Guard = Cmd->GetGuard();
+        //         auto const& Updates = Cmd->GetUpdates();
 
-                for (auto const& Update : Updates) {
-                    auto const& LHS = Update->GetLHS();
-                    auto const& RHS = Update->GetRHS();
+        //         for (auto const& Update : Updates) {
+        //             auto const& LHS = Update->GetLHS();
+        //             auto const& RHS = Update->GetRHS();
 
-                    auto LValType = LHS->GetType();
-                    if (!LValType->Is<RangeType>()) {
-                        continue;
-                    }
+        //             auto LValType = LHS->GetType();
+        //             if (!LValType->Is<RangeType>()) {
+        //                 continue;
+        //             }
 
-                    // This is a range typed update
-                    auto TypeAsRange = LValType->SAs<RangeType>();
-                    auto RangeLow = TypeAsRange->GetLow();
-                    auto RangeHigh = TypeAsRange->GetHigh();
+        //             // This is a range typed update
+        //             auto TypeAsRange = LValType->SAs<RangeType>();
+        //             auto RangeLow = TypeAsRange->GetLow();
+        //             auto RangeHigh = TypeAsRange->GetHigh();
 
-                    auto LowVal = Mgr->MakeVal(to_string(RangeLow), TypeAsRange);
-                    auto HighVal = Mgr->MakeVal(to_string(RangeHigh), TypeAsRange);
+        //             auto LowVal = Mgr->MakeVal(to_string(RangeLow), TypeAsRange);
+        //             auto HighVal = Mgr->MakeVal(to_string(RangeHigh), TypeAsRange);
 
-                    auto LowConstraint = Mgr->MakeExpr(LTSOps::OpGE, RHS, LowVal);
-                    auto HighConstraint = Mgr->MakeExpr(LTSOps::OpLE, RHS, HighVal);
+        //             auto LowConstraint = Mgr->MakeExpr(LTSOps::OpGE, RHS, LowVal);
+        //             auto HighConstraint = Mgr->MakeExpr(LTSOps::OpLE, RHS, HighVal);
 
-                    auto BoundsConstraint = Mgr->MakeExpr(LTSOps::OpAND, LowConstraint,
-                                                          HighConstraint);
-                    BoundsConstraint = Mgr->MakeExpr(LTSOps::OpIMPLIES, Guard, BoundsConstraint);
-                    auto Simplified = Mgr->Simplify(BoundsConstraint);
-                    BoundsInvariants.insert(Simplified);
-                }
-            }
+        //             auto BoundsConstraint = Mgr->MakeExpr(LTSOps::OpAND, LowConstraint,
+        //                                                   HighConstraint);
+        //             BoundsConstraint = Mgr->MakeExpr(LTSOps::OpIMPLIES, Guard, BoundsConstraint);
+        //             auto Simplified = Mgr->Simplify(BoundsConstraint);
+        //             BoundsInvariants.insert(Simplified);
+        //         }
+        //     }
 
-            // Finally, it must be possible to evaluate the invariant
-            // on ANY state, without exception
-            auto&& IndexTerms = GatherTermsInIndex(TheLTS->InvariantExp);
-            MakeIndexTermInvariants(Mgr->MakeTrue(), IndexTerms);
-            set<ExpT> SimplifiedBoundsInvars;
+        //     // Finally, it must be possible to evaluate the invariant
+        //     // on ANY state, without exception
+        //     auto&& IndexTerms = GatherTermsInIndex(TheLTS->InvariantExp);
+        //     MakeIndexTermInvariants(Mgr->MakeTrue(), IndexTerms);
+        //     set<ExpT> SimplifiedBoundsInvars;
 
-            for (auto const& Invar : BoundsInvariants) {
-                SimplifiedBoundsInvars.insert(Mgr->Simplify(Invar));
-            }
+        //     for (auto const& Invar : BoundsInvariants) {
+        //         SimplifiedBoundsInvars.insert(Mgr->Simplify(Invar));
+        //     }
 
-            BoundsInvariants = SimplifiedBoundsInvars;
+        //     BoundsInvariants = SimplifiedBoundsInvars;
 
-            // compile and lower the invariants
-            for (auto const& Invar : BoundsInvariants) {
-                Compiler->CompileExp(Invar, TheLTS);
-                LoweredBoundsInvars[Invar] = TransformArrayRValue(Invar);
-            }
-        }
+        //     // compile and lower the invariants
+        //     for (auto const& Invar : BoundsInvariants) {
+        //         Compiler->CompileExp(Invar, TheLTS);
+        //         LoweredBoundsInvars[Invar] = TransformArrayRValue(Invar);
+        //     }
+        // }
 
         inline void LTSChecker::RecordErrorState(const StateVec* ErrorState)
         {
-            if (ErrorStates.find(ErrorState) != ErrorStates.end()) {
-                return;
-            }
+            // if (ErrorStates.find(ErrorState) != ErrorStates.end()) {
+            //     return;
+            // }
 
-            bool FoundBlown = false;
-            for (auto const& Invar : BoundsInvariants) {
-                auto Interp = Invar->ExtensionData.Interp;
-                auto Res = Interp->Evaluate(ErrorState);
-                if (Res == UndefValue) {
-                    continue;
-                } else if (Res == 0) {
-                    FoundBlown = true;
-                    ErrorStates[ErrorState] = Invar;
-                    break;
-                }
-            }
+            // bool FoundBlown = false;
+            // for (auto const& Invar : BoundsInvariants) {
+            //     auto Interp = Invar->ExtensionData.Interp;
+            //     auto Res = Interp->Evaluate(ErrorState);
+            //     if (Res == UndefValue) {
+            //         continue;
+            //     } else if (Res == 0) {
+            //         FoundBlown = true;
+            //         ErrorStates[ErrorState] = Invar;
+            //         break;
+            //     }
+            // }
 
-            if (!FoundBlown) {
-                ostringstream sstr;
-                Printer->PrintState(ErrorState, sstr);
-                throw InternalError((string)"Could not find the bounds invariant that " +
-                                    "was blown in call to LTSChecker::RecordErrorState()\n" +
-                                    "The State:\n" + sstr.str() + "\nCould not find bounds " +
-                                    "invariant that was blown for the state listed above.\n" +
-                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
-            }
+            // if (!FoundBlown) {
+            //     ostringstream sstr;
+            //     Printer->PrintState(ErrorState, sstr);
+            //     throw InternalError((string)"Could not find the bounds invariant that " +
+            //                         "was blown in call to LTSChecker::RecordErrorState()\n" +
+            //                         "The State:\n" + sstr.str() + "\nCould not find bounds " +
+            //                         "invariant that was blown for the state listed above.\n" +
+            //                         "At: " + __FILE__ + ":" + to_string(__LINE__));
+            // }
         }
 
         LTSChecker::LTSChecker(LabelledTS* TheLTS)
@@ -549,7 +549,6 @@ namespace ESMC {
         {
             // Freeze the LTS in any case
             TheLTS->Freeze();
-
             Compiler = new LTSCompiler();
             Compiler->CompileLTS(TheLTS);
             Factory = new StateFactory(TheLTS->StateVectorSize);
@@ -603,9 +602,8 @@ namespace ESMC {
             DeadlockFreeInvariant = MakeDisjunction(DLFDisjunctions, Mgr);
             DeadlockFreeInvariant = Mgr->Simplify(DeadlockFreeInvariant);
 
-            // Make the invariant on undef and bounds
-            MakeBoundsInvariants();
-            LoweredInvariant = TransformArrayRValue(TheLTS->InvariantExp);
+            LoweredInvariant =
+                Mgr->ApplyTransform<LTS::Detail::ArrayRValueTransformer>(TheLTS->InvariantExp);
         }
 
         LTSChecker::~LTSChecker()

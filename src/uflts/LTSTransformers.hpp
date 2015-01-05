@@ -100,8 +100,8 @@ namespace ESMC {
                 virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
                 virtual void VisitConstExpression(const ConstExpT* Exp) override;
                 virtual void VisitOpExpression(const OpExpT* Exp) override;
-                virtual inline void VisitEQuantifiedExpression(const EQExpT* Exp) override;
-                virtual inline void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+                virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+                virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
 
                 static ExpT Do(MgrT* Mgr,
                                const ExpT& Exp,
@@ -127,13 +127,35 @@ namespace ESMC {
                 virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
                 virtual void VisitConstExpression(const ConstExpT* Exp) override;
                 virtual void VisitOpExpression(const OpExpT* Exp) override;
-                virtual inline void VisitEQuantifiedExpression(const EQExpT* Exp) override;
-                virtual inline void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+                virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+                virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
 
                 static ExpT Do(MgrT* Mgr, const ExpT& Exp,
                                const vector<u08>& PermVec,
                                const map<TypeRef, u32>& TypeOffsets);
 
+            };
+
+            class ArrayRValueTransformer : public VisitorBaseT
+            {
+            private:
+                MgrT* Mgr;
+                vector<ExpT> ExpStack;
+
+                inline void VisitQuantifiedExpression(const QExpT* Exp);
+
+            public:
+                ArrayRValueTransformer(MgrT* Mgr);
+                virtual ~ArrayRValueTransformer();
+
+                virtual void VisitVarExpression(const VarExpT* Exp) override;
+                virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
+                virtual void VisitConstExpression(const ConstExpT* Exp) override;
+                virtual void VisitOpExpression(const OpExpT* Exp) override;
+                virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+                virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+
+                static ExpT Do(MgrT* Mgr, const ExpT& Exp);
             };
 
         } /* end namespace Detail */
