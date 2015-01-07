@@ -389,6 +389,20 @@ namespace ESMC {
             const vector<LTSAssignRef>& GetUpdates() const;
         };
 
+        class LTSInitStateGenerator : public RefCountable
+        {
+        private:
+            vector<LTSAssignRef> Updates;
+            mutable vector<LTSAssignRef> LoweredUpdates;
+
+        public:
+            LTSInitStateGenerator(const vector<LTSAssignRef>& Updates);
+            virtual ~LTSInitStateGenerator();
+
+            const vector<LTSAssignRef>& GetUpdates() const;
+            void SetLoweredUpdates(const vector<LTSAssignRef>& LoweredUpdates) const;
+            const vector<LTSAssignRef>& GetLoweredUpdates() const;
+        };
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

@@ -246,8 +246,8 @@ namespace ESMC {
                         SubstMap[LHS] = NewSubstitution;
                     } else {
                         auto NewRHS = Mgr->TermSubstitute(SubstMap, RHS);
-                        auto SimpLHS = Mgr->Simplify(LHS);
-                        auto SimpRHS = Mgr->Simplify(NewRHS);
+                        auto SimpLHS = Mgr->SimplifyFP(LHS);
+                        auto SimpRHS = Mgr->SimplifyFP(NewRHS);
                         NewUpdates.push_back(new LTSAssignSimple(SimpLHS, SimpRHS));
                     }
                 }
@@ -1127,25 +1127,33 @@ namespace ESMC {
             auto&& ParamInsts = InstantiateParams(Params, Constraint, Mgr);
             const u32 NumParams = Params.size();
             for (auto const& ParamInst : ParamInsts) {
-                InitStateGenerators.push_back(vector<LTSAssignRef>());
 
                 MgrT::SubstMapT SubstMap;
                 for (u32 i = 0; i < NumParams; ++i) {
                     SubstMap[Params[i]] = ParamInst[i];
                 }
 
+                vector<LTSAssignRef> CurrentISUpdates;
                 for (auto const& Update : Updates) {
                     if (Update->Is<LTSAssignSimple>()) {
                         CheckUpdates({ Update }, SymTab, Mgr, false, "");
                         auto SubstLHS = Mgr->Substitute(SubstMap, Update->GetLHS());
                         auto SubstRHS = Mgr->Substitute(SubstMap, Update->GetRHS());
                         auto NewAsgn = new LTSAssignSimple(SubstLHS, SubstRHS);
-                        auto&& Vars = Mgr->Gather(SubstRHS, Detail::VarGatherer());
-                        if (Vars.size() > 0) {
+                        auto&& RHSVars = Mgr->Gather(SubstRHS, Detail::VarGatherer());
+                        if (RHSVars.size() > 0) {
                             throw ESMCError((string)"Init state updates cannot refer " +
                                             "to variables");
                         }
-                        InitStateGenerators.back().push_back(NewAsgn);
+                        auto LHSBaseVar = GetBaseLValue(SubstLHS);
+                        auto&& LHSVars = Mgr->Gather(SubstLHS, Detail::VarGatherer());
+                        if (LHSVars.size() != 1 ||
+                            *(LHSVars.begin()) != LHSBaseVar) {
+                            throw ESMCError((string)"Init state updates cannot refer " +
+                                            "to variables");
+                        }
+
+                        CurrentISUpdates.push_back(new LTSAssignSimple(SubstLHS, SubstRHS));
                     } else {
                         auto UpdateAsParam = Update->As<LTSAssignParam>();
                         auto const& AsgnParams = UpdateAsParam->GetParams();
@@ -1167,12 +1175,19 @@ namespace ESMC {
                             auto SubstLHS = Mgr->Substitute(LocalSubstMap, Update->GetLHS());
                             auto SubstRHS = Mgr->Substitute(LocalSubstMap, Update->GetRHS());
                             auto NewAsgn = new LTSAssignSimple(SubstLHS, SubstRHS);
-                            auto&& Vars = Mgr->Gather(SubstRHS, Detail::VarGatherer());
-                            if (Vars.size() > 0) {
+                            auto&& RHSVars = Mgr->Gather(SubstRHS, Detail::VarGatherer());
+                            if (RHSVars.size() > 0) {
                                 throw ESMCError((string)"Init state updates cannot refer " +
                                                 "to variables");
                             }
-                            InitStateGenerators.back().push_back(NewAsgn);
+                            auto LHSBaseVar = GetBaseLValue(SubstLHS);
+                            auto&& LHSVars = Mgr->Gather(SubstLHS, Detail::VarGatherer());
+                            if (LHSVars.size() != 1 ||
+                                *(LHSVars.begin()) != LHSBaseVar) {
+                                throw ESMCError((string)"Init state updates cannot refer " +
+                                                "to variables");
+                            }
+                            CurrentISUpdates.push_back(NewAsgn);
                         }
                     }
                 }
@@ -1180,16 +1195,25 @@ namespace ESMC {
                 // Add the initial states for the channels as well
                 for (auto const& NameChanEFSM : ChannelEFSMs) {
                     auto ChanEFSM = NameChanEFSM.second;
-                    InitStateGenerators.back().insert(InitStateGenerators.back().end(),
-                                                      ChanEFSM->InitStateUpdates.begin(),
-                                                      ChanEFSM->InitStateUpdates.end());
+                    CurrentISUpdates.insert(CurrentISUpdates.end(),
+                                            ChanEFSM->InitStateUpdates.begin(),
+                                            ChanEFSM->InitStateUpdates.end());
                 }
+
+                InitStateGenerators.push_back(new LTSInitStateGenerator(CurrentISUpdates));
             }
 
-            vector<vector<LTSAssignRef>> FlattenedISGens;
+            vector<ISGenRef> FlattenedISGens;
             for (auto const& ISGen : InitStateGenerators) {
-                auto&& FlattenedISGen = ExpandUpdates(ISGen);
-                FlattenedISGens.push_back(FlattenedISGen);
+                auto const& Updates = ISGen->GetUpdates();
+                auto&& FlattenedUpdates = ExpandUpdates(Updates);
+                vector<LTSAssignRef> SimpUpdates;
+                for (auto const& Update : FlattenedUpdates) {
+                    auto SimpLHS = Mgr->SimplifyFP(Update->GetLHS());
+                    auto SimpRHS = Mgr->SimplifyFP(Update->GetRHS());
+                    SimpUpdates.push_back(new LTSAssignSimple(SimpLHS, SimpRHS));
+                }
+                FlattenedISGens.push_back(new LTSInitStateGenerator(SimpUpdates));
             }
 
             InitStateGenerators = FlattenedISGens;

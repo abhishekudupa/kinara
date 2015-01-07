@@ -103,7 +103,7 @@ namespace ESMC {
             vector<tuple<ChannelEFSM*, ExpT, u32>> ChanBuffersToSort;
 
             u32 StateVectorSize;
-            vector<vector<LTSAssignRef>> InitStateGenerators;
+            vector<ISGenRef> InitStateGenerators;
             vector<GCmdRef> GuardedCommands;
 
             SymbolTable SymTab;

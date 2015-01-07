@@ -8,7 +8,7 @@ BoundVarExpression : NA
 OpExpression:
   EQ : defined(right) & defined(left)
   NOT : defined(right)
-  ITE : defined(condition) & ((condition & defined(ifexp)) | (!condition & defined(elseexp)))
+  ITE : defined(condition) & (condition -> defined(ifexp) & (!condition -> defined(elseexp))
   OR : (defined(a) & a) | (defined(b) & b) | (defined(a) & defined(b))
   AND : (defined(a) & !a) | (defined(b) & !b) | (defined(a) & defined(b))
   IMPLIES: (defined(a) & !a) | (defined(b) & b) | (defined(a) & defined(b))
@@ -18,4 +18,6 @@ OpExpression:
   ComparisonOps : defined(a) & defined(b)
   select/index : defined(a) & defined(i) & (i != undef)
   project/field : defined(r)
+  UF : true
+
 QuantifiedExpression: NA

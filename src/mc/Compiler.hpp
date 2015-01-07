@@ -53,13 +53,6 @@ namespace ESMC {
 
         typedef const ExpressionBase<LTSExtensionT, LTSTermSemanticizer>* ExpPtrT;
 
-        class CompileInfo
-        {
-        public:
-            RValueInterpreter* Interp;
-
-        };
-
         class OffsetCompiler : public VisitorBaseT
         {
         public:
@@ -82,9 +75,13 @@ namespace ESMC {
         {
         protected:
             ExpPtrT Exp;
+            ExpT NoExceptionPredicate;
+            ExpT TrueExp;
+
+            inline void SetNoExceptionPred(const ExpT& NewPred);
 
         public:
-            RValueInterpreter(ExpPtrT Exp);
+            RValueInterpreter(ExpPtrT Exp, const ExpT& NoExceptionPredicate);
             virtual ~RValueInterpreter();
 
             ExpPtrT GetExp() const;
@@ -93,6 +90,7 @@ namespace ESMC {
             virtual void UpdateModel(const Z3Model& Model,
                                      const unordered_set<i64>& InterpretedOps,
                                      const unordered_map<i64, ExpT>& IndicatorExps) const;
+            const ExpT& GetNoExceptionPredicate() const;
 
             static void MakeInterpreter(const ExpT& Exp, LTSCompiler* Compiler);
 
@@ -136,7 +134,7 @@ namespace ESMC {
             bool Scalar;
 
         public:
-            LValueInterpreter(ExpPtrT Exp);
+            LValueInterpreter(ExpPtrT Exp, const ExpT& NoExceptionPredicate);
             virtual ~LValueInterpreter();
 
             i64 GetLow() const;
@@ -247,6 +245,7 @@ namespace ESMC {
             const u32 NumSubInterps;
 
             inline void EvaluateSubInterps(const StateVec* StateVector) const;
+            inline void SetNEPredAllDef();
 
         public:
             OpInterpreter(const vector<RValueInterpreter*>& SubInterps,
@@ -425,6 +424,9 @@ namespace ESMC {
             RValueInterpreter* IndexInterp;
             u32 ElemSize;
             bool IndexSymmetric;
+            bool IndexRange;
+            i64 IndexRangeLow;
+            i64 IndexRangeHigh;
 
         public:
             IndexInterpreter(LValueInterpreter* ArrayInterp,

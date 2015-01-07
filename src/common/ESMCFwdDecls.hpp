@@ -146,9 +146,11 @@ namespace ESMC {
         class LTSTransitionOutput;
         class LTSTransitionInternal;
         class LTSInitState;
+        class LTSInitStateGenerator;
 
         typedef CSmartPtr<LTSTransitionBase> LTSTransRef;
         typedef CSmartPtr<LTSInitState> InitStateRef;
+        typedef CSmartPtr<LTSInitStateGenerator> ISGenRef;
 
         class LTSSymbTransitionBase;
         class LTSSymbIOTransitionBase;
@@ -173,7 +175,6 @@ namespace ESMC {
         class StateFactory;
         class LTSChecker;
         class LTSCompiler;
-        class CompileInfo;
         class StateVecPrinter;
 
         class RValueInterpreter;

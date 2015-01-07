@@ -57,6 +57,7 @@ namespace ESMC {
     namespace MC {
 
         using namespace ESMC::LTS;
+        using ESMC::LTS::Detail::ArrayRValueTransformer;
 
         const i64 UndefValue = INT64_MAX;
 
@@ -144,6 +145,12 @@ namespace ESMC {
                         Exp->ExtensionData.Offset =
                             Children[0]->ExtensionData.Offset +
                             (ValueSize * (Children[1]->ExtensionData.ConstVal - 1));
+                    } else if (IndexType->Is<RangeType>()) {
+                        auto IndexTypeAsRange = IndexType->SAs<RangeType>();
+                        auto IndexRangeLow = IndexTypeAsRange->GetLow();
+                        Exp->ExtensionData.Offset =
+                            Children[0]->ExtensionData.Offset +
+                            (ValueSize * (Children[1]->ExtensionData.ConstVal - IndexRangeLow));
                     } else {
                         Exp->ExtensionData.Offset =
                             Children[0]->ExtensionData.Offset +
@@ -173,10 +180,10 @@ namespace ESMC {
         }
 
         // Interpreters
-        RValueInterpreter::RValueInterpreter(ExpPtrT Exp)
-            : Exp(Exp)
+        RValueInterpreter::RValueInterpreter(ExpPtrT Exp, const ExpT& NoExceptionPredicate)
+            : Exp(Exp), NoExceptionPredicate(NoExceptionPredicate),
+              TrueExp(Exp->GetMgr()->MakeTrue())
         {
-            // Nothing here
         }
 
         RValueInterpreter::~RValueInterpreter()
@@ -184,9 +191,29 @@ namespace ESMC {
             // Nothing here
         }
 
+        inline void RValueInterpreter::SetNoExceptionPred(const ExpT& NewPred)
+        {
+            if (NewPred != ExpT::NullPtr) {
+                auto Mgr = NewPred->GetMgr();
+                NoExceptionPredicate = ArrayRValueTransformer::Do(Mgr, NewPred);
+                NoExceptionPredicate = Mgr->SimplifyFP(NoExceptionPredicate);
+            } else {
+                this->NoExceptionPredicate = NewPred;
+            }
+        }
+
         ExpPtrT RValueInterpreter::GetExp() const
         {
             return Exp;
+        }
+
+        const ExpT& RValueInterpreter::GetNoExceptionPredicate() const
+        {
+            if (NoExceptionPredicate != ExpT::NullPtr) {
+                return NoExceptionPredicate;
+            } else {
+                return TrueExp;
+            }
         }
 
         void RValueInterpreter::MakeInterpreter(const ExpT& Exp, LTSCompiler* Compiler)
@@ -327,8 +354,8 @@ namespace ESMC {
             return;
         }
 
-        LValueInterpreter::LValueInterpreter(ExpPtrT Exp)
-            : RValueInterpreter(Exp)
+        LValueInterpreter::LValueInterpreter(ExpPtrT Exp, const ExpT& NoExceptionPredicate)
+            : RValueInterpreter(Exp, NoExceptionPredicate)
         {
             auto const& Type  = Exp->GetType();
             Scalar = Type->Is<ScalarType>();
@@ -382,7 +409,7 @@ namespace ESMC {
         }
 
         CompiledConstInterpreter::CompiledConstInterpreter(i64 Value, ExpPtrT Exp)
-            : RValueInterpreter(Exp), Value(Value)
+            : RValueInterpreter(Exp, ExpT::NullPtr), Value(Value)
         {
             // Nothing here
         }
@@ -392,13 +419,13 @@ namespace ESMC {
             // Nothing here
         }
 
-        i64 CompiledConstInterpreter::Evaluate(const StateVec *StateVector) const
+        i64 CompiledConstInterpreter::Evaluate(const StateVec* StateVector) const
         {
             return Value;
         }
 
         CompiledLValueInterpreter::CompiledLValueInterpreter(u32 Offset, ExpPtrT Exp)
-            : LValueInterpreter(Exp), Offset(Offset)
+            : LValueInterpreter(Exp, ExpT::NullPtr), Offset(Offset)
         {
             // Nothing here
         }
@@ -462,7 +489,7 @@ namespace ESMC {
         // Uninterpreted function interpreter implementation
         UFInterpreter::UFInterpreter(const vector<RValueInterpreter*>& ArgInterps,
                                      ExpPtrT Exp)
-            : RValueInterpreter(Exp),
+            : RValueInterpreter(Exp, ExpT::NullPtr),
               ArgInterps(ArgInterps), SubEvals(ArgInterps.size()),
               NumArgInterps(ArgInterps.size()), Model(Z3Model::NullModel),
               Enabled(false), MyOpCode(Exp->As<OpExpression>()->GetOpCode())
@@ -587,7 +614,7 @@ namespace ESMC {
 
         OpInterpreter::OpInterpreter(const vector<RValueInterpreter*>& SubInterps,
                                      ExpPtrT Exp)
-            : RValueInterpreter(Exp), SubInterps(SubInterps),
+            : RValueInterpreter(Exp, ExpT::NullPtr), SubInterps(SubInterps),
               SubEvals(SubInterps.size()), NumSubInterps(SubInterps.size())
         {
             // Nothing here
@@ -605,11 +632,29 @@ namespace ESMC {
             }
         }
 
+        inline void OpInterpreter::SetNEPredAllDef()
+        {
+            auto Mgr = Exp->GetMgr();
+            vector<ExpT> NEConjuncts(NumSubInterps);
+
+            if (NumSubInterps == 0) {
+                SetNoExceptionPred(ExpT::NullPtr);
+            } else if (NumSubInterps == 1) {
+                SetNoExceptionPred(SubInterps[0]->GetNoExceptionPredicate());
+            } else {
+                for (u32 i = 0; i < NumSubInterps; ++i) {
+                    NEConjuncts[i] = SubInterps[i]->GetNoExceptionPredicate();
+                }
+                auto NEPred = Mgr->MakeExpr(LTSOps::OpAND, NEConjuncts);
+                SetNoExceptionPred(NEPred);
+            }
+        }
+
         EQInterpreter::EQInterpreter(const vector<RValueInterpreter*>& SubInterps,
                                      ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
         }
 
         EQInterpreter::~EQInterpreter()
@@ -629,7 +674,7 @@ namespace ESMC {
                                        ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
         }
 
         NOTInterpreter::~NOTInterpreter()
@@ -653,7 +698,15 @@ namespace ESMC {
                                        ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            auto Mgr = Exp->GetMgr();
+            auto NEPred1 = SubInterps[0]->GetNoExceptionPredicate();
+            auto NEPred2 = Mgr->MakeExpr(LTSOps::OpIMPLIES, SubInterps[0]->GetExp(),
+                                         SubInterps[1]->GetNoExceptionPredicate());
+            auto NegCondition = Mgr->MakeExpr(LTSOps::OpNOT, SubInterps[0]->GetExp());
+            auto NEPred3 = Mgr->MakeExpr(LTSOps::OpIMPLIES, NegCondition,
+                                         SubInterps[2]->GetNoExceptionPredicate());
+            auto NEPred = Mgr->MakeExpr(LTSOps::OpAND, NEPred1, NEPred2, NEPred3);
+            SetNoExceptionPred(NEPred);
         }
 
         ITEInterpreter::~ITEInterpreter()
@@ -679,7 +732,22 @@ namespace ESMC {
                                      ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            auto Mgr = Exp->GetMgr();
+            const u32 NumDisjuncts = SubInterps.size();
+
+            vector<ExpT> NEDisjuncts(NumDisjuncts + 1);
+            vector<ExpT> AllDefConjuncts(NumDisjuncts);
+
+            for (u32 i = 0; i < NumDisjuncts; ++i) {
+                NEDisjuncts[i] = Mgr->MakeExpr(LTSOps::OpAND,
+                                               SubInterps[i]->GetNoExceptionPredicate(),
+                                               SubInterps[i]->GetExp());
+                AllDefConjuncts[i] = SubInterps[i]->GetNoExceptionPredicate();
+            }
+
+            NEDisjuncts[NumDisjuncts] = Mgr->MakeExpr(LTSOps::OpAND, AllDefConjuncts);
+            auto NEPred = Mgr->MakeExpr(LTSOps::OpOR, NEDisjuncts);
+            SetNoExceptionPred(NEPred);
         }
 
         ORInterpreter::~ORInterpreter()
@@ -706,7 +774,21 @@ namespace ESMC {
                                        ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            auto Mgr = Exp->GetMgr();
+            const u32 NumDisjuncts = SubInterps.size();
+
+            vector<ExpT> NEDisjuncts(NumDisjuncts + 1);
+            vector<ExpT> AllDefConjuncts(NumDisjuncts);
+
+            for (u32 i = 0; i < NumDisjuncts; ++i) {
+                NEDisjuncts[i] =
+                    Mgr->MakeExpr(LTSOps::OpAND, SubInterps[i]->GetNoExceptionPredicate(),
+                                  Mgr->MakeExpr(LTSOps::OpNOT, SubInterps[i]->GetExp()));
+                AllDefConjuncts[i] = SubInterps[i]->GetNoExceptionPredicate();
+            }
+            NEDisjuncts[NumDisjuncts] = Mgr->MakeExpr(LTSOps::OpAND, AllDefConjuncts);
+            auto NEPred = Mgr->MakeExpr(LTSOps::OpOR, NEDisjuncts);
+            SetNoExceptionPred(NEPred);
         }
 
         ANDInterpreter::~ANDInterpreter()
@@ -733,7 +815,16 @@ namespace ESMC {
                                                ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            auto Mgr = Exp->GetMgr();
+
+            auto NEPred1 = Mgr->MakeExpr(LTSOps::OpAND, SubInterps[0]->GetNoExceptionPredicate(),
+                                         Mgr->MakeExpr(LTSOps::OpNOT, SubInterps[0]->GetExp()));
+            auto NEPred2 = Mgr->MakeExpr(LTSOps::OpAND, SubInterps[1]->GetNoExceptionPredicate(),
+                                         SubInterps[1]->GetExp());
+            auto NEPred3 = Mgr->MakeExpr(LTSOps::OpAND, SubInterps[0]->GetNoExceptionPredicate(),
+                                         SubInterps[1]->GetNoExceptionPredicate());
+            auto NEPred = Mgr->MakeExpr(LTSOps::OpOR, NEPred1, NEPred2, NEPred3);
+            SetNoExceptionPred(NEPred);
         }
 
         IMPLIESInterpreter::~IMPLIESInterpreter()
@@ -766,7 +857,7 @@ namespace ESMC {
                                        ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
         }
 
         IFFInterpreter::~IFFInterpreter()
@@ -788,7 +879,7 @@ namespace ESMC {
                                        ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
         }
 
         XORInterpreter::~XORInterpreter()
@@ -810,7 +901,7 @@ namespace ESMC {
                                        ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
         }
 
         ADDInterpreter::~ADDInterpreter()
@@ -836,7 +927,7 @@ namespace ESMC {
                                        ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
         }
 
         SUBInterpreter::~SUBInterpreter()
@@ -868,7 +959,7 @@ namespace ESMC {
                                            ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
         }
 
         MINUSInterpreter::~MINUSInterpreter()
@@ -892,7 +983,7 @@ namespace ESMC {
                                        ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
         }
 
         MULInterpreter::~MULInterpreter()
@@ -917,7 +1008,17 @@ namespace ESMC {
                                        ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
+            // Also the second argument cannot be zero
+            auto Mgr = Exp->GetMgr();
+
+            auto const& Divisor = SubInterps[1]->GetExp();
+            auto NonZero = Mgr->MakeExpr(LTSOps::OpNOT,
+                                         Mgr->MakeExpr(LTSOps::OpEQ,
+                                                       Divisor,
+                                                       Mgr->MakeVal("0", Divisor->GetType())));
+            auto NEPred = Mgr->MakeExpr(LTSOps::OpAND, NoExceptionPredicate, NonZero);
+            SetNoExceptionPred(NEPred);
         }
 
         DIVInterpreter::~DIVInterpreter()
@@ -938,7 +1039,17 @@ namespace ESMC {
                                        ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
+            // Also the second argument cannot be zero
+            auto Mgr = Exp->GetMgr();
+
+            auto const& Divisor = SubInterps[1]->GetExp();
+            auto NonZero = Mgr->MakeExpr(LTSOps::OpNOT,
+                                         Mgr->MakeExpr(LTSOps::OpEQ,
+                                                       Divisor,
+                                                       Mgr->MakeVal("0", Divisor->GetType())));
+            auto NEPred = Mgr->MakeExpr(LTSOps::OpAND, NoExceptionPredicate, NonZero);
+            SetNoExceptionPred(NEPred);
         }
 
         MODInterpreter::~MODInterpreter()
@@ -959,7 +1070,7 @@ namespace ESMC {
                                      ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
         }
 
         GTInterpreter::~GTInterpreter()
@@ -980,7 +1091,7 @@ namespace ESMC {
                                      ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
         }
 
         GEInterpreter::~GEInterpreter()
@@ -1001,7 +1112,7 @@ namespace ESMC {
                                      ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
         }
 
         LTInterpreter::~LTInterpreter()
@@ -1022,7 +1133,7 @@ namespace ESMC {
                                      ExpPtrT Exp)
             : OpInterpreter(SubInterps, Exp)
         {
-            // Nothing here
+            SetNEPredAllDef();
         }
 
         LEInterpreter::~LEInterpreter()
@@ -1042,14 +1153,50 @@ namespace ESMC {
         IndexInterpreter::IndexInterpreter(LValueInterpreter* ArrayInterp,
                                            RValueInterpreter* IndexInterp,
                                            ExpPtrT Exp)
-            : LValueInterpreter(Exp),
+            : LValueInterpreter(Exp, ExpT::NullPtr),
               ArrayInterp(ArrayInterp), IndexInterp(IndexInterp)
         {
             auto const& ArrType = ArrayInterp->GetExp()->GetType();
+            auto const& ActualIndexType = ArrType->SAs<ArrayType>()->GetIndexType();
 
             ElemSize = ArrType->SAs<ArrayType>()->GetValueType()->GetByteSize();
             ElemSize = Align(ElemSize, ElemSize);
-            IndexSymmetric = IndexInterp->GetExp()->GetType()->Is<SymmetricType>();
+
+            IndexSymmetric = ActualIndexType->Is<SymmetricType>();
+            IndexRange = ActualIndexType->Is<RangeType>();
+            if (IndexRange) {
+                auto IndexAsRange = ActualIndexType->SAs<RangeType>();
+                IndexRangeLow = IndexAsRange->GetLow();
+                IndexRangeHigh = IndexAsRange->GetHigh();
+            }
+
+            auto NEPred1 = ArrayInterp->GetNoExceptionPredicate();
+            auto NEPred2 = IndexInterp->GetNoExceptionPredicate();
+            ExpT NEPred3 = ExpT::NullPtr;
+            auto const& IndexExp = IndexInterp->GetExp();
+
+            auto Mgr = Exp->GetMgr();
+
+            if (IndexSymmetric) {
+                auto ClearValue = ActualIndexType->GetClearValue();
+                NEPred3 = Mgr->MakeExpr(LTSOps::OpNOT,
+                                        Mgr->MakeExpr(LTSOps::OpEQ,
+                                                      IndexExp,
+                                                      Mgr->MakeVal(ClearValue, ActualIndexType)));
+            } else if (IndexRange) {
+                NEPred3 = Mgr->MakeExpr(LTSOps::OpAND,
+                                        Mgr->MakeExpr(LTSOps::OpGE,
+                                                      IndexExp,
+                                                      Mgr->MakeVal(to_string(IndexRangeLow),
+                                                                   ActualIndexType)),
+                                        Mgr->MakeExpr(LTSOps::OpLE,
+                                                      IndexExp,
+                                                      Mgr->MakeVal(to_string(IndexRangeHigh),
+                                                                   ActualIndexType)));
+            }
+
+            auto NEPred = Mgr->MakeExpr(LTSOps::OpAND, NEPred1, NEPred2, NEPred3);
+            SetNoExceptionPred(NEPred3);
         }
 
         IndexInterpreter::~IndexInterpreter()
@@ -1123,6 +1270,12 @@ namespace ESMC {
                 } else {
                     IndexValue = IndexValue - 1;
                 }
+            } else if (IndexRange) {
+                if (IndexValue < IndexRangeLow || IndexValue > IndexRangeHigh) {
+                    return UndefValue;
+                } else {
+                    IndexValue = IndexValue - IndexRangeLow;
+                }
             }
 
             return BaseOffset + (IndexValue * ElemSize);
@@ -1130,10 +1283,10 @@ namespace ESMC {
 
         FieldInterpreter::FieldInterpreter(LValueInterpreter* RecInterp,
                                            u32 FieldOffset, ExpPtrT Exp)
-            : LValueInterpreter(Exp),
+            : LValueInterpreter(Exp, ExpT::NullPtr),
               RecInterp(RecInterp), FieldOffset(FieldOffset)
         {
-            // Nothing here
+            SetNoExceptionPred(RecInterp->GetNoExceptionPredicate());
         }
 
         FieldInterpreter::~FieldInterpreter()
@@ -1249,14 +1402,21 @@ namespace ESMC {
 
                 auto LoweredGuard =
                     Mgr->ApplyTransform<LTS::Detail::ArrayRValueTransformer>(GCmd->GetGuard());
+                LoweredGuard = Mgr->SimplifyFP(LoweredGuard);
                 GCmd->SetLoweredGuard(LoweredGuard);
+
                 vector<LTSAssignRef> LoweredUpdates;
                 for (auto const& Update : GCmd->GetUpdates()) {
-                    LoweredUpdates.push_back(ArrayTransformAssignment(Update->GetLHS(),
-                                                                      Update->GetRHS()));
+                    auto LUpdate = ArrayTransformAssignment(Update->GetLHS(),
+                                                            Update->GetRHS());
+                    auto SimpLHS = Mgr->SimplifyFP(LUpdate->GetLHS());
+                    auto SimpRHS = Mgr->SimplifyFP(LUpdate->GetRHS());
+
+                    LoweredUpdates.push_back(new LTSAssignSimple(SimpLHS, SimpRHS));
                 }
                 GCmd->SetLoweredUpdates(LoweredUpdates);
             }
+
             CompileExp(TheLTS->InvariantExp, TheLTS);
             CompileExp(TheLTS->FinalCondExp, TheLTS);
 
@@ -1265,7 +1425,7 @@ namespace ESMC {
             }
 
             for (auto const& InitStateGen : TheLTS->InitStateGenerators) {
-                for (auto const& Update : InitStateGen) {
+                for (auto const& Update : InitStateGen->GetUpdates()) {
                     CompileExp(Update->GetLHS(), TheLTS);
                     CompileExp(Update->GetRHS(), TheLTS);
                 }

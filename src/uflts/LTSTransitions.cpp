@@ -293,7 +293,7 @@ namespace ESMC {
             FairnessSets.insert(FairnessSets.begin(), FairSets.begin(), FairSets.end());
             // Make the guard
             Guard = MakeConjunction(GuardComps, Mgr);
-            Guard = Mgr->Simplify(Guard);
+            Guard = Mgr->SimplifyFP(Guard);
 
             // Set up the fixed interpretation
             vector<ExpT> FixedComps;
@@ -309,7 +309,7 @@ namespace ESMC {
             }
 
             FixedInterpretation = MakeConjunction(FixedComps, Mgr);
-            FixedInterpretation = Mgr->Simplify(FixedInterpretation);
+            FixedInterpretation = Mgr->SimplifyFP(FixedInterpretation);
         }
 
         MgrT* LTSGuardedCommand::GetMgr() const
