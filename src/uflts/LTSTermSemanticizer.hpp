@@ -1142,10 +1142,12 @@ namespace ESMC {
                 case LTSOps::OpIFF:
                 case LTSOps::OpXOR:
                 case LTSOps::OpADD:
-                case LTSOps::OpMUL:
-                    sort(NewChildren.begin(), NewChildren.end(), ExpressionPtrCompare());
+                case LTSOps::OpMUL: {
+                    set<ExpT, ExpressionPtrCompare> CanonSet(NewChildren.begin(), NewChildren.end());
+                    vector<ExpT> CanonChildren(CanonSet.begin(), CanonSet.end());
                     ExpStack.push_back(new OpExpression<E, S>(nullptr, OpCode,
-                                                              NewChildren, Exp->ExtensionData));
+                                                              CanonChildren, Exp->ExtensionData));
+                }
                     break;
 
                 case LTSOps::OpNOT:

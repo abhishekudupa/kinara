@@ -189,6 +189,7 @@ namespace ESMC {
             // Lowered invariant from the LTS
             ExpT LoweredInvariant;
             ExpT DeadlockFreeInvariant;
+            ExpT LoweredDLFInvariant;
 
             // The set of all error states, mapping to the
             // invariant expression that was blown

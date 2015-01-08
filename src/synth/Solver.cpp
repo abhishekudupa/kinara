@@ -120,15 +120,15 @@ namespace ESMC {
         {
             auto const& TrueExp = TheLTS->MakeTrue();
             if (AssertedConstraints.find(Assertion) != AssertedConstraints.end()) {
-                if (Assertion != TrueExp) {
-                    cout << "Not asserting previously asserted constraint:" << endl
-                         << Assertion->ToString() << endl;
-                }
+                // if (Assertion != TrueExp) {
+                //     cout << "Not asserting previously asserted constraint:" << endl
+                //          << Assertion->ToString() << endl;
+                // }
                 return;
             }
 
             AssertedConstraints.insert(Assertion);
-            cout << "Asserting: " << Assertion->ToString() << endl;
+            // cout << "Asserting: " << Assertion->ToString() << endl;
             TP->Assert(Assertion, Options.UnrollQuantifiers);
         }
 
@@ -882,11 +882,17 @@ namespace ESMC {
 
             auto const& TraceBlownInvar = Trace->GetInvariantBlown();
 
+            cout << "Safety violation trace:" << endl;
+            cout << Trace->ToString() << endl << endl;
+
+            cout << "Computing weakest pre (safety) of: " << endl <<
+                TraceBlownInvar->ToString() << endl << endl;
+
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this, Trace, TraceBlownInvar);
             for (auto const& Pred : WPConditions) {
-                // cout << "Obtained Safety Pre:" << endl
-                //      << Pred->ToString() << endl << endl;
+                cout << "Obtained Safety Pre:" << endl
+                     << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
 
@@ -895,7 +901,7 @@ namespace ESMC {
 
         inline void Solver::HandleOneDeadlockViolation(const StateVec* ErrorState)
         {
-            // auto Mgr = TheLTS->GetMgr();
+            auto Mgr = TheLTS->GetMgr();
             auto AQS = Checker->AQS;
 
             // cout << "Handling one deadlock violation, computing shortest path... ";
@@ -920,49 +926,52 @@ namespace ESMC {
             // Checker->Printer->PrintState(ErrorState, cout);
             // cout << endl << endl;
 
-            // const StateVec* LastState;
-            // auto TraceElems = Trace->GetTraceElems();
-            // if (TraceElems.size() > 0) {
-            //     LastState = TraceElems.back().second;
-            // } else {
-            //     LastState = Trace->GetInitialState();
-            // }
+            const StateVec* LastState;
+            auto TraceElems = Trace->GetTraceElems();
+            if (TraceElems.size() > 0) {
+                LastState = TraceElems.back().second;
+            } else {
+                LastState = Trace->GetInitialState();
+            }
 
-            // // Gather the guards of guarded commands that could
-            // // possibly solve this deadlock
-            // vector<ExpT> Disjuncts;
-            // for (auto const& Cmd : GuardedCommands) {
-            //     auto const& FixedInterp = Cmd->GetFixedInterpretation();
-            //     auto Interp = FixedInterp->ExtensionData.Interp;
-            //     auto Res = Interp->Evaluate(LastState);
-            //     if (Res == 0) {
-            //         continue;
-            //     }
-            //     Disjuncts.push_back(Cmd->GetLoweredGuard());
-            // }
+            // Gather the guards of guarded commands that could
+            // possibly solve this deadlock
+            vector<ExpT> Disjuncts;
+            for (auto const& Cmd : GuardedCommands) {
+                auto const& FixedInterp = Cmd->GetFixedInterpretation();
+                auto Interp = FixedInterp->ExtensionData.Interp;
+                auto Res = Interp->Evaluate(LastState);
+                if (Res == 0) {
+                    continue;
+                }
+                Disjuncts.push_back(Cmd->GetLoweredGuard());
+            }
 
-            // ExpT GoodExp = ExpT::NullPtr;
-            // auto UnreachableExp = TraceAnalyses::AutomataStatesCondition(TheLTS, LastState);
-            // UnreachableExp = Mgr->MakeExpr(LTSOps::OpNOT, UnreachableExp);
+            ExpT GoodExp = ExpT::NullPtr;
+            auto UnreachableExp = TraceAnalyses::AutomataStatesCondition(TheLTS, LastState);
+            UnreachableExp = Mgr->MakeExpr(LTSOps::OpNOT, UnreachableExp);
 
-            // // cout << "Unreachable Exp: " << endl << UnreachableExp->ToString() << endl << endl;
+            // cout << "Unreachable Exp: " << endl << UnreachableExp->ToString() << endl << endl;
 
-            // Disjuncts.push_back(UnreachableExp);
+            Disjuncts.push_back(UnreachableExp);
 
-            // if (Disjuncts.size() == 1) {
-            //     GoodExp = Disjuncts[0];
-            // } else {
-            //     GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
-            // }
+            if (Disjuncts.size() == 1) {
+                GoodExp = Disjuncts[0];
+            } else {
+                GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
+            }
 
             // audupa: Replaced the complex code above with the simpler one
             // below, that should lead to better generalization!
 
-            auto GoodExp = Checker->DeadlockFreeInvariant;
+            // auto GoodExp = Checker->LoweredDLFInvariant;
 
             // audupa: end changes
 
-            cout << "Computing Weakest Pre of: " << GoodExp->ToString() << endl << endl;
+            // cout << "Computing Weakest Pre of: " << GoodExp->ToString() << endl << endl;
+            GoodExp =
+                Mgr->ApplyTransform<ESMC::LTS::Detail::ArrayRValueTransformer>(GoodExp);
+            GoodExp = Mgr->SimplifyFP(GoodExp);
 
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this,
@@ -996,7 +1005,7 @@ namespace ESMC {
             for (auto const& ErrorState : ErrorStates) {
                 auto SVPtr = ErrorState.first;
                 auto const& BlownInvariant = ErrorState.second;
-                if (BlownInvariant == DeadlockFreeInvar) {
+                if (BlownInvariant == Checker->LoweredDLFInvariant) {
                     HandleOneDeadlockViolation(SVPtr);
                 } else {
                     HandleOneSafetyViolation(SVPtr, BlownInvariant);
@@ -1065,8 +1074,8 @@ namespace ESMC {
 
             auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundsVariable);
 
-            cout << "Asserting Bounds Constraint: " << endl
-                 << EQExp->ToString() << endl << endl;
+            // cout << "Asserting Bounds Constraint: " << endl
+            //      << EQExp->ToString() << endl << endl;
 
             TP->Assert(EQExp, Options.UnrollQuantifiers);
             for (auto const& Assertion : AssertedConstraints) {

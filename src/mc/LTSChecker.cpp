@@ -454,6 +454,9 @@ namespace ESMC {
 
             LoweredInvariant =
                 Mgr->ApplyTransform<LTS::Detail::ArrayRValueTransformer>(TheLTS->InvariantExp);
+            LoweredDLFInvariant =
+                Mgr->ApplyTransform<LTS::Detail::ArrayRValueTransformer>(DeadlockFreeInvariant);
+            LoweredDLFInvariant = Mgr->SimplifyFP(LoweredDLFInvariant);
         }
 
         LTSChecker::~LTSChecker()
@@ -543,7 +546,7 @@ namespace ESMC {
                     }
                 } else if (Cmd == GCmdRef::NullPtr) {
                     if (Deadlocked) {
-                        if (!RecordErrorState(State, DeadlockFreeInvariant, NumErrors)) {
+                        if (!RecordErrorState(State, LoweredDLFInvariant, NumErrors)) {
                             return;
                         }
                     }
@@ -714,7 +717,7 @@ namespace ESMC {
                 }
 
                 if (Deadlocked) {
-                    if (!RecordErrorState(CurState, DeadlockFreeInvariant, NumErrors)) {
+                    if (!RecordErrorState(CurState, LoweredDLFInvariant, NumErrors)) {
                         return;
                     }
                 }
