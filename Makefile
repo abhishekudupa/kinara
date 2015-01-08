@@ -73,8 +73,8 @@ libesmc_OBJS= \
 	LTSSemTypes.o \
 	LTSState.o \
 	LTSTermSemanticizer.o \
+	LTSTransformers.o \
 	LTSTransitions.o \
-	LTSUtils.o \
 	OmegaAutomaton.o \
 	Permutations.o \
 	ResourceLimitManager.o \

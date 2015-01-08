@@ -51,9 +51,30 @@ namespace ESMC {
         }
 
         LTSAssignBase::LTSAssignBase(const ExpT& LHS, const ExpT& RHS)
-            : RefCountable(), LHS(LHS), RHS(RHS)
+            : RefCountable(), LHS(LHS), RHS(RHS),
+              BoundsConstraint(ExpT::NullPtr),
+              LoweredBoundsConstraint(ExpT::NullPtr)
         {
-            // Nothing here
+            auto const& LHSType = LHS->GetType();
+            auto Mgr = LHS->GetMgr();
+
+            if (LHSType->Is<RangeType>()) {
+                auto TypeAsRange = LHSType->SAs<RangeType>();
+                auto LowStr = to_string(TypeAsRange->GetLow());
+                auto HighStr = to_string(TypeAsRange->GetHigh());
+                auto LowVal = Mgr->MakeVal(LowStr, LHSType);
+                auto HighVal = Mgr->MakeVal(HighStr, LHSType);
+
+                BoundsConstraint =
+                    Mgr->MakeExpr(LTSOps::OpAND,
+                                  Mgr->MakeExpr(LTSOps::OpGE, RHS, LowVal),
+                                  Mgr->MakeExpr(LTSOps::OpLE, RHS, HighVal));
+                BoundsConstraint = Mgr->SimplifyFP(BoundsConstraint);
+            } else {
+                BoundsConstraint = Mgr->MakeTrue();
+            }
+
+            LoweredBoundsConstraint = BoundsConstraint;
         }
 
         LTSAssignBase::~LTSAssignBase()
@@ -69,6 +90,21 @@ namespace ESMC {
         const ExpT& LTSAssignBase::GetRHS() const
         {
             return RHS;
+        }
+
+        const ExpT& LTSAssignBase::GetBoundsConstraint() const
+        {
+            return BoundsConstraint;
+        }
+
+        const ExpT& LTSAssignBase::GetLoweredBoundsConstraint() const
+        {
+            return LoweredBoundsConstraint;
+        }
+
+        void LTSAssignBase::SetLoweredBoundsConstraint(const ExpT& Constraint) const
+        {
+            LoweredBoundsConstraint = Constraint;
         }
 
         LTSAssignSimple::~LTSAssignSimple()

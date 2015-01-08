@@ -864,7 +864,6 @@ namespace ESMC {
                                                      const ExpT& BlownInvariant)
         {
             auto AQS = Checker->AQS;
-            auto Mgr = TheLTS->GetMgr();
 
             // cout << "Handling one safety violation, computing shortest path... ";
             // flush(cout);
@@ -874,72 +873,20 @@ namespace ESMC {
 
             // cout << "Done!" << endl << "Unwinding trace... ";
             // flush(cout);
-
-            auto Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
-            // cout << "Trace:" << endl << endl;
-            // cout << Trace->ToString(1) << endl << endl;
-
-            // cout << "Done!" << endl
-            //      << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
-            //      << "Finding invariant that was blown... ";
-            // flush(cout);
-
-            auto LastState = Trace->GetTraceElems().back().second;
-
-            vector<ExpT> ActualBlownInvariants;
-            // Find out the invariant blown on the last state of trace now
-            if (BlownInvariant != Checker->TheLTS->InvariantExp) {
-                auto const& BoundsInvariants = Checker->BoundsInvariants;
-
-                bool FoundBlown = false;
-                for (auto const& Invar : BoundsInvariants) {
-                    // cout << "Evaluating invariant: " << Invar->ToString() << endl;
-                    auto Interp = Invar->ExtensionData.Interp;
-                    auto Res = Interp->Evaluate(LastState);
-                    if (Res == UndefValue) {
-                        continue;
-                    } else if (Res == 0) {
-                        FoundBlown = true;
-                        cout << endl << "Blown invar: " << Invar->ToString() << endl;
-                        auto it = Checker->LoweredBoundsInvars.find(Invar);
-                        if (it == Checker->LoweredBoundsInvars.end()) {
-                            throw InternalError((string)"Could not find array transformed invariant " +
-                                                "for bounds invariant:\n" + Invar->ToString());
-                        }
-                        cout << endl << "Lowered Blown invar: " << it->second->ToString() << endl;
-                        ActualBlownInvariants.push_back(it->second);
-                    }
-                }
-
-                if (!FoundBlown) {
-                    ostringstream sstr;
-                    Checker->Printer->PrintState(LastState, sstr);
-                    throw InternalError((string)"Could not find the bounds invariant that was " +
-                                        "blown in call to Solver::HandleOneSafetyViolation()\n" +
-                                        "The State:\n" + sstr.str() + "\nCould not find bounds " +
-                                        "invariant that was blown for the state listed above.\n" +
-                                        "But the invariant:\n" + BlownInvariant->ToString() +
-                                        "\nwas reported to have been blown!\n" +
-                                        "At: " + __FILE__ + ":" + to_string(__LINE__));
-                }
+            SafetyViolation* Trace;
+            if (BlownInvariant == Checker->LoweredInvariant) {
+                Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
             } else {
-                cout << "Blown invar: " << Checker->TheLTS->InvariantExp->ToString()
-                     << endl;
-                cout << endl << "Lowered Blown invar: "
-                     << Checker->LoweredInvariant->ToString() << endl;
-                ActualBlownInvariants.push_back(Checker->LoweredInvariant);
+                Trace = TraceBase::MakeBoundsViolation(PPath, Checker, BlownInvariant);
             }
 
-            // cout << "Done!" << endl << "Blown Invariant: " << endl
-            //      << ActualBlownInvariant->ToString() << endl << "Computing weakest pre... ";
-            // flush(cout);
-            auto ActualBlownInvariant = MakeConjunction(ActualBlownInvariants, Mgr);
+            auto const& TraceBlownInvar = Trace->GetInvariantBlown();
 
             auto&& WPConditions =
-                TraceAnalyses::WeakestPrecondition(this, Trace, ActualBlownInvariant);
+                TraceAnalyses::WeakestPrecondition(this, Trace, TraceBlownInvar);
             for (auto const& Pred : WPConditions) {
-                cout << "Obtained Safety Pre:" << endl
-                     << Pred->ToString() << endl << endl;
+                // cout << "Obtained Safety Pre:" << endl
+                //      << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
 
@@ -948,7 +895,7 @@ namespace ESMC {
 
         inline void Solver::HandleOneDeadlockViolation(const StateVec* ErrorState)
         {
-            auto Mgr = TheLTS->GetMgr();
+            // auto Mgr = TheLTS->GetMgr();
             auto AQS = Checker->AQS;
 
             // cout << "Handling one deadlock violation, computing shortest path... ";
@@ -973,40 +920,47 @@ namespace ESMC {
             // Checker->Printer->PrintState(ErrorState, cout);
             // cout << endl << endl;
 
-            const StateVec* LastState;
-            auto TraceElems = Trace->GetTraceElems();
-            if (TraceElems.size() > 0) {
-                LastState = TraceElems.back().second;
-            } else {
-                LastState = Trace->GetInitialState();
-            }
+            // const StateVec* LastState;
+            // auto TraceElems = Trace->GetTraceElems();
+            // if (TraceElems.size() > 0) {
+            //     LastState = TraceElems.back().second;
+            // } else {
+            //     LastState = Trace->GetInitialState();
+            // }
 
-            // Gather the guards of guarded commands that could
-            // possibly solve this deadlock
-            vector<ExpT> Disjuncts;
-            for (auto const& Cmd : GuardedCommands) {
-                auto const& FixedInterp = Cmd->GetFixedInterpretation();
-                auto Interp = FixedInterp->ExtensionData.Interp;
-                auto Res = Interp->Evaluate(LastState);
-                if (Res == 0) {
-                    continue;
-                }
-                Disjuncts.push_back(Cmd->GetLoweredGuard());
-            }
+            // // Gather the guards of guarded commands that could
+            // // possibly solve this deadlock
+            // vector<ExpT> Disjuncts;
+            // for (auto const& Cmd : GuardedCommands) {
+            //     auto const& FixedInterp = Cmd->GetFixedInterpretation();
+            //     auto Interp = FixedInterp->ExtensionData.Interp;
+            //     auto Res = Interp->Evaluate(LastState);
+            //     if (Res == 0) {
+            //         continue;
+            //     }
+            //     Disjuncts.push_back(Cmd->GetLoweredGuard());
+            // }
 
-            ExpT GoodExp = ExpT::NullPtr;
-            auto UnreachableExp = TraceAnalyses::AutomataStatesCondition(TheLTS, LastState);
-            UnreachableExp = Mgr->MakeExpr(LTSOps::OpNOT, UnreachableExp);
+            // ExpT GoodExp = ExpT::NullPtr;
+            // auto UnreachableExp = TraceAnalyses::AutomataStatesCondition(TheLTS, LastState);
+            // UnreachableExp = Mgr->MakeExpr(LTSOps::OpNOT, UnreachableExp);
 
-            // cout << "Unreachable Exp: " << endl << UnreachableExp->ToString() << endl << endl;
+            // // cout << "Unreachable Exp: " << endl << UnreachableExp->ToString() << endl << endl;
 
-            Disjuncts.push_back(UnreachableExp);
+            // Disjuncts.push_back(UnreachableExp);
 
-            if (Disjuncts.size() == 1) {
-                GoodExp = Disjuncts[0];
-            } else {
-                GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
-            }
+            // if (Disjuncts.size() == 1) {
+            //     GoodExp = Disjuncts[0];
+            // } else {
+            //     GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
+            // }
+
+            // audupa: Replaced the complex code above with the simpler one
+            // below, that should lead to better generalization!
+
+            auto GoodExp = Checker->DeadlockFreeInvariant;
+
+            // audupa: end changes
 
             cout << "Computing Weakest Pre of: " << GoodExp->ToString() << endl << endl;
 

@@ -83,6 +83,7 @@ namespace ESMC {
             map<string, EFSMBase*> ActualEFSMs;
             map<string, ChannelEFSM*> ChannelEFSMs;
             set<TypeRef> UsedSymmTypes;
+            map<TypeRef, u32> SymmTypeOffsets;
 
             map<TypeRef, vector<TypeRef>> ParamTypeInsts;
             map<TypeRef, vector<ExpT>> PInstToParams;
@@ -158,10 +159,11 @@ namespace ESMC {
             const vector<string>& GetMsgTypeMap() const;
 
             // Accessors
-            const vector<vector<LTSAssignRef>>& GetInitStateGenerators() const;
+            const vector<ISGenRef>& GetInitStateGenerators() const;
             const vector<GCmdRef>& GetGuardedCmds() const;
             const vector<ExpT>& GetStateVectorVars() const;
             const set<TypeRef>& GetUsedSymmTypes() const;
+            const map<TypeRef, u32>& GetSymmTypeOffsets() const;
             u32 GetStateVectorSize() const;
 
             // methods for creating expressions

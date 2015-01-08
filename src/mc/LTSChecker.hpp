@@ -204,9 +204,11 @@ namespace ESMC {
             // returns <null, false> if no more commands
             // returns <null, true> if exception
             inline const GCmdRef& GetNextEnabledCmd(StateVec* State, i64& LastFired,
-                                                    bool& Exception);
+                                                    bool& Exception, ExpT& NEPred);
 
-            inline void RecordErrorState(const StateVec* ErrorState);
+            inline bool RecordErrorState(const StateVec* ErrorState,
+                                         const ExpT& BlownInvariant,
+                                         u32 MaxErrors);
 
             inline void DoDFS(StateVec* Root, u32 NumErrors);
             inline void DoBFS(const vector<StateVec*>& Roots, u32 NumErrors);
@@ -245,7 +247,7 @@ namespace ESMC {
             AQStructure* GetAQS() const;
             ProductStructure* GetPS() const;
 
-            const unordered_map<const StateVec*, ExpT> GetAllErrorStates() const;
+            const unordered_map<const StateVec*, ExpT>& GetAllErrorStates() const;
             TraceBase* MakeTraceToError(const StateVec* ErrorState);
             const vector<string>& GetBuchiMonitorNames() const;
         };
@@ -253,11 +255,13 @@ namespace ESMC {
         // Returns false if exception encountered
         extern bool ApplyUpdates(const vector<LTSAssignRef>& Updates,
                                  const StateVec* InputState,
-                                 StateVec *OutputState);
+                                 StateVec* OutputState,
+                                 ExpT& NEPred);
 
         // Returns null if exception encountered
         extern StateVec* ExecuteCommand(const GCmdRef& Cmd,
-                                        const StateVec* InputState);
+                                        const StateVec* InputState,
+                                        ExpT& NEPred);
 
         // returns <null, true> if command cannot be executed
         // returns <statevec, true> if command CAN be executed
@@ -266,7 +270,8 @@ namespace ESMC {
         // or if an error was encountered evaluating the guard of Cmd
         extern StateVec* TryExecuteCommand(const GCmdRef& Cmd,
                                            const StateVec* InputState,
-                                           bool& Exception);
+                                           bool& Exception,
+                                           ExpT& NEPred);
 
     } /* end namespace MC */
 } /* end namespace ESMC */

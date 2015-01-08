@@ -322,15 +322,19 @@ namespace ESMC {
         // Extern helper function definitions
         bool ApplyUpdates(const vector<LTSAssignRef>& Updates,
                           const StateVec* InputState,
-                          StateVec* OutputState)
+                          StateVec* OutputState,
+                          ExpT& NEPred)
         {
             for (auto const& Update : Updates) {
                 auto const& LHS = Update->GetLHS();
                 auto const& RHS = Update->GetRHS();
                 auto const& LHSInterp = LHS->ExtensionData.Interp->SAs<LValueInterpreter>();
                 auto const& RHSInterp = RHS->ExtensionData.Interp;
-                auto Status = LHSInterp->Update(RHSInterp, InputState, OutputState);
-                if (!Status) {
+                auto Status = LHSInterp->Update(RHSInterp, InputState, OutputState, NEPred);
+                if (Status == UpdateStatusT::BoundsViolation) {
+                    NEPred = Update->GetLoweredBoundsConstraint();
+                    return false;
+                } else if (Status == UpdateStatusT::EvalException) {
                     return false;
                 }
             }
@@ -338,11 +342,12 @@ namespace ESMC {
         }
 
         StateVec* ExecuteCommand(const GCmdRef& Cmd,
-                                 const StateVec* InputState)
+                                 const StateVec* InputState,
+                                 ExpT& NEPred)
         {
             auto Retval = InputState->Clone();
             auto const& Updates = Cmd->GetUpdates();
-            auto Status = ApplyUpdates(Updates, InputState, Retval);
+            auto Status = ApplyUpdates(Updates, InputState, Retval, NEPred);
             if (!Status) {
                 Retval->Recycle();
                 return nullptr;
@@ -353,20 +358,22 @@ namespace ESMC {
 
         StateVec* TryExecuteCommand(const GCmdRef& Cmd,
                                     const StateVec* InputState,
-                                    bool& Exception)
+                                    bool& Exception,
+                                    ExpT& NEPred)
         {
             Exception = false;
 
             auto const& Guard = Cmd->GetGuard();
             auto GuardInterp = Guard->ExtensionData.Interp;
             auto Res = GuardInterp->Evaluate(InputState);
-            if (Res == UndefValue) {
+            if (Res == ExceptionValue) {
                 Exception = true;
+                NEPred = GuardInterp->GetNoExceptionPredicate();
                 return nullptr;
             } else if (Res == 0) {
                 return nullptr;
             } else {
-                auto OutState = ExecuteCommand(Cmd, InputState);
+                auto OutState = ExecuteCommand(Cmd, InputState, NEPred);
                 if (OutState == nullptr) {
                     Exception = true;
                     return nullptr;
@@ -375,173 +382,16 @@ namespace ESMC {
             }
         }
 
-        // inline set<ExpT> LTSChecker::GatherTermsInIndex(const ExpT& Exp)
-        // {
-        //     auto Mgr = TheLTS->GetMgr();
-
-        //     // first, gather array terms which are indexed by a variable
-        //     auto&& ArrayTerms =
-        //         Mgr->Gather(Exp,
-        //                     [&] (const ExpBaseT* ExpPtr) -> bool
-        //                     {
-        //                         auto ExpAsOp = ExpPtr->As<OpExpression>();
-        //                         if (ExpAsOp == nullptr) {
-        //                             return false;
-        //                         }
-        //                         if (ExpAsOp->GetOpCode() != LTSOps::OpIndex) {
-        //                             return false;
-        //                         }
-        //                         auto const& Children = ExpAsOp->GetChildren();
-        //                         if (!Children[1]->Is<ConstExpression>()) {
-        //                             return true;
-        //                         }
-        //                         return false;
-        //                     });
-
-        //     // Now, gather the terms used as index
-        //     set<ExpT> Retval;
-        //     for (auto const& ArrayTerm : ArrayTerms) {
-        //         auto ExpAsOp = ArrayTerm->SAs<OpExpression>();
-        //         auto const& Children = ExpAsOp->GetChildren();
-        //         Retval.insert(Children[1]);
-        //     }
-
-        //     return Retval;
-        // }
-
-        // inline void LTSChecker::MakeIndexTermInvariants(const ExpT& Precondition,
-        //                                                 const set<ExpT>& IndexTerms)
-        // {
-        //     auto Mgr = TheLTS->GetMgr();
-        //     for (auto const& IndexTerm : IndexTerms) {
-        //         auto const& IndexType = IndexTerm->GetType();
-        //         if (!IndexType->Is<SymmetricType>()) {
-        //             continue;
-        //         }
-
-        //         // It is a symmetric type
-        //         auto Invar = Mgr->MakeExpr(LTSOps::OpEQ, IndexTerm,
-        //                                    Mgr->MakeVal(IndexType->GetClearValue(),
-        //                                                 IndexType));
-        //         Invar = Mgr->MakeExpr(LTSOps::OpNOT, Invar);
-        //         Invar = Mgr->MakeExpr(LTSOps::OpIMPLIES, Precondition, Invar);
-        //         Invar = Mgr->Simplify(Invar);
-        //         BoundsInvariants.insert(Invar);
-        //     }
-        // }
-
-        // inline void LTSChecker::MakeBoundsInvariants()
-        // {
-        //     auto Mgr = TheLTS->GetMgr();
-        //     // First, ALL index terms used in guards must never be undef
-        //     for (auto const& Cmd : GuardedCommands) {
-        //         auto const& Guard = Cmd->GetGuard();
-        //         auto&& IndexTerms = GatherTermsInIndex(Guard);
-        //         MakeIndexTermInvariants(Mgr->MakeTrue(), IndexTerms);
-        //     }
-
-        //     // Second, IF the guard of a guarded command is true, then ALL
-        //     // the index terms used in the LHS or RHS of updates can never
-        //     // be undef
-
-        //     for (auto const& Cmd : GuardedCommands) {
-        //         auto const& Guard = Cmd->GetGuard();
-        //         auto const& Updates = Cmd->GetUpdates();
-
-        //         for (auto const& Update : Updates) {
-        //             auto const& LHS = Update->GetLHS();
-        //             auto const& RHS = Update->GetRHS();
-
-        //             auto&& IndexTermsLHS = GatherTermsInIndex(LHS);
-        //             MakeIndexTermInvariants(Guard, IndexTermsLHS);
-        //             auto&& IndexTermsRHS = GatherTermsInIndex(RHS);
-        //             MakeIndexTermInvariants(Guard, IndexTermsRHS);
-        //         }
-        //     }
-
-        //     // Third, IF the guard of a guarded command is true, then
-        //     // the RHS of every update to a range typed term must be within
-        //     // the bounds of the range type
-
-        //     for (auto const& Cmd : GuardedCommands) {
-        //         auto const& Guard = Cmd->GetGuard();
-        //         auto const& Updates = Cmd->GetUpdates();
-
-        //         for (auto const& Update : Updates) {
-        //             auto const& LHS = Update->GetLHS();
-        //             auto const& RHS = Update->GetRHS();
-
-        //             auto LValType = LHS->GetType();
-        //             if (!LValType->Is<RangeType>()) {
-        //                 continue;
-        //             }
-
-        //             // This is a range typed update
-        //             auto TypeAsRange = LValType->SAs<RangeType>();
-        //             auto RangeLow = TypeAsRange->GetLow();
-        //             auto RangeHigh = TypeAsRange->GetHigh();
-
-        //             auto LowVal = Mgr->MakeVal(to_string(RangeLow), TypeAsRange);
-        //             auto HighVal = Mgr->MakeVal(to_string(RangeHigh), TypeAsRange);
-
-        //             auto LowConstraint = Mgr->MakeExpr(LTSOps::OpGE, RHS, LowVal);
-        //             auto HighConstraint = Mgr->MakeExpr(LTSOps::OpLE, RHS, HighVal);
-
-        //             auto BoundsConstraint = Mgr->MakeExpr(LTSOps::OpAND, LowConstraint,
-        //                                                   HighConstraint);
-        //             BoundsConstraint = Mgr->MakeExpr(LTSOps::OpIMPLIES, Guard, BoundsConstraint);
-        //             auto Simplified = Mgr->Simplify(BoundsConstraint);
-        //             BoundsInvariants.insert(Simplified);
-        //         }
-        //     }
-
-        //     // Finally, it must be possible to evaluate the invariant
-        //     // on ANY state, without exception
-        //     auto&& IndexTerms = GatherTermsInIndex(TheLTS->InvariantExp);
-        //     MakeIndexTermInvariants(Mgr->MakeTrue(), IndexTerms);
-        //     set<ExpT> SimplifiedBoundsInvars;
-
-        //     for (auto const& Invar : BoundsInvariants) {
-        //         SimplifiedBoundsInvars.insert(Mgr->Simplify(Invar));
-        //     }
-
-        //     BoundsInvariants = SimplifiedBoundsInvars;
-
-        //     // compile and lower the invariants
-        //     for (auto const& Invar : BoundsInvariants) {
-        //         Compiler->CompileExp(Invar, TheLTS);
-        //         LoweredBoundsInvars[Invar] = TransformArrayRValue(Invar);
-        //     }
-        // }
-
-        inline void LTSChecker::RecordErrorState(const StateVec* ErrorState)
+        inline bool LTSChecker::RecordErrorState(const StateVec* ErrorState,
+                                                 const ExpT& BlownInvariant,
+                                                 u32 MaxErrors)
         {
-            // if (ErrorStates.find(ErrorState) != ErrorStates.end()) {
-            //     return;
-            // }
-
-            // bool FoundBlown = false;
-            // for (auto const& Invar : BoundsInvariants) {
-            //     auto Interp = Invar->ExtensionData.Interp;
-            //     auto Res = Interp->Evaluate(ErrorState);
-            //     if (Res == UndefValue) {
-            //         continue;
-            //     } else if (Res == 0) {
-            //         FoundBlown = true;
-            //         ErrorStates[ErrorState] = Invar;
-            //         break;
-            //     }
-            // }
-
-            // if (!FoundBlown) {
-            //     ostringstream sstr;
-            //     Printer->PrintState(ErrorState, sstr);
-            //     throw InternalError((string)"Could not find the bounds invariant that " +
-            //                         "was blown in call to LTSChecker::RecordErrorState()\n" +
-            //                         "The State:\n" + sstr.str() + "\nCould not find bounds " +
-            //                         "invariant that was blown for the state listed above.\n" +
-            //                         "At: " + __FILE__ + ":" + to_string(__LINE__));
-            // }
+            if (ErrorStates.find(ErrorState) != ErrorStates.end()) {
+                return true;
+            } else {
+                ErrorStates[ErrorState] = BlownInvariant;
+                return (ErrorStates.size() < MaxErrors);
+            }
         }
 
         LTSChecker::LTSChecker(LabelledTS* TheLTS)
@@ -633,9 +483,11 @@ namespace ESMC {
         }
 
         inline const GCmdRef& LTSChecker::GetNextEnabledCmd(StateVec* State, i64& LastFired,
-                                                            bool& Exception)
+                                                            bool& Exception, ExpT& NEPred)
         {
             Exception = false;
+            NEPred = ExpT::NullPtr;
+
             set<u32>::iterator it;
             if (LastFired == -1) {
                 it = InterpretedCommands.begin();
@@ -645,9 +497,11 @@ namespace ESMC {
             while (it != InterpretedCommands.end()) {
                 auto CurCmdID = *it;
                 auto const& Guard = GuardedCommands[CurCmdID]->GetGuard();
-                auto GRes = Guard->ExtensionData.Interp->Evaluate(State);
-                if (GRes == UndefValue) {
+                auto Interp = Guard->ExtensionData.Interp;
+                auto GRes = Interp->Evaluate(State);
+                if (GRes == ExceptionValue) {
                     Exception = true;
+                    NEPred = Interp->GetNoExceptionPredicate();
                     return GCmdRef::NullPtr;
                 } else if (GRes != 0) {
                     LastFired = CurCmdID;
@@ -663,6 +517,7 @@ namespace ESMC {
             stack<DFSStackEntry> DFSStack;
             AQS->InsertInitState(Root);
             DFSStack.push(DFSStackEntry(Root));
+            auto const& Invar = TheLTS->GetInvariant();
 
             while (DFSStack.size() > 0) {
                 auto& CurEntry = DFSStack.top();
@@ -679,17 +534,16 @@ namespace ESMC {
                 // StateVec* TempNextState = nullptr;
 
                 bool Exception = false;
-                auto const& Cmd = GetNextEnabledCmd(State, LastFired, Exception);
+                ExpT NEPred = ExpT::NullPtr;
+                auto const& Cmd = GetNextEnabledCmd(State, LastFired, Exception, NEPred);
 
                 if (Exception) {
-                    RecordErrorState(State);
-                    if (ErrorStates.size() >= NumErrors) {
+                    if (!RecordErrorState(State, NEPred, NumErrors)) {
                         return;
                     }
                 } else if (Cmd == GCmdRef::NullPtr) {
                     if (Deadlocked) {
-                        ErrorStates[State] = DeadlockFreeInvariant;
-                        if (ErrorStates.size() >= NumErrors) {
+                        if (!RecordErrorState(State, DeadlockFreeInvariant, NumErrors)) {
                             return;
                         }
                     }
@@ -700,15 +554,14 @@ namespace ESMC {
                 }
 
                 // Successors remain to be explored
-                NextState = ExecuteCommand(Cmd, State);
+                NextState = ExecuteCommand(Cmd, State, NEPred);
 
                 if (NextState == nullptr) {
                     // An exception was encountered firing this
                     // command on the State. Store it, and pop from
                     // stack, since only one error is remembered
                     // per state
-                    RecordErrorState(State);
-                    if (ErrorStates.size() >= NumErrors) {
+                    if (!RecordErrorState(State, NEPred, NumErrors)) {
                         return;
                     }
                     DFSStack.pop();
@@ -752,18 +605,16 @@ namespace ESMC {
                     DFSStack.push(DFSStackEntry(CanonState));
 
                     // This is a new state, check for error
-                    auto const& Invar = TheLTS->GetInvariant();
                     auto Interp = Invar->ExtensionData.Interp;
                     auto InvarRes = Interp->Evaluate(CanonState);
-                    if (InvarRes == UndefValue) {
-                        RecordErrorState(CanonState);
-                        if (ErrorStates.size() >= NumErrors) {
+                    if (InvarRes == ExceptionValue) {
+                        if (!RecordErrorState(CanonState, Interp->GetNoExceptionPredicate(),
+                                              NumErrors)) {
                             return;
                         }
                         DFSStack.pop();
                     } else if (InvarRes == 0) {
-                        ErrorStates[CanonState] = Invar;
-                        if (ErrorStates.size() >= NumErrors) {
+                        if (!RecordErrorState(CanonState, LoweredInvariant, NumErrors)) {
                             return;
                         }
                         DFSStack.pop();
@@ -787,6 +638,8 @@ namespace ESMC {
         inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots, u32 NumErrors)
         {
             deque<StateVec*> BFSQueue(Roots.begin(), Roots.end());
+            auto const& Invar = TheLTS->GetInvariant();
+
             for (auto State : BFSQueue) {
                 AQS->InsertInitState(State);
             }
@@ -805,12 +658,12 @@ namespace ESMC {
 
                     StateVec* NextState = nullptr;
                     bool Exception = false;
+                    ExpT NEPred;
 
-                    NextState = TryExecuteCommand(Cmd, CurState, Exception);
+                    NextState = TryExecuteCommand(Cmd, CurState, Exception, NEPred);
                     if (Exception) {
                         Deadlocked = false;
-                        RecordErrorState(CurState);
-                        if (ErrorStates.size() >= NumErrors) {
+                        if (!RecordErrorState(CurState, NEPred, NumErrors)) {
                             return;
                         }
                         // Already an error. Don't try any more commands
@@ -840,22 +693,18 @@ namespace ESMC {
                             BFSQueue.push_back(CanonNextState);
 
                             // New state, check for errors;
-                            auto const& Invar = TheLTS->GetInvariant();
                             auto Interp = Invar->ExtensionData.Interp;
                             auto InvarRes = Interp->Evaluate(CanonNextState);
-                            if (InvarRes == UndefValue) {
-                                RecordErrorState(CanonNextState);
-                                if (ErrorStates.size() >= NumErrors) {
+                            if (InvarRes == ExceptionValue) {
+                                if (!RecordErrorState(CanonNextState, LoweredInvariant, NumErrors)) {
                                     return;
                                 }
                                 // Remove it from the queue
                                 BFSQueue.pop_back();
-
                             } else if (InvarRes == 0) {
                                 // Again, remember this state, but continue
                                 // on with the AQS construction
-                                ErrorStates[CanonNextState] = Invar;
-                                if (ErrorStates.size() >= NumErrors) {
+                                if (!RecordErrorState(CanonNextState, LoweredInvariant, NumErrors)) {
                                     return;
                                 }
                                 BFSQueue.pop_back();
@@ -865,8 +714,7 @@ namespace ESMC {
                 }
 
                 if (Deadlocked) {
-                    ErrorStates[CurState] = DeadlockFreeInvariant;
-                    if (ErrorStates.size() >= NumErrors) {
+                    if (!RecordErrorState(CurState, DeadlockFreeInvariant, NumErrors)) {
                         return;
                     }
                 }
@@ -901,7 +749,10 @@ namespace ESMC {
 
             for (auto const& ISGen : ISGens) {
                 auto CurState = Factory->MakeState();
-                ApplyUpdates(ISGen, ZeroState, CurState);
+                ExpT NEPred;
+                if (!ApplyUpdates(ISGen->GetUpdates(), ZeroState, CurState, NEPred)) {
+                    throw ESMCError((string)"Could not construct initial state!");
+                }
 
                 // cout << "Initial State:" << endl;
                 // cout << "--------------------------------------------------------" << endl;
@@ -939,7 +790,7 @@ namespace ESMC {
             return true;
         }
 
-        const unordered_map<const StateVec*, ExpT> LTSChecker::GetAllErrorStates() const
+        const unordered_map<const StateVec*, ExpT>& LTSChecker::GetAllErrorStates() const
         {
             return ErrorStates;
         }
@@ -962,11 +813,7 @@ namespace ESMC {
                                 "not marked as an error state by the checker");
             }
             auto const& BlownInvariant = it->second;
-            if (BlownInvariant == DeadlockFreeInvariant) {
-                return TraceBase::MakeDeadlockViolation(ErrorState, this);
-            } else {
-                return TraceBase::MakeSafetyViolation(ErrorState, this, BlownInvariant);
-            }
+            return TraceBase::MakeBoundsViolation(ErrorState, this, BlownInvariant);
         }
 
         void LTSChecker::ClearAQS()

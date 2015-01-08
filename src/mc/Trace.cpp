@@ -46,6 +46,7 @@
 #include "../uflts/LTSAutomaton.hpp"
 #include "../uflts/LTSEFSMBase.hpp"
 #include "../uflts/LTSAssign.hpp"
+#include "../uflts/LTSTransformers.hpp"
 #include "../symmetry/SymmCanonicalizer.hpp"
 
 #include "StateVec.hpp"
@@ -83,7 +84,8 @@ namespace ESMC {
         inline const StateVec*
         TraceBase::UnwindPermPath(AQSPermPath* PermPath,
                                   LTSChecker* Checker,
-                                  vector<TraceElemT>& PathElems)
+                                  vector<TraceElemT>& PathElems,
+                                  u32& InvPermAlongPathOut)
         {
             auto TheLTS = Checker->TheLTS;
             auto TheCanonicalizer = Checker->TheCanonicalizer;
@@ -127,7 +129,8 @@ namespace ESMC {
 
                     // Ignore the exception here
                     bool Exception = false;
-                    auto CandidateState = TryExecuteCommand(Cmd, CurUnwoundState, Exception);
+                    ExpT NEPred;
+                    auto CandidateState = TryExecuteCommand(Cmd, CurUnwoundState, Exception, NEPred);
                     if (CandidateState == nullptr) {
                         continue;
                     }
@@ -156,7 +159,18 @@ namespace ESMC {
                 // it's part of the return value
                 CurUnwoundState = NextUnsortedState;
             }
+
+            InvPermAlongPathOut = InvPermAlongPath;
             return UnwoundOrigin;
+        }
+
+        inline const StateVec*
+        TraceBase::UnwindPermPath(AQSPermPath* PermPath,
+                                  LTSChecker* Checker,
+                                  vector<TraceElemT>& PathElems)
+        {
+            u32 Unused = 0;
+            return UnwindPermPath(PermPath, Checker, PathElems, Unused);
         }
 
         // InvPermAlongPathOut is only a return value
@@ -198,8 +212,9 @@ namespace ESMC {
                 for (auto const& Cmd : GuardedCommands) {
                     // we ignore the exception here
                     bool Exception = false;
+                    ExpT NEPred;
                     auto CandidateSV = TryExecuteCommand(Cmd, CurUnwoundState->GetSVPtr(),
-                                                         Exception);
+                                                         Exception, NEPred);
                     if (CandidateSV == nullptr) {
                         continue;
                     }
@@ -353,8 +368,9 @@ namespace ESMC {
 
                         // We ignore the exception here
                         bool Exception = false;
+                        ExpT NEPred;
                         auto CandidateSV = TryExecuteCommand(Cmd, CurUnsortedPS->GetSVPtr(),
-                                                             Exception);
+                                                             Exception, NEPred);
                         if (CandidateSV == nullptr) {
                             continue;
                         }
@@ -497,8 +513,9 @@ namespace ESMC {
 
                             // We ignore the exception here
                             bool Exception = false;
+                            ExpT NEPred;
                             auto NS = TryExecuteCommand(GuardedCmds[SatCmd],
-                                                        PS->GetSVPtr(), Exception);
+                                                        PS->GetSVPtr(), Exception, NEPred);
                             if (NS != nullptr) {
                                 NS->Recycle();
                                 FoundOne = true;
@@ -524,6 +541,15 @@ namespace ESMC {
             return MakeSafetyViolation(PPath, Checker, BlownInvariant);
         }
 
+        SafetyViolation* TraceBase::MakeBoundsViolation(const StateVec* ErrorState,
+                                                        LTSChecker* Checker,
+                                                        const ExpT& BlownInvariant)
+        {
+            auto TheAQS = Checker->AQS;
+            auto PPath = TheAQS->FindPath(ErrorState);
+            return MakeSafetyViolation(PPath, Checker, BlownInvariant);
+        }
+
         DeadlockViolation* TraceBase::MakeDeadlockViolation(const StateVec* ErrorState,
                                                             LTSChecker* Checker)
         {
@@ -541,6 +567,27 @@ namespace ESMC {
             delete PermPath;
             return new SafetyViolation(UnwoundInitState, PathElems,
                                        Checker->Printer, BlownInvariant);
+        }
+
+        SafetyViolation* TraceBase::MakeBoundsViolation(AQSPermPath* PermPath,
+                                                        LTSChecker* Checker,
+                                                        const ExpT& BoundsConstraint)
+        {
+            vector<TraceElemT> PathElems;
+            u32 FinalInvPerm = 0;
+            auto UnwoundInitState = UnwindPermPath(PermPath, Checker,
+                                                   PathElems, FinalInvPerm);
+            auto Mgr = BoundsConstraint->GetMgr();
+            auto PermSet = Checker->TheCanonicalizer->GetPermSet();
+            auto const& Permutation = PermSet->GetIterator(FinalInvPerm).GetPerm();
+            auto const& TypeOffsets = Checker->TheLTS->GetSymmTypeOffsets();
+
+            auto PermConstraint =
+                Mgr->ApplyTransform<ESMC::LTS::Detail::ExpressionPermuter>(BoundsConstraint,
+                                                                           Permutation,
+                                                                           TypeOffsets);
+            return new SafetyViolation(UnwoundInitState, PathElems,
+                                       Checker->Printer, PermConstraint);
         }
 
         DeadlockViolation* TraceBase::MakeDeadlockViolation(AQSPermPath* PermPath,
@@ -642,9 +689,10 @@ namespace ESMC {
                                         for (auto SatCmdID : SatCmds) {
                                             // we ignore exceptions here
                                             bool Exception = false;
+                                            ExpT NEPred;
                                             auto NS = TryExecuteCommand(GuardedCmds[SatCmdID],
                                                                         State->GetSVPtr(),
-                                                                        Exception);
+                                                                        Exception, NEPred);
                                             if (NS != nullptr) {
                                                 NS->Recycle();
                                                 return false;
@@ -827,6 +875,11 @@ namespace ESMC {
             Printer->PrintState(PrevState, sstr);
             sstr << "-----------------------------------------------------" << endl << endl;
             return sstr.str();
+        }
+
+        const ExpT& SafetyViolation::GetInvariantBlown() const
+        {
+            return BlownInvariant;
         }
 
         DeadlockViolation::DeadlockViolation(const StateVec* InitialState,

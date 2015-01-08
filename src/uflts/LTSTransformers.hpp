@@ -40,9 +40,10 @@
 
 #include "../common/ESMCFwdDecls.hpp"
 
+#include "LTSDecls.hpp"
+
 namespace ESMC {
     namespace LTS {
-
         namespace Detail {
 
             struct VarGatherer

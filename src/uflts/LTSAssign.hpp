@@ -52,6 +52,8 @@ namespace ESMC {
         protected:
             ExpT LHS;
             ExpT RHS;
+            ExpT BoundsConstraint;
+            mutable ExpT LoweredBoundsConstraint;
 
         public:
             LTSAssignBase();
@@ -60,6 +62,10 @@ namespace ESMC {
 
             const ExpT& GetLHS() const;
             const ExpT& GetRHS() const;
+            const ExpT& GetBoundsConstraint() const;
+            const ExpT& GetLoweredBoundsConstraint() const;
+            void SetLoweredBoundsConstraint(const ExpT& Constraint) const;
+
             virtual string ToString() const = 0;
             virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const = 0;
 

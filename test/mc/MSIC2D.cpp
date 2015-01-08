@@ -1448,6 +1448,7 @@ int main()
     }
 
     cout << "State vector size is " << TheLTS->GetStateVectorSize() << " bytes." << endl;
+    auto Checker = new LTSChecker(TheLTS);
 
     cout << "Guarded Commands:" << endl;
     auto const& GCmds = TheLTS->GetGuardedCmds();
@@ -1458,11 +1459,7 @@ int main()
     cout << "Initial State Generators:" << endl;
     auto const& InitStateGens = TheLTS->GetInitStateGenerators();
     for (auto const& InitStateGen : InitStateGens) {
-        cout << "InitState {" << endl;
-        for (auto const& Update : InitStateGen) {
-            cout << "    " << Update->ToString() << endl;
-        }
-        cout << "}" << endl;
+        cout << InitStateGen->ToString() << endl;
     }
 
     cout << "Invariant:" << endl;
@@ -1474,7 +1471,6 @@ int main()
     //     cout << BufferExp.second->ToString() << endl;
     // }
 
-    auto Checker = new LTSChecker(TheLTS);
 
     // Create the liveness monitors
 

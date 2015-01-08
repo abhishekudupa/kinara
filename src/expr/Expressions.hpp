@@ -2497,8 +2497,9 @@ namespace ESMC {
         ExprMgr<E, S>::SimplifyFP(const ExpT &Exp)
         {
             auto OldExp = Exp;
-            ExpT SimpExp = ExpT::NullPtr;
+            ExpT SimpExp = OldExp;
             do {
+                OldExp = SimpExp;
                 SimpExp = Simplify(OldExp);
             } while (SimpExp != OldExp);
             return SimpExp;

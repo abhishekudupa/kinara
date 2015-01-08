@@ -49,7 +49,11 @@ namespace ESMC {
 
         using namespace ESMC::LTS;
 
-        extern const i64 UndefValue;
+        extern const i64 ExceptionValue;
+
+        enum class UpdateStatusT {
+            UpdateOK, EvalException, BoundsViolation
+        };
 
         typedef const ExpressionBase<LTSExtensionT, LTSTermSemanticizer>* ExpPtrT;
 
@@ -145,15 +149,15 @@ namespace ESMC {
             // Return success or failure
             // Failure could be due to undef values
             // or out of bounds values
-            virtual bool Write(i64 Value, const StateVec* InStateVector,
-                               StateVec* OutStateVector) const
+            virtual UpdateStatusT Write(i64 Value, const StateVec* InStateVector,
+                                        StateVec* OutStateVector, ExpT& NEPred) const
                 __attribute__ ((warn_unused_result)) = 0;
 
             virtual i64 GetOffset(const StateVec* StateVector) const = 0;
 
             // Return success or failure, same as Write
-            bool Update(const RValueInterpreter* RHS, const StateVec* InStateVector,
-                        StateVec* OutStateVector) const
+            UpdateStatusT Update(const RValueInterpreter* RHS, const StateVec* InStateVector,
+                                 StateVec* OutStateVector, ExpT& NEPred) const
                 __attribute__ ((warn_unused_result));
         };
 
@@ -182,8 +186,8 @@ namespace ESMC {
 
             virtual i64 GetOffset(const StateVec* StateVector) const override;
             virtual i64 Evaluate(const StateVec* StateVector) const override;
-            virtual bool Write(i64 Value, const StateVec* InStateVector,
-                               StateVec* OutStateVector) const override;
+            virtual UpdateStatusT Write(i64 Value, const StateVec* InStateVector,
+                                        StateVec* OutStateVector, ExpT& NEPred) const override;
         };
 
         namespace Detail {
@@ -436,8 +440,8 @@ namespace ESMC {
             bool IsScalar() const;
 
             virtual i64 Evaluate(const StateVec* StateVector) const override;
-            virtual bool Write(i64 Value, const StateVec* InStateVector,
-                               StateVec* StateVector) const override;
+            virtual UpdateStatusT Write(i64 Value, const StateVec* InStateVector,
+                                        StateVec* StateVector, ExpT& NEPred) const override;
             virtual i64 GetOffset(const StateVec* StateVector) const override;
         };
 
@@ -453,8 +457,8 @@ namespace ESMC {
             virtual ~FieldInterpreter();
 
             virtual i64 Evaluate(const StateVec* StateVector) const override;
-            virtual bool Write(i64 Value, const StateVec* InStateVector,
-                               StateVec* OutStateVector) const override;
+            virtual UpdateStatusT Write(i64 Value, const StateVec* InStateVector,
+                                        StateVec* OutStateVector, ExpT& NEPred) const override;
             virtual i64 GetOffset(const StateVec* StateVector) const override;
         };
 
@@ -466,8 +470,11 @@ namespace ESMC {
 
             inline bool HasMsgLValue(const ExpT& Exp, LabelledTS* TheLTS);
 
+            inline vector<LTSAssignRef>
+            ArrayTransformAssignments(const vector<LTSAssignRef>& Updates, MgrT* Mgr) const;
             LTSAssignRef ArrayTransformAssignment(const ExpT& LHS,
-                                                  const ExpT& RHS) const;
+                                                  const ExpT& RHS,
+                                                  const MgrT::SubstMapT& AccumMap) const;
 
 
         public:

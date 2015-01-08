@@ -545,25 +545,17 @@ namespace ESMC {
 
                 for (auto UpdateIterator = Updates.rbegin();
                      UpdateIterator != Updates.rend(); ++UpdateIterator) {
-
-                    auto it = SubstMapForTransition.find((*UpdateIterator)->GetLHS());
-
-                    if (it != SubstMapForTransition.end()) {
-                        MgrT::SubstMapT LocalSubst;
-                        LocalSubst[(*UpdateIterator)->GetLHS()] = (*UpdateIterator)->GetRHS();
-                        auto NewSubst = Mgr->TermSubstitute(LocalSubst, it->second);
-                        SubstMapForTransition[it->first] = NewSubst;
-                    } else {
-                        SubstMapForTransition[(*UpdateIterator)->GetLHS()] =
-                            (*UpdateIterator)->GetRHS();
-                    }
+                    auto const& Update = *UpdateIterator;
+                    auto const& LHS = Update->GetLHS();
+                    auto const& RHS = Update->GetRHS();
+                    SubstMapForTransition[LHS] = RHS;
                 }
 
                 auto const& Guard = Cmd->GetLoweredGuard();
 
                 Phi = Mgr->TermSubstitute(SubstMapForTransition, Phi);
                 Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, Guard, Phi);
-                Phi = Mgr->Simplify(Phi);
+                Phi = Mgr->SimplifyFP(Phi);
             }
 
             FastExpSetT Retval;
@@ -571,13 +563,13 @@ namespace ESMC {
 
             for (auto const& InitState : InitStateGenerators) {
                 MgrT::SubstMapT InitStateSubstMap;
-                for (auto const& Update : InitState) {
+                for (auto const& Update : InitState->GetLoweredUpdates()) {
                     auto LHS = Update->GetLHS();
                     auto RHS = Update->GetRHS();
                     InitStateSubstMap[LHS] = RHS;
                 }
                 auto NewPhi = Mgr->TermSubstitute(InitStateSubstMap, Phi);
-                NewPhi = Mgr->Simplify(NewPhi);
+                NewPhi = Mgr->SimplifyFP(NewPhi);
                 Retval.insert(NewPhi);
             }
             return Retval;
@@ -719,9 +711,9 @@ namespace ESMC {
             for (auto const& InitState : InitStateGenerators) {
                 MgrT::SubstMapT InitStateSubstMap;
                 vector<ExpT> InitialStateConjuncts;
-                for (auto update: InitState) {
-                    auto LHS = update->GetLHS();
-                    auto RHS = update->GetRHS();
+                for (auto const& Update : InitState->GetLoweredUpdates()) {
+                    auto LHS = Update->GetLHS();
+                    auto RHS = Update->GetRHS();
                     InitStateSubstMap[LHS] = RHS;
                 }
                 auto Mgr = Phi->GetMgr();

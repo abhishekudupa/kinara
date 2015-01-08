@@ -59,7 +59,7 @@ namespace ESMC {
         using namespace ESMC::LTS;
         using ESMC::LTS::Detail::ArrayRValueTransformer;
 
-        const i64 UndefValue = INT64_MAX;
+        const i64 ExceptionValue = INT64_MAX;
 
         OffsetCompiler::OffsetCompiler()
             : VisitorBaseT("OffsetCompiler")
@@ -184,6 +184,7 @@ namespace ESMC {
             : Exp(Exp), NoExceptionPredicate(NoExceptionPredicate),
               TrueExp(Exp->GetMgr()->MakeTrue())
         {
+            // Nothing here
         }
 
         RValueInterpreter::~RValueInterpreter()
@@ -401,11 +402,17 @@ namespace ESMC {
             return Size;
         }
 
-        bool LValueInterpreter::Update(const RValueInterpreter *RHS,
-                                       const StateVec *InStateVector,
-                                       StateVec *OutStateVector) const
+        UpdateStatusT LValueInterpreter::Update(const RValueInterpreter* RHS,
+                                                const StateVec *InStateVector,
+                                                StateVec *OutStateVector,
+                                                ExpT& NEPred) const
         {
-            return Write(RHS->Evaluate(InStateVector), InStateVector, OutStateVector);
+            auto NewVal = RHS->Evaluate(InStateVector);
+            if (NewVal == ExceptionValue) {
+                NEPred = RHS->GetNoExceptionPredicate();
+                return UpdateStatusT::EvalException;
+            }
+            return Write(NewVal, InStateVector, OutStateVector, NEPred);
         }
 
         CompiledConstInterpreter::CompiledConstInterpreter(i64 Value, ExpPtrT Exp)
@@ -452,8 +459,8 @@ namespace ESMC {
             return RawVal + Low;
         }
 
-        bool CompiledLValueInterpreter::Write(i64 Value, const StateVec* InStateVector,
-                                              StateVec* StateVector) const
+        UpdateStatusT CompiledLValueInterpreter::Write(i64 Value, const StateVec* InStateVector,
+                                                       StateVec* StateVector, ExpT& NEPred) const
         {
             i64 RawValue = 0;
             if (!Scalar) {
@@ -461,7 +468,7 @@ namespace ESMC {
             }
 
             if (Value < Low || Value > High) {
-                return false;
+                return UpdateStatusT::BoundsViolation;
             } else {
                 RawValue = Value - Low;
             }
@@ -473,7 +480,7 @@ namespace ESMC {
                 StateVector->WriteWord(Offset, (u32)RawValue);
             }
 
-            return true;
+            return UpdateStatusT::UpdateOK;
         }
 
         i64 CompiledLValueInterpreter::GetOffset(const StateVec* StateVector) const
@@ -685,8 +692,8 @@ namespace ESMC {
         i64 NOTInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            if (SubEvals[0] == UndefValue) {
-                return UndefValue;
+            if (SubEvals[0] == ExceptionValue) {
+                return ExceptionValue;
             } else if (SubEvals[0] == 0) {
                 return 1;
             } else {
@@ -719,8 +726,8 @@ namespace ESMC {
         i64 ITEInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            if (SubEvals[0] == UndefValue) {
-                return UndefValue;
+            if (SubEvals[0] == ExceptionValue) {
+                return ExceptionValue;
             } else if (SubEvals[0] == 0) {
                 return SubEvals[1];
             } else {
@@ -760,14 +767,14 @@ namespace ESMC {
             bool Exception = false;
             EvaluateSubInterps(StateVector);
             for (auto SubEval : SubEvals) {
-                if (SubEval == UndefValue) {
+                if (SubEval == ExceptionValue) {
                     Exception = true;
                 } else if (SubEval != 0) {
                     return 1;
                 }
             }
 
-            return (Exception ? UndefValue : 0);
+            return (Exception ? ExceptionValue : 0);
         }
 
         ANDInterpreter::ANDInterpreter(const vector<RValueInterpreter*>& SubInterps,
@@ -801,14 +808,14 @@ namespace ESMC {
             bool Exception = false;
             EvaluateSubInterps(StateVector);
             for (auto SubEval : SubEvals) {
-                if (SubEval == UndefValue) {
+                if (SubEval == ExceptionValue) {
                     Exception = true;
                 } else if (SubEval == 0) {
                     return 0;
                 }
             }
 
-            return (Exception ? UndefValue : 1);
+            return (Exception ? ExceptionValue : 1);
         }
 
         IMPLIESInterpreter::IMPLIESInterpreter(const vector<RValueInterpreter*>& SubInterps,
@@ -835,18 +842,18 @@ namespace ESMC {
         i64 IMPLIESInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            if (SubEvals[0] == UndefValue) {
-                if (SubEvals[1] != UndefValue && SubEvals[1] != 0) {
+            if (SubEvals[0] == ExceptionValue) {
+                if (SubEvals[1] != ExceptionValue && SubEvals[1] != 0) {
                     return 1;
                 } else {
-                    return UndefValue;
+                    return ExceptionValue;
                 }
             } else if (SubEvals[0] == 0) {
                 return 1;
             } else {
                 // antecedent is true
-                if (SubEvals[1] == UndefValue) {
-                    return UndefValue;
+                if (SubEvals[1] == ExceptionValue) {
+                    return ExceptionValue;
                 } else {
                     return SubEvals[1];
                 }
@@ -868,8 +875,8 @@ namespace ESMC {
         i64 IFFInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
-                return UndefValue;
+            if (SubEvals[0] == ExceptionValue || SubEvals[1] == ExceptionValue) {
+                return ExceptionValue;
             } else {
                 return (SubEvals[0] == SubEvals[1]);
             }
@@ -890,8 +897,8 @@ namespace ESMC {
         i64 XORInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
-                return UndefValue;
+            if (SubEvals[0] == ExceptionValue || SubEvals[1] == ExceptionValue) {
+                return ExceptionValue;
             } else {
                 return (SubEvals[0] != SubEvals[1]);
             }
@@ -916,8 +923,8 @@ namespace ESMC {
 
             for (auto SubEval : SubEvals) {
                 Retval += SubEval;
-                if (SubEval == UndefValue) {
-                    return UndefValue;
+                if (SubEval == ExceptionValue) {
+                    return ExceptionValue;
                 }
             }
             return Retval;
@@ -948,8 +955,8 @@ namespace ESMC {
                 } else {
                     Retval -= SubEval;
                 }
-                if (SubEval == UndefValue) {
-                    return UndefValue;
+                if (SubEval == ExceptionValue) {
+                    return ExceptionValue;
                 }
             }
             return Retval;
@@ -970,8 +977,8 @@ namespace ESMC {
         i64 MINUSInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            if (SubEvals[0] == UndefValue) {
-                return UndefValue;
+            if (SubEvals[0] == ExceptionValue) {
+                return ExceptionValue;
             }
 
             i64 Retval = 0;
@@ -997,8 +1004,8 @@ namespace ESMC {
             i64 Retval = 1;
             for (auto SubEval : SubEvals) {
                 Retval *= SubEval;
-                if (SubEval == UndefValue) {
-                    return UndefValue;
+                if (SubEval == ExceptionValue) {
+                    return ExceptionValue;
                 }
             }
             return Retval;
@@ -1029,8 +1036,11 @@ namespace ESMC {
         i64 DIVInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
-                return UndefValue;
+            if (SubEvals[0] == ExceptionValue || SubEvals[1] == ExceptionValue) {
+                return ExceptionValue;
+            }
+            if (SubEvals[1] == 0) {
+                return ExceptionValue;
             }
             return (SubEvals[0] / SubEvals[1]);
         }
@@ -1060,8 +1070,11 @@ namespace ESMC {
         i64 MODInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
-                return UndefValue;
+            if (SubEvals[0] == ExceptionValue || SubEvals[1] == ExceptionValue) {
+                return ExceptionValue;
+            }
+            if (SubEvals[1] == 0) {
+                return ExceptionValue;
             }
             return (SubEvals[0] % SubEvals[1]);
         }
@@ -1081,8 +1094,8 @@ namespace ESMC {
         i64 GTInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
-                return UndefValue;
+            if (SubEvals[0] == ExceptionValue || SubEvals[1] == ExceptionValue) {
+                return ExceptionValue;
             }
             return (SubEvals[0] > SubEvals[1]);
         }
@@ -1102,8 +1115,8 @@ namespace ESMC {
         i64 GEInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
-                return UndefValue;
+            if (SubEvals[0] == ExceptionValue || SubEvals[1] == ExceptionValue) {
+                return ExceptionValue;
             }
             return (SubEvals[0] >= SubEvals[1]);
         }
@@ -1123,8 +1136,8 @@ namespace ESMC {
         i64 LTInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
-                return UndefValue;
+            if (SubEvals[0] == ExceptionValue || SubEvals[1] == ExceptionValue) {
+                return ExceptionValue;
             }
             return (SubEvals[0] < SubEvals[1]);
         }
@@ -1144,8 +1157,8 @@ namespace ESMC {
         i64 LEInterpreter::Evaluate(const StateVec* StateVector) const
         {
             EvaluateSubInterps(StateVector);
-            if (SubEvals[0] == UndefValue || SubEvals[1] == UndefValue) {
-                return UndefValue;
+            if (SubEvals[0] == ExceptionValue || SubEvals[1] == ExceptionValue) {
+                return ExceptionValue;
             }
             return (SubEvals[0] <= SubEvals[1]);
         }
@@ -1211,8 +1224,8 @@ namespace ESMC {
             }
 
             i64 Offset = GetOffset(StateVector);
-            if (Offset == UndefValue) {
-                return UndefValue;
+            if (Offset == ExceptionValue) {
+                return ExceptionValue;
             }
 
             auto BasePtr = StateVector->GetStateBuffer();
@@ -1230,19 +1243,25 @@ namespace ESMC {
             return RawVal + Low;
         }
 
-        bool IndexInterpreter::Write(i64 Value, const StateVec* InStateVector,
-                                     StateVec* StateVector) const
+        UpdateStatusT IndexInterpreter::Write(i64 Value, const StateVec* InStateVector,
+                                              StateVec* StateVector, ExpT& NEPred) const
         {
             if (!Scalar) {
                 throw ESMCError((string)"WriteScalar() called on non-scalar type");
             }
 
             auto Offset = GetOffset(InStateVector);
-            if (Offset == UndefValue) {
-                return false;
+            if (Offset == ExceptionValue) {
+                NEPred = NoExceptionPredicate;
+                return UpdateStatusT::EvalException;
             }
+
             auto BasePtr = StateVector->GetStateBuffer();
             auto DstPtr = BasePtr + Offset;
+
+            if (Value < Low || Value > High) {
+                return UpdateStatusT::BoundsViolation;
+            }
 
             i64 RawVal = Value - Low;
 
@@ -1254,25 +1273,25 @@ namespace ESMC {
                 *((u32*)(DstPtr)) = (u32)RawVal;
             }
 
-            return true;
+            return UpdateStatusT::UpdateOK;
         }
 
         i64 IndexInterpreter::GetOffset(const StateVec* StateVector) const
         {
             auto BaseOffset = ArrayInterp->GetOffset(StateVector);
-            if (BaseOffset == UndefValue) {
-                return UndefValue;
+            if (BaseOffset == ExceptionValue) {
+                return ExceptionValue;
             }
             auto IndexValue = IndexInterp->Evaluate(StateVector);
             if (IndexSymmetric) {
                 if (IndexValue == 0) {
-                    return UndefValue;
+                    return ExceptionValue;
                 } else {
                     IndexValue = IndexValue - 1;
                 }
             } else if (IndexRange) {
                 if (IndexValue < IndexRangeLow || IndexValue > IndexRangeHigh) {
-                    return UndefValue;
+                    return ExceptionValue;
                 } else {
                     IndexValue = IndexValue - IndexRangeLow;
                 }
@@ -1303,8 +1322,8 @@ namespace ESMC {
             auto BasePtr = StateVector->GetStateBuffer();
 
             auto Offset = GetOffset(StateVector);
-            if (Offset == UndefValue) {
-                return UndefValue;
+            if (Offset == ExceptionValue) {
+                return ExceptionValue;
             }
             auto DstPtr = BasePtr + Offset;
 
@@ -1323,17 +1342,21 @@ namespace ESMC {
         i64 FieldInterpreter::GetOffset(const StateVec* StateVector) const
         {
             auto BaseOffset = RecInterp->GetOffset(StateVector);
-            if (BaseOffset == UndefValue) {
-                return UndefValue;
+            if (BaseOffset == ExceptionValue) {
+                return ExceptionValue;
             }
             return BaseOffset + FieldOffset;
         }
 
-        bool FieldInterpreter::Write(i64 Value, const StateVec* InStateVector,
-                                     StateVec* StateVector) const
+        UpdateStatusT FieldInterpreter::Write(i64 Value, const StateVec* InStateVector,
+                                              StateVec* StateVector, ExpT& NEPred) const
         {
             if (!Scalar) {
                 throw ESMCError((string)"Write() called on non-scalar type");
+            }
+
+            if (Value < Low || Value > High) {
+                return UpdateStatusT::BoundsViolation;
             }
 
             i64 RawVal = Value - Low;
@@ -1341,8 +1364,9 @@ namespace ESMC {
             auto BasePtr = StateVector->GetStateBuffer();
             auto Offset = GetOffset(InStateVector);
 
-            if (Offset == UndefValue) {
-                return false;
+            if (Offset == ExceptionValue) {
+                NEPred = NoExceptionPredicate;
+                return UpdateStatusT::EvalException;
             }
             auto DstPtr = BasePtr + Offset;
 
@@ -1354,7 +1378,7 @@ namespace ESMC {
                 *((u32*)(DstPtr)) = (u32)RawVal;
             }
 
-            return true;
+            return UpdateStatusT::UpdateOK;
         }
 
         LTSCompiler::LTSCompiler()
@@ -1405,15 +1429,14 @@ namespace ESMC {
                 LoweredGuard = Mgr->SimplifyFP(LoweredGuard);
                 GCmd->SetLoweredGuard(LoweredGuard);
 
-                vector<LTSAssignRef> LoweredUpdates;
                 for (auto const& Update : GCmd->GetUpdates()) {
-                    auto LUpdate = ArrayTransformAssignment(Update->GetLHS(),
-                                                            Update->GetRHS());
-                    auto SimpLHS = Mgr->SimplifyFP(LUpdate->GetLHS());
-                    auto SimpRHS = Mgr->SimplifyFP(LUpdate->GetRHS());
-
-                    LoweredUpdates.push_back(new LTSAssignSimple(SimpLHS, SimpRHS));
+                    auto LoweredBoundsConstraint =
+                        Mgr->ApplyTransform<ArrayRValueTransformer>(Update->GetBoundsConstraint());
+                    LoweredBoundsConstraint = Mgr->SimplifyFP(LoweredBoundsConstraint);
+                    Update->SetLoweredBoundsConstraint(LoweredBoundsConstraint);
                 }
+
+                auto&& LoweredUpdates = ArrayTransformAssignments(GCmd->GetUpdates(), Mgr);
                 GCmd->SetLoweredUpdates(LoweredUpdates);
             }
 
@@ -1429,11 +1452,15 @@ namespace ESMC {
                     CompileExp(Update->GetLHS(), TheLTS);
                     CompileExp(Update->GetRHS(), TheLTS);
                 }
+
+                auto&& LoweredUpdates = ArrayTransformAssignments(InitStateGen->GetUpdates(), Mgr);
+                InitStateGen->SetLoweredUpdates(LoweredUpdates);
             }
         }
 
         LTSAssignRef LTSCompiler::ArrayTransformAssignment(const ExpT& LHS,
-                                                           const ExpT& RHS) const
+                                                           const ExpT& RHS,
+                                                           const MgrT::SubstMapT& AccumMap) const
         {
             auto Mgr = LHS->GetMgr();
             if (LHS->Is<VarExpression>()) {
@@ -1444,13 +1471,17 @@ namespace ESMC {
                 auto const& Children = LHSAsOp->GetChildren();
 
                 if (OpCode == LTSOps::OpIndex || OpCode == LTSOps::OpSelect) {
-                    auto StoreExp = Mgr->MakeExpr(LTSOps::OpStore, Children[0],
+                    auto SubstLVal = Mgr->Substitute(AccumMap, Children[0]);
+                    auto StoreExp = Mgr->MakeExpr(LTSOps::OpStore,
+                                                  SubstLVal,
                                                   Children[1], RHS);
-                    return ArrayTransformAssignment(Children[0], StoreExp);
+                    return ArrayTransformAssignment(Children[0], StoreExp, AccumMap);
                 } else if (OpCode == LTSOps::OpField || OpCode == LTSOps::OpProject) {
-                    auto UpdateExp = Mgr->MakeExpr(LTSOps::OpUpdate, Children[0],
+                    auto SubstLVal = Mgr->Substitute(AccumMap, Children[0]);
+                    auto UpdateExp = Mgr->MakeExpr(LTSOps::OpUpdate,
+                                                   SubstLVal,
                                                    Children[1], RHS);
-                    return ArrayTransformAssignment(Children[0], UpdateExp);
+                    return ArrayTransformAssignment(Children[0], UpdateExp, AccumMap);
                 } else {
                     throw InternalError((string)"Non LValue obtained for LHS in " +
                                         "LTSCompiler::ArrayTransformAssignment()");
@@ -1459,6 +1490,30 @@ namespace ESMC {
                 throw InternalError((string)"Non LValue obtained for LHS in " +
                                     "LTSCompiler::ArrayTransformAssignment()");
             }
+        }
+
+        inline vector<LTSAssignRef>
+        LTSCompiler::ArrayTransformAssignments(const vector<LTSAssignRef>& Updates, MgrT* Mgr) const
+        {
+            MgrT::SubstMapT AccumMap;
+            for (auto const& Update : Updates) {
+                auto XFormedLHS =
+                    Mgr->ApplyTransform<ArrayRValueTransformer>(Update->GetLHS());
+                auto XFormedRHS =
+                    Mgr->ApplyTransform<ArrayRValueTransformer>(Update->GetRHS());
+                auto XFormedUpdate = ArrayTransformAssignment(XFormedLHS, XFormedRHS, AccumMap);
+                AccumMap[XFormedUpdate->GetLHS()] = Mgr->SimplifyFP(XFormedUpdate->GetRHS());
+            }
+
+            // Make the new set of updates by iterating over the
+            // accumulated substitutions
+            vector<LTSAssignRef> Retval;
+            for (auto const& Subst : AccumMap) {
+                auto LHS = Mgr->SimplifyFP(Subst.first);
+                auto RHS = Mgr->SimplifyFP(Subst.second);
+                Retval.push_back(new LTSAssignSimple(LHS, RHS));
+            }
+            return Retval;
         }
 
         void LTSCompiler::UpdateModel(const Z3Model& Model,

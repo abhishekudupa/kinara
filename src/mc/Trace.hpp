@@ -185,6 +185,11 @@ namespace ESMC {
             UnwindPermPath(AQSPermPath* PermPath,
                            LTSChecker* Checker,
                            vector<TraceElemT>& PathElems);
+            static inline const StateVec*
+            UnwindPermPath(AQSPermPath* PermPath,
+                           LTSChecker* CHecker,
+                           vector<TraceElemT>& PathElems,
+                           u32& InvPermAlongPathOut);
 
             static inline const ProductState*
             UnwindPermPath(PSPermPath* PermPath,
@@ -214,10 +219,14 @@ namespace ESMC {
                                                 const vector<GCmdRef>& GuardedCmds,
                                                 u32 InstanceID);
 
+
         public:
             static SafetyViolation* MakeSafetyViolation(const StateVec* ErrorState,
                                                         LTSChecker* Checker,
                                                         const ExpT& BlownInvariant);
+            static SafetyViolation* MakeBoundsViolation(const StateVec* ErrorState,
+                                                        LTSChecker* Checker,
+                                                        const ExpT& BoundsConstraint);
             static DeadlockViolation* MakeDeadlockViolation(const StateVec* ErrorState,
                                                             LTSChecker* Checker);
             // Accepts the root of a fair accepting (green) SCC.
@@ -227,6 +236,10 @@ namespace ESMC {
             static SafetyViolation* MakeSafetyViolation(AQSPermPath* PermPath,
                                                         LTSChecker* Checker,
                                                         const ExpT& BlownInvariant);
+            static SafetyViolation* MakeBoundsViolation(AQSPermPath* PermPath,
+                                                        LTSChecker* Checker,
+                                                        const ExpT& BoundsConstraint);
+
             static DeadlockViolation* MakeDeadlockViolation(AQSPermPath* PermPath,
                                                             LTSChecker* Checker);
         };

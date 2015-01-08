@@ -421,6 +421,14 @@ namespace ESMC {
             for (auto const& Update : Updates) {
                 sstr << "        " << Update->ToString() << endl;
             }
+
+            if (LoweredGuard != ExpT::NullPtr && LoweredUpdates.size() > 0) {
+                sstr << endl << "Lowered:" << endl;
+                sstr << "    " << LoweredGuard->ToString() << " ->" << endl;
+                for (auto const& Update : LoweredUpdates) {
+                    sstr << "        " << Update->ToString() << endl;
+                }
+            }
             sstr << "}" << endl;
             return sstr.str();
         }
@@ -617,6 +625,52 @@ namespace ESMC {
             for (auto const& Update : Updates) {
                 sstr << "    " << Update->ToString() << endl;
             }
+            sstr << "}" << endl;
+            return sstr.str();
+        }
+
+        LTSInitStateGenerator::LTSInitStateGenerator(const vector<LTSAssignRef>& Updates)
+            : Updates(Updates)
+        {
+            // Nothing here
+        }
+
+        LTSInitStateGenerator::~LTSInitStateGenerator()
+        {
+            // Nothing here
+        }
+
+        const vector<LTSAssignRef>& LTSInitStateGenerator::GetUpdates() const
+        {
+            return Updates;
+        }
+
+        const vector<LTSAssignRef>& LTSInitStateGenerator::GetLoweredUpdates() const
+        {
+            return LoweredUpdates;
+        }
+
+        void
+        LTSInitStateGenerator::SetLoweredUpdates(const vector<LTSAssignRef>& LoweredUpdates) const
+        {
+            this->LoweredUpdates = LoweredUpdates;
+        }
+
+        string LTSInitStateGenerator::ToString() const
+        {
+            ostringstream sstr;
+            sstr << "initstate {" << endl;
+            for (auto const& Update : Updates) {
+                sstr << "    " << Update->ToString() << endl;
+            }
+
+            if (LoweredUpdates.size() > 0) {
+                sstr << endl << "Lowered Updates:" << endl;
+                for (auto const& Update : LoweredUpdates) {
+                    sstr << "    " << Update->ToString() << endl;
+                }
+            }
+
             sstr << "}" << endl;
             return sstr.str();
         }

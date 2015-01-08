@@ -477,6 +477,11 @@ namespace ESMC {
             return UsedSymmTypes;
         }
 
+        const map<TypeRef, u32>& LabelledTS::GetSymmTypeOffsets() const
+        {
+            return SymmTypeOffsets;
+        }
+
         u32 LabelledTS::GetStateVectorSize() const
         {
             return StateVectorSize;
@@ -643,6 +648,7 @@ namespace ESMC {
                 auto Extension = SymmType->GetExtension<LTSTypeExtensionT>();
                 Extension->TypeID = TypeIDCounter++;
                 Extension->TypeOffset = TypeOffsetCounter;
+                SymmTypeOffsets[SymmType] = TypeOffsetCounter;
                 TypeOffsetCounter += SymmType->As<SymmetricType>()->GetCardinalityNoUndef();
             }
 
@@ -691,7 +697,7 @@ namespace ESMC {
                                                           TypeIDFieldType);
         }
 
-        const vector<vector<LTSAssignRef>>&
+        const vector<ISGenRef>&
         LabelledTS::GetInitStateGenerators() const
         {
             return InitStateGenerators;
@@ -1139,7 +1145,6 @@ namespace ESMC {
                         CheckUpdates({ Update }, SymTab, Mgr, false, "");
                         auto SubstLHS = Mgr->Substitute(SubstMap, Update->GetLHS());
                         auto SubstRHS = Mgr->Substitute(SubstMap, Update->GetRHS());
-                        auto NewAsgn = new LTSAssignSimple(SubstLHS, SubstRHS);
                         auto&& RHSVars = Mgr->Gather(SubstRHS, Detail::VarGatherer());
                         if (RHSVars.size() > 0) {
                             throw ESMCError((string)"Init state updates cannot refer " +
@@ -1174,7 +1179,7 @@ namespace ESMC {
 
                             auto SubstLHS = Mgr->Substitute(LocalSubstMap, Update->GetLHS());
                             auto SubstRHS = Mgr->Substitute(LocalSubstMap, Update->GetRHS());
-                            auto NewAsgn = new LTSAssignSimple(SubstLHS, SubstRHS);
+
                             auto&& RHSVars = Mgr->Gather(SubstRHS, Detail::VarGatherer());
                             if (RHSVars.size() > 0) {
                                 throw ESMCError((string)"Init state updates cannot refer " +
@@ -1187,7 +1192,7 @@ namespace ESMC {
                                 throw ESMCError((string)"Init state updates cannot refer " +
                                                 "to variables");
                             }
-                            CurrentISUpdates.push_back(NewAsgn);
+                            CurrentISUpdates.push_back(new LTSAssignSimple(SubstLHS, SubstRHS));
                         }
                     }
                 }

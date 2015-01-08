@@ -402,6 +402,7 @@ namespace ESMC {
             const vector<LTSAssignRef>& GetUpdates() const;
             void SetLoweredUpdates(const vector<LTSAssignRef>& LoweredUpdates) const;
             const vector<LTSAssignRef>& GetLoweredUpdates() const;
+            string ToString() const;
         };
 
     } /* end namespace LTS */

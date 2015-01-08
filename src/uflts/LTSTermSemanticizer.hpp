@@ -861,6 +861,7 @@ namespace ESMC {
 
                     Exp->SetType(RecType);
                 }
+                    break;
 
                 default: {
                     // Must be an uninterpreted function

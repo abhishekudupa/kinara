@@ -1159,11 +1159,7 @@ int main()
     cout << "Initial State Generators:" << endl;
     auto const& InitStateGens = TheLTS->GetInitStateGenerators();
     for (auto const& InitStateGen : InitStateGens) {
-        cout << "InitState {" << endl;
-        for (auto const& Update : InitStateGen) {
-            cout << "    " << Update->ToString() << endl;
-        }
-        cout << "}" << endl;
+        cout << InitStateGen->ToString() << endl;
     }
 
     cout << "Invariant:" << endl;
