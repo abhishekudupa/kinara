@@ -816,7 +816,13 @@ namespace ESMC {
                                 "not marked as an error state by the checker");
             }
             auto const& BlownInvariant = it->second;
-            return TraceBase::MakeBoundsViolation(ErrorState, this, BlownInvariant);
+            if (BlownInvariant == LoweredInvariant) {
+                return TraceBase::MakeSafetyViolation(ErrorState, this, LoweredInvariant);
+            } else if (BlownInvariant == LoweredDLFInvariant) {
+                return TraceBase::MakeDeadlockViolation(ErrorState, this);
+            } else {
+                return TraceBase::MakeBoundsViolation(ErrorState, this);
+            }
         }
 
         void LTSChecker::ClearAQS()

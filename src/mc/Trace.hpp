@@ -225,8 +225,7 @@ namespace ESMC {
                                                         LTSChecker* Checker,
                                                         const ExpT& BlownInvariant);
             static SafetyViolation* MakeBoundsViolation(const StateVec* ErrorState,
-                                                        LTSChecker* Checker,
-                                                        const ExpT& BoundsConstraint);
+                                                        LTSChecker* Checker);
             static DeadlockViolation* MakeDeadlockViolation(const StateVec* ErrorState,
                                                             LTSChecker* Checker);
             // Accepts the root of a fair accepting (green) SCC.
@@ -237,8 +236,7 @@ namespace ESMC {
                                                         LTSChecker* Checker,
                                                         const ExpT& BlownInvariant);
             static SafetyViolation* MakeBoundsViolation(AQSPermPath* PermPath,
-                                                        LTSChecker* Checker,
-                                                        const ExpT& BoundsConstraint);
+                                                        LTSChecker* Checker);
 
             static DeadlockViolation* MakeDeadlockViolation(AQSPermPath* PermPath,
                                                             LTSChecker* Checker);

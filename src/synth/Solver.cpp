@@ -118,7 +118,7 @@ namespace ESMC {
 
         inline void Solver::CheckedAssert(const ExpT& Assertion)
         {
-            auto const& TrueExp = TheLTS->MakeTrue();
+            // auto const& TrueExp = TheLTS->MakeTrue();
             if (AssertedConstraints.find(Assertion) != AssertedConstraints.end()) {
                 // if (Assertion != TrueExp) {
                 //     cout << "Not asserting previously asserted constraint:" << endl
@@ -877,22 +877,22 @@ namespace ESMC {
             if (BlownInvariant == Checker->LoweredInvariant) {
                 Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
             } else {
-                Trace = TraceBase::MakeBoundsViolation(PPath, Checker, BlownInvariant);
+                Trace = TraceBase::MakeBoundsViolation(PPath, Checker);
             }
 
             auto const& TraceBlownInvar = Trace->GetInvariantBlown();
 
-            cout << "Safety violation trace:" << endl;
-            cout << Trace->ToString() << endl << endl;
+            // cout << "Safety violation trace:" << endl;
+            // cout << Trace->ToString() << endl << endl;
 
-            cout << "Computing weakest pre (safety) of: " << endl <<
-                TraceBlownInvar->ToString() << endl << endl;
+            // cout << "Computing weakest pre (safety) of: " << endl <<
+            //     TraceBlownInvar->ToString() << endl << endl;
 
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this, Trace, TraceBlownInvar);
             for (auto const& Pred : WPConditions) {
-                cout << "Obtained Safety Pre:" << endl
-                     << Pred->ToString() << endl << endl;
+                // cout << "Obtained Safety Pre:" << endl
+                //      << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
 
@@ -926,45 +926,45 @@ namespace ESMC {
             // Checker->Printer->PrintState(ErrorState, cout);
             // cout << endl << endl;
 
-            const StateVec* LastState;
-            auto TraceElems = Trace->GetTraceElems();
-            if (TraceElems.size() > 0) {
-                LastState = TraceElems.back().second;
-            } else {
-                LastState = Trace->GetInitialState();
-            }
+            // const StateVec* LastState;
+            // auto TraceElems = Trace->GetTraceElems();
+            // if (TraceElems.size() > 0) {
+            //     LastState = TraceElems.back().second;
+            // } else {
+            //     LastState = Trace->GetInitialState();
+            // }
 
-            // Gather the guards of guarded commands that could
-            // possibly solve this deadlock
-            vector<ExpT> Disjuncts;
-            for (auto const& Cmd : GuardedCommands) {
-                auto const& FixedInterp = Cmd->GetFixedInterpretation();
-                auto Interp = FixedInterp->ExtensionData.Interp;
-                auto Res = Interp->Evaluate(LastState);
-                if (Res == 0) {
-                    continue;
-                }
-                Disjuncts.push_back(Cmd->GetLoweredGuard());
-            }
+            // // Gather the guards of guarded commands that could
+            // // possibly solve this deadlock
+            // vector<ExpT> Disjuncts;
+            // for (auto const& Cmd : GuardedCommands) {
+            //     auto const& FixedInterp = Cmd->GetFixedInterpretation();
+            //     auto Interp = FixedInterp->ExtensionData.Interp;
+            //     auto Res = Interp->Evaluate(LastState);
+            //     if (Res == 0) {
+            //         continue;
+            //     }
+            //     Disjuncts.push_back(Cmd->GetLoweredGuard());
+            // }
 
-            ExpT GoodExp = ExpT::NullPtr;
-            auto UnreachableExp = TraceAnalyses::AutomataStatesCondition(TheLTS, LastState);
-            UnreachableExp = Mgr->MakeExpr(LTSOps::OpNOT, UnreachableExp);
+            // ExpT GoodExp = ExpT::NullPtr;
+            // auto UnreachableExp = TraceAnalyses::AutomataStatesCondition(TheLTS, LastState);
+            // UnreachableExp = Mgr->MakeExpr(LTSOps::OpNOT, UnreachableExp);
 
-            // cout << "Unreachable Exp: " << endl << UnreachableExp->ToString() << endl << endl;
+            // // cout << "Unreachable Exp: " << endl << UnreachableExp->ToString() << endl << endl;
 
-            Disjuncts.push_back(UnreachableExp);
+            // Disjuncts.push_back(UnreachableExp);
 
-            if (Disjuncts.size() == 1) {
-                GoodExp = Disjuncts[0];
-            } else {
-                GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
-            }
+            // if (Disjuncts.size() == 1) {
+            //     GoodExp = Disjuncts[0];
+            // } else {
+            //     GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
+            // }
 
             // audupa: Replaced the complex code above with the simpler one
             // below, that should lead to better generalization!
 
-            // auto GoodExp = Checker->LoweredDLFInvariant;
+            auto GoodExp = Checker->LoweredDLFInvariant;
 
             // audupa: end changes
 
@@ -980,7 +980,7 @@ namespace ESMC {
 
 
             for (auto const& Pred : WPConditions) {
-                cout << "Obtained Pre:" << endl << Pred->ToString() << endl << endl;
+                // cout << "Obtained Pre:" << endl << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
 
@@ -993,7 +993,6 @@ namespace ESMC {
         inline void Solver::HandleSafetyViolations()
         {
             auto const& ErrorStates = Checker->GetAllErrorStates();
-            auto const& DeadlockFreeInvar = Checker->DeadlockFreeInvariant;
             const u32 NumTotalErrors = ErrorStates.size();
             set<ExpT> BlownInvariantsCovered;
             cout << "Found " << NumTotalErrors << " error states in all!" << endl;
@@ -1248,7 +1247,7 @@ namespace ESMC {
 
                 // all good. extract a model
                 auto const& Model = TP->GetModel();
-                cout << "Model:" << endl << Model.ToString() << endl;
+                // cout << "Model:" << endl << Model.ToString() << endl;
                 // PrintSolution();
                 Compiler->UpdateModel(Model, InterpretedOps, GuardIndicatorExps);
 

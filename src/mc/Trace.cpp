@@ -542,12 +542,11 @@ namespace ESMC {
         }
 
         SafetyViolation* TraceBase::MakeBoundsViolation(const StateVec* ErrorState,
-                                                        LTSChecker* Checker,
-                                                        const ExpT& BlownInvariant)
+                                                        LTSChecker* Checker)
         {
             auto TheAQS = Checker->AQS;
             auto PPath = TheAQS->FindPath(ErrorState);
-            return MakeSafetyViolation(PPath, Checker, BlownInvariant);
+            return MakeBoundsViolation(PPath, Checker);
         }
 
         DeadlockViolation* TraceBase::MakeDeadlockViolation(const StateVec* ErrorState,
@@ -570,24 +569,38 @@ namespace ESMC {
         }
 
         SafetyViolation* TraceBase::MakeBoundsViolation(AQSPermPath* PermPath,
-                                                        LTSChecker* Checker,
-                                                        const ExpT& BoundsConstraint)
+                                                        LTSChecker* Checker)
         {
             vector<TraceElemT> PathElems;
             u32 FinalInvPerm = 0;
             auto UnwoundInitState = UnwindPermPath(PermPath, Checker,
                                                    PathElems, FinalInvPerm);
-            auto Mgr = BoundsConstraint->GetMgr();
-            auto PermSet = Checker->TheCanonicalizer->GetPermSet();
-            auto const& Permutation = PermSet->GetIterator(FinalInvPerm).GetPerm();
-            auto const& TypeOffsets = Checker->TheLTS->GetSymmTypeOffsets();
+            auto FinalState = PathElems.back().second;
 
-            auto PermConstraint =
-                Mgr->ApplyTransform<ESMC::LTS::Detail::ExpressionPermuter>(BoundsConstraint,
-                                                                           Permutation,
-                                                                           TypeOffsets);
+            auto const& Commands = Checker->GuardedCommands;
+            ExpT BlownInvariant = ExpT::NullPtr;
+            // Find out which of the bounds invariants is blown
+            for (auto const& Cmd : Commands) {
+                ExpT NEPred;
+                bool Exception = false;
+                auto NS = TryExecuteCommand(Cmd, FinalState, Exception, NEPred);
+                if (Exception) {
+                    BlownInvariant = NEPred;
+                    break;
+                } else if (NS != nullptr) {
+                    NS->Recycle();
+                }
+            }
+
+            if (BlownInvariant == ExpT::NullPtr) {
+                throw InternalError((string)"Could not find invariant that was " +
+                                    "blown in the last state of the error trace " +
+                                    "in call to TraceBase::MakeBoundsViolation().\n" +
+                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
+            }
+
             return new SafetyViolation(UnwoundInitState, PathElems,
-                                       Checker->Printer, PermConstraint);
+                                       Checker->Printer, BlownInvariant);
         }
 
         DeadlockViolation* TraceBase::MakeDeadlockViolation(AQSPermPath* PermPath,

@@ -81,6 +81,7 @@ namespace ESMC {
             u64 MemLimitInMB;
             u32 NumCExToProcess;
             u32 BoundLimit;
+            bool GeneralFixForDL;
 
             inline SolverOptionsT()
                 : GBoundMethod(GuardBoundingMethodT::NoBounding),
@@ -88,7 +89,7 @@ namespace ESMC {
                   SBoundMethod(StateUpdateBoundingMethodT::NoBounding),
                   UnrollQuantifiers(false), CPULimitInSeconds(UINT64_MAX),
                   MemLimitInMB(UINT64_MAX), NumCExToProcess(8),
-                  BoundLimit(256)
+                  BoundLimit(256), GeneralFixForDL(false)
             {
                 // Nothing here
             }
@@ -102,7 +103,8 @@ namespace ESMC {
                   MemLimitInMB(Other.MemLimitInMB),
                   NumCExToProcess(Other.NumCExToProcess == 0 ?
                                   UINT32_MAX : Other.NumCExToProcess),
-                  BoundLimit(Other.BoundLimit == 0 ? 256 : Other.BoundLimit)
+                  BoundLimit(Other.BoundLimit == 0 ? 256 : Other.BoundLimit),
+                  GeneralFixForDL(Other.GeneralFixForDL)
             {
                 // Nothing here
             }
@@ -122,6 +124,7 @@ namespace ESMC {
                 NumCExToProcess =
                     Other.NumCExToProcess == 0 ? UINT32_MAX : Other.NumCExToProcess;
                 BoundLimit = Other.BoundLimit == 0 ? 256 : Other.BoundLimit;
+                GeneralFixForDL = Other.GeneralFixForDL;
                 return *this;
             }
         };
