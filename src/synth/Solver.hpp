@@ -205,20 +205,19 @@ namespace ESMC {
 
         private:
             static const string BoundsVarPrefix;
-            static const u32 MaxBound;
 
             SolverOptionsT Options;
-
-            // Assertions in the current iteration
-            // Barring the cost bounds assertions
-            FastExpSetT CurrentAssertions;
+            // The set of assertions already asserted
+            unordered_set<ExpT, Detail::UnorderedExpSetHasher> AssertedConstraints;
+            // Barring the cost bounds assertions, which are in the
+            // assumptions queue here:
             deque<Z3Expr> CurrentAssumptions;
-            ExpT BoundsVariable;
             Z3TPRef TP;
             LabelledTS* TheLTS;
             LTSCompiler* Compiler;
             LTSChecker* Checker;
             u32 Bound;
+            ExpT BoundsVariable;
             vector<GCmdRef> GuardedCommands;
             Detail::SynthCostFunction CostFunction;
 
@@ -229,44 +228,17 @@ namespace ESMC {
             // for efficiency
             unordered_set<i64> InterpretedOps;
 
-            // The set of assertions already asserted
-            unordered_set<ExpT, Detail::UnorderedExpSetHasher> AssertedConstraints;
 
-            unordered_map<i64, ExpT> GuardIndicatorExps;
-            unordered_map<i64, ExpT> UpdateIndicatorExps;
+            set<ExpT> GuardFuncCosts;
+            set<ExpT> UpdateFuncCosts;
+            // AllFalse preds for guards
+            // used for updating the models in the compiler/interpreter
+            unordered_map<i64, ExpT> AllFalsePreds;
+
             Z3Ctx Ctx;
-            UIDGenerator GuardIndicatorUIDGenerator;
-            UIDGenerator UpdateIndicatorUIDGenerator;
-            UIDGenerator IdentityUpdateUIDGenerator;
-            UIDGenerator VarDepIndicatorUIDGenerator;
-            UIDGenerator FunctionCostUIDGenerator;
-            UIDGenerator GuardPointUIDGenerator;
-            UIDGenerator UpdatePointUIDGenerator;
-            UIDGenerator AllFalseUIDGenerator;
-            FastExpSetT AllIndicators;
-
             SolverStatsT Stats;
 
             inline void CheckedAssert(const ExpT& Assertion);
-            inline void AssertCurrentConstraints();
-
-            inline tuple<ExpT, ExpT, ExpT, ExpT>
-            CreateIndicatorSubsts(vector<TypeRef>& ExistsQVars,
-                                  const ExpT& UpdateExp,
-                                  const ExpT& CurrentArg);
-            inline vector<ExpT>
-            CreateArgDepConstraints(const ExpT& OpExpression,
-                                    const ExpT& IdentityIndicatorExp);
-            inline void CreateIndicators(const ExpT& OpExpression, const ExpT& LValueExp,
-                                         bool IsGuard);
-            inline void CreateIndicators(i64 OpCode);
-
-            inline void MakeStateIdenticalConstraints(const ExpT& Exp);
-
-            inline void CreateGuardIndicator(i64 GuardOp);
-            inline void CreateUpdatePointBounds(i64 UpdateOp);
-            inline void CreateUpdateIndicator(i64 UpdateOp);
-            inline void CreateBoundsConstraints(i64 UpdateOp);
             inline void CreateMutualExclusionConstraint(const ExpT& GuardExp1,
                                                         const ExpT& GuardExp2);
             inline void AssertBoundsConstraint();
@@ -280,6 +252,42 @@ namespace ESMC {
             inline void ResetStats();
             inline void PrintStats(ostream& Out);
             inline void HandleResourceLimit();
+
+            // Returns the set of update ops associated with the guard
+            inline unordered_set<i64> AssertConstraintsForNewGuard(i64 GuardOp);
+
+            // returns predicate for allfalse and alltrue
+            inline pair<ExpT, ExpT> MakeAllFalseConstraint(i64 GuardOp,
+                                                           const ExpT& GuardExp,
+                                                           bool MakeAllTrue);
+            inline ExpT MakeIdentityConstraint(i64 Op, const ExpT& UpdateExp,
+                                               u32 LValueIndex);
+            inline ExpT MakeConstantConstraint(i64 Op, const ExpT& Exp);
+            inline tuple<ExpT, ExpT, ExpT, ExpT>
+            CreateArgDepSubsts(vector<TypeRef>& QVars,
+                               const ExpT& UpdateExp,
+                               const ExpT& CurrentArg);
+            inline ExpT MakeArgDepConstraints(i64 OpCode, const ExpT& Exp);
+            inline vector<ExpT> MakePointApplications(i64 OpCode);
+
+            inline void MakeArgDepCCForGuard(i64 Op, const ExpT& Exp);
+            inline void MakeNonFalseCCForGuard(i64 Op, const ExpT& Exp);
+            inline void MakePointCCForGuard(i64 Op, const ExpT& Exp);
+
+            inline void MakeArgDepCCForLValUpdate(i64 Op, const ExpT& Exp,
+                                                  const ExpT& LValueExp);
+            inline void MakeIdentityCCForLValUpdate(i64 Op, const ExpT& Exp,
+                                                    const ExpT& LValueExp);
+            inline void MakePointCCForLValUpdate(i64 Op, const ExpT& Exp,
+                                                 const ExpT& LValueExp);
+
+            inline void MakeCostConstraintsForLValueUpdate(i64 Op, const ExpT& UpdateExp,
+                                                           const ExpT& LValueExp);
+            inline void MakeCostConstraintsForStateUpdate(i64 Op, const ExpT& UpdateExp);
+            inline void MakeCostConstraintsForNonLValueUpdate(i64 Op, const ExpT& UpdateExp);
+            inline void MakeCostConstraintsForGuard(i64 Op, const ExpT& Exp);
+            inline void MakeCostConstraintsForOp(i64 Op);
+            inline void MakeRangeConstraintsForOp(i64 UpdateOp);
 
         public:
             Solver(LTSChecker* Checker, const SolverOptionsT& Options = SolverOptionsT());

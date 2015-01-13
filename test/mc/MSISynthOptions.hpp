@@ -57,6 +57,7 @@ struct MSISynthOptionsT {
     StateUpdateBoundingMethodT SBoundMethod;
     bool UnrollQuantifiers;
     bool NarrowDomains;
+    bool GeneralFixForDL;
     u64 CPULimit;
     u64 MemLimit;
     u32 NumCExToProcess;
@@ -89,7 +90,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
         ("cpu-limit,t", po::value<u64>(&CPULimit)->default_value(UINT64_MAX),
          "CPU Time limit in seconds")
         ("mem-limit,m", po::value<u64>(&MemLimit)->default_value(UINT64_MAX),
-         "Memory limit in MB");
+         "Memory limit in MB")
+        ("gen-dl-fix", "Use general fixes for deadlocks");
 
     po::variables_map vm;
 
@@ -140,6 +142,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
 
     Options.UnrollQuantifiers = (vm.count("quants") > 0);
     Options.NarrowDomains = (vm.count("narrow") > 0);
+    Options.GeneralFixForDL = (vm.count("gen-dl-fix") > 0);
     Options.CPULimit = CPULimit;
     Options.MemLimit = MemLimit;
     Options.NumCExToProcess = CExToProcess;
@@ -155,6 +158,7 @@ static inline void OptsToSolverOpts(const MSISynthOptionsT& Opts,
     SolverOpts.UBoundMethod = Opts.UBoundMethod;
     SolverOpts.SBoundMethod = Opts.SBoundMethod;
     SolverOpts.UnrollQuantifiers = Opts.UnrollQuantifiers;
+    SolverOpts.GeneralFixForDL = Opts.GeneralFixForDL;
     SolverOpts.CPULimitInSeconds = Opts.CPULimit;
     SolverOpts.MemLimitInMB = Opts.MemLimit;
     SolverOpts.NumCExToProcess = Opts.NumCExToProcess;

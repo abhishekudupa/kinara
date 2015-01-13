@@ -93,7 +93,7 @@ namespace ESMC {
             virtual i64 Evaluate(const StateVec* StateVector) const = 0;
             virtual void UpdateModel(const Z3Model& Model,
                                      const unordered_set<i64>& InterpretedOps,
-                                     const unordered_map<i64, ExpT>& IndicatorExps) const;
+                                     const unordered_map<i64, ExpT>& AllFalsePreds) const;
             const ExpT& GetNoExceptionPredicate() const;
 
             static void MakeInterpreter(const ExpT& Exp, LTSCompiler* Compiler);
@@ -235,7 +235,7 @@ namespace ESMC {
             virtual i64 Evaluate(const StateVec* StateVector) const override;
             virtual void UpdateModel(const Z3Model& Model,
                                      const unordered_set<i64>& InterpretedOps,
-                                     const unordered_map<i64, ExpT>& IndicatorExps) const override;
+                                     const unordered_map<i64, ExpT>& AllFalsePreds) const override;
             const EvalMapT& GetEvalMap() const;
             i64 GetOpCode() const;
             bool IsEnabled() const;
@@ -486,7 +486,7 @@ namespace ESMC {
             void CompileLTS(LabelledTS* TheLTS);
             void UpdateModel(const Z3Model& Model,
                              const unordered_set<i64>& InterpretedOps,
-                             const unordered_map<i64, ExpT>& IndicatorExps);
+                             const unordered_map<i64, ExpT>& AllFalsePreds);
             const unordered_map<i64, vector<const UFInterpreter*>>& GetUFInterpreters() const;
         };
 

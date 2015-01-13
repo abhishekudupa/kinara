@@ -2821,7 +2821,7 @@ namespace ESMC {
                     }
                 }
                 auto&& CP = CrossProduct<string>(QVarElems.begin(),
-                                                  QVarElems.end());
+                                                 QVarElems.end());
                 for (auto const& CPElem : CP) {
                     typename MgrT::SubstMapT SubstMap;
                     for (u32 i = 0; i < NumQVars; ++i) {

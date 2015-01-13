@@ -572,15 +572,15 @@ namespace ESMC {
 
         void UFInterpreter::UpdateModel(const Z3Model& Model,
                                         const unordered_set<i64>& InterpretedOps,
-                                        const unordered_map<i64, ExpT>& IndicatorExps) const
+                                        const unordered_map<i64, ExpT>& AllFalsePreds) const
         {
             EvalMap.clear();
             if (InterpretedOps.find(MyOpCode) == InterpretedOps.end()) {
                 Enabled = false;
             } else {
-                auto it = IndicatorExps.find(MyOpCode);
-                if (it != IndicatorExps.end()) {
-                    // check if my indicator is true
+                auto it = AllFalsePreds.find(MyOpCode);
+                if (it != AllFalsePreds.end()) {
+                    // check if my all false pred is true
                     Z3TPRef TP = Model.GetTPPtr();
                     auto Res = TP->Evaluate(it->second);
                     auto ResAsConst = Res->As<Exprs::ConstExpression>();
@@ -590,7 +590,7 @@ namespace ESMC {
                                         "Term:\n" + it->second->ToString() +
                                         "\nEvaluation:\n" + Res->ToString());
                     }
-                    if (ResAsConst->GetConstValue() != "0") {
+                    if (ResAsConst->GetConstValue() == "false") {
                         Enabled = true;
                         this->Model = Model;
                     } else {
@@ -1518,12 +1518,12 @@ namespace ESMC {
 
         void LTSCompiler::UpdateModel(const Z3Model& Model,
                                       const unordered_set<i64>& InterpretedOps,
-                                      const unordered_map<i64, ExpT>& IndicatorExps)
+                                      const unordered_map<i64, ExpT>& AllFalsePreds)
         {
             // Push the model through all the registered
             // interpreters
             for (auto const& Interp : RegisteredInterps) {
-                Interp->UpdateModel(Model, InterpretedOps, IndicatorExps);
+                Interp->UpdateModel(Model, InterpretedOps, AllFalsePreds);
             }
         }
 

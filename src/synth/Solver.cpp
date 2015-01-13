@@ -118,9 +118,8 @@ namespace ESMC {
 
         inline void Solver::CheckedAssert(const ExpT& Assertion)
         {
-            // auto const& TrueExp = TheLTS->MakeTrue();
             if (AssertedConstraints.find(Assertion) != AssertedConstraints.end()) {
-                // if (Assertion != TrueExp) {
+                // if (Assertion != TheLTS->MakeTrue()) {
                 //     cout << "Not asserting previously asserted constraint:" << endl
                 //          << Assertion->ToString() << endl;
                 // }
@@ -135,213 +134,6 @@ namespace ESMC {
         Solver::~Solver()
         {
             // Nothing here
-        }
-
-
-        inline tuple<ExpT, ExpT, ExpT, ExpT>
-        Solver::CreateIndicatorSubsts(vector<TypeRef>& ExistsQVars,
-                                      const ExpT& UpdateExp,
-                                      const ExpT& CurrentArg)
-        {
-            auto Mgr = TheLTS->GetMgr();
-
-            auto const& UpdateArgs = GetOpArgs(UpdateExp);
-            vector<ExpT> OtherArgs;
-            for (auto const& UpdateArg : UpdateArgs) {
-                if (UpdateArg != CurrentArg) {
-                    OtherArgs.push_back(UpdateArg);
-                }
-            }
-            const u32 NumOtherArgs = OtherArgs.size();
-            vector<TypeRef> OtherArgTypes;
-            transform(OtherArgs.begin(), OtherArgs.end(), back_inserter(OtherArgTypes),
-                      [&] (const ExpT& Exp) -> TypeRef
-                      {
-                          return Exp->GetType();
-                      });
-            MgrT::SubstMapT OtherArgSubstMap1;
-            for (u32 i = 0; i < NumOtherArgs; ++i) {
-                auto BoundVar = Mgr->MakeBoundVar(OtherArgTypes[i], NumOtherArgs - i - 1);
-                OtherArgSubstMap1[OtherArgs[i]] = BoundVar;
-            }
-            auto ArgBoundVar = Mgr->MakeBoundVar(CurrentArg->GetType(), NumOtherArgs);
-            auto ArgPrimeBoundVar = Mgr->MakeBoundVar(CurrentArg->GetType(), NumOtherArgs + 1);
-            OtherArgSubstMap1[CurrentArg] = ArgBoundVar;
-            auto OtherArgSubstMap2 = OtherArgSubstMap1;
-            OtherArgSubstMap2[CurrentArg] = ArgPrimeBoundVar;
-
-            ExistsQVars.push_back(CurrentArg->GetType());
-            ExistsQVars.push_back(CurrentArg->GetType());
-            ExistsQVars.insert(ExistsQVars.end(), OtherArgTypes.begin(), OtherArgTypes.end());
-
-            auto SubstExp1 = Mgr->BoundSubstitute(OtherArgSubstMap1, UpdateExp);
-            auto SubstExp2 = Mgr->BoundSubstitute(OtherArgSubstMap2, UpdateExp);
-
-            return make_tuple(SubstExp1, SubstExp2, ArgBoundVar, ArgPrimeBoundVar);
-        }
-
-        inline vector<ExpT>
-        Solver::CreateArgDepConstraints(const ExpT& OpExpression,
-                                        const ExpT& IdentityIndicatorExp)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            vector<ExpT> Retval;
-            auto const& OpArgs = GetOpArgs(OpExpression);
-            for (auto const& Arg : OpArgs) {
-                vector<TypeRef> ExistsQVars;
-                auto SubstExpPair =
-                    CreateIndicatorSubsts(ExistsQVars, OpExpression, Arg);
-
-                auto const& SubstExp1 = get<0>(SubstExpPair);
-                auto const& SubstExp2 = get<1>(SubstExpPair);
-
-                auto QBody = Mgr->MakeExpr(LTSOps::OpEQ, SubstExp1, SubstExp2);
-                QBody = Mgr->MakeExpr(LTSOps::OpNOT, QBody);
-
-                auto Antecedent = Mgr->MakeExists(ExistsQVars, QBody);
-                if (IdentityIndicatorExp != ExpT::NullPtr) {
-                    Antecedent = Mgr->MakeExpr(LTSOps::OpAND, Antecedent,
-                                               Mgr->MakeExpr(LTSOps::OpNOT,
-                                                             IdentityIndicatorExp));
-                }
-
-                auto IndicatorUIDStr = to_string(VarDepIndicatorUIDGenerator.GetUID());
-                auto IndicatorVarName =
-                    (string)"__var_dep_indicator_" + IndicatorUIDStr;
-                auto IndicatorExp = Mgr->MakeVar(IndicatorVarName,
-                                                 Mgr->MakeType<RangeType>(0, 1));
-                // AllIndicators.insert(IndicatorExp);
-                auto Consequent = Mgr->MakeExpr(LTSOps::OpEQ, IndicatorExp,
-                                                Mgr->MakeVal("1", IndicatorExp->GetType()));
-                auto Implication = Mgr->MakeExpr(LTSOps::OpIFF, Antecedent, Consequent);
-
-                // cout << "Asserting Indicator Implication:" << endl
-                //      << Implication->ToString() << endl << endl;
-                CurrentAssertions.insert(Implication);
-                Retval.push_back(IndicatorExp);
-            }
-            return Retval;
-        }
-
-        inline void Solver::CreateIndicators(const ExpT& OpExpression,
-                                             const ExpT& LValueExp,
-                                             bool IsGuard)
-        {
-            auto Mgr = TheLTS->GetMgr();
-
-            auto const& AppArgs = GetOpArgs(OpExpression);
-            const u32 NumArgs = AppArgs.size();
-            auto FuncCostVarName = (string)"__func_cost_" +
-                to_string(FunctionCostUIDGenerator.GetUID());
-            auto FuncCostVarType = Mgr->MakeType<RangeType>(0, 1 + NumArgs);
-            auto FuncCostVar = Mgr->MakeVar(FuncCostVarName, FuncCostVarType);
-            AllIndicators.insert(FuncCostVar);
-            const u32 OpCode = OpExpression->SAs<Exprs::OpExpression>()->GetOpCode();
-
-            vector<TypeRef> QVarTypes;
-            transform(AppArgs.begin(), AppArgs.end(), back_inserter(QVarTypes),
-                      [&] (const ExpT& Exp) -> TypeRef
-                      {
-                          return Exp->GetType();
-                      });
-            MgrT::SubstMapT SubstMap;
-            for (u32 i = 0; i < NumArgs; ++i) {
-                SubstMap[AppArgs[i]] = Mgr->MakeBoundVar(QVarTypes[i], NumArgs - i - 1);
-            }
-
-            if (LValueExp != ExpT::NullPtr && !IsGuard) {
-                auto Body = Mgr->MakeExpr(LTSOps::OpEQ, OpExpression, LValueExp);
-                Body = Mgr->MakeExpr(LTSOps::OpNOT, Body);
-                auto SubstBody = Mgr->BoundSubstitute(SubstMap, Body);
-                auto ExistsExp = Mgr->MakeExists(QVarTypes, SubstBody);
-                auto IdentityVarName = "__identity_update_indicator_" +
-                    to_string(IdentityUpdateUIDGenerator.GetUID());
-                auto IdentityVar = Mgr->MakeVar(IdentityVarName, Mgr->MakeType<BooleanType>());
-                auto IdentityConstraint = Mgr->MakeExpr(LTSOps::OpIFF, ExistsExp,
-                                                        Mgr->MakeExpr(LTSOps::OpNOT, IdentityVar));
-                // cout << "Asserting Identity Update Constraint:" << IdentityConstraint->ToString()
-                //      << endl << endl;
-                CurrentAssertions.insert(IdentityConstraint);
-
-                auto&& ArgDepConstraints = CreateArgDepConstraints(OpExpression, IdentityVar);
-
-                auto Antecedent = Mgr->MakeExpr(LTSOps::OpNOT, IdentityVar);
-                auto Consequent = MakeSum(ArgDepConstraints, Mgr, FuncCostVarType);
-                Consequent = Mgr->MakeExpr(LTSOps::OpADD, Consequent,
-                                           Mgr->MakeVal("1", FuncCostVarType));
-                Consequent = Mgr->MakeExpr(LTSOps::OpGE, FuncCostVar, Consequent);
-                auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, Antecedent, Consequent);
-                // cout << "Asserting Cost Constraint:" << endl << ImpliesExp->ToString()
-                //      << endl << endl;
-
-                UpdateIndicatorExps[OpCode] = FuncCostVar;
-                CurrentAssertions.insert(ImpliesExp);
-            } else if (IsGuard) {
-                auto Body = OpExpression;
-                auto SubstBody = Mgr->BoundSubstitute(SubstMap, Body);
-                auto ExistsExp = Mgr->MakeExists(QVarTypes, SubstBody);
-                auto AllFalseIndicatorVarName = "__all_false_" +
-                    to_string(AllFalseUIDGenerator.GetUID());
-                auto AllFalseVar = Mgr->MakeVar(AllFalseIndicatorVarName,
-                                                Mgr->MakeType<BooleanType>());
-                auto NegAllFalse = Mgr->MakeExpr(LTSOps::OpNOT, AllFalseVar);
-                auto AllFalseConstraint = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp, NegAllFalse);
-
-                // cout << "Asserting All False Constraint:" << AllFalseConstraint->ToString()
-                //      << endl << endl;
-                CurrentAssertions.insert(AllFalseConstraint);
-
-                auto&& ArgDepConstraints = CreateArgDepConstraints(OpExpression, ExpT::NullPtr);
-
-                auto Antecedent = NegAllFalse;
-                auto Consequent = MakeSum(ArgDepConstraints, Mgr, FuncCostVarType);
-                Consequent = Mgr->MakeExpr(LTSOps::OpADD, Consequent,
-                                           Mgr->MakeVal("1", FuncCostVarType));
-                Consequent = Mgr->MakeExpr(LTSOps::OpGE, FuncCostVar, Consequent);
-                auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, Antecedent, Consequent);
-                // cout << "Asserting Cost Constraint:" << endl << ImpliesExp->ToString()
-                //      << endl << endl;
-                GuardIndicatorExps[OpCode] = FuncCostVar;
-                CurrentAssertions.insert(ImpliesExp);
-            } else {
-                auto&& ArgDepConstraints = CreateArgDepConstraints(OpExpression, ExpT::NullPtr);
-                auto SumExp = MakeSum(ArgDepConstraints, Mgr, FuncCostVarType);
-                auto Constraint = Mgr->MakeExpr(LTSOps::OpGE, FuncCostVar, SumExp);
-                // cout << "Asserting Cost Constraint:" << endl << Constraint->ToString()
-                //      << endl << endl;
-                UpdateIndicatorExps[OpCode] = FuncCostVar;
-                CurrentAssertions.insert(Constraint);
-            }
-        }
-
-        inline void Solver::CreateIndicators(i64 OpCode)
-        {
-            auto const& GuardOpToExp = TheLTS->GuardOpToExp;
-            auto const& UpdateOpToLValue = TheLTS->UpdateOpToUpdateLValue;
-            auto const& AllOpToExp = TheLTS->AllOpToExp;
-
-            // is this an lvalue update that requires
-            // identity constraints?
-            auto it1 = GuardOpToExp.find(OpCode);
-            auto it2 = UpdateOpToLValue.find(OpCode);
-            auto it3 = AllOpToExp.find(OpCode);
-
-            if (it3 == AllOpToExp.end()) {
-                throw InternalError((string)"Could not find an expression for OpCode: " +
-                                    to_string(OpCode) + ".\nAt: " + __FILE__ + ":" +
-                                    to_string(__LINE__));
-            }
-
-            if (it1 != GuardOpToExp.end()) {
-                // This is a guard
-                CreateIndicators(it3->second, ExpT::NullPtr, true);
-            } else if (it2 == UpdateOpToLValue.end()) {
-                // This is an update, but is exempt
-                CreateIndicators(it3->second, ExpT::NullPtr, false);
-            } else {
-                // Update and non-exempt
-                CreateIndicators(it3->second, it2->second.second, false);
-            }
         }
 
         inline void Solver::CreateMutualExclusionConstraint(const ExpT& GuardExp1,
@@ -385,309 +177,10 @@ namespace ESMC {
             }
             auto QBody = Mgr->BoundSubstitute(SubstMap, MutexExp);
             auto Constraint = Mgr->MakeForAll(QVarTypes, QBody);
-            CurrentAssertions.insert(Constraint);
+            CheckedAssert(Constraint);
         }
 
-        inline void Solver::CreateGuardIndicator(i64 GuardOp)
-        {
-            auto Mgr = TheLTS->GetMgr();
-
-            if (Options.GBoundMethod == GuardBoundingMethodT::PointBound) {
-
-                auto FunType = Mgr->LookupUninterpretedFunction(GuardOp)->As<FuncType>();
-                auto DomainTypes = FunType->GetArgTypes();
-                vector<vector<string>> DomainElems;
-                const u32 NumDomainTypes = DomainTypes.size();
-                transform(DomainTypes.begin(), DomainTypes.end(), back_inserter(DomainElems),
-                          [&] (const TypeRef& Type) -> vector<string>
-                          {
-                              return Type->GetElements();
-                          });
-
-                auto&& DomainCP = CrossProduct<string>(DomainElems.begin(), DomainElems.end());
-                vector<ExpT> PointIndicators;
-                for (auto const& DomainTuple : DomainCP) {
-                    vector<ExpT> AppArgs(NumDomainTypes);
-                    for (u32 i = 0; i < NumDomainTypes; ++i) {
-                        AppArgs[i] = Mgr->MakeVal(DomainTuple[i], DomainTypes[i]);
-                    }
-                    auto AppExp = Mgr->MakeExpr(GuardOp, AppArgs);
-                    auto IndicatorVarName = (string)"__guard_point_indicator_" +
-                        to_string(GuardPointUIDGenerator.GetUID());
-                    auto IndicatorVar = Mgr->MakeVar(IndicatorVarName,
-                                                     Mgr->MakeType<RangeType>(0, 1));
-                    PointIndicators.push_back(IndicatorVar);
-                    auto OneExp = Mgr->MakeVal("1", Mgr->MakeType<RangeType>(0, 1));
-                    auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES,
-                                                    AppExp,
-                                                    Mgr->MakeExpr(LTSOps::OpEQ,
-                                                                  IndicatorVar,
-                                                                  OneExp));
-
-                    // cout << "Asserting Guard Point Constraint:" << endl
-                    //      << ImpliesExp->ToString() << endl << endl;
-                    CurrentAssertions.insert(ImpliesExp);
-                }
-
-                auto SumExp = MakeSum(PointIndicators, Mgr,
-                                      Mgr->MakeType<RangeType>(0, PointIndicators.size()));
-                auto SumIndicatorVarName = (string)"__guard_indicator_" +
-                    to_string(GuardIndicatorUIDGenerator.GetUID());
-                auto SumIndicatorVar =
-                    Mgr->MakeVar(SumIndicatorVarName,
-                                 Mgr->MakeType<RangeType>(0, PointIndicators.size()));
-                auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumIndicatorVar, SumExp);
-                GuardIndicatorExps[GuardOp] = SumIndicatorVar;
-
-                // cout << "Asserting Guard Indicator Constraint:" << endl
-                //      << EQExp->ToString() << endl << endl;
-                CurrentAssertions.insert(EQExp);
-
-            } else if (Options.GBoundMethod == GuardBoundingMethodT::NonFalseBound) {
-
-                auto IndicatorUID = GuardIndicatorUIDGenerator.GetUID();
-                string IndicatorVarName = (string)"__indicator_" + to_string(IndicatorUID);
-                auto FunType = Mgr->LookupUninterpretedFunction(GuardOp)->As<FuncType>();
-                IndicatorVarName += (string)"_" + FunType->GetName();
-                auto const& DomainTypes = FunType->GetArgTypes();
-                vector<ExpT> BoundArgs;
-                const u32 NumDomainTypes = DomainTypes.size();
-                for (u32 i = 0; i < NumDomainTypes; ++i) {
-                    auto BoundVar = Mgr->MakeBoundVar(DomainTypes[i], NumDomainTypes - i - 1);
-                    BoundArgs.push_back(BoundVar);
-                }
-                auto AppExp = Mgr->MakeExpr(GuardOp, BoundArgs);
-                auto ExistsExp = Mgr->MakeExists(DomainTypes, AppExp);
-                auto IndicatorType = Mgr->MakeType<RangeType>(0, 1);
-
-                auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
-                GuardIndicatorExps[GuardOp] = IndicatorVar;
-
-                auto Implies = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
-                                             Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
-                                                           Mgr->MakeVal("1", IndicatorType)));
-                // cout << "Asserting Indicator Implication:" << endl
-                //      << Implies->ToString() << endl << endl;
-                CurrentAssertions.insert(Implies);
-            } else if (Options.GBoundMethod == GuardBoundingMethodT::VarDepBound) {
-                CreateIndicators(GuardOp);
-            } else {
-                // No bounding, return
-                return;
-            }
-        }
-
-        inline void Solver::CreateUpdatePointBounds(i64 UpdateOp)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            auto FunType = Mgr->LookupUninterpretedFunction(UpdateOp)->SAs<FuncType>();
-            auto const& DomTypes = FunType->GetArgTypes();
-
-            auto const& UpdateOpToLValue = TheLTS->UpdateOpToUpdateLValue;
-            auto it = UpdateOpToLValue.find(UpdateOp);
-
-            if (it == UpdateOpToLValue.end()) {
-                throw InternalError((string)"Could not find update exp and lvalue for op " +
-                                    "with opcode: " + to_string(UpdateOp));
-            }
-            auto const& UpdateExp = it->second.first;
-            auto const& LValueExp = it->second.second;
-
-            auto UpdateEQLValue = Mgr->MakeExpr(LTSOps::OpEQ, UpdateExp, LValueExp);
-            auto const& ActualArgs = GetOpArgs(UpdateExp);
-
-            const u32 NumArgs = DomTypes.size();
-            vector<vector<string>> DomainValues(NumArgs);
-            for (u32 i = 0; i < NumArgs; ++i) {
-                DomainValues[i] = DomTypes[i]->GetElements();
-            }
-
-            // Find the cross product of the arguments
-            auto&& ArgCP = CrossProduct<string>(DomainValues.begin(), DomainValues.end());
-            const u32 NumPoints = ArgCP.size();
-            vector<ExpT> PointIndicators(NumPoints);
-
-            for (u32 i = 0; i < NumPoints; ++i) {
-                auto const& CurPoint = ArgCP[i];
-
-                // Make a subst map
-                MgrT::SubstMapT SubstMap;
-                for (u32 j = 0; j < NumArgs; ++j) {
-                    auto CurValue = Mgr->MakeVal(CurPoint[j], DomTypes[j]);
-                    SubstMap[ActualArgs[j]] = CurValue;
-                }
-                auto SubstEQ = Mgr->TermSubstitute(SubstMap, UpdateEQLValue);
-                auto NotSubstEQ = Mgr->MakeExpr(LTSOps::OpNOT, SubstEQ);
-
-                string PointIndicatorName = "__update_point_indicator_" +
-                    to_string(UpdatePointUIDGenerator.GetUID());
-                auto PointIndicator = Mgr->MakeVar(PointIndicatorName,
-                                                   Mgr->MakeType<RangeType>(0,1));
-                PointIndicators[i] = PointIndicator;
-                auto PointEQOne = Mgr->MakeExpr(LTSOps::OpEQ, PointIndicator,
-                                                Mgr->MakeVal("1",
-                                                             Mgr->MakeType<RangeType>(0,1)));
-                auto Implication = Mgr->MakeExpr(LTSOps::OpIMPLIES, NotSubstEQ, PointEQOne);
-                CurrentAssertions.insert(Implication);
-
-                // cout << "Creating update point indicator:" << endl
-                //      << Implication->ToString() << endl;
-            }
-
-            // Make an indicator for the update itself
-            string UpdateIndicatorName = "__update_indicator_" +
-                to_string(UpdateIndicatorUIDGenerator.GetUID());
-            // Update equal to sum of the point indicators
-            auto UpdateRangeType = Mgr->MakeType<RangeType>(0, NumPoints);
-            auto UpdateIndicator = Mgr->MakeVar(UpdateIndicatorName,
-                                                UpdateRangeType);
-            auto SumExp = MakeSum(PointIndicators, Mgr, UpdateRangeType);
-            auto UpdateEQSum = Mgr->MakeExpr(LTSOps::OpEQ, UpdateIndicator, SumExp);
-            CurrentAssertions.insert(UpdateEQSum);
-
-            // cout << "Creating update indicator for " << UpdateExp
-            //      << endl << UpdateEQSum->ToString() << endl;
-            UpdateIndicatorExps[UpdateOp] = UpdateIndicator;
-        }
-
-        inline void Solver::MakeStateIdenticalConstraints(const ExpT& Exp)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            auto ExpAsOp = Exp->As<OpExpression>();
-            assert(ExpAsOp != nullptr);
-            auto const& Args = GetOpArgs(Exp);
-
-            vector<TypeRef> ArgTypes;
-            transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
-                      [&] (const ExpT& Exp) -> TypeRef
-                      {
-                          return Exp->GetType();
-                      });
-
-            vector<TypeRef> QVarTypes = ArgTypes;
-            QVarTypes.insert(QVarTypes.end(), ArgTypes.begin(), ArgTypes.end());
-            const u32 NumArgs = ArgTypes.size();
-
-            MgrT::SubstMapT Subst1;
-            MgrT::SubstMapT Subst2;
-            for (u32 i = 0; i < NumArgs; ++i) {
-                auto BoundVarExp = Mgr->MakeBoundVar(ArgTypes[i], NumArgs - i - 1);
-                Subst1[Args[i]] = BoundVarExp;
-            }
-
-            for (u32 i = 0; i < NumArgs; ++i) {
-                auto BoundVarExp = Mgr->MakeBoundVar(ArgTypes[i], (2 * NumArgs) - i - 1);
-                Subst2[Args[i]] = BoundVarExp;
-            }
-
-            auto App1 = Mgr->BoundSubstitute(Subst1, Exp);
-            auto App2 = Mgr->BoundSubstitute(Subst2, Exp);
-
-            auto Body = Mgr->MakeExpr(LTSOps::OpEQ, App1, App2);
-
-            auto Constraint = Mgr->MakeForAll(QVarTypes, Body);
-            // cout << "State Variable Identical Constraint:" << endl
-            //      << Constraint->ToString() << endl << endl;
-            CurrentAssertions.insert(Constraint);
-        }
-
-        inline void Solver::CreateUpdateIndicator(i64 UpdateOp)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            auto const& UpdateOpToLValue = TheLTS->UpdateOpToUpdateLValue;
-            auto const& StateUpdateOpToExp = TheLTS->StateUpdateOpToExp;
-
-            auto it = UpdateOpToLValue.find(UpdateOp);
-            if (it == UpdateOpToLValue.end()) {
-                // This must be an exempt lvalue, but it could be a state
-                // variable
-                auto it2 = StateUpdateOpToExp.find(UpdateOp);
-                if (it2 == StateUpdateOpToExp.end()) {
-                    // This is an exempt lvalue
-                    if (Options.UBoundMethod == UpdateBoundingMethodT::VarDepBound) {
-                        CreateIndicators(UpdateOp);
-                        return;
-                    } else {
-                        return;
-                    }
-                }
-
-                // This is a state variable.
-                auto const& AppArgs = GetOpArgs(it2->second);
-                const u32 NumArgs = AppArgs.size();
-                auto FuncCostVarName = (string)"__func_cost_" +
-                    to_string(FunctionCostUIDGenerator.GetUID());
-                auto FuncCostVarType = Mgr->MakeType<RangeType>(0, NumArgs);
-                auto FuncCostVar = Mgr->MakeVar(FuncCostVarName, FuncCostVarType);
-                AllIndicators.insert(FuncCostVar);
-
-                if (Options.SBoundMethod == StateUpdateBoundingMethodT::AllSame) {
-                    MakeStateIdenticalConstraints(it2->second);
-                } else if (Options.SBoundMethod == StateUpdateBoundingMethodT::VarDepBound) {
-                    auto&& ArgDepConstraints = CreateArgDepConstraints(it2->second, ExpT::NullPtr);
-                    auto SumExp = MakeSum(ArgDepConstraints, Mgr, FuncCostVarType);
-                    auto Constraint = Mgr->MakeExpr(LTSOps::OpGE, FuncCostVar, SumExp);
-                    UpdateIndicatorExps[UpdateOp] = FuncCostVar;
-                    CurrentAssertions.insert(Constraint);
-                } else {
-                    // No bounding
-                    return;
-                }
-                return;
-            }
-
-            // This has an LValue, is not a state update and is not exempt
-            if (Options.UBoundMethod == UpdateBoundingMethodT::NonIdentityBound) {
-
-                auto IndicatorUID = UpdateIndicatorUIDGenerator.GetUID();
-                string IndicatorVarName =
-                    (string)"__update_indicator_" + to_string(IndicatorUID);
-
-                auto const& UpdateExp = it->second.first;
-                auto const& LValue = it->second.second;
-
-                auto const& OpArgs = GetOpArgs(UpdateExp);
-                // remove the lvalue itself from the op args
-                vector<TypeRef> ArgTypes;
-                transform(OpArgs.begin(), OpArgs.end(), back_inserter(ArgTypes),
-                          [&] (const ExpT& Exp) -> TypeRef
-                          {
-                              return Exp->GetType();
-                          });
-
-                // replace each of the arg types by a bound var
-                MgrT::SubstMapT SubstMap;
-                const u32 NumArgs = ArgTypes.size();
-                for (u32 i = 0; i < NumArgs; ++i) {
-                    auto BoundVar = Mgr->MakeBoundVar(ArgTypes[i], NumArgs - i - 1);
-                    SubstMap[OpArgs[i]] = BoundVar;
-                }
-
-                // Substitute the bound vars
-                auto QBodyExp = Mgr->MakeExpr(LTSOps::OpEQ, LValue, UpdateExp);
-                QBodyExp = Mgr->MakeExpr(LTSOps::OpNOT, QBodyExp);
-                QBodyExp = Mgr->BoundSubstitute(SubstMap, QBodyExp);
-                auto ExistsExp = Mgr->MakeExists(ArgTypes, QBodyExp);
-                auto IndicatorType = Mgr->MakeType<RangeType>(0, 1);
-                auto IndicatorVar = Mgr->MakeVar(IndicatorVarName, IndicatorType);
-                UpdateIndicatorExps[UpdateOp] = IndicatorVar;
-
-                auto ImpliesExp = Mgr->MakeExpr(LTSOps::OpIMPLIES, ExistsExp,
-                                                Mgr->MakeExpr(LTSOps::OpEQ, IndicatorVar,
-                                                              Mgr->MakeVal("1", IndicatorType)));
-                // cout << "Asserting Update Indicator Implication:" << endl
-                //      << ImpliesExp->ToString() << endl << endl;
-                CurrentAssertions.insert(ImpliesExp);
-            } else if (Options.UBoundMethod == UpdateBoundingMethodT::VarDepBound) {
-                CreateIndicators(UpdateOp);
-            } else if (Options.UBoundMethod == UpdateBoundingMethodT::PointBound) {
-                CreateUpdatePointBounds(UpdateOp);
-            } else {
-                return;
-            }
-        }
-
-        inline void Solver::CreateBoundsConstraints(i64 UpdateOp)
+        inline void Solver::MakeRangeConstraintsForOp(i64 UpdateOp)
         {
             auto Mgr = TheLTS->GetMgr();
             auto FunType = Mgr->LookupUninterpretedFunction(UpdateOp)->As<FuncType>();
@@ -717,7 +210,7 @@ namespace ESMC {
 
             auto QBody = Mgr->MakeExpr(LTSOps::OpAND, LEExp, GEExp);
             auto QExpr = Mgr->MakeForAll(DomTypes, QBody);
-            CurrentAssertions.insert(QExpr);
+            CheckedAssert(QExpr);
         }
 
         inline void Solver::UpdateCommands()
@@ -736,7 +229,9 @@ namespace ESMC {
             }
         }
 
-        void Solver::UnveilGuardOp(i64 Op)
+        // Returns the set of update ops associated with the guard
+        inline unordered_set<i64>
+        Solver::AssertConstraintsForNewGuard(i64 GuardOp)
         {
             auto const& GuardOpToExp = TheLTS->GuardOpToExp;
             auto const& GuardSymmetryConstraints = TheLTS->GuardSymmetryConstraints;
@@ -746,16 +241,12 @@ namespace ESMC {
                 TheLTS->GuardOpToUpdateSymmetryConstraints;
 
             unordered_set<i64> NewlyUnveiledUpdates;
-            auto ExpIt = GuardOpToExp.find(Op);
+
+            auto ExpIt = GuardOpToExp.find(GuardOp);
             if (ExpIt == GuardOpToExp.end()) {
-                // Not unveiled, and not a guard, must be an unveiled update
-                if (UnveiledUpdateOps.find(Op) == UnveiledUpdateOps.end()) {
-                    throw InternalError((string)"Expected Op " + to_string(Op) +
-                                        "to have been unveiled already.\nWhen asserting: " +
-                                        "At: " + __FILE__ + ":" +
-                                        to_string(__LINE__));
-                }
-                return;
+                throw InternalError((string)"Could not find expression for op: " +
+                                    to_string(GuardOp) + "\nAt: " + __FILE__ + ":" +
+                                    to_string(__LINE__));
             }
 
             auto GuardExp = ExpIt->second;
@@ -765,10 +256,10 @@ namespace ESMC {
 
             // This is a new guard
             // Assert the symmetry constraints
-            auto it = GuardSymmetryConstraints.find(Op);
+            auto it = GuardSymmetryConstraints.find(GuardOp);
             if (it != GuardSymmetryConstraints.end()) {
                 for (auto const& Constraint : it->second) {
-                    CurrentAssertions.insert(Constraint);
+                    CheckedAssert(Constraint);
                 }
             }
 
@@ -777,7 +268,7 @@ namespace ESMC {
 
             // Assert the determinism constraints wrt guards
             // that have already been unveiled
-            auto it2 = GuardMutualExclusiveSets.find(Op);
+            auto it2 = GuardMutualExclusiveSets.find(GuardOp);
             if (it2 != GuardMutualExclusiveSets.end()) {
                 for (auto const& OtherGuard : it2->second) {
                     auto OtherOp = OtherGuard->SAs<OpExpression>()->GetOpCode();
@@ -794,22 +285,22 @@ namespace ESMC {
 
             // add the symmetry constraints for updates associated with
             // this guard
-            auto it3 = GuardOpToUpdateSymmetryConstraints.find(Op);
+            auto it3 = GuardOpToUpdateSymmetryConstraints.find(GuardOp);
             if (it3 != GuardOpToUpdateSymmetryConstraints.end()) {
                 for (auto const& Constraint : it3->second) {
                     // cout << Constraint->ToString() << endl;
-                    CurrentAssertions.insert(Constraint);
+                    CheckedAssert(Constraint);
                 }
             }
 
             // cout << "End of Symmetry constraints on updates:" << endl;
 
             // Mark the guard and its updates as unveiled
-            UnveiledGuardOps.insert(Op);
+            UnveiledGuardOps.insert(GuardOp);
             UnveiledNewOps = true;
+            InterpretedOps.insert(GuardOp);
 
-            InterpretedOps.insert(Op);
-            auto it4 = GuardOpToUpdates.find(Op);
+            auto it4 = GuardOpToUpdates.find(GuardOp);
             if (it4 != GuardOpToUpdates.end()) {
                 for (auto const& UpdateExp : it4->second) {
                     auto UpdateOp = UpdateExp->SAs<OpExpression>()->GetOpCode();
@@ -819,14 +310,697 @@ namespace ESMC {
                 }
             }
 
-            // Create the indicator variable for the guard
-            // and assert the implication on the indicator variable
-            CreateGuardIndicator(Op);
+            return NewlyUnveiledUpdates;
+        }
+
+        inline pair<ExpT, ExpT>
+        Solver::MakeAllFalseConstraint(i64 GuardOp,
+                                       const ExpT& GuardExp,
+                                       bool MakeAllTrue)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto const& Args = GetOpArgs(GuardExp);
+            const u32 NumArgs = Args.size();
+            auto const& FunType = Mgr->LookupUninterpretedFunction(GuardOp)->As<FuncType>();
+            auto const& DomTypes = FunType->GetArgTypes();
+            MgrT::SubstMapT SubstMap;
+            for (u32 i = 0; i < NumArgs; ++i) {
+                SubstMap[Args[i]] = Mgr->MakeBoundVar(DomTypes[i], NumArgs - i - 1);
+            }
+            auto Body = Mgr->BoundSubstitute(SubstMap, GuardExp);
+            auto NotBody = Mgr->MakeExpr(LTSOps::OpNOT, Body);
+
+            auto AllFalseConstraint = Mgr->MakeForAll(DomTypes, NotBody);
+            auto AllTrueConstraint = Mgr->MakeForAll(DomTypes, Body);
+
+            auto AllFalsePred = Mgr->MakeVar((string)"__allfalse_" + to_string(GuardOp),
+                                             Mgr->MakeType<BooleanType>());
+            auto AllTruePred = Mgr->MakeVar((string)"__alltrue_" + to_string(GuardOp),
+                                            Mgr->MakeType<BooleanType>());
+
+            auto IffFalse = Mgr->MakeExpr(LTSOps::OpIFF, AllFalseConstraint, AllFalsePred);
+            auto IffTrue = Mgr->MakeExpr(LTSOps::OpIFF, AllTrueConstraint, AllTruePred);
+            CheckedAssert(IffFalse);
+            if (MakeAllTrue) {
+                CheckedAssert(IffTrue);
+                return make_pair(AllFalsePred, AllTruePred);
+            } else {
+                return make_pair(AllFalsePred, ExpT::NullPtr);
+            }
+        }
+
+        inline vector<ExpT> Solver::MakePointApplications(i64 OpCode)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto FunType = Mgr->LookupUninterpretedFunction(OpCode)->As<FuncType>();
+            auto const& ArgTypes = FunType->GetArgTypes();
+            const u32 NumArgs = ArgTypes.size();
+
+            vector<vector<string>> ArgValues;
+            for (auto const& ArgType : ArgTypes) {
+                ArgValues.push_back(ArgType->GetElements());
+            }
+            auto&& CPTuples = CrossProduct<string>(ArgValues.begin(), ArgValues.end());
+            const u32 NumPoints = CPTuples.size();
+            vector<ExpT> Retval(NumPoints);
+            for (u32 j = 0; j < NumPoints; ++j) {
+                auto const& Tuple = CPTuples[j];
+                vector<ExpT> AppArgs(NumArgs);
+                for (u32 i = 0; i < NumArgs; ++i) {
+                    AppArgs[i] = Mgr->MakeVal(Tuple[i], ArgTypes[i]);
+                }
+                auto AppExp = Mgr->MakeExpr(OpCode, AppArgs);
+                Retval[j] = AppExp;
+            }
+            return Retval;
+        }
+
+        inline tuple<ExpT, ExpT, ExpT, ExpT>
+        Solver::CreateArgDepSubsts(vector<TypeRef>& QVars,
+                                   const ExpT& UpdateExp,
+                                   const ExpT& CurrentArg)
+        {
+            auto Mgr = TheLTS->GetMgr();
+
+            auto const& UpdateArgs = GetOpArgs(UpdateExp);
+            vector<ExpT> OtherArgs;
+            for (auto const& UpdateArg : UpdateArgs) {
+                if (UpdateArg != CurrentArg) {
+                    OtherArgs.push_back(UpdateArg);
+                }
+            }
+            const u32 NumOtherArgs = OtherArgs.size();
+            vector<TypeRef> OtherArgTypes;
+            transform(OtherArgs.begin(), OtherArgs.end(), back_inserter(OtherArgTypes),
+                      [&] (const ExpT& Exp) -> TypeRef
+                      {
+                          return Exp->GetType();
+                      });
+            MgrT::SubstMapT OtherArgSubstMap1;
+            for (u32 i = 0; i < NumOtherArgs; ++i) {
+                auto BoundVar = Mgr->MakeBoundVar(OtherArgTypes[i], NumOtherArgs - i - 1);
+                OtherArgSubstMap1[OtherArgs[i]] = BoundVar;
+            }
+            auto ArgBoundVar = Mgr->MakeBoundVar(CurrentArg->GetType(), NumOtherArgs);
+            auto ArgPrimeBoundVar = Mgr->MakeBoundVar(CurrentArg->GetType(), NumOtherArgs + 1);
+            OtherArgSubstMap1[CurrentArg] = ArgBoundVar;
+            auto OtherArgSubstMap2 = OtherArgSubstMap1;
+            OtherArgSubstMap2[CurrentArg] = ArgPrimeBoundVar;
+
+            QVars.push_back(CurrentArg->GetType());
+            QVars.push_back(CurrentArg->GetType());
+            QVars.insert(QVars.end(), OtherArgTypes.begin(), OtherArgTypes.end());
+
+            auto SubstExp1 = Mgr->BoundSubstitute(OtherArgSubstMap1, UpdateExp);
+            auto SubstExp2 = Mgr->BoundSubstitute(OtherArgSubstMap2, UpdateExp);
+
+            return make_tuple(SubstExp1, SubstExp2, ArgBoundVar, ArgPrimeBoundVar);
+        }
+
+        inline ExpT Solver::MakeArgDepConstraints(i64 OpCode, const ExpT& Exp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto const IsGuard = (TheLTS->GuardOpToExp.find(OpCode) !=
+                                  TheLTS->GuardOpToExp.end());
+            string PerArgCostVarNamePrefix;
+            if (IsGuard) {
+                PerArgCostVarNamePrefix = (string)"__arg_dep_cost_guard_" + to_string(OpCode);
+            } else {
+                PerArgCostVarNamePrefix = (string)"__arg_dep_cost_update_" + to_string(OpCode);
+            }
+
+            auto ZeroOneType = Mgr->MakeType<RangeType>(0, 1);
+            auto TVType = Mgr->MakeType<RangeType>(0, 2);
+            auto ZeroExp = Mgr->MakeVal("0", ZeroOneType);
+            auto OneExp = Mgr->MakeVal("1", ZeroOneType);
+            auto TwoExp = Mgr->MakeVal("2", TVType);
+
+            vector<ExpT> PerArgCosts;
+
+            auto const& OpArgs = GetOpArgs(Exp);
+            u32 Count = 1;
+            for (auto const& Arg : OpArgs) {
+                vector<TypeRef> QVars;
+                auto Substs = CreateArgDepSubsts(QVars, Exp, Arg);
+
+                auto const& SubstExp1 = get<0>(Substs);
+                auto const& SubstExp2 = get<1>(Substs);
+
+                auto QBody = Mgr->MakeExpr(LTSOps::OpEQ, SubstExp1, SubstExp2);
+                auto Antecedent = Mgr->MakeForAll(QVars, QBody);
+                auto NegAntecedent = Mgr->MakeExpr(LTSOps::OpNOT, Antecedent);
+
+                if (IsGuard || !CheckTypeCompat(Arg->GetType(), Exp->GetType())) {
+                    auto CurArgCostVar = Mgr->MakeVar(PerArgCostVarNamePrefix + "_on_arg_" +
+                                                      to_string(Count), ZeroOneType);
+                    auto CostEQ0 = Mgr->MakeExpr(LTSOps::OpEQ, CurArgCostVar, ZeroExp);
+                    auto CostEQ1 = Mgr->MakeExpr(LTSOps::OpEQ, CurArgCostVar, OneExp);
+
+                    auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, Antecedent, CostEQ0);
+                    auto Constraint1 = Mgr->MakeExpr(LTSOps::OpIFF, NegAntecedent, CostEQ1);
+
+                    CheckedAssert(Constraint0);
+                    CheckedAssert(Constraint1);
+
+                    PerArgCosts.push_back(CurArgCostVar);
+                } else {
+                    auto CurArgCostVar = Mgr->MakeVar(PerArgCostVarNamePrefix + "_on_arg_" +
+                                                      to_string(Count), TVType);
+                    auto CostEQ0 = Mgr->MakeExpr(LTSOps::OpEQ, CurArgCostVar, ZeroExp);
+                    auto CostEQ1 = Mgr->MakeExpr(LTSOps::OpEQ, CurArgCostVar, OneExp);
+                    auto CostEQ2 = Mgr->MakeExpr(LTSOps::OpEQ, CurArgCostVar, TwoExp);
+                    auto ExpEQArg = Mgr->MakeExpr(LTSOps::OpEQ, Exp, Arg);
+                    auto ExpNEQArg = Mgr->MakeExpr(LTSOps::OpNOT, ExpEQArg);
+
+                    auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, Antecedent, CostEQ0);
+                    auto Constraint2 = Mgr->MakeExpr(LTSOps::OpIFF,
+                                                     Mgr->MakeExpr(LTSOps::OpAND,
+                                                                   NegAntecedent,
+                                                                   ExpNEQArg),
+                                                     CostEQ2);
+                    auto Constraint1 = Mgr->MakeExpr(LTSOps::OpIFF,
+                                                     Mgr->MakeExpr(LTSOps::OpAND,
+                                                                   NegAntecedent,
+                                                                   ExpEQArg),
+                                                     CostEQ1);
+
+                    CheckedAssert(Constraint0);
+                    CheckedAssert(Constraint1);
+                    CheckedAssert(Constraint2);
+                    PerArgCosts.push_back(CurArgCostVar);
+                }
+                ++Count;
+            }
+
+            auto TotalArgDepCostType = Mgr->MakeType<RangeType>(0, 2 * PerArgCosts.size());
+            auto TotalArgDepCostVar = Mgr->MakeVar(PerArgCostVarNamePrefix, TotalArgDepCostType);
+            auto SumExp = MakeSum(PerArgCosts, Mgr, TotalArgDepCostType);
+            auto Constraint = Mgr->MakeExpr(LTSOps::OpEQ, TotalArgDepCostVar, SumExp);
+            return TotalArgDepCostVar;
+        }
+
+        inline void Solver::MakeArgDepCCForGuard(i64 Op, const ExpT& Exp)
+        {
+            string CostVarName("__guard_func_cost_");
+            CostVarName += to_string(Op);
+            auto const& OpArgs = GetOpArgs(Exp);
+            const u32 NumArgs = OpArgs.size();
+            auto Mgr = TheLTS->GetMgr();
+
+            auto CostVarType = Mgr->MakeType<RangeType>(0, 2 * NumArgs + 1);
+            auto CostVar = Mgr->MakeVar(CostVarName, CostVarType);
+            auto AFATPair = MakeAllFalseConstraint(Op, Exp, false);
+            auto const& AFPred = AFATPair.first;
+            auto NegAFPred = Mgr->MakeExpr(LTSOps::OpNOT, AFPred);
+            auto CostEQ0 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                         Mgr->MakeVal("0", CostVarType));
+            auto OneExp = Mgr->MakeVal("1", CostVarType);
+            auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, AFPred, CostEQ0);
+            auto ArgDepCost = MakeArgDepConstraints(Op, Exp);
+            auto OnePlusADCost = Mgr->MakeExpr(LTSOps::OpADD, OneExp, ArgDepCost);
+            auto CostEQArgDep = Mgr->MakeExpr(LTSOps::OpEQ, CostVar, OnePlusADCost);
+            auto ConstraintGen = Mgr->MakeExpr(LTSOps::OpIFF, NegAFPred, CostEQArgDep);
+            CheckedAssert(Constraint0);
+            CheckedAssert(ConstraintGen);
+            GuardFuncCosts.insert(CostVar);
+            AllFalsePreds[Op] = AFPred;
+            return;
+        }
+
+        inline void Solver::MakeNonFalseCCForGuard(i64 Op, const ExpT& Exp)
+        {
+            string CostVarName("__guard_func_cost_");
+            CostVarName += to_string(Op);
+            auto Mgr = TheLTS->GetMgr();
+
+            auto CostVarType = Mgr->MakeType<RangeType>(0, 2);
+            auto CostVar = Mgr->MakeVar(CostVarName, CostVarType);
+            auto AFATPair = MakeAllFalseConstraint(Op, Exp, true);
+            auto const& AFPred = AFATPair.first;
+            auto const& ATPred = AFATPair.second;
+            auto CostEQ0 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                         Mgr->MakeVal("0", CostVarType));
+            auto CostEQ1 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                         Mgr->MakeVal("1", CostVarType));
+            auto CostEQ2 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                         Mgr->MakeVal("2", CostVarType));
+
+            auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, AFPred, CostEQ0);
+            auto Constraint1 = Mgr->MakeExpr(LTSOps::OpIFF, ATPred, CostEQ1);
+            auto NotAFNotAT = Mgr->MakeExpr(LTSOps::OpAND,
+                                            Mgr->MakeExpr(LTSOps::OpNOT, AFPred),
+                                            Mgr->MakeExpr(LTSOps::OpNOT, ATPred));
+            auto Constraint2 = Mgr->MakeExpr(LTSOps::OpIFF, NotAFNotAT, CostEQ2);
+            CheckedAssert(Constraint0);
+            CheckedAssert(Constraint1);
+            CheckedAssert(Constraint2);
+            GuardFuncCosts.insert(CostVar);
+            AllFalsePreds[Op] = AFPred;
+            return;
+        }
+
+        inline void Solver::MakePointCCForGuard(i64 Op, const ExpT& Exp)
+        {
+            string CostVarName("__guard_func_cost_");
+            CostVarName += to_string(Op);
+            auto Mgr = TheLTS->GetMgr();
+
+            auto&& PointApps = MakePointApplications(Op);
+            const u32 NumPoints = PointApps.size();
+            auto CostVarType = Mgr->MakeType<RangeType>(0, NumPoints + 1);
+            auto CostVar = Mgr->MakeVar(CostVarName, CostVarType);
+            auto AFATPair = MakeAllFalseConstraint(Op, Exp, true);
+            auto const& AFPred = AFATPair.first;
+            auto const& ATPred = AFATPair.second;
+            auto NegAFPred = Mgr->MakeExpr(LTSOps::OpNOT, AFPred);
+            auto NegATPred = Mgr->MakeExpr(LTSOps::OpNOT, ATPred);
+
+            auto CostEQ0 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                         Mgr->MakeVal("0", CostVarType));
+            auto CostEQ1 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                         Mgr->MakeVal("1", CostVarType));
+            string PointCostVarNamePrefix("__point_cost_guard_");
+            PointCostVarNamePrefix += to_string(Op);
+            auto PerPointCostVarType = Mgr->MakeType<RangeType>(0, 1);
+            vector<ExpT> PerPointCostVars(NumPoints);
+
+            for (u32 i = 0; i < NumPoints; ++i) {
+                auto const& CurApp = PointApps[i];
+                auto NegCurApp = Mgr->MakeExpr(LTSOps::OpNOT, CurApp);
+                auto CurPointCostVar = Mgr->MakeVar(PointCostVarNamePrefix +
+                                                    "_" + to_string(i),
+                                                    PerPointCostVarType);
+                auto CurPointCostEQ0 = Mgr->MakeExpr(LTSOps::OpEQ,
+                                                     CurPointCostVar,
+                                                     Mgr->MakeVal("0", PerPointCostVarType));
+                auto CurPointCostEQ1 = Mgr->MakeExpr(LTSOps::OpEQ,
+                                                     CurPointCostVar,
+                                                     Mgr->MakeVal("1", PerPointCostVarType));
+                auto Constraint1 = Mgr->MakeExpr(LTSOps::OpIFF, CurApp, CurPointCostEQ1);
+                auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, NegCurApp, CurPointCostEQ0);
+                CheckedAssert(Constraint0);
+                CheckedAssert(Constraint1);
+                PerPointCostVars[i] = CurPointCostVar;
+            }
+
+            auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, AFPred, CostEQ0);
+            auto Constraint1 = Mgr->MakeExpr(LTSOps::OpIFF, ATPred, CostEQ1);
+            auto NotAFNotAT = Mgr->MakeExpr(LTSOps::OpAND, NegAFPred, NegATPred);
+            auto PointSum = MakeSum(PerPointCostVars, Mgr, CostVarType);
+            auto OnePlusPointSum = Mgr->MakeExpr(LTSOps::OpADD, PointSum,
+                                                 Mgr->MakeVal("1", CostVarType));
+            auto ConstraintN = Mgr->MakeExpr(LTSOps::OpIFF, NotAFNotAT,
+                                             Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                                           OnePlusPointSum));
+
+            CheckedAssert(Constraint0);
+            CheckedAssert(Constraint1);
+            CheckedAssert(ConstraintN);
+            GuardFuncCosts.insert(CostVar);
+            AllFalsePreds[Op] = AFPred;
+            return;
+        }
+
+        inline void Solver::MakeCostConstraintsForGuard(i64 Op, const ExpT& Exp)
+        {
+            if (Options.GBoundMethod == GuardBoundingMethodT::NoBounding) {
+                auto AFATPair = MakeAllFalseConstraint(Op, Exp, false);
+                auto AFPred = AFATPair.first;
+                AllFalsePreds[Op] = AFPred;
+                return;
+            }
+            if (Options.GBoundMethod == GuardBoundingMethodT::NonFalseBound) {
+                MakeNonFalseCCForGuard(Op, Exp);
+                return;
+            }
+            if (Options.GBoundMethod == GuardBoundingMethodT::VarDepBound) {
+                MakeArgDepCCForGuard(Op, Exp);
+                return;
+            }
+            if (Options.GBoundMethod == GuardBoundingMethodT::PointBound) {
+                MakePointCCForGuard(Op, Exp);
+                return;
+            }
+        }
+
+        inline ExpT
+        Solver::MakeIdentityConstraint(i64 Op, const ExpT& UpdateExp, u32 LValueIndex)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto FunType = Mgr->LookupUninterpretedFunction(Op)->As<FuncType>();
+            auto const& DomTypes = FunType->GetArgTypes();
+            const u32 NumArgs = DomTypes.size();
+            auto const& OpArgs = GetOpArgs(UpdateExp);
+            auto const& LValueExp = OpArgs[LValueIndex];
+            auto AppEQLValue = Mgr->MakeExpr(LTSOps::OpEQ, UpdateExp, LValueExp);
+
+            MgrT::SubstMapT SubstMap;
+            for (u32 i = 0; i < NumArgs; ++i) {
+                SubstMap[OpArgs[i]] = Mgr->MakeBoundVar(DomTypes[i], NumArgs - i - 1);
+            }
+            auto Body = Mgr->BoundSubstitute(SubstMap, AppEQLValue);
+            auto ForallExp = Mgr->MakeForAll(DomTypes, Body);
+            auto IdentityPred = Mgr->MakeVar("__identity_" + to_string(Op),
+                                             Mgr->MakeType<BooleanType>());
+            auto Constraint = Mgr->MakeExpr(LTSOps::OpIFF, ForallExp, IdentityPred);
+            CheckedAssert(Constraint);
+            return IdentityPred;
+        }
+
+        inline ExpT
+        Solver::MakeConstantConstraint(i64 Op, const ExpT& Exp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto&& PointApps = MakePointApplications(Op);
+            const u32 NumPoints = PointApps.size();
+
+            if (NumPoints == 1) {
+                return Mgr->MakeTrue();
+            } else {
+                vector<ExpT> Conjuncts(NumPoints - 1);
+                auto Reference = PointApps[0];
+                for (u32 i = 1; i < NumPoints; ++i) {
+                    Conjuncts[i - 1] = Mgr->MakeExpr(LTSOps::OpEQ, Reference, PointApps[i]);
+                }
+                auto AllEQExp = MakeConjunction(Conjuncts, Mgr);
+                auto ConstantPred = Mgr->MakeVar("__constant_update_" + to_string(Op),
+                                                 Mgr->MakeType<BooleanType>());
+                auto IffExp = Mgr->MakeExpr(LTSOps::OpIFF, AllEQExp, ConstantPred);
+                CheckedAssert(IffExp);
+                return ConstantPred;
+            }
+        }
+
+        inline void
+        Solver::MakeArgDepCCForLValUpdate(i64 Op, const ExpT& Exp,
+                                          const ExpT& LValueExp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto const& OpArgs = GetOpArgs(Exp);
+            const u32 NumArgs = OpArgs.size();
+            i32 LValueIndex = -1;
+            for (u32 i = 0; i < NumArgs; ++i) {
+                if (OpArgs[i] == LValueExp) {
+                    LValueIndex = i;
+                    break;
+                }
+            }
+
+            if (LValueIndex < 0) {
+                throw InternalError((string)"Could not find index of lvalue in update exp:\n" +
+                                    Exp->ToString() + "\nAt: " + __FILE__ + ":" +
+                                    to_string(__LINE__));
+            }
+
+            string CostVarName("__update_func_cost_");
+            CostVarName += to_string(Op);
+
+            auto CostVarType = Mgr->MakeType<RangeType>(0, 2 * NumArgs + 1);
+            auto ZeroExp = Mgr->MakeVal("0", CostVarType);
+            auto OneExp = Mgr->MakeVal("1", CostVarType);
+            auto CostVar = Mgr->MakeVar(CostVarName, CostVarType);
+
+            auto CostEQ0 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar, ZeroExp);
+            auto CostEQ1 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar, OneExp);
+            auto ArgDepCost = MakeArgDepConstraints(Op, Exp);
+            auto OnePlusArgDepCost = Mgr->MakeExpr(LTSOps::OpADD, ArgDepCost, OneExp);
+            auto CostEQN = Mgr->MakeExpr(LTSOps::OpEQ, CostVar, OnePlusArgDepCost);
+
+            auto IdentityPred = MakeIdentityConstraint(Op, Exp, LValueIndex);
+            auto ConstantPred = MakeConstantConstraint(Op, Exp);
+            auto NegIdentityPred = Mgr->MakeExpr(LTSOps::OpNOT, IdentityPred);
+            auto NegConstantPred = Mgr->MakeExpr(LTSOps::OpNOT, ConstantPred);
+            auto NonIdNonConst = Mgr->MakeExpr(LTSOps::OpAND, NegIdentityPred,
+                                               NegConstantPred);
+
+            auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, IdentityPred, CostEQ0);
+            auto Constraint1 = Mgr->MakeExpr(LTSOps::OpIFF, ConstantPred, CostEQ1);
+            auto ConstraintN = Mgr->MakeExpr(LTSOps::OpIFF, NonIdNonConst, CostEQN);
+
+            CheckedAssert(Constraint0);
+            CheckedAssert(Constraint1);
+            CheckedAssert(ConstraintN);
+            UpdateFuncCosts.insert(CostVar);
+            return;
+        }
+
+        inline void
+        Solver::MakeIdentityCCForLValUpdate(i64 Op, const ExpT& Exp,
+                                            const ExpT& LValueExp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto const& OpArgs = GetOpArgs(Exp);
+            const u32 NumArgs = OpArgs.size();
+            i32 LValueIndex = -1;
+            for (u32 i = 0; i < NumArgs; ++i) {
+                if (OpArgs[i] == LValueExp) {
+                    LValueIndex = i;
+                    break;
+                }
+            }
+
+            if (LValueIndex < 0) {
+                throw InternalError((string)"Could not find index of lvalue in update exp:\n" +
+                                    Exp->ToString() + "\nAt: " + __FILE__ + ":" +
+                                    to_string(__LINE__));
+            }
+
+            string CostVarName("__update_func_cost_");
+            CostVarName += to_string(Op);
+
+            auto CostVarType = Mgr->MakeType<RangeType>(0, 2);
+            auto CostVar = Mgr->MakeVar(CostVarName, CostVarType);
+            auto ZeroExp = Mgr->MakeVal("0", CostVarType);
+            auto OneExp = Mgr->MakeVal("1", CostVarType);
+            auto TwoExp = Mgr->MakeVal("2", CostVarType);
+            auto CostEQ0 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar, ZeroExp);
+            auto CostEQ1 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar, OneExp);
+            auto CostEQ2 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar, TwoExp);
+            auto IdentityPred = MakeIdentityConstraint(Op, Exp, LValueIndex);
+            auto ConstantPred = MakeConstantConstraint(Op, Exp);
+            auto NegIdentityPred = Mgr->MakeExpr(LTSOps::OpNOT, IdentityPred);
+            auto NegConstantPred = Mgr->MakeExpr(LTSOps::OpNOT, ConstantPred);
+            auto NonIdNonConst = Mgr->MakeExpr(LTSOps::OpAND, NegIdentityPred,
+                                               NegConstantPred);
+
+            auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, IdentityPred, CostEQ0);
+            auto Constraint1 = Mgr->MakeExpr(LTSOps::OpIFF, ConstantPred, CostEQ1);
+            auto Constraint2 = Mgr->MakeExpr(LTSOps::OpIFF, NonIdNonConst, CostEQ2);
+
+            CheckedAssert(Constraint0);
+            CheckedAssert(Constraint1);
+            CheckedAssert(Constraint2);
+            UpdateFuncCosts.insert(CostVar);
+            return;
+        }
+
+        inline void
+        Solver::MakePointCCForLValUpdate(i64 Op, const ExpT& Exp,
+                                         const ExpT& LValueExp)
+        {
+            auto Mgr = TheLTS->GetMgr();
+            auto const& OpArgs = GetOpArgs(Exp);
+            const u32 NumArgs = OpArgs.size();
+            i32 LValueIndex = -1;
+            for (u32 i = 0; i < NumArgs; ++i) {
+                if (OpArgs[i] == LValueExp) {
+                    LValueIndex = i;
+                    break;
+                }
+            }
+
+            if (LValueIndex < 0) {
+                throw InternalError((string)"Could not find index of lvalue in update exp:\n" +
+                                    Exp->ToString() + "\nAt: " + __FILE__ + ":" +
+                                    to_string(__LINE__));
+            }
+
+            string CostVarName("__update_func_cost_");
+            CostVarName += to_string(Op);
+
+            auto&& PointApps = MakePointApplications(Op);
+            const u32 NumPoints = PointApps.size();
+            auto CostVarType = Mgr->MakeType<RangeType>(0, NumPoints + 1);
+            auto CostVar = Mgr->MakeVar(CostVarName, CostVarType);
+
+            auto IdentityPred = MakeIdentityConstraint(Op, Exp, LValueIndex);
+            auto ConstantPred = MakeConstantConstraint(Op, Exp);
+            auto NegIdentityPred = Mgr->MakeExpr(LTSOps::OpNOT, IdentityPred);
+            auto NegConstantPred = Mgr->MakeExpr(LTSOps::OpNOT, ConstantPred);
+            auto NonIdNonConst = Mgr->MakeExpr(LTSOps::OpAND, NegIdentityPred,
+                                               NegConstantPred);
+            auto CostEQ0 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                         Mgr->MakeVal("0", CostVarType));
+            auto CostEQ1 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                         Mgr->MakeVal("1", CostVarType));
+            string PointCostVarNamePrefix("__point_cost_update_");
+            PointCostVarNamePrefix += to_string(Op);
+            auto PerPointCostVarType = Mgr->MakeType<RangeType>(0, 1);
+            vector<ExpT> PerPointCostVars(NumPoints);
+
+            for (u32 i = 0; i < NumPoints; ++i) {
+                auto const& CurApp = PointApps[i];
+                auto const& CurAppArgs = GetOpArgs(CurApp);
+                auto AppEQLVal = Mgr->MakeExpr(LTSOps::OpEQ, CurApp,
+                                               CurAppArgs[LValueIndex]);
+                auto NegAppEQLVal = Mgr->MakeExpr(LTSOps::OpNOT, AppEQLVal);
+                auto CurPointCostVar = Mgr->MakeVar(PointCostVarNamePrefix +
+                                                    "_" + to_string(i),
+                                                    PerPointCostVarType);
+                auto CurPointCostEQ0 = Mgr->MakeExpr(LTSOps::OpEQ, CurPointCostVar,
+                                                     Mgr->MakeVal("0", PerPointCostVarType));
+                auto CurPointCostEQ1 = Mgr->MakeExpr(LTSOps::OpEQ, CurPointCostVar,
+                                                     Mgr->MakeVal("1", PerPointCostVarType));
+                auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, AppEQLVal, CurPointCostEQ0);
+                auto Constraint1 = Mgr->MakeExpr(LTSOps::OpIFF, NegAppEQLVal, CurPointCostEQ1);
+                CheckedAssert(Constraint0);
+                CheckedAssert(Constraint1);
+                PerPointCostVars[i] = CurPointCostVar;
+            }
+
+            auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, IdentityPred, CostEQ0);
+            auto Constraint1 = Mgr->MakeExpr(LTSOps::OpIFF, ConstantPred, CostEQ1);
+
+            auto PointSum = MakeSum(PerPointCostVars, Mgr, CostVarType);
+            auto OnePlusPointSum = Mgr->MakeExpr(LTSOps::OpADD, PointSum,
+                                                 Mgr->MakeVal("1", CostVarType));
+            auto ConstraintN = Mgr->MakeExpr(LTSOps::OpIFF, NonIdNonConst,
+                                             Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                                           OnePlusPointSum));
+            CheckedAssert(Constraint0);
+            CheckedAssert(Constraint1);
+            CheckedAssert(ConstraintN);
+            UpdateFuncCosts.insert(CostVar);
+            return;
+        }
+
+        inline void
+        Solver::MakeCostConstraintsForLValueUpdate(i64 Op, const ExpT& UpdateExp,
+                                                   const ExpT& LValueExp)
+        {
+            if (Options.UBoundMethod == UpdateBoundingMethodT::NoBounding) {
+                return;
+            }
+            if (Options.UBoundMethod == UpdateBoundingMethodT::NonIdentityBound) {
+                MakeIdentityCCForLValUpdate(Op, UpdateExp, LValueExp);
+                return;
+            }
+            if (Options.UBoundMethod == UpdateBoundingMethodT::VarDepBound) {
+                MakeArgDepCCForLValUpdate(Op, UpdateExp, LValueExp);
+                return;
+            }
+            if (Options.UBoundMethod == UpdateBoundingMethodT::PointBound) {
+                MakePointCCForLValUpdate(Op, UpdateExp, LValueExp);
+                return;
+            }
+        }
+
+        inline void
+        Solver::MakeCostConstraintsForStateUpdate(i64 Op, const ExpT& UpdateExp)
+        {
+            if (Options.SBoundMethod == StateUpdateBoundingMethodT::NoBounding) {
+                return;
+            }
+            if (Options.SBoundMethod == StateUpdateBoundingMethodT::AllSame) {
+                auto ConstantPred = MakeConstantConstraint(Op, UpdateExp);
+                CheckedAssert(ConstantPred);
+            }
+            if (Options.SBoundMethod == StateUpdateBoundingMethodT::VarDepBound) {
+                auto ArgDepCost = MakeArgDepConstraints(Op, UpdateExp);
+                auto const& AppArgs = GetOpArgs(UpdateExp);
+                const u32 NumArgs = AppArgs.size();
+                string CostVarName("__state_update_func_cost_");
+                CostVarName += to_string(Op);
+                auto Mgr = TheLTS->GetMgr();
+                auto CostVarType = Mgr->MakeType<RangeType>(0, NumArgs);
+                auto CostVar = Mgr->MakeVar(CostVarName, CostVarType);
+                auto Constraint = Mgr->MakeExpr(LTSOps::OpEQ, CostVar, ArgDepCost);
+                CheckedAssert(Constraint);
+                UpdateFuncCosts.insert(CostVar);
+            }
+        }
+
+        inline void
+        Solver::MakeCostConstraintsForNonLValueUpdate(i64 Op, const ExpT& UpdateExp)
+        {
+            if (Options.UBoundMethod == UpdateBoundingMethodT::NoBounding) {
+                return;
+            } else {
+                // Always apply vardep, since it's the only thing that makes
+                // sense
+                auto const& AppArgs = GetOpArgs(UpdateExp);
+                const u32 NumArgs = AppArgs.size();
+                auto Mgr = TheLTS->GetMgr();
+                auto ConstantPred = MakeConstantConstraint(Op, UpdateExp);
+                auto NegConstantPred = Mgr->MakeExpr(LTSOps::OpNOT, ConstantPred);
+                string CostVarName("__msg_update_func_cost_");
+                CostVarName += to_string(Op);
+                auto CostVarType = Mgr->MakeType<RangeType>(0, 2 * NumArgs + 1);
+                auto CostVar = Mgr->MakeVar(CostVarName, CostVarType);
+                auto CostEQ0 = Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                             Mgr->MakeVal("0", CostVarType));
+                auto ArgDepCost = MakeArgDepConstraints(Op, UpdateExp);
+                auto OnePlusADCost = Mgr->MakeExpr(LTSOps::OpADD, ArgDepCost,
+                                                   Mgr->MakeVal("1", CostVarType));
+                auto CostEQN = Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                             OnePlusADCost);
+                auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, ConstantPred, CostEQ0);
+                auto ConstraintN = Mgr->MakeExpr(LTSOps::OpIFF, NegConstantPred, CostEQN);
+                CheckedAssert(Constraint0);
+                CheckedAssert(ConstraintN);
+                UpdateFuncCosts.insert(CostVar);
+                return;
+            }
+        }
+
+        inline void
+        Solver::MakeCostConstraintsForOp(i64 Op)
+        {
+            auto const& GuardOpToExp = TheLTS->GuardOpToExp;
+            auto it1 = GuardOpToExp.find(Op);
+            if (it1 != GuardOpToExp.end()) {
+                // This is a guard
+                MakeCostConstraintsForGuard(Op, it1->second);
+                return;
+            }
+            // This is an update
+            auto const& UpdateOpToUpdateLValue = TheLTS->UpdateOpToUpdateLValue;
+            auto it2 = UpdateOpToUpdateLValue.find(Op);
+            if (it2 != UpdateOpToUpdateLValue.end()) {
+                // This is an update with an lvalue associated with it
+                MakeCostConstraintsForLValueUpdate(Op, it2->second.first, it2->second.second);
+                return;
+            }
+
+            auto const& StateUpdateOpToExp = TheLTS->StateUpdateOpToExp;
+            auto it3 = StateUpdateOpToExp.find(Op);
+            if (it3 != StateUpdateOpToExp.end()) {
+                // This is an update on the state (location) variable
+                MakeCostConstraintsForStateUpdate(Op, it3->second);
+                return;
+            }
+
+            // This is for sure an update on a message field
+            auto const& AllOpToExp = TheLTS->AllOpToExp;
+            auto it4 = AllOpToExp.find(Op);
+            if (it4 == AllOpToExp.end()) {
+                throw InternalError((string)"Could not find expression associated with " +
+                                    "op: " + to_string(Op) + "\nAt: " + __FILE__ + ":" +
+                                    to_string(__LINE__));
+            }
+            MakeCostConstraintsForNonLValueUpdate(Op, it4->second);
+        }
+
+        void Solver::UnveilGuardOp(i64 Op)
+        {
+            auto&& UpdateOps = AssertConstraintsForNewGuard(Op);
+
+            MakeCostConstraintsForOp(Op);
 
             // Create indicator variables for each newly unveiled update as well
-            for (auto const& NewUpdateOp : NewlyUnveiledUpdates) {
-                CreateUpdateIndicator(NewUpdateOp);
-                CreateBoundsConstraints(NewUpdateOp);
+            for (auto const& NewUpdateOp : UpdateOps) {
+                MakeCostConstraintsForOp(NewUpdateOp);
+                MakeRangeConstraintsForOp(NewUpdateOp);
             }
             UpdateCommands();
         }
@@ -835,7 +1009,8 @@ namespace ESMC {
         {
             UnveiledGuardOps.insert(Op);
             InterpretedOps.insert(Op);
-            CreateGuardIndicator(Op);
+            // CreateGuardIndicator(Op);
+            MakeCostConstraintsForOp(Op);
             UpdateCommands();
         }
 
@@ -850,13 +1025,16 @@ namespace ESMC {
 
         void Solver::MakeAssertion(const ExpT& Pred)
         {
-            CurrentAssertions.insert(Pred);
+            CheckedAssert(Pred);
             auto&& SynthOps = GetSynthOps(Pred);
             for (auto const& Op : SynthOps) {
                 if (UnveiledGuardOps.find(Op) != UnveiledGuardOps.end()) {
                     continue;
                 }
-                UnveilGuardOp(Op);
+                // Unveil if this is indeed a guard op
+                if (TheLTS->GuardOpToExp.find(Op) != TheLTS->GuardOpToExp.end()) {
+                    UnveilGuardOp(Op);
+                }
             }
         }
 
@@ -926,58 +1104,53 @@ namespace ESMC {
             // Checker->Printer->PrintState(ErrorState, cout);
             // cout << endl << endl;
 
-            // const StateVec* LastState;
-            // auto TraceElems = Trace->GetTraceElems();
-            // if (TraceElems.size() > 0) {
-            //     LastState = TraceElems.back().second;
-            // } else {
-            //     LastState = Trace->GetInitialState();
-            // }
+            ExpT GoodExp = ExpT::NullPtr;
 
-            // // Gather the guards of guarded commands that could
-            // // possibly solve this deadlock
-            // vector<ExpT> Disjuncts;
-            // for (auto const& Cmd : GuardedCommands) {
-            //     auto const& FixedInterp = Cmd->GetFixedInterpretation();
-            //     auto Interp = FixedInterp->ExtensionData.Interp;
-            //     auto Res = Interp->Evaluate(LastState);
-            //     if (Res == 0) {
-            //         continue;
-            //     }
-            //     Disjuncts.push_back(Cmd->GetLoweredGuard());
-            // }
+            if (!Options.GeneralFixForDL) {
+                const StateVec* LastState;
+                auto TraceElems = Trace->GetTraceElems();
+                if (TraceElems.size() > 0) {
+                    LastState = TraceElems.back().second;
+                } else {
+                    LastState = Trace->GetInitialState();
+                }
 
-            // ExpT GoodExp = ExpT::NullPtr;
-            // auto UnreachableExp = TraceAnalyses::AutomataStatesCondition(TheLTS, LastState);
-            // UnreachableExp = Mgr->MakeExpr(LTSOps::OpNOT, UnreachableExp);
+                // Gather the guards of guarded commands that could
+                // possibly solve this deadlock
+                vector<ExpT> Disjuncts;
+                for (auto const& Cmd : GuardedCommands) {
+                    auto const& FixedInterp = Cmd->GetFixedInterpretation();
+                    auto Interp = FixedInterp->ExtensionData.Interp;
+                    auto Res = Interp->Evaluate(LastState);
+                    if (Res == 0) {
+                        continue;
+                    }
+                    Disjuncts.push_back(Cmd->GetLoweredGuard());
+                }
 
-            // // cout << "Unreachable Exp: " << endl << UnreachableExp->ToString() << endl << endl;
+                auto UnreachableExp = TraceAnalyses::AutomataStatesCondition(TheLTS, LastState);
+                UnreachableExp = Mgr->MakeExpr(LTSOps::OpNOT, UnreachableExp);
+                UnreachableExp = Mgr->ApplyTransform<ArrayRValueTransformer>(UnreachableExp);
 
-            // Disjuncts.push_back(UnreachableExp);
+                // cout << "Unreachable Exp: " << endl
+                //      << UnreachableExp->ToString() << endl << endl;
 
-            // if (Disjuncts.size() == 1) {
-            //     GoodExp = Disjuncts[0];
-            // } else {
-            //     GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
-            // }
+                Disjuncts.push_back(UnreachableExp);
 
-            // audupa: Replaced the complex code above with the simpler one
-            // below, that should lead to better generalization!
-
-            auto GoodExp = Checker->LoweredDLFInvariant;
-
-            // audupa: end changes
+                if (Disjuncts.size() == 1) {
+                    GoodExp = Disjuncts[0];
+                } else {
+                    GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
+                }
+            } else {
+                GoodExp = Checker->LoweredDLFInvariant;
+            }
 
             // cout << "Computing Weakest Pre of: " << GoodExp->ToString() << endl << endl;
-            GoodExp =
-                Mgr->ApplyTransform<ESMC::LTS::Detail::ArrayRValueTransformer>(GoodExp);
             GoodExp = Mgr->SimplifyFP(GoodExp);
 
             auto&& WPConditions =
-                TraceAnalyses::WeakestPrecondition(this,
-                                                   Trace->As<SafetyViolation>(),
-                                                   GoodExp);
-
+                TraceAnalyses::WeakestPrecondition(this, Trace->As<SafetyViolation>(), GoodExp);
 
             for (auto const& Pred : WPConditions) {
                 // cout << "Obtained Pre:" << endl << Pred->ToString() << endl << endl;
@@ -986,7 +1159,6 @@ namespace ESMC {
 
             // cout << "Done!" << endl;
             // flush(cout);
-
             delete Trace;
         }
 
@@ -1046,11 +1218,11 @@ namespace ESMC {
             ExpT SumExp = nullptr;
 
             // Sum over ALL the indicators
-            for (auto const& IndexExp : GuardIndicatorExps) {
-                Summands.push_back(IndexExp.second);
+            for (auto const& FuncCost : GuardFuncCosts) {
+                Summands.push_back(FuncCost);
             }
-            for (auto const& IndexExp : UpdateIndicatorExps) {
-                Summands.push_back(IndexExp.second);
+            for (auto const& FuncCost : UpdateFuncCosts) {
+                Summands.push_back(FuncCost);
             }
 
             if (Summands.size() == 0) {
@@ -1100,14 +1272,6 @@ namespace ESMC {
             }
 
             return;
-        }
-
-        inline void Solver::AssertCurrentConstraints()
-        {
-            // cout << "Asserting constraints for this iteration." << endl;
-            for (auto const& Pred : CurrentAssertions) {
-                CheckedAssert(Pred);
-            }
         }
 
         inline void Solver::ResetStats()
@@ -1199,11 +1363,6 @@ namespace ESMC {
                     HandleResourceLimit();
                 }
 
-                // Assert any constraints we might have
-                // from the previous iteration
-                AssertCurrentConstraints();
-                CurrentAssertions.clear();
-
                 if (!FirstIteration && !InitialConstraintsCounted) {
                     InitialConstraintsCounted = true;
                     Stats.InitialNumAssertions = TP->GetNumAssertions();
@@ -1249,7 +1408,7 @@ namespace ESMC {
                 auto const& Model = TP->GetModel();
                 // cout << "Model:" << endl << Model.ToString() << endl;
                 // PrintSolution();
-                Compiler->UpdateModel(Model, InterpretedOps, GuardIndicatorExps);
+                Compiler->UpdateModel(Model, InterpretedOps, AllFalsePreds);
 
                 // Okay, we're good to model check now
                 Checker->ClearAQS();
@@ -1374,7 +1533,7 @@ namespace ESMC {
                 }
             }
             cout << "The solution is the following:" << endl;
-            for (auto NewOpIndicatorVar : GuardIndicatorExps) {
+            for (auto NewOpIndicatorVar : AllFalsePreds) {
                 auto NewOp = NewOpIndicatorVar.first;
                 auto IndicatorVar = NewOpIndicatorVar.second;
                 auto IndicatorValue = TP->Evaluate(IndicatorVar);
