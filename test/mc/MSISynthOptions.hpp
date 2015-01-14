@@ -62,6 +62,7 @@ struct MSISynthOptionsT {
     u64 MemLimit;
     u32 NumCExToProcess;
     u32 BoundLimit;
+    bool ShowModel;
 };
 
 static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Options)
@@ -91,8 +92,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
          "CPU Time limit in seconds")
         ("mem-limit,m", po::value<u64>(&MemLimit)->default_value(UINT64_MAX),
          "Memory limit in MB")
-        ("gen-dl-fix", "Use general fixes for deadlocks");
-
+        ("gen-dl-fix", "Use general fixes for deadlocks")
+        ("show-model", "Display model used in each iteration");
     po::variables_map vm;
 
     po::store(po::command_line_parser(Argc, ArgV).options(Desc).run(), vm);
@@ -143,6 +144,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     Options.UnrollQuantifiers = (vm.count("quants") > 0);
     Options.NarrowDomains = (vm.count("narrow") > 0);
     Options.GeneralFixForDL = (vm.count("gen-dl-fix") > 0);
+    Options.ShowModel = (vm.count("show-model") > 0);
     Options.CPULimit = CPULimit;
     Options.MemLimit = MemLimit;
     Options.NumCExToProcess = CExToProcess;
@@ -163,6 +165,7 @@ static inline void OptsToSolverOpts(const MSISynthOptionsT& Opts,
     SolverOpts.MemLimitInMB = Opts.MemLimit;
     SolverOpts.NumCExToProcess = Opts.NumCExToProcess;
     SolverOpts.BoundLimit = Opts.BoundLimit;
+    SolverOpts.ShowModel = Opts.ShowModel;
 }
 
 //

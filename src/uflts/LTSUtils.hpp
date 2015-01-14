@@ -40,6 +40,11 @@
 #if !defined ESMC_LTS_UTILS_HPP_
 #define ESMC_LTS_UTILS_HPP_
 
+#include <algorithm>
+
+#include <boost/algorithm/string/split.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+
 #include "../common/ESMCFwdDecls.hpp"
 #include "../expr/Expressions.hpp"
 #include "../utils/CombUtils.hpp"
@@ -451,6 +456,53 @@ namespace ESMC {
                                     "At: " + __FILE__ + ":" + to_string(__LINE__));
             }
             return ExpAsOp->GetChildren();
+        }
+
+        static inline void PrintModel(const Z3Model& Model, ostream& Out)
+        {
+            auto&& ModelStr = Model.ToString();
+            vector<string> SplitComps;
+            boost::algorithm::split(SplitComps, ModelStr,
+                                    boost::algorithm::is_any_of("\n"),
+                                    boost::algorithm::token_compress_on);
+            for (auto& Comp : SplitComps) {
+                boost::algorithm::trim(Comp);
+            }
+
+            vector<string> CompsToSort;
+            for (auto CompIt = SplitComps.begin(); CompIt != SplitComps.end(); ++CompIt) {
+                if (boost::algorithm::ends_with(*CompIt, "{")) {
+                    vector<string> NestedComps;
+                    string CompHeader = *CompIt;
+                    ++CompIt;
+                    do {
+                        NestedComps.push_back(*CompIt);
+                        ++CompIt;
+                    } while (!boost::algorithm::ends_with(*CompIt, "}"));
+                    sort(NestedComps.begin(), NestedComps.end() - 1);
+                    ostringstream sstr;
+                    sstr << CompHeader << endl;
+                    for (auto const& NComp : NestedComps) {
+                        sstr << "    " << NComp << endl;
+                    }
+                    sstr << "}" << endl;
+                    CompsToSort.push_back(sstr.str());
+                } else {
+                    CompsToSort.push_back(*CompIt);
+                }
+            }
+
+            sort(CompsToSort.begin(), CompsToSort.end());
+            for (auto const& Comp : CompsToSort) {
+                Out << Comp << endl;
+            }
+        }
+
+        static inline string PrintModel(const Z3Model& Model)
+        {
+            ostringstream sstr;
+            PrintModel(Model, sstr);
+            return sstr.str();
         }
 
     } /* end namespace LTS */

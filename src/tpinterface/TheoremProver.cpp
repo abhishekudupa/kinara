@@ -127,11 +127,21 @@ namespace ESMC {
                 UnrolledExp = Assertion;
             }
             auto LoweredAssertion = Mgr->LowerExpr(UnrolledExp, LTSCtx);
+
+            // cout << "[TheoremProver] Asserting Expr:" << endl
+            //      << Assertion->ToString() << endl;
+            // cout << "[TheoremProver] Asserting Unrolled Expr:"
+            //      << UnrolledExp->ToString() << endl;
+            // cout << "[TheoremProver] Asserting Lowered Expr:" << endl
+            //      << LoweredAssertion.ToString() << endl;
+
             Z3_solver_assert(*Ctx, Solver, LoweredAssertion);
             auto const& Assumptions = LTSCtx->GetAllAssumptions();
             assert(Assumptions.size() == 1);
             for (auto const& AssumptionSet : Assumptions) {
                 for (auto const& Assumption : AssumptionSet) {
+                    // cout << "[TheoremProver] Asserting Assumption:" << endl
+                    //      << Assumption.ToString() << endl;
                     Z3_solver_assert(*Ctx, Solver, Assumption);
                 }
             }
@@ -146,6 +156,8 @@ namespace ESMC {
 
         void Z3TheoremProver::Assert(const Z3Expr& Assertion)
         {
+            cout << "[TheoremProver] Asserting pre-lowered assertion:" << endl
+                 << Assertion.ToString() << endl;
             Z3_solver_assert(*Ctx, Solver, Assertion);
         }
 

@@ -37,6 +37,8 @@
 
 // Code:
 
+#include <boost/algorithm/string/predicate.hpp>
+
 #include "../tpinterface/TheoremProver.hpp"
 #include "../mc/Trace.hpp"
 #include "../mc/Compiler.hpp"
@@ -118,6 +120,38 @@ namespace ESMC {
 
         inline void Solver::CheckedAssert(const ExpT& Assertion)
         {
+            // Check for non-existence of stray variables
+            auto Mgr = TheLTS->GetMgr();
+            auto&& Vars = Mgr->Gather(Assertion,
+                                      [&] (const ExpPtrT Exp) -> bool
+                                      {
+                                          auto ExpAsVar = Exp->As<VarExpression>();
+                                          if (ExpAsVar == nullptr) {
+                                              return false;
+                                          }
+                                          auto const& VarName = ExpAsVar->GetVarName();
+                                          if (boost::algorithm::starts_with(VarName, "__")) {
+                                              return false;
+                                          }
+                                          return true;
+                                      });
+            if (Vars.size() > 0) {
+
+                ostringstream sstr;
+                sstr << "Encountered Stray Variables in Solver::CheckedAssert()" << endl
+                     << "Assertion:" << endl << Assertion->ToString() << endl
+                     << "Variables Found:" << endl;
+                for (auto const& Var : Vars) {
+                    sstr << Var->SAs<VarExpression>()->GetVarName() << endl;
+                }
+                sstr << endl;
+                sstr << "At: " << __FILE__ << ":" << __LINE__ << endl;
+
+                cout << sstr.str();
+
+                // throw InternalError(sstr.str());
+            }
+
             if (AssertedConstraints.find(Assertion) != AssertedConstraints.end()) {
                 // if (Assertion != TheLTS->MakeTrue()) {
                 //     cout << "Not asserting previously asserted constraint:" << endl
@@ -438,6 +472,7 @@ namespace ESMC {
             vector<ExpT> PerArgCosts;
 
             auto const& OpArgs = GetOpArgs(Exp);
+            const u32 NumArgs = OpArgs.size();
             u32 Count = 1;
             for (auto const& Arg : OpArgs) {
                 vector<TypeRef> QVars;
@@ -469,19 +504,31 @@ namespace ESMC {
                     auto CostEQ0 = Mgr->MakeExpr(LTSOps::OpEQ, CurArgCostVar, ZeroExp);
                     auto CostEQ1 = Mgr->MakeExpr(LTSOps::OpEQ, CurArgCostVar, OneExp);
                     auto CostEQ2 = Mgr->MakeExpr(LTSOps::OpEQ, CurArgCostVar, TwoExp);
+
                     auto ExpEQArg = Mgr->MakeExpr(LTSOps::OpEQ, Exp, Arg);
-                    auto ExpNEQArg = Mgr->MakeExpr(LTSOps::OpNOT, ExpEQArg);
+
+                    MgrT::SubstMapT EQSubstMap;
+                    auto FunType = Mgr->LookupUninterpretedFunction(OpCode)->As<FuncType>();
+                    auto const& DomTypes = FunType->GetArgTypes();
+                    for (u32 i = 0; i < NumArgs; ++i) {
+                        EQSubstMap[OpArgs[i]] = Mgr->MakeBoundVar(DomTypes[i], NumArgs - i - 1);
+                    }
+
+                    auto ExpEQArgBody = Mgr->BoundSubstitute(EQSubstMap, ExpEQArg);
+                    auto ForAllArgExpEQArg = Mgr->MakeForAll(DomTypes, ExpEQArgBody);
+                    auto NegForAllArgExpEQArg = Mgr->MakeExpr(LTSOps::OpNOT,
+                                                              ForAllArgExpEQArg);
 
                     auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, Antecedent, CostEQ0);
                     auto Constraint2 = Mgr->MakeExpr(LTSOps::OpIFF,
                                                      Mgr->MakeExpr(LTSOps::OpAND,
                                                                    NegAntecedent,
-                                                                   ExpNEQArg),
+                                                                   NegForAllArgExpEQArg),
                                                      CostEQ2);
                     auto Constraint1 = Mgr->MakeExpr(LTSOps::OpIFF,
                                                      Mgr->MakeExpr(LTSOps::OpAND,
                                                                    NegAntecedent,
-                                                                   ExpEQArg),
+                                                                   ForAllArgExpEQArg),
                                                      CostEQ1);
 
                     CheckedAssert(Constraint0);
@@ -1406,8 +1453,9 @@ namespace ESMC {
 
                 // all good. extract a model
                 auto const& Model = TP->GetModel();
-                // cout << "Model:" << endl << Model.ToString() << endl;
-                // PrintSolution();
+                if (Options.ShowModel) {
+                    cout << "Model:" << endl << PrintModel(Model) << endl;
+                }
                 Compiler->UpdateModel(Model, InterpretedOps, AllFalsePreds);
 
                 // Okay, we're good to model check now
