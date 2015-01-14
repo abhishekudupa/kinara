@@ -263,9 +263,14 @@ namespace ESMC {
                 static inline string TypeToString(const TypeT& Type);
             };
 
+            // Forward declaration
+            template <typename E, template <typename> class S> class ArrayRecordSimplifier;
+
             template <typename E, template <typename> class S>
             class Simplifier : public ExpressionVisitorBase<E, S>
             {
+                friend class ArrayRecordSimplifier<E, S>;
+
             private:
                 typedef Expr<E, S> ExpT;
                 typedef ExprMgr<E, S> MgrType;
@@ -280,7 +285,7 @@ namespace ESMC {
             public:
                 Simplifier(MgrType* Mgr, const TypeRef& BoolType,
                            const TypeRef& IntType);
-                ~Simplifier();
+                virtual ~Simplifier();
 
                 inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
                 inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
@@ -295,6 +300,36 @@ namespace ESMC {
                 static inline ExpT Do(MgrType* Mgr, const ExpT& Exp,
                                       const TypeRef& BoolType,
                                       const TypeRef& IntType);
+            };
+
+            template <typename E, template <typename> class S>
+            class ArrayRecordSimplifier : public ExpressionVisitorBase<E, S>
+            {
+            private:
+                unordered_set<ExpT, Exprs::ExpressionPtrHasher> KillSet;
+                unordered_map<ExpT, ExpT, Exprs::ExpressionPtrHasher> StoreSet;
+                MgrType* Mgr;
+                Simplifier<E, S>* ExprSimplifier;
+                vector<ExpT> ExpStack;
+
+                inline void VisitAlienExpression(const ExpressionBase<E, S>* Exp);
+
+            public:
+                ArrayRecordSimplifier(MgrType* Mgr, Simplifier<E, S>* ExprSimplifier);
+                virtual ~ArrayRecordSimplifier();
+
+                inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+                inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+                inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+                    override;
+                inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+                inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>*
+                                                               Exp) override;
+                inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>*
+                                                               Exp) override;
+
+                static inline ExpT Do(MgrType* Mgr, Simplifier<E, S>* ExprSimplifier,
+                                      const ExpT& Exp);
             };
 
             template <typename E, template <typename> class S>
@@ -1846,6 +1881,112 @@ namespace ESMC {
                 return TheSimplifier.ExpStack[0];
             }
 
+            // Implementation of ArrayRecordSimplifier
+            template <typename E, template <typename> class S>
+            ArrayRecordSimplifier<E, S>::ArrayRecordSimplifier(MgrType* Mgr,
+                                                               Simplifier<E, S>* ExprSimplifier)
+                ExpressionVisitorBase<E, S>("ArrayRecordSimplifier"),
+                Mgr(Mgr), ExprSimplifier(ExprSimplifier)
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            ArrayRecordSimplifier<E, S>::~ArrayRecordSimplifier()
+            {
+                // Nothing here
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            ArrayRecordSimplifier<E, S>::VisitAlienExpression(const ExpressionBase<E, S>* Exp)
+            {
+                Exp->Accept(ExprSimplifier);
+                ExpStack.push_back(ExprSimplifier->ExpStack.back());
+                ExprSimplifier->ExpStack.pop_back();
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            ArrayRecordSimplifier<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+            {
+                VisitAlienExpression(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            ArrayRecordSimplifier<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+            {
+                VisitAlienExpression(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            ArrayRecordSimplifier<E, S>::VisitBoundVarExpression(const
+                                                                 BoundVarExpression<E, S>* Exp)
+            {
+                VisitAlienExpression(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            ArrayRecordSimplifier<E, S>::VisitEQuantifiedExpression(const
+                                                                    EQuantifiedExpression<E, S>*
+                                                                    Exp)
+            {
+                VisitAlienExpression(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            ArrayRecordSimplifier<E, S>::VisitAQuantifiedExpression(const
+                                                                    AQuantifiedExpression<E, S>*
+                                                                    Exp)
+            {
+                VisitAlienExpression(Exp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline void
+            ArrayRecordSimplifier<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+            {
+                auto OpCode = Exp->GetOpCode();
+                auto const& Children = Exp->GetChildren();
+
+                switch (OpCode) {
+                case LTSOps::OpSelect: {
+
+                }
+                    break;
+
+                case LTSOps::OpStore: {
+                    Children[1]->Accept(ExprSimplifier);
+                    auto SimpIndexExp = ExprSimplifier->ExpStack.back();
+                    ExprSimplifier->ExpStack.pop_back();
+                    if (KillSet.find(SimpIndexExp) != KillSet.end()) {
+                        Children[0]->Accept(this);
+                        auto SimpArrayExp = ExpStack.back();
+                        ExpStack.pop_back();
+                        Children[1]->Accept(this);
+                    }
+                }
+                    break;
+
+                case LTSOps::OpProject: {
+
+                }
+                    break;
+
+                case LTSOps::OpUpdate: {
+
+                }
+                    break;
+
+                default: {
+                    VisitAlienExpression(Exp);
+                }
+                }
+            }
 
             // Implementation of Lowerer
             template <typename E, template <typename> class S>
