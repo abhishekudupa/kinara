@@ -43,6 +43,7 @@
 #define ESMC_EXPRESSIONS_HPP_
 
 #include <vector>
+#include <stack>
 #include <boost/functional/hash.hpp>
 #include <boost/algorithm/string/trim.hpp>
 #include <functional>
@@ -714,7 +715,7 @@ namespace ESMC {
 
             MgrType* Mgr;
             SubstMapT SubstMap;
-            vector<ExpT> ExpStack;
+            stack<ExpT> ExpStack;
 
         public:
             inline TermSubstitutor(MgrType* Mgr, const SubstMapT& Subst);
@@ -746,7 +747,7 @@ namespace ESMC {
 
             MgrType* Mgr;
             SubstMapT SubstMap;
-            vector<ExpT> ExpStack;
+            stack<ExpT> ExpStack;
             u32 OffsetToAdd;
 
             inline bool TrySubstitute(const ExpressionBase<E, S>* Exp);
@@ -1040,9 +1041,9 @@ namespace ESMC {
         {
             auto it = SubstMap.find(Exp);
             if (it != SubstMap.end()) {
-                ExpStack.push_back(it->second);
+                ExpStack.push(it->second);
             } else {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
         }
 
@@ -1052,9 +1053,9 @@ namespace ESMC {
         {
             auto it = SubstMap.find(Exp);
             if (it != SubstMap.end()) {
-                ExpStack.push_back(it->second);
+                ExpStack.push(it->second);
             } else {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
         }
 
@@ -1064,9 +1065,9 @@ namespace ESMC {
         {
             auto it = SubstMap.find(Exp);
             if (it != SubstMap.end()) {
-                ExpStack.push_back(it->second);
+                ExpStack.push(it->second);
             } else {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
         }
 
@@ -1076,7 +1077,7 @@ namespace ESMC {
         {
             auto it = SubstMap.find(Exp);
             if (it != SubstMap.end()) {
-                ExpStack.push_back(it->second);
+                ExpStack.push(it->second);
             } else {
                 ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
                 auto const& OldChildren = Exp->GetChildren();
@@ -1084,11 +1085,11 @@ namespace ESMC {
                 vector<ExpT> NewChildren(NumChildren);
 
                 for (u32 i = 0; i < NumChildren; ++i) {
-                    NewChildren[NumChildren - i - 1] = ExpStack.back();
-                    ExpStack.pop_back();
+                    NewChildren[NumChildren - i - 1] = ExpStack.top();
+                    ExpStack.pop();
                 }
 
-                ExpStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
+                ExpStack.push(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
             }
         }
 
@@ -1100,9 +1101,9 @@ namespace ESMC {
             auto const& QExpr = Exp->GetQExpression();
 
             QExpr->Accept(this);
-            auto NewQExpr = ExpStack.back();
-            ExpStack.pop_back();
-            ExpStack.push_back(Mgr->MakeExists(QVarTypes, NewQExpr));
+            auto NewQExpr = ExpStack.top();
+            ExpStack.pop();
+            ExpStack.push(Mgr->MakeExists(QVarTypes, NewQExpr));
         }
 
         template <typename E, template <typename> class S>
@@ -1113,9 +1114,9 @@ namespace ESMC {
             auto const& QExpr = Exp->GetQExpression();
 
             QExpr->Accept(this);
-            auto NewQExpr = ExpStack.back();
-            ExpStack.pop_back();
-            ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewQExpr));
+            auto NewQExpr = ExpStack.top();
+            ExpStack.pop();
+            ExpStack.push(Mgr->MakeForAll(QVarTypes, NewQExpr));
         }
 
         template <typename E, template <typename> class S>
@@ -1125,7 +1126,7 @@ namespace ESMC {
         {
             TermSubstitutor TheSubstitutor(Mgr, SubstMap);
             Exp->Accept(&TheSubstitutor);
-            return TheSubstitutor.ExpStack[0];
+            return TheSubstitutor.ExpStack.top();
         }
 
         // BoundSubstitutor implementation
@@ -1213,7 +1214,7 @@ namespace ESMC {
             if (it == SubstMap.end()) {
                 return false;
             } else if (OffsetToAdd == 0) {
-                this->ExpStack.push_back(it->second);
+                this->ExpStack.push(it->second);
                 return true;
             } else {
                 auto OrigBoundVar = it->second->template SAs<BoundVarExpression>();
@@ -1221,7 +1222,7 @@ namespace ESMC {
                 auto OrigIndex = OrigBoundVar->GetVarIdx();
                 auto NewIndex = OrigIndex + OffsetToAdd;
                 auto NewExp = this->Mgr->MakeBoundVar(Type, NewIndex);
-                this->ExpStack.push_back(NewExp);
+                this->ExpStack.push(NewExp);
                 return true;
             }
         }
@@ -1233,7 +1234,7 @@ namespace ESMC {
             if (TrySubstitute(Exp)) {
                 return;
             } else {
-                this->ExpStack.push_back(Exp);
+                this->ExpStack.push(Exp);
             }
         }
 
@@ -1244,7 +1245,7 @@ namespace ESMC {
             if (TrySubstitute(Exp)) {
                 return;
             } else {
-                this->ExpStack.push_back(Exp);
+                this->ExpStack.push(Exp);
             }
         }
 
@@ -1252,7 +1253,7 @@ namespace ESMC {
         inline void
         BoundSubstitutor<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
         {
-            this->ExpStack.push_back(Exp);
+            this->ExpStack.push(Exp);
         }
 
         template <typename E, template <typename> class S>
@@ -1268,11 +1269,11 @@ namespace ESMC {
                 vector<ExpT> NewChildren(NumChildren);
 
                 for (u32 i = 0; i < NumChildren; ++i) {
-                    NewChildren[NumChildren - i - 1] = this->ExpStack.back();
-                    this->ExpStack.pop_back();
+                    NewChildren[NumChildren - i - 1] = this->ExpStack.top();
+                    this->ExpStack.pop();
                 }
 
-                this->ExpStack.push_back(this->Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
+                this->ExpStack.push(this->Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
             }
         }
 
@@ -1282,9 +1283,9 @@ namespace ESMC {
         {
             OffsetToAdd += Exp->GetQVarTypes().size();
             Exp->GetQExpression()->Accept(this);
-            auto NewQExpr = this->ExpStack.back();
-            this->ExpStack.pop_back();
-            this->ExpStack.push_back(this->Mgr->MakeExists(Exp->GetQVarTypes(), NewQExpr));
+            auto NewQExpr = this->ExpStack.top();
+            this->ExpStack.pop();
+            this->ExpStack.push(this->Mgr->MakeExists(Exp->GetQVarTypes(), NewQExpr));
             OffsetToAdd -= Exp->GetQVarTypes().size();
         }
 
@@ -1294,9 +1295,9 @@ namespace ESMC {
         {
             OffsetToAdd += Exp->GetQVarTypes().size();
             Exp->GetQExpression()->Accept(this);
-            auto NewQExpr = this->ExpStack.back();
-            this->ExpStack.pop_back();
-            this->ExpStack.push_back(this->Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
+            auto NewQExpr = this->ExpStack.top();
+            this->ExpStack.pop();
+            this->ExpStack.push(this->Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
             OffsetToAdd -= Exp->GetQVarTypes().size();
         }
 
@@ -1306,7 +1307,7 @@ namespace ESMC {
         {
             BoundSubstitutor TheSubstitutor(Mgr, SubstMap);
             Exp->Accept(&TheSubstitutor);
-            return TheSubstitutor.ExpStack[0];
+            return TheSubstitutor.ExpStack.top();
         }
 
         // Gatherer implementation

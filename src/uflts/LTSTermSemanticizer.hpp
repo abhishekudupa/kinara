@@ -45,6 +45,7 @@
 #include <unordered_set>
 #include <set>
 #include <vector>
+#include <stack>
 #include <z3.h>
 #include <map>
 #include <type_traits>
@@ -213,7 +214,7 @@ namespace ESMC {
             {
             private:
                 typedef Expr<E, S> ExpT;
-                vector<ExpT> ExpStack;
+                stack<ExpT> ExpStack;
 
                 inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp);
 
@@ -275,7 +276,7 @@ namespace ESMC {
                 typedef Expr<E, S> ExpT;
                 typedef ExprMgr<E, S> MgrType;
 
-                vector<ExpT> ExpStack;
+                stack<ExpT> ExpStack;
                 TypeRef BoolType;
                 TypeRef IntType;
                 MgrType* Mgr;
@@ -318,7 +319,7 @@ namespace ESMC {
 
                 MgrType* Mgr;
                 Simplifier<E, S>* ExprSimplifier;
-                vector<ExpT> ExpStack;
+                stack<ExpT> ExpStack;
 
                 inline void VisitAlienExpression(const ExpressionBase<E, S>* Exp);
 
@@ -351,7 +352,7 @@ namespace ESMC {
             {
             private:
                 const UFID2TypeMapT& UFMap;
-                vector<Z3Expr> ExpStack;
+                stack<Z3Expr> ExpStack;
                 typedef Expr<E, S> ExpT;
                 LTSLCRef LTSCtx;
 
@@ -415,7 +416,7 @@ namespace ESMC {
                 typedef ExprMgr<E, S> MgrT;
                 typedef Expr<E, S> ExpT;
 
-                vector<ExpT> ExpStack;
+                stack<ExpT> ExpStack;
                 MgrT* Mgr;
                 i32 ShiftValue;
 
@@ -444,7 +445,7 @@ namespace ESMC {
                 typedef ExprMgr<E, S> MgrT;
                 typedef Expr<E, S> ExpT;
 
-                vector<ExpT> ExpStack;
+                stack<ExpT> ExpStack;
                 MgrT* Mgr;
                 bool IncludeUndef;
 
@@ -1152,21 +1153,21 @@ namespace ESMC {
             inline void
             Canonicalizer<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             template <typename E, template <typename> class S>
             inline void
             Canonicalizer<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             template <typename E, template <typename> class S>
             inline void
             Canonicalizer<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             template <typename E, template <typename> class S>
@@ -1180,8 +1181,8 @@ namespace ESMC {
 
                 vector<ExpT> NewChildren(NumChildren);
                 for (u32 i = 0; i < NumChildren; ++i) {
-                    NewChildren[NumChildren - i - 1] = ExpStack.back();
-                    ExpStack.pop_back();
+                    NewChildren[NumChildren - i - 1] = ExpStack.top();
+                    ExpStack.pop();
                 }
 
                 switch (OpCode) {
@@ -1194,7 +1195,7 @@ namespace ESMC {
                 case LTSOps::OpMUL: {
                     set<ExpT, ExpressionPtrCompare> CanonSet(NewChildren.begin(), NewChildren.end());
                     vector<ExpT> CanonChildren(CanonSet.begin(), CanonSet.end());
-                    ExpStack.push_back(new OpExpression<E, S>(nullptr, OpCode,
+                    ExpStack.push(new OpExpression<E, S>(nullptr, OpCode,
                                                               CanonChildren, Exp->ExtensionData));
                 }
                     break;
@@ -1204,16 +1205,16 @@ namespace ESMC {
                         NewChildren[0]->template
                         SAs<OpExpression>()->GetOpCode() == LTSOps::OpNOT) {
 
-                        ExpStack.push_back((NewChildren[0]->template
+                        ExpStack.push((NewChildren[0]->template
                                             SAs<OpExpression>()->GetChildren())[0]);
                     } else {
-                        ExpStack.push_back(new OpExpression<E, S>(nullptr, OpCode,
+                        ExpStack.push(new OpExpression<E, S>(nullptr, OpCode,
                                                                   NewChildren, Exp->ExtensionData));
                     }
                     break;
 
                 default:
-                    ExpStack.push_back(new OpExpression<E, S>(nullptr, OpCode, NewChildren,
+                    ExpStack.push(new OpExpression<E, S>(nullptr, OpCode, NewChildren,
                                                               Exp->ExtensionData));
                     break;
                 }
@@ -1224,14 +1225,14 @@ namespace ESMC {
             Canonicalizer<E, S>::VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
             {
                 Exp->GetQExpression()->Accept(this);
-                auto NewQExpr = ExpStack.back();
-                ExpStack.pop_back();
+                auto NewQExpr = ExpStack.top();
+                ExpStack.pop();
                 if (Exp->IsForAll()) {
-                    ExpStack.push_back(new AQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
+                    ExpStack.push(new AQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
                                                                        NewQExpr,
                                                                        Exp->ExtensionData));
                 } else {
-                    ExpStack.push_back(new EQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
+                    ExpStack.push(new EQuantifiedExpression<E, S>(nullptr, Exp->GetQVarTypes(),
                                                                        NewQExpr,
                                                                        Exp->ExtensionData));
                 }
@@ -1257,7 +1258,7 @@ namespace ESMC {
             {
                 Canonicalizer<E, S> TheCanonicalizer;
                 Exp->Accept(&TheCanonicalizer);
-                return TheCanonicalizer.ExpStack[0];
+                return TheCanonicalizer.ExpStack.top();
             }
 
             // Implementation of Simplifier
@@ -1281,21 +1282,21 @@ namespace ESMC {
             inline void
             Simplifier<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             template <typename E, template <typename> class S>
             inline void
             Simplifier<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             template <typename E, template <typename> class S>
             inline void
             Simplifier<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             template<typename E, template <typename> class S>
@@ -1432,13 +1433,13 @@ namespace ESMC {
                     ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
 
                     for(u32 i = 0; i < NumChildren; ++i) {
-                        SimpChildren[NumChildren - i - 1] = ExpStack.back();
-                        ExpStack.pop_back();
+                        SimpChildren[NumChildren - i - 1] = ExpStack.top();
+                        ExpStack.pop();
                     }
                 }
 
                 if (LTSReservedOps.find(OpCode) == LTSReservedOps.end()) {
-                    ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                    ExpStack.push(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                     return;
                 }
 
@@ -1447,9 +1448,9 @@ namespace ESMC {
                 case LTSOps::OpIFF:
                     if (!CheckAllConstant(SimpChildren)) {
                         if (SimpChildren[0]->Equals(SimpChildren[1])) {
-                            ExpStack.push_back(Mgr->MakeVal("true", BoolType));
+                            ExpStack.push(Mgr->MakeVal("true", BoolType));
                         } else {
-                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                            ExpStack.push(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                         }
                     } else {
                         auto const& Val1 =
@@ -1457,68 +1458,68 @@ namespace ESMC {
                         auto const& Val2 =
                             SimpChildren[1]->template SAs<ConstExpression>()->GetConstValue();
                         auto Result = (Val1 == Val2 ? "true" : "false");
-                        ExpStack.push_back(Mgr->MakeVal(Result, BoolType));
+                        ExpStack.push(Mgr->MakeVal(Result, BoolType));
                     }
                     break;
 
                 case LTSOps::OpNOT:
                     if (!CheckAllConstant(SimpChildren)) {
-                        ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                        ExpStack.push(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                     } else {
                         auto const& Val =
                             SimpChildren[0]->template SAs<ConstExpression>()->GetConstValue();
                         auto Result = (Val == "true" ? "false" : "true");
-                        ExpStack.push_back(Mgr->MakeVal(Result, BoolType));
+                        ExpStack.push(Mgr->MakeVal(Result, BoolType));
                     }
                     break;
 
                 case LTSOps::OpITE:
                     if (SimpChildren[1]->Equals(SimpChildren[2])) {
-                        ExpStack.push_back(SimpChildren[1]);
+                        ExpStack.push(SimpChildren[1]);
                     } else if (SimpChildren[0]->template As<ConstExpression>() != nullptr) {
                         if (SimpChildren[0]->template
                             SAs<ConstExpression>()->GetConstValue() == "true") {
-                            ExpStack.push_back(SimpChildren[1]);
+                            ExpStack.push(SimpChildren[1]);
                         } else {
-                            ExpStack.push_back(SimpChildren[2]);
+                            ExpStack.push(SimpChildren[2]);
                         }
                     } else {
-                        ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                        ExpStack.push(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                     }
                     break;
 
                 case LTSOps::OpOR:
                     if (HasBool(SimpChildren, true, BoolType)) {
-                        ExpStack.push_back(Mgr->MakeVal("true", BoolType));
+                        ExpStack.push(Mgr->MakeVal("true", BoolType));
                     } else {
                         auto&& RedChildren = PurgeBool(SimpChildren, false, BoolType);
                         if (RedChildren.size() == 0) {
-                            ExpStack.push_back(Mgr->MakeVal("false", BoolType));
+                            ExpStack.push(Mgr->MakeVal("false", BoolType));
                         } else if (RedChildren.size() == 1) {
-                            ExpStack.push_back(RedChildren[0]);
+                            ExpStack.push(RedChildren[0]);
                         } else if (AllOfOp(RedChildren, LTSOps::OpOR)) {
                             auto&& FlattenedChildren = GetAllChildren(RedChildren);
-                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
+                            ExpStack.push(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
-                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
+                            ExpStack.push(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
                         }
                     }
                     break;
 
                 case LTSOps::OpAND:
                     if (HasBool(SimpChildren, false, BoolType)) {
-                        ExpStack.push_back(Mgr->MakeVal("false", BoolType));
+                        ExpStack.push(Mgr->MakeVal("false", BoolType));
                     } else {
                         auto&& RedChildren = PurgeBool(SimpChildren, true, BoolType);
                         if (RedChildren.size() == 0) {
-                            ExpStack.push_back(Mgr->MakeVal("true", BoolType));
+                            ExpStack.push(Mgr->MakeVal("true", BoolType));
                         } else if (RedChildren.size() == 1) {
-                            ExpStack.push_back(RedChildren[0]);
+                            ExpStack.push(RedChildren[0]);
                         } else if (AllOfOp(RedChildren, LTSOps::OpAND)) {
                             auto&& FlattenedChildren = GetAllChildren(RedChildren);
-                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
+                            ExpStack.push(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
-                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
+                            ExpStack.push(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
                         }
                     }
                     break;
@@ -1528,9 +1529,9 @@ namespace ESMC {
                         auto Ant = SimpChildren[0]->template SAs<ConstExpression>();
                         auto const& AntVal = Ant->GetConstValue();
                         if (AntVal == "false") {
-                            ExpStack.push_back(Mgr->MakeVal("true", BoolType));
+                            ExpStack.push(Mgr->MakeVal("true", BoolType));
                         } else {
-                            ExpStack.push_back(SimpChildren[1]);
+                            ExpStack.push(SimpChildren[1]);
                         }
                     } else if (SimpChildren[1]->template As<ConstExpression>() != nullptr) {
                         auto Con = SimpChildren[1]->template SAs<ConstExpression>();
@@ -1538,13 +1539,13 @@ namespace ESMC {
                         if (ConVal == "false") {
                             vector<ExpT> NewChildren;
                             NewChildren.push_back(SimpChildren[0]);
-                            ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpNOT,
+                            ExpStack.push(Mgr->MakeExpr(LTSOps::OpNOT,
                                                              NewChildren));
                         } else {
-                            ExpStack.push_back(SimpChildren[1]);
+                            ExpStack.push(SimpChildren[1]);
                         }
                     } else {
-                        ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                        ExpStack.push(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                     }
                     break;
 
@@ -1557,9 +1558,9 @@ namespace ESMC {
                         auto BVal = BExp->GetConstValue();
 
                         if (AVal == BVal) {
-                            ExpStack.push_back(Mgr->MakeVal("false", BoolType));
+                            ExpStack.push(Mgr->MakeVal("false", BoolType));
                         } else {
-                            ExpStack.push_back(Mgr->MakeVal("true", BoolType));
+                            ExpStack.push(Mgr->MakeVal("true", BoolType));
                         }
                     }
 
@@ -1569,9 +1570,9 @@ namespace ESMC {
                         if (AVal == "true") {
                             vector<ExpT> NewChildren;
                             NewChildren.push_back(SimpChildren[1]);
-                            ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpNOT, NewChildren));
+                            ExpStack.push(Mgr->MakeExpr(LTSOps::OpNOT, NewChildren));
                         } else {
-                            ExpStack.push_back(SimpChildren[1]);
+                            ExpStack.push(SimpChildren[1]);
                         }
                     } else if (SimpChildren[1]->template As<ConstExpression>() != nullptr) {
                         auto BExp = SimpChildren[1]->template SAs<ConstExpression>();
@@ -1579,12 +1580,12 @@ namespace ESMC {
                         if (BVal == "true") {
                             vector<ExpT> NewChildren;
                             NewChildren.push_back(SimpChildren[0]);
-                            ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpNOT, NewChildren));
+                            ExpStack.push(Mgr->MakeExpr(LTSOps::OpNOT, NewChildren));
                         } else {
-                            ExpStack.push_back(SimpChildren[0]);
+                            ExpStack.push(SimpChildren[0]);
                         }
                     } else {
-                        ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                        ExpStack.push(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                     }
                     break;
 
@@ -1597,16 +1598,16 @@ namespace ESMC {
                                                          SAs<ConstExpression>()->GetConstValue());
                             SumVal += Val;
                         }
-                        ExpStack.push_back(Mgr->MakeVal(to_string(SumVal), IntType));
+                        ExpStack.push(Mgr->MakeVal(to_string(SumVal), IntType));
                     } else {
                         auto&& RedChildren = PurgeInt(SimpChildren, 0);
                         if (RedChildren.size() == 1) {
-                            ExpStack.push_back(RedChildren[0]);
+                            ExpStack.push(RedChildren[0]);
                         } else if (AllOfOp(RedChildren, LTSOps::OpADD)) {
                             auto&& FlattenedChildren = GetAllChildren(RedChildren);
-                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
+                            ExpStack.push(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
-                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
+                            ExpStack.push(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
                         }
                     }
                     break;
@@ -1623,7 +1624,7 @@ namespace ESMC {
                                                          SAs<ConstExpression>()->GetConstValue());
                         }
                         i64 DiffVal = FirstVal - ToSubtract;
-                        ExpStack.push_back(Mgr->MakeVal(to_string(DiffVal), IntType));
+                        ExpStack.push(Mgr->MakeVal(to_string(DiffVal), IntType));
                     } else {
                         auto it = SimpChildren.begin();
                         ++it;
@@ -1638,9 +1639,9 @@ namespace ESMC {
                                            return false;
                                        }
                                    })) {
-                            ExpStack.push_back(SimpChildren[0]);
+                            ExpStack.push(SimpChildren[0]);
                         } else {
-                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                            ExpStack.push(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                         }
                     }
                     break;
@@ -1650,9 +1651,9 @@ namespace ESMC {
                         i64 Val = boost::lexical_cast<i64>(SimpChildren[0]->template
                                                            SAs<ConstExpression>()->GetConstValue());
                         Val = -Val;
-                        ExpStack.push_back(Mgr->MakeVal(to_string(Val), IntType));
+                        ExpStack.push(Mgr->MakeVal(to_string(Val), IntType));
                     } else {
-                        ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                        ExpStack.push(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                     }
                     break;
 
@@ -1665,20 +1666,20 @@ namespace ESMC {
                                                          SAs<ConstExpression>()->GetConstValue());
                             ProdVal *= Val;
                         }
-                        ExpStack.push_back(Mgr->MakeVal(to_string(ProdVal), IntType));
+                        ExpStack.push(Mgr->MakeVal(to_string(ProdVal), IntType));
                     } else {
                         if (HasInt(SimpChildren, 0)) {
-                            ExpStack.push_back(Mgr->MakeVal("0", IntType));
+                            ExpStack.push(Mgr->MakeVal("0", IntType));
                         } else {
                             auto&& RedChildren = PurgeInt(SimpChildren, 1);
                             if (RedChildren.size() == 1) {
-                                ExpStack.push_back(RedChildren[0]);
+                                ExpStack.push(RedChildren[0]);
                             } else if (AllOfOp(RedChildren, LTSOps::OpMUL)) {
                                 auto&& FlattenedChildren = GetAllChildren(RedChildren);
-                                ExpStack.push_back(MakeOpExp(Mgr, OpCode, FlattenedChildren,
+                                ExpStack.push(MakeOpExp(Mgr, OpCode, FlattenedChildren,
                                                              ExtData));
                             } else {
-                                ExpStack.push_back(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
+                                ExpStack.push(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
                             }
                         }
                     }
@@ -1702,7 +1703,7 @@ namespace ESMC {
                                                           SAs<ConstExpression>()->GetConstValue()));
 
                         }
-                        ExpStack.push_back(Mgr->MakeVal(to_string(DivVal), IntType));
+                        ExpStack.push(Mgr->MakeVal(to_string(DivVal), IntType));
                     } else {
                         if (SimpChildren[1]->template As<ConstExpression>() != nullptr) {
                             auto Val =
@@ -1712,13 +1713,13 @@ namespace ESMC {
                                 throw ExprTypeError("Division by zero during simplification");
                             } else if (Val == 1) {
                                 if (OpCode == LTSOps::OpMOD) {
-                                    ExpStack.push_back(Mgr->MakeVal("0", IntType));
+                                    ExpStack.push(Mgr->MakeVal("0", IntType));
                                 } else {
-                                    ExpStack.push_back(SimpChildren[0]);
+                                    ExpStack.push(SimpChildren[0]);
                                 }
                             }
                         } else {
-                            ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                            ExpStack.push(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                         }
                     }
                     break;
@@ -1745,9 +1746,9 @@ namespace ESMC {
                             ResString = Val1 <= Val2 ? "true" : "false";
                         }
 
-                        ExpStack.push_back(Mgr->MakeVal(ResString, BoolType));
+                        ExpStack.push(Mgr->MakeVal(ResString, BoolType));
                     } else {
-                        ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                        ExpStack.push(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                     }
                     break;
 
@@ -1755,11 +1756,11 @@ namespace ESMC {
                 case LTSOps::OpStore:
                 case LTSOps::OpProject:
                 case LTSOps::OpUpdate: {
-                    ExpStack.push_back(ArrayRecordSimplifier<E, S>::Do(Mgr, this, Exp));
+                    ExpStack.push(ArrayRecordSimplifier<E, S>::Do(Mgr, this, Exp));
                 }
                     break;
                 default:
-                    ExpStack.push_back(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
+                    ExpStack.push(MakeOpExp(Mgr, OpCode, SimpChildren, ExtData));
                 }
             }
 
@@ -1768,20 +1769,20 @@ namespace ESMC {
             Simplifier<E, S>::VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
             {
                 Exp->GetQExpression()->Accept(this);
-                auto NewQExpr = ExpStack.back();
-                ExpStack.pop_back();
+                auto NewQExpr = ExpStack.top();
+                ExpStack.pop();
 
                 if (NewQExpr->template Is<ConstExpression>()) {
-                    ExpStack.push_back(NewQExpr);
+                    ExpStack.push(NewQExpr);
                     return;
                 }
 
                 // Not a constant
                 if (Exp->IsForAll()) {
-                    ExpStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(),
+                    ExpStack.push(Mgr->MakeForAll(Exp->GetQVarTypes(),
                                                        NewQExpr, Exp->ExtensionData));
                 } else {
-                    ExpStack.push_back(Mgr->MakeExists(Exp->GetQVarTypes(),
+                    ExpStack.push(Mgr->MakeExists(Exp->GetQVarTypes(),
                                                        NewQExpr, Exp->ExtensionData));
                 }
             }
@@ -1808,7 +1809,7 @@ namespace ESMC {
             {
                 Simplifier<E, S> TheSimplifier(Mgr, BoolType, IntType);
                 Exp->Accept(&TheSimplifier);
-                return TheSimplifier.ExpStack[0];
+                return TheSimplifier.ExpStack.top();
             }
 
             // Implementation of ArrayRecordSimplifier
@@ -1878,8 +1879,8 @@ namespace ESMC {
             ArrayRecordSimplifier<E, S>::VisitAlienExpression(const ExpressionBase<E, S>* Exp)
             {
                 Exp->Accept(ExprSimplifier);
-                ExpStack.push_back(ExprSimplifier->ExpStack.back());
-                ExprSimplifier->ExpStack.pop_back();
+                ExpStack.push(ExprSimplifier->ExpStack.top());
+                ExprSimplifier->ExpStack.pop();
             }
 
             template <typename E, template <typename> class S>
@@ -1947,8 +1948,8 @@ namespace ESMC {
                 switch (OpCode) {
                 case LTSOps::OpSelect: {
                     VisitAlienExpression(Children[1]);
-                    auto SimpIndex = ExpStack.back();
-                    ExpStack.pop_back();
+                    auto SimpIndex = ExpStack.top();
+                    ExpStack.pop();
 
                     if (IsStore(Children[0])) {
                         RelevantIndex = SimpIndex;
@@ -1959,12 +1960,12 @@ namespace ESMC {
 
                     auto it = StoreSet.find(SimpIndex);
                     if (it != StoreSet.end()) {
-                        ExpStack.pop_back();
-                        ExpStack.push_back(it->second);
+                        ExpStack.pop();
+                        ExpStack.push(it->second);
                     } else {
-                        auto NewArrExp = ExpStack.back();
-                        ExpStack.pop_back();
-                        ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpSelect,
+                        auto NewArrExp = ExpStack.top();
+                        ExpStack.pop();
+                        ExpStack.push(Mgr->MakeExpr(LTSOps::OpSelect,
                                                          NewArrExp,
                                                          SimpIndex));
                     }
@@ -1973,8 +1974,8 @@ namespace ESMC {
 
                 case LTSOps::OpStore: {
                     VisitAlienExpression(Children[1]);
-                    auto SimpIndex = ExpStack.back();
-                    ExpStack.pop_back();
+                    auto SimpIndex = ExpStack.top();
+                    ExpStack.pop();
                     if (KillSet.find(SimpIndex) != KillSet.end() ||
                         !IsIndexRelevant(SimpIndex)) {
                         if (IsStore(Children[0])) {
@@ -1990,11 +1991,11 @@ namespace ESMC {
                         VisitAlienExpression(Children[0]);
                     }
                     VisitAlienExpression(Children[2]);
-                    auto NewValExp = ExpStack.back();
-                    ExpStack.pop_back();
-                    auto NewArrExp = ExpStack.back();
-                    ExpStack.pop_back();
-                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpStore, NewArrExp,
+                    auto NewValExp = ExpStack.top();
+                    ExpStack.pop();
+                    auto NewArrExp = ExpStack.top();
+                    ExpStack.pop();
+                    ExpStack.push(Mgr->MakeExpr(LTSOps::OpStore, NewArrExp,
                                                      SimpIndex, NewValExp));
                     StoreSet[SimpIndex] = NewValExp;
                 }
@@ -2010,12 +2011,12 @@ namespace ESMC {
 
                     auto it = StoreSet.find(Children[1]);
                     if (it != StoreSet.end()) {
-                        ExpStack.pop_back();
-                        ExpStack.push_back(it->second);
+                        ExpStack.pop();
+                        ExpStack.push(it->second);
                     } else {
-                        auto NewRecExp = ExpStack.back();
-                        ExpStack.pop_back();
-                        ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpProject,
+                        auto NewRecExp = ExpStack.top();
+                        ExpStack.pop();
+                        ExpStack.push(Mgr->MakeExpr(LTSOps::OpProject,
                                                          NewRecExp, Children[1]));
                     }
                 }
@@ -2038,11 +2039,11 @@ namespace ESMC {
                         VisitAlienExpression(Children[0]);
                     }
                     VisitAlienExpression(Children[2]);
-                    auto NewValExp = ExpStack.back();
-                    ExpStack.pop_back();
-                    auto NewRecExp = ExpStack.back();
-                    ExpStack.pop_back();
-                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpUpdate, NewRecExp,
+                    auto NewValExp = ExpStack.top();
+                    ExpStack.pop();
+                    auto NewRecExp = ExpStack.top();
+                    ExpStack.pop();
+                    ExpStack.push(Mgr->MakeExpr(LTSOps::OpUpdate, NewRecExp,
                                                      Children[1], NewValExp));
                     StoreSet[Children[1]] = NewValExp;
                 }
@@ -2069,7 +2070,7 @@ namespace ESMC {
                                         to_string(__LINE__));
                 }
                 Exp->Accept(&TheSimplifier);
-                return TheSimplifier.ExpStack[0];
+                return TheSimplifier.ExpStack.top();
             }
 
             // Implementation of Lowerer
@@ -2247,7 +2248,7 @@ namespace ESMC {
                     delete[] AndArgs;
                 }
 
-                ExpStack.push_back(LoweredExpr);
+                ExpStack.push(LoweredExpr);
             }
 
             template <typename E, template <typename> class S>
@@ -2259,14 +2260,14 @@ namespace ESMC {
                 auto Ctx = LTSCtx->GetZ3Ctx();
 
                 if (Type->template Is<IntegerType>()) {
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_numeral(*Ctx, Val.c_str(),
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_numeral(*Ctx, Val.c_str(),
                                                                  Z3_mk_int_sort(*Ctx))));
                 } else if (Type->template Is<BooleanType>()) {
 
                     if (Val == "true") {
-                        ExpStack.push_back(Z3Expr(Ctx, Z3_mk_true(*Ctx)));
+                        ExpStack.push(Z3Expr(Ctx, Z3_mk_true(*Ctx)));
                     } else {
-                        ExpStack.push_back(Z3Expr(Ctx, Z3_mk_false(*Ctx)));
+                        ExpStack.push(Z3Expr(Ctx, Z3_mk_false(*Ctx)));
                     }
 
                 } else if (Type->template Is<SymmetricType>()) {
@@ -2279,14 +2280,14 @@ namespace ESMC {
                     }
                     auto const& LoweredType = LowerType(Type);
                     auto Decl = LoweredType.GetFuncDecl(ActualVal);
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_app(*Ctx, Decl, 0, nullptr)));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_app(*Ctx, Decl, 0, nullptr)));
                 } else if (Type->template Is<EnumType>()) {
                     // enum constants are unqualified
                     auto const& LoweredType = LowerType(Type);
                     auto TypeAsEnum = Type->template SAs<EnumType>();
                     string QualifiedVal = TypeAsEnum->GetName() + "::" + Val;
                     auto Decl = LoweredType.GetFuncDecl(QualifiedVal);
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_app(*Ctx, Decl, 0, nullptr)));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_app(*Ctx, Decl, 0, nullptr)));
                 } else {
                     throw ESMCError((string)"Unexpected constant of type \"" + Type->ToString() +
                                     "\". Cannot lower this kind of constant into a Z3Expr");
@@ -2303,7 +2304,7 @@ namespace ESMC {
 
                 auto LoweredSort = LowerType(Type);
                 auto LoweredExpr = Z3Expr(Ctx, Z3_mk_bound(*Ctx, Index, LoweredSort));
-                ExpStack.push_back(LoweredExpr);
+                ExpStack.push(LoweredExpr);
 
                 if (Type->template Is<RangeType>()) {
                     auto TypeAsRange = Type->template SAs<RangeType>();
@@ -2345,84 +2346,84 @@ namespace ESMC {
                     ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
 
                     for (u32 i = 0; i < NumChildren; ++i) {
-                        LChildren[NumChildren - i - 1] = ExpStack.back();
-                        LoweredChildren[NumChildren - i - 1] = ExpStack.back();
-                        ExpStack.pop_back();
+                        LChildren[NumChildren - i - 1] = ExpStack.top();
+                        LoweredChildren[NumChildren - i - 1] = ExpStack.top();
+                        ExpStack.pop();
                     }
                 }
 
                 switch (OpCode) {
                 case LTSOps::OpEQ:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_eq(*Ctx, LChildren[0], LChildren[1])));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_eq(*Ctx, LChildren[0], LChildren[1])));
                     break;
 
                 case LTSOps::OpNOT:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_not(*Ctx, LChildren[0])));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_not(*Ctx, LChildren[0])));
                     break;
 
                 case LTSOps::OpITE:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_ite(*Ctx, LChildren[0],
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_ite(*Ctx, LChildren[0],
                                                              LChildren[1], LChildren[2])));
                     break;
 
                 case LTSOps::OpOR:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_or(*Ctx, NumChildren, LoweredChildren)));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_or(*Ctx, NumChildren, LoweredChildren)));
                     break;
 
                 case LTSOps::OpAND:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_and(*Ctx, NumChildren, LoweredChildren)));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_and(*Ctx, NumChildren, LoweredChildren)));
                     break;
 
                 case LTSOps::OpIMPLIES:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_implies(*Ctx, LChildren[0], LChildren[1])));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_implies(*Ctx, LChildren[0], LChildren[1])));
                     break;
 
                 case LTSOps::OpIFF:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_iff(*Ctx, LChildren[0], LChildren[1])));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_iff(*Ctx, LChildren[0], LChildren[1])));
                     break;
 
                 case LTSOps::OpXOR:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_xor(*Ctx, LChildren[0], LChildren[1])));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_xor(*Ctx, LChildren[0], LChildren[1])));
                     break;
 
                 case LTSOps::OpADD:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_add(*Ctx, NumChildren, LoweredChildren)));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_add(*Ctx, NumChildren, LoweredChildren)));
                     break;
 
                 case LTSOps::OpSUB:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_sub(*Ctx, NumChildren, LoweredChildren)));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_sub(*Ctx, NumChildren, LoweredChildren)));
                     break;
 
                 case LTSOps::OpMINUS:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_unary_minus(*Ctx, LChildren[0])));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_unary_minus(*Ctx, LChildren[0])));
                     break;
 
                 case LTSOps::OpMUL:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_mul(*Ctx, NumChildren, LoweredChildren)));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_mul(*Ctx, NumChildren, LoweredChildren)));
                     break;
 
                 case LTSOps::OpDIV:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_div(*Ctx, LChildren[0], LChildren[1])));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_div(*Ctx, LChildren[0], LChildren[1])));
                     break;
 
                 case LTSOps::OpMOD:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_mod(*Ctx, LChildren[0], LChildren[1])));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_mod(*Ctx, LChildren[0], LChildren[1])));
                     break;
 
                 case LTSOps::OpGT:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_gt(*Ctx, LChildren[0], LChildren[1])));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_gt(*Ctx, LChildren[0], LChildren[1])));
                     break;
 
                 case LTSOps::OpGE:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_ge(*Ctx, LChildren[0], LChildren[1])));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_ge(*Ctx, LChildren[0], LChildren[1])));
                     break;
 
                 case LTSOps::OpLT:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_lt(*Ctx, LChildren[0], LChildren[1])));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_lt(*Ctx, LChildren[0], LChildren[1])));
                     break;
 
                 case LTSOps::OpLE:
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_le(*Ctx, LChildren[0], LChildren[1])));
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_le(*Ctx, LChildren[0], LChildren[1])));
                     break;
 
                 case LTSOps::OpIndex:
@@ -2452,7 +2453,7 @@ namespace ESMC {
 
                         LTSCtx->AddAssumption(Z3Expr(Ctx, Z3_mk_and(*Ctx, 2, AndArgs)));
                     }
-                    ExpStack.push_back(LoweredExpr);
+                    ExpStack.push(LoweredExpr);
                     break;
                 }
 
@@ -2460,10 +2461,10 @@ namespace ESMC {
                 case LTSOps::OpProject: {
                     // Visit the record expression
                     Children[0]->Accept(this);
-                    auto RecExp = ExpStack.back();
+                    auto RecExp = ExpStack.top();
                     auto RecType = Children[0]->GetType();
                     auto const& LoweredRecSort = LowerType(RecType);
-                    ExpStack.pop_back();
+                    ExpStack.pop();
 
                     auto const& FieldName =
                         Children[1]->template As<ESMC::Exprs::VarExpression>()->GetVarName();
@@ -2472,7 +2473,7 @@ namespace ESMC {
                     Z3_ast FuncArgs[1];
                     FuncArgs[0] = RecExp;
                     auto LoweredExpr = Z3Expr(Ctx, Z3_mk_app(*Ctx, FieldFunc, 1, FuncArgs));
-                    ExpStack.push_back(LoweredExpr);
+                    ExpStack.push(LoweredExpr);
 
                     auto const& ExpType = Exp->GetType();
                     auto ExpTypeAsRange = ExpType->template As<RangeType>();
@@ -2502,19 +2503,19 @@ namespace ESMC {
                 }
 
                 case LTSOps::OpStore: {
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_store(*Ctx, LChildren[0],
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_store(*Ctx, LChildren[0],
                                                                LChildren[1], LChildren[2])));
                     break;
                 }
 
                 case LTSOps::OpUpdate: {
                     Children[0]->Accept(this);
-                    auto RecExp = ExpStack.back();
-                    ExpStack.pop_back();
+                    auto RecExp = ExpStack.top();
+                    ExpStack.pop();
 
                     Children[2]->Accept(this);
-                    auto UpdateExp = ExpStack.back();
-                    ExpStack.pop_back();
+                    auto UpdateExp = ExpStack.top();
+                    ExpStack.pop();
 
                     auto RecType = Children[0]->GetType();
                     auto const& RecTypeName = RecType->template SAs<RecordType>()->GetName();
@@ -2542,7 +2543,7 @@ namespace ESMC {
                     }
 
                     auto ConstructFunc = LoweredRecSort.GetFuncDecl(RecTypeName);
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_app(*Ctx, ConstructFunc,
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_app(*Ctx, ConstructFunc,
                                                              NumMembers, AppArgs)));
                     delete[] AppArgs;
                 }
@@ -2582,7 +2583,7 @@ namespace ESMC {
 
                     Z3_dec_ref(*Ctx, Z3_func_decl_to_ast(*Ctx, FuncDecl));
 
-                    ExpStack.push_back(AppExp);
+                    ExpStack.push(AppExp);
                     break;
                 }
                 }
@@ -2598,8 +2599,8 @@ namespace ESMC {
                 LTSCtx->PushAssumptionScope();
                 Exp->GetQExpression()->Accept(this);
 
-                auto LoweredQExpr = ExpStack.back();
-                ExpStack.pop_back();
+                auto LoweredQExpr = ExpStack.top();
+                ExpStack.pop();
 
                 // Get the assumptions made
                 auto&& Assumptions = LTSCtx->PopAssumptionScope();
@@ -2633,7 +2634,7 @@ namespace ESMC {
                     auto ActualBody = Z3Expr(Ctx,
                                              Z3_mk_implies(*Ctx, AssumptionLExp,
                                                            LoweredQExpr));
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_forall(*Ctx, 0, 0, nullptr,
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_forall(*Ctx, 0, 0, nullptr,
                                                                 NumQVars, QVarSorts,
                                                                 QVarNames, ActualBody)));
                 } else {
@@ -2642,7 +2643,7 @@ namespace ESMC {
                     AndArgs3[1] = LoweredQExpr;
                     auto ActualBody = Z3Expr(Ctx,
                                              Z3_mk_and(*Ctx, 2, AndArgs3));
-                    ExpStack.push_back(Z3Expr(Ctx, Z3_mk_exists(*Ctx, 0, 0, nullptr,
+                    ExpStack.push(Z3Expr(Ctx, Z3_mk_exists(*Ctx, 0, 0, nullptr,
                                                                 NumQVars, QVarSorts,
                                                                 QVarNames, ActualBody)));
                 }
@@ -2680,11 +2681,11 @@ namespace ESMC {
                 // for (u32 i = 0; i < NumAssumptions; ++i) {
                 //     AndArgs[i] = Assumptions[i];
                 // }
-                // AndArgs[NumAssumptions] = TheLowerer.ExpStack.back();
+                // AndArgs[NumAssumptions] = TheLowerer.ExpStack.top();
 
                 // auto Retval = Z3Expr(Ctx, Z3_mk_and(*Ctx, NumAssumptions + 1, AndArgs));
                 // delete[] AndArgs;
-                auto Retval = TheLowerer.ExpStack.back();
+                auto Retval = TheLowerer.ExpStack.top();
                 return Retval;
             }
 
@@ -2910,14 +2911,14 @@ namespace ESMC {
             inline void
             DeBruijnShifter<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             template <typename E, template <typename> class S>
             inline void
             DeBruijnShifter<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             template <typename E, template <typename> class S>
@@ -2926,7 +2927,7 @@ namespace ESMC {
             {
                 auto OldIdx = Exp->GetVarIdx();
                 auto const& Type = Exp->GetVarType();
-                ExpStack.push_back(Mgr->MakeBoundVar(Type, OldIdx + ShiftValue));
+                ExpStack.push(Mgr->MakeBoundVar(Type, OldIdx + ShiftValue));
             }
 
             template <typename E, template <typename> class S>
@@ -2939,11 +2940,11 @@ namespace ESMC {
                 vector<ExpT> NewChildren(NumChildren);
 
                 for (u32 i = 0; i < NumChildren; ++i) {
-                    NewChildren[NumChildren - i - 1] = ExpStack.back();
-                    ExpStack.pop_back();
+                    NewChildren[NumChildren - i - 1] = ExpStack.top();
+                    ExpStack.pop();
                 }
 
-                ExpStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
+                ExpStack.push(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
             }
 
             template <typename E, template <typename> class S>
@@ -2951,10 +2952,10 @@ namespace ESMC {
             DeBruijnShifter<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
             {
                 Exp->GetQExpression()->Accept(this);
-                auto NewBody = ExpStack.back();
-                ExpStack.pop_back();
+                auto NewBody = ExpStack.top();
+                ExpStack.pop();
                 auto const& QVarTypes = Exp->GetQVarTypes();
-                ExpStack.push_back(Mgr->MakeExists(QVarTypes, NewBody));
+                ExpStack.push(Mgr->MakeExists(QVarTypes, NewBody));
             }
 
             template <typename E, template <typename> class S>
@@ -2962,10 +2963,10 @@ namespace ESMC {
             DeBruijnShifter<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
             {
                 Exp->GetQExpression()->Accept(this);
-                auto NewBody = ExpStack.back();
-                ExpStack.pop_back();
+                auto NewBody = ExpStack.top();
+                ExpStack.pop();
                 auto const& QVarTypes = Exp->GetQVarTypes();
-                ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewBody));
+                ExpStack.push(Mgr->MakeForAll(QVarTypes, NewBody));
             }
 
             template <typename E, template <typename> class S>
@@ -2974,7 +2975,7 @@ namespace ESMC {
             {
                 DeBruijnShifter<E, S> TheShifter(Mgr, ShiftValue);
                 Exp->Accept(&TheShifter);
-                return TheShifter.ExpStack[0];
+                return TheShifter.ExpStack.top();
             }
 
             // implementation of quantifier unroller
@@ -2995,21 +2996,21 @@ namespace ESMC {
             template <typename E, template <typename> class S>
             inline void QuantifierUnroller<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             template <typename E, template <typename> class S>
             inline void
             QuantifierUnroller<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             template <typename E, template <typename> class S>
             inline void
             QuantifierUnroller<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             template <typename E, template <typename> class S>
@@ -3021,11 +3022,11 @@ namespace ESMC {
 
                 vector<ExpT> NewChildren(NumChildren);
                 for (u32 i = 0; i < NumChildren; ++i) {
-                    NewChildren[NumChildren - i - 1] = ExpStack.back();
-                    ExpStack.pop_back();
+                    NewChildren[NumChildren - i - 1] = ExpStack.top();
+                    ExpStack.pop();
                 }
 
-                ExpStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
+                ExpStack.push(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
             }
 
             template <typename E, template <typename> class S>
@@ -3070,15 +3071,15 @@ namespace ESMC {
                                                                  Exp)
             {
                 Exp->GetQExpression()->Accept(this);
-                auto NewExp = ExpStack.back();
-                ExpStack.pop_back();
+                auto NewExp = ExpStack.top();
+                ExpStack.pop();
                 auto NewQExp = Mgr->MakeExists(Exp->GetQVarTypes(), NewExp);
                 auto&& UnrolledExps =
                     UnrollQuantifier(NewQExp->template SAs<Exprs::QuantifiedExpressionBase>());
                 if (UnrolledExps.size() == 1) {
-                    ExpStack.push_back(UnrolledExps[0]);
+                    ExpStack.push(UnrolledExps[0]);
                 } else {
-                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpOR, UnrolledExps));
+                    ExpStack.push(Mgr->MakeExpr(LTSOps::OpOR, UnrolledExps));
                 }
             }
 
@@ -3088,15 +3089,15 @@ namespace ESMC {
                                                                  Exp)
             {
                 Exp->GetQExpression()->Accept(this);
-                auto NewExp = ExpStack.back();
-                ExpStack.pop_back();
+                auto NewExp = ExpStack.top();
+                ExpStack.pop();
                 auto NewQExp = Mgr->MakeForAll(Exp->GetQVarTypes(), NewExp);
                 auto&& UnrolledExps =
                     UnrollQuantifier(NewQExp->template SAs<Exprs::QuantifiedExpressionBase>());
                 if (UnrolledExps.size() == 1) {
-                    ExpStack.push_back(UnrolledExps[0]);
+                    ExpStack.push(UnrolledExps[0]);
                 } else {
-                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpAND, UnrolledExps));
+                    ExpStack.push(Mgr->MakeExpr(LTSOps::OpAND, UnrolledExps));
                 }
             }
 
@@ -3106,7 +3107,7 @@ namespace ESMC {
             {
                 QuantifierUnroller Unroller(Mgr, IncludeUndef);
                 Exp->Accept(&Unroller);
-                return Unroller.ExpStack[0];
+                return Unroller.ExpStack.top();
             }
 
         } /* end namespace Detail */
