@@ -2496,12 +2496,18 @@ namespace ESMC {
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::SimplifyFP(const ExpT &Exp)
         {
+            u32 NumIters = 0;
             auto OldExp = Exp;
             ExpT SimpExp = OldExp;
             do {
                 OldExp = SimpExp;
                 SimpExp = Simplify(OldExp);
+
+                // cout << "[Simplifier] iteration " << ++NumIters << endl
+                //      << "Simplified:" << endl << OldExp->ToString() << endl
+                //      << "To:" << endl << SimpExp->ToString() << endl;
             } while (SimpExp != OldExp);
+            // cout << "[Simplifier] Done Simplifying!" << endl << endl;
             return SimpExp;
         }
 

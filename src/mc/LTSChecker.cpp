@@ -699,7 +699,9 @@ namespace ESMC {
                             auto Interp = Invar->ExtensionData.Interp;
                             auto InvarRes = Interp->Evaluate(CanonNextState);
                             if (InvarRes == ExceptionValue) {
-                                if (!RecordErrorState(CanonNextState, LoweredInvariant, NumErrors)) {
+                                if (!RecordErrorState(CanonNextState,
+                                                      LoweredInvariant,
+                                                      NumErrors)) {
                                     return;
                                 }
                                 // Remove it from the queue
@@ -707,7 +709,9 @@ namespace ESMC {
                             } else if (InvarRes == 0) {
                                 // Again, remember this state, but continue
                                 // on with the AQS construction
-                                if (!RecordErrorState(CanonNextState, LoweredInvariant, NumErrors)) {
+                                if (!RecordErrorState(CanonNextState,
+                                                      LoweredInvariant,
+                                                      NumErrors)) {
                                     return;
                                 }
                                 BFSQueue.pop_back();
