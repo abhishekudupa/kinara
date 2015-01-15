@@ -2024,7 +2024,7 @@ namespace ESMC {
                 case LTSOps::OpUpdate: {
                     if (KillSet.find(Children[1]) != KillSet.end() ||
                         (RelevantField != ExpT::NullPtr &&
-                         RelevantField == Children[1])) {
+                         RelevantField != Children[1])) {
                         if (IsUpdate(Children[0])) {
                             Children[0]->Accept(this);
                         } else {
