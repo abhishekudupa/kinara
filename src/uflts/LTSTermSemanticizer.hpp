@@ -1196,7 +1196,7 @@ namespace ESMC {
                     set<ExpT, ExpressionPtrCompare> CanonSet(NewChildren.begin(), NewChildren.end());
                     vector<ExpT> CanonChildren(CanonSet.begin(), CanonSet.end());
                     ExpStack.push(new OpExpression<E, S>(nullptr, OpCode,
-                                                              CanonChildren, Exp->ExtensionData));
+                                                         CanonChildren, Exp->ExtensionData));
                 }
                     break;
 
@@ -3308,7 +3308,7 @@ namespace ESMC {
                 return Exp;
             }
             auto OpCode = ExpAsOp->GetOpCode();
-            auto const& Children = ExpAsOp->GetChildren();
+            auto& Children = const_cast<vector<ExpT>&>(ExpAsOp->GetChildren());
             switch (OpCode) {
             case LTSOps::OpEQ:
             case LTSOps::OpOR:
@@ -3318,12 +3318,15 @@ namespace ESMC {
             case LTSOps::OpADD:
             case LTSOps::OpMUL:
                 {
-                    vector<ExpT> NewChildren = Children;
-                    sort(NewChildren.begin(), NewChildren.end(), ExpressionPtrCompare());
-                    return new OpExpression<E, ESMC::LTS::LTSTermSemanticizer>(nullptr,
-                                                                               OpCode,
-                                                                               NewChildren,
-                                                                               Exp->ExtensionData);
+                    sort(Children.begin(), Children.end(), ExpressionPtrCompare());
+                    if (OpCode == LTSOps::OpAND || OpCode == LTSOps::OpOR) {
+                        auto it = unique(Children.begin(), Children.end());
+                        Children.resize(distance(Children.begin(), it));
+                        if (Children.size() == 1) {
+                            return Children[0];
+                        }
+                    }
+                    return Exp;
                 }
                 break;
 

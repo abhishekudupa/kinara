@@ -543,8 +543,10 @@ namespace ESMC {
 
                 MgrT::SubstMapT SubstMapForTransition;
 
-                for (auto UpdateIterator = Updates.rbegin();
-                     UpdateIterator != Updates.rend(); ++UpdateIterator) {
+                // Assumption: There's only one update
+                // to each variable in a transition
+                for (auto UpdateIterator = Updates.begin();
+                     UpdateIterator != Updates.end(); ++UpdateIterator) {
                     auto const& Update = *UpdateIterator;
                     auto const& LHS = Update->GetLHS();
                     auto const& RHS = Update->GetRHS();

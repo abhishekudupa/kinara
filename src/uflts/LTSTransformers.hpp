@@ -38,6 +38,8 @@
 #if !defined ESMC_LTS_TRANSFORMERS_HPP_
 #define ESMC_LTS_TRANSFORMERS_HPP_
 
+#include <stack>
+
 #include "../common/ESMCFwdDecls.hpp"
 
 #include "LTSDecls.hpp"
@@ -85,7 +87,7 @@ namespace ESMC {
             class MsgTransformer : public VisitorBaseT
             {
             private:
-                vector<ExpT> ExpStack;
+                stack<ExpT> ExpStack;
                 MgrT* Mgr;
                 string MsgVarName;
                 TypeRef MsgRecType;
@@ -117,7 +119,7 @@ namespace ESMC {
                 MgrT* Mgr;
                 const vector<u08>& PermVec;
                 map<TypeRef, u32> TypeOffsets;
-                vector<ExpT> ExpStack;
+                stack<ExpT> ExpStack;
 
             public:
                 ExpressionPermuter(MgrT* Mgr, const vector<u08>& PermVec,
@@ -141,7 +143,7 @@ namespace ESMC {
             {
             private:
                 MgrT* Mgr;
-                vector<ExpT> ExpStack;
+                stack<ExpT> ExpStack;
 
                 inline void VisitQuantifiedExpression(const QExpT* Exp);
 
@@ -157,6 +159,49 @@ namespace ESMC {
                 virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
 
                 static ExpT Do(MgrT* Mgr, const ExpT& Exp);
+            };
+
+            class UFIndexExpGatherer : public VisitorBaseT
+            {
+            private:
+                set<pair<ExpT, TypeRef>>& UFIndexExps;
+                FastExpSetT& UFExps;
+
+            public:
+                UFIndexExpGatherer(set<pair<ExpT, TypeRef>>& UFIndexExps,
+                                   FastExpSetT& UFExps);
+                virtual ~UFIndexExpGatherer();
+
+                virtual void VisitOpExpression(const OpExpT* Exp) override;
+                virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+                virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+                static void Do(const ExpT& Exp, set<pair<ExpT, TypeRef>>& UFIndexExps,
+                               FastExpSetT& UFExps);
+            };
+
+            class ConstraintPurifier : public VisitorBaseT
+            {
+            private:
+                MgrT* Mgr;
+                stack<ExpT> ExpStack;
+                FastExpSetT& Assumptions;
+
+            public:
+                ConstraintPurifier(MgrT* Mgr, FastExpSetT& Assumptions);
+                virtual ~ConstraintPurifier();
+
+                inline void MakeAssumptions(const set<pair<ExpT, TypeRef>>& UFIndexExps);
+                inline vector<pair<ExpT, ExpT>> MakeITEBranches(ExpT Exp,
+                                                                const FastExpSetT& UFExps);
+
+                virtual void VisitVarExpression(const VarExpT* Exp) override;
+                virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
+                virtual void VisitConstExpression(const ConstExpT* Exp) override;
+                virtual void VisitOpExpression(const OpExpT* Exp) override;
+                virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+                virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+
+                static ExpT Do(MgrT* Mgr, const ExpT& Exp, FastExpSetT& Assumptions);
             };
 
         } /* end namespace Detail */

@@ -555,7 +555,7 @@ namespace ESMC {
             typedef unordered_map<ExpT, ExpT, ExpressionPtrHasher> SubstMapT;
 
             typedef RefCache<ExpressionBase<E, S>, ExpressionPtrHasher,
-                             ExpressionPtrEquals, CSmartPtr> ExpCacheT;
+                             FastExpressionPtrEquals, CSmartPtr> ExpCacheT;
 
             typedef unordered_set<ExpT, ExpressionPtrHasher, FastExpressionPtrEquals> ExpSetT;
 
@@ -2241,49 +2241,56 @@ namespace ESMC {
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::Internalize(const ExpT& Exp)
         {
-            const_cast<ExpressionBase<E, S>*>(&*Exp)->Mgr = this;
-            if ((Exp->template As<ConstExpression>() != nullptr) ||
-                (Exp->template As<VarExpression>() != nullptr) ||
-                (Exp->template As<BoundVarExpression>() != nullptr)) {
-                return ExpCache.Get(Exp);
-            }
-            auto ExpAsOp = Exp->template As<OpExpression>();
-            if (ExpAsOp != nullptr) {
-                // First check if I already have an entry in the cache
-                auto Existing = ExpCache.Find(Exp);
-                if (Existing != ExpT::NullPtr) {
-                    return Existing;
-                } else {
-                    auto const& Children = ExpAsOp->GetChildren();
-                    const u32 NumChildren = Children.size();
-                    vector<ExpT> IntChildren(NumChildren);
-                    for (u32 i = 0; i < NumChildren; ++i) {
-                        IntChildren[i] = Internalize(Children[i]);
-                    }
-                    return ExpCache.template Put<OpExpression<E, S>>(this,
-                                                                     ExpAsOp->GetOpCode(),
-                                                                     IntChildren,
-                                                                     Exp->ExtensionData);
-                }
-            }
-            auto ExpAsQuantified = Exp->template As<QuantifiedExpressionBase>();
-            if (ExpAsQuantified != nullptr) {
-                auto const& QVarTypes = ExpAsQuantified->GetQVarTypes();
-                auto IntQExpr = Internalize(ExpAsQuantified->GetQExpression());
-                if (ExpAsQuantified->IsForAll()) {
-                    return ExpCache.template Get<AQuantifiedExpression<E, S>>(this,
-                                                                              QVarTypes,
-                                                                              IntQExpr,
-                                                                              Exp->ExtensionData);
-                } else {
-                    return ExpCache.template Get<EQuantifiedExpression<E, S>>(this,
-                                                                              QVarTypes,
-                                                                              IntQExpr,
-                                                                              Exp->ExtensionData);
-                }
-            } else {
-                throw ExprTypeError("Strange type of expression encountered");
-            }
+            // audupa: 01/15/14, we don't need to internalize
+            // the children, the assumption is that the canonicalizer
+            // will not introduce any NEW expressions
+            return ExpCache.Get(Exp);
+
+            // const_cast<ExpressionBase<E, S>*>(&*Exp)->Mgr = this;
+            // if ((Exp->template As<ConstExpression>() != nullptr) ||
+            //     (Exp->template As<VarExpression>() != nullptr) ||
+            //     (Exp->template As<BoundVarExpression>() != nullptr)) {
+            //     return ExpCache.Get(Exp);
+            // }
+            // auto ExpAsOp = Exp->template As<OpExpression>();
+            // if (ExpAsOp != nullptr) {
+
+            //     // First check if I already have an entry in the cache
+            //     auto Existing = ExpCache.Find(Exp);
+            //     if (Existing != ExpT::NullPtr) {
+            //         return Existing;
+            //     } else {
+
+            //         auto const& Children = ExpAsOp->GetChildren();
+            //         const u32 NumChildren = Children.size();
+            //         vector<ExpT> IntChildren(NumChildren);
+            //         for (u32 i = 0; i < NumChildren; ++i) {
+            //             IntChildren[i] = Internalize(Children[i]);
+            //         }
+            //         return ExpCache.template Put<OpExpression<E, S>>(this,
+            //                                                          ExpAsOp->GetOpCode(),
+            //                                                          IntChildren,
+            //                                                          Exp->ExtensionData);
+            //     }
+            // }
+            // auto ExpAsQuantified = Exp->template As<QuantifiedExpressionBase>();
+            // if (ExpAsQuantified != nullptr) {
+            //     auto const& QVarTypes = ExpAsQuantified->GetQVarTypes();
+            //     auto IntQExpr = Internalize(ExpAsQuantified->GetQExpression());
+            //     if (ExpAsQuantified->IsForAll()) {
+            //         return ExpCache.template Get<AQuantifiedExpression<E, S>>(this,
+            //                                                                   QVarTypes,
+            //                                                                   IntQExpr,
+            //                                                                   Exp->ExtensionData);
+            //     } else {
+            //         return ExpCache.template Get<EQuantifiedExpression<E, S>>(this,
+            //                                                                   QVarTypes,
+            //                                                                   IntQExpr,
+            //                                                                   Exp->ExtensionData);
+            //     }
+            // } else {
+            //     throw ExprTypeError("Strange type of expression encountered");
+            // }
         }
 
         template <typename E, template <typename> class S>

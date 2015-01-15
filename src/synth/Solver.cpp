@@ -122,6 +122,7 @@ namespace ESMC {
         {
             // Check for non-existence of stray variables
             auto Mgr = TheLTS->GetMgr();
+            ExpT FinalAssertion = ExpT::NullPtr;
             auto&& Vars = Mgr->Gather(Assertion,
                                       [&] (const ExpPtrT Exp) -> bool
                                       {
@@ -137,32 +138,44 @@ namespace ESMC {
                                       });
             if (Vars.size() > 0) {
 
-                ostringstream sstr;
-                sstr << "Encountered Stray Variables in Solver::CheckedAssert()" << endl
-                     << "Assertion:" << endl << Assertion->ToString() << endl
-                     << "Variables Found:" << endl;
-                for (auto const& Var : Vars) {
-                    sstr << Var->SAs<VarExpression>()->GetVarName() << endl;
-                }
-                sstr << endl;
-                sstr << "At: " << __FILE__ << ":" << __LINE__ << endl;
+                // ostringstream sstr;
+                // sstr << "Encountered Stray Variables in Solver::CheckedAssert()" << endl
+                //      << "Assertion:" << endl << Assertion->ToString() << endl
+                //      << "Variables Found:" << endl;
+                // for (auto const& Var : Vars) {
+                //     sstr << Var->SAs<VarExpression>()->GetVarName() << endl;
+                // }
+                // sstr << endl;
+                // sstr << "At: " << __FILE__ << ":" << __LINE__ << endl;
 
-                cout << sstr.str();
+                // cout << sstr.str();
+
+                FastExpSetT Assumptions;
+                FinalAssertion =
+                    Mgr->ApplyTransform<LTS::Detail::ConstraintPurifier>(Assertion, Assumptions);
+                vector<ExpT> AssumptionVec(Assumptions.begin(), Assumptions.end());
+
+                // cout << "Purified to:" << endl << FinalAssertion->ToString() << endl;
+                FinalAssertion = Mgr->MakeExpr(LTSOps::OpIMPLIES,
+                                               MakeConjunction(AssumptionVec, Mgr),
+                                               FinalAssertion);
 
                 // throw InternalError(sstr.str());
+            } else {
+                FinalAssertion = Assertion;
             }
 
-            if (AssertedConstraints.find(Assertion) != AssertedConstraints.end()) {
-                // if (Assertion != TheLTS->MakeTrue()) {
-                //     cout << "Not asserting previously asserted constraint:" << endl
-                //          << Assertion->ToString() << endl;
-                // }
+            if (AssertedConstraints.find(FinalAssertion) != AssertedConstraints.end()) {
+                if (FinalAssertion != TheLTS->MakeTrue()) {
+                    cout << "Not asserting previously asserted constraint:" << endl
+                         << FinalAssertion->ToString() << endl;
+                }
                 return;
             }
 
-            AssertedConstraints.insert(Assertion);
+            AssertedConstraints.insert(FinalAssertion);
             // cout << "Asserting: " << Assertion->ToString() << endl;
-            TP->Assert(Assertion, Options.UnrollQuantifiers);
+            TP->Assert(FinalAssertion, Options.UnrollQuantifiers);
         }
 
         Solver::~Solver()
@@ -1116,8 +1129,8 @@ namespace ESMC {
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this, Trace, TraceBlownInvar);
             for (auto const& Pred : WPConditions) {
-                // cout << "Obtained Safety Pre:" << endl
-                //      << Pred->ToString() << endl << endl;
+                cout << "Obtained Safety Pre:" << endl
+                     << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
 
@@ -1200,7 +1213,7 @@ namespace ESMC {
                 TraceAnalyses::WeakestPrecondition(this, Trace->As<SafetyViolation>(), GoodExp);
 
             for (auto const& Pred : WPConditions) {
-                // cout << "Obtained Pre:" << endl << Pred->ToString() << endl << endl;
+                cout << "Obtained Deadlock Pre:" << endl << Pred->ToString() << endl << endl;
                 MakeAssertion(Pred);
             }
 

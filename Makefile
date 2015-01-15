@@ -8,15 +8,15 @@ BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
 CXX?=g++
 
-CXXFLAGS=-std=c++11 -Wall -pedantic -fopenmp -pipe
+CXXFLAGS=-std=c++11 -Wall -pedantic -pipe
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/z3/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/sparsehash
 
 ifeq "x$(CXX)" "xg++"
-CXXFLAGS+=-Wno-unused-local-typedefs
+CXXFLAGS+=-Wno-unused-local-typedefs -fopenmp
 else
-CXXFLAGS+=-Wno-gnu-folding-constant
+CXXFLAGS+=-Wno-gnu-folding-constant -openmp
 endif
 
 PROJECT_MODULES= \

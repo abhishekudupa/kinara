@@ -118,6 +118,7 @@ namespace ESMC {
         typedef Exprs::EQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> EQExpT;
         typedef Exprs::AQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> AQExpT;
         typedef unordered_set<ExpT, Exprs::ExpressionPtrHasher> FastExpSetT;
+        typedef unordered_map<ExpT, ExpT, Exprs::ExpressionPtrHasher> FastExpMapT;
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

@@ -37,6 +37,7 @@
 
 #include "LTSTransformers.hpp"
 #include "LTSDecls.hpp"
+#include "LTSUtils.hpp"
 
 namespace ESMC {
     namespace LTS {
@@ -61,20 +62,20 @@ namespace ESMC {
             {
                 if (Exp->GetVarName() == MsgVarName &&
                     Exp->GetVarType() == MsgRecType) {
-                    ExpStack.push_back(Mgr->MakeVar(Exp->GetVarName(), UnifiedMType));
+                    ExpStack.push(Mgr->MakeVar(Exp->GetVarName(), UnifiedMType));
                 } else {
-                    ExpStack.push_back(Exp);
+                    ExpStack.push(Exp);
                 }
             }
 
             void MsgTransformer::VisitBoundVarExpression(const BoundVarExpT* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             void MsgTransformer::VisitConstExpression(const ConstExpT* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             void MsgTransformer::VisitOpExpression(const OpExpT* Exp)
@@ -85,8 +86,8 @@ namespace ESMC {
                 const u32 NumChildren = OldChildren.size();
                 vector<ExpT> NewChildren(NumChildren);
                 for (u32 i = 0; i < NumChildren; ++i) {
-                    NewChildren[NumChildren - i - 1] = ExpStack.back();
-                    ExpStack.pop_back();
+                    NewChildren[NumChildren - i - 1] = ExpStack.top();
+                    ExpStack.pop();
                 }
 
                 auto OpCode = Exp->GetOpCode();
@@ -113,26 +114,26 @@ namespace ESMC {
                                                                                 OldFieldName);
                     auto FAType = Mgr->MakeType<FieldAccessType>();
                     auto NewFieldVar = Mgr->MakeVar(NewFieldName, FAType);
-                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpField, NewChildren[0], NewFieldVar));
+                    ExpStack.push(Mgr->MakeExpr(LTSOps::OpField, NewChildren[0], NewFieldVar));
                 } else {
-                    ExpStack.push_back(Mgr->MakeExpr(OpCode, NewChildren));
+                    ExpStack.push(Mgr->MakeExpr(OpCode, NewChildren));
                 }
             }
 
             void MsgTransformer::VisitEQuantifiedExpression(const EQExpT* Exp)
             {
                 Exp->GetQExpression()->Accept(this);
-                auto NewQExpr = ExpStack.back();
-                ExpStack.pop_back();
-                ExpStack.push_back(Mgr->MakeExists(Exp->GetQVarTypes(), NewQExpr));
+                auto NewQExpr = ExpStack.top();
+                ExpStack.pop();
+                ExpStack.push(Mgr->MakeExists(Exp->GetQVarTypes(), NewQExpr));
             }
 
             void MsgTransformer::VisitAQuantifiedExpression(const AQExpT* Exp)
             {
                 Exp->GetQExpression()->Accept(this);
-                auto NewQExpr = ExpStack.back();
-                ExpStack.pop_back();
-                ExpStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
+                auto NewQExpr = ExpStack.top();
+                ExpStack.pop();
+                ExpStack.push(Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
             }
 
             ExpT MsgTransformer::Do(MgrT* Mgr,
@@ -143,7 +144,7 @@ namespace ESMC {
             {
                 MsgTransformer TheTransformer(Mgr, MsgVarName, MsgRecType, UnifiedMType);
                 Exp->Accept(&TheTransformer);
-                return TheTransformer.ExpStack[0];
+                return TheTransformer.ExpStack.top();
             }
 
             ExpressionPermuter::ExpressionPermuter(MgrT* Mgr, const vector<u08>& PermVec,
@@ -161,14 +162,14 @@ namespace ESMC {
 
             void ExpressionPermuter::VisitVarExpression(const VarExpT* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             void ExpressionPermuter::VisitConstExpression(const ConstExpT* Exp)
             {
                 auto const& Type = Exp->GetType();
                 if (!Type->Is<SymmetricType>()) {
-                    ExpStack.push_back(Exp);
+                    ExpStack.push(Exp);
                     return;
                 }
 
@@ -178,7 +179,7 @@ namespace ESMC {
                 auto ConstIdx = TypeAsSym->GetMemberIdx(ConstVal);
                 if (ConstIdx == 0) {
                     // the undef value permutes to itself
-                    ExpStack.push_back(Exp);
+                    ExpStack.push(Exp);
                     return;
                 }
 
@@ -195,12 +196,12 @@ namespace ESMC {
                 auto Offset = it->second;
                 auto PermutedIdx = PermVec[Offset + ConstIdx] + 1;
                 auto const& PermutedVal = TypeAsSym->GetMember(PermutedIdx);
-                ExpStack.push_back(Mgr->MakeVal(PermutedVal, Type));
+                ExpStack.push(Mgr->MakeVal(PermutedVal, Type));
             }
 
             void ExpressionPermuter::VisitBoundVarExpression(const BoundVarExpT* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             void ExpressionPermuter::VisitOpExpression(const OpExpT* Exp)
@@ -214,11 +215,11 @@ namespace ESMC {
                 vector<ExpT> NewChildren(NumChildren);
 
                 for (u32 i = 0; i < NumChildren; ++i) {
-                    NewChildren[NumChildren - i - 1] = ExpStack.back();
-                    ExpStack.pop_back();
+                    NewChildren[NumChildren - i - 1] = ExpStack.top();
+                    ExpStack.pop();
                 }
 
-                ExpStack.push_back(Mgr->MakeExpr(OpCode, NewChildren));
+                ExpStack.push(Mgr->MakeExpr(OpCode, NewChildren));
             }
 
             void ExpressionPermuter::VisitEQuantifiedExpression(const EQExpT* Exp)
@@ -228,9 +229,9 @@ namespace ESMC {
 
                 QExpr->Accept(this);
 
-                auto NewExp = ExpStack.back();
-                ExpStack.pop_back();
-                ExpStack.push_back(Mgr->MakeExists(QVarTypes, NewExp));
+                auto NewExp = ExpStack.top();
+                ExpStack.pop();
+                ExpStack.push(Mgr->MakeExists(QVarTypes, NewExp));
             }
 
             void ExpressionPermuter::VisitAQuantifiedExpression(const AQExpT* Exp)
@@ -240,9 +241,9 @@ namespace ESMC {
 
                 QExpr->Accept(this);
 
-                auto NewExp = ExpStack.back();
-                ExpStack.pop_back();
-                ExpStack.push_back(Mgr->MakeForAll(QVarTypes, NewExp));
+                auto NewExp = ExpStack.top();
+                ExpStack.pop();
+                ExpStack.push(Mgr->MakeForAll(QVarTypes, NewExp));
             }
 
             ExpT ExpressionPermuter::Do(MgrT* Mgr, const ExpT& Exp,
@@ -251,7 +252,7 @@ namespace ESMC {
             {
                 ExpressionPermuter ThePermuter(Mgr, PermVec, TypeOffsets);
                 Exp->Accept(&ThePermuter);
-                return ThePermuter.ExpStack[0];
+                return ThePermuter.ExpStack.top();
             }
 
 
@@ -269,17 +270,17 @@ namespace ESMC {
 
             void ArrayRValueTransformer::VisitVarExpression(const VarExpT* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             void ArrayRValueTransformer::VisitBoundVarExpression(const BoundVarExpT* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             void ArrayRValueTransformer::VisitConstExpression(const ConstExpT* Exp)
             {
-                ExpStack.push_back(Exp);
+                ExpStack.push(Exp);
             }
 
             void ArrayRValueTransformer::VisitOpExpression(const OpExpT* Exp)
@@ -291,32 +292,32 @@ namespace ESMC {
 
                 for (u32 i = 0; i < NumChildren; ++i) {
                     Children[i]->Accept(this);
-                    NewChildren[i] = ExpStack.back();
-                    ExpStack.pop_back();
+                    NewChildren[i] = ExpStack.top();
+                    ExpStack.pop();
                 }
 
                 if (OpCode == LTSOps::OpIndex) {
                     // Transform this into a select expression
-                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpSelect, NewChildren[0],
+                    ExpStack.push(Mgr->MakeExpr(LTSOps::OpSelect, NewChildren[0],
                                                      NewChildren[1]));
                 } else if (OpCode == LTSOps::OpField) {
                     // Transform to a project expression
-                    ExpStack.push_back(Mgr->MakeExpr(LTSOps::OpProject, NewChildren[0],
+                    ExpStack.push(Mgr->MakeExpr(LTSOps::OpProject, NewChildren[0],
                                                      NewChildren[1]));
                 } else {
-                    ExpStack.push_back(Mgr->MakeExpr(OpCode, NewChildren));
+                    ExpStack.push(Mgr->MakeExpr(OpCode, NewChildren));
                 }
             }
 
             inline void ArrayRValueTransformer::VisitQuantifiedExpression(const QExpT* Exp)
             {
                 Exp->GetQExpression()->Accept(this);
-                auto NewQExpr = ExpStack.back();
-                ExpStack.pop_back();
+                auto NewQExpr = ExpStack.top();
+                ExpStack.pop();
                 if (Exp->IsForAll()) {
-                    ExpStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
+                    ExpStack.push(Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
                 } else {
-                    ExpStack.push_back(Mgr->MakeExists(Exp->GetQVarTypes(), NewQExpr));
+                    ExpStack.push(Mgr->MakeExists(Exp->GetQVarTypes(), NewQExpr));
                 }
             }
 
@@ -334,7 +335,205 @@ namespace ESMC {
             {
                 ArrayRValueTransformer TheTransformer(Mgr);
                 Exp->Accept(&TheTransformer);
-                return TheTransformer.ExpStack[0];
+                return TheTransformer.ExpStack.top();
+            }
+
+
+            // UFIndexExpGatherer implementation
+            UFIndexExpGatherer::UFIndexExpGatherer(set<pair<ExpT, TypeRef>>& UFIndexExps,
+                                                   FastExpSetT& UFExps)
+                : VisitorBaseT("UFIndexExpGatherer"),
+                  UFIndexExps(UFIndexExps), UFExps(UFExps)
+            {
+                // Nothing here
+            }
+
+            UFIndexExpGatherer::~UFIndexExpGatherer()
+            {
+                // Nothing here
+            }
+
+            void UFIndexExpGatherer::VisitOpExpression(const OpExpT* Exp)
+            {
+                auto OpCode = Exp->GetOpCode();
+                auto const& Children = Exp->GetChildren();
+
+                VisitorBaseT::VisitOpExpression(Exp);
+
+                if (OpCode == LTSOps::OpSelect || OpCode == LTSOps::OpStore) {
+                    auto ArrType = Children[0]->GetType()->As<ArrayType>();
+                    auto const& IndexType = ArrType->GetIndexType();
+                    auto&& SynthExps = GetSynthExps(Children[1]);
+                    if (SynthExps.size() > 0) {
+                        UFIndexExps.insert(make_pair(Children[1], IndexType));
+                        UFExps.insert(SynthExps.begin(), SynthExps.end());
+                    }
+                }
+            }
+
+            void UFIndexExpGatherer::VisitEQuantifiedExpression(const EQExpT* Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+            }
+
+            void UFIndexExpGatherer::VisitAQuantifiedExpression(const AQExpT* Exp)
+            {
+                Exp->GetQExpression()->Accept(this);
+            }
+
+            void UFIndexExpGatherer::Do(const ExpT& Exp,
+                                        set<pair<ExpT, TypeRef>>& UFIndexExps,
+                                        FastExpSetT& UFExps)
+            {
+                UFIndexExpGatherer TheGatherer(UFIndexExps, UFExps);
+                Exp->Accept(&TheGatherer);
+                return;
+            }
+
+            // ConstraintPurifier implementation
+            ConstraintPurifier::ConstraintPurifier(MgrT* Mgr, FastExpSetT& Assumptions)
+                : VisitorBaseT("ConstraintPurifier"),
+                  Mgr(Mgr), Assumptions(Assumptions)
+            {
+                // Nothing here
+            }
+
+            ConstraintPurifier::~ConstraintPurifier()
+            {
+                // Nothing here
+            }
+
+            inline void
+            ConstraintPurifier::MakeAssumptions(const set<pair<ExpT, TypeRef>>& UFIndexExps)
+            {
+                for (auto const& UFIndexExp : UFIndexExps) {
+                    auto const& IndexExp = UFIndexExp.first;
+                    auto const& IndexType = UFIndexExp.second;
+                    if (IndexType->Is<SymmetricType>()) {
+                        auto Assumption = Mgr->MakeExpr(LTSOps::OpEQ, IndexExp,
+                                                        Mgr->MakeVal(IndexType->GetClearValue(),
+                                                                     IndexType));
+                        Assumption = Mgr->MakeExpr(LTSOps::OpNOT, Assumption);
+                        Assumptions.insert(Assumption);
+                    } else if (IndexType->Is<RangeType>()) {
+                        auto Low = IndexType->SAs<RangeType>()->GetLow();
+                        auto High = IndexType->SAs<RangeType>()->GetHigh();
+                        auto Constraint1 = Mgr->MakeExpr(LTSOps::OpGE, IndexExp,
+                                                         Mgr->MakeVal(to_string(Low),
+                                                                      IndexType));
+                        auto Constraint2 = Mgr->MakeExpr(LTSOps::OpLE, IndexExp,
+                                                         Mgr->MakeVal(to_string(High),
+                                                                      IndexType));
+                        Assumptions.insert(Mgr->MakeExpr(LTSOps::OpAND, Constraint1,
+                                                         Constraint2));
+                    }
+                }
+            }
+
+            inline vector<pair<ExpT, ExpT> >
+            ConstraintPurifier::MakeITEBranches(ExpT Exp, const FastExpSetT& UFExps)
+            {
+                vector<ExpT> UFExpVec(UFExps.begin(), UFExps.end());
+                const u32 NumUFExps = UFExpVec.size();
+
+                vector<vector<string>> ValueVectors;
+                for (auto const& UFExp : UFExpVec) {
+                    auto const ExpType = UFExp->GetType();
+                    ValueVectors.push_back(ExpType->GetElementsNoUndef());
+                }
+
+                auto&& CPTuples = CrossProduct<string>(ValueVectors.begin(),
+                                                       ValueVectors.end());
+                const u32 NumTuples = CPTuples.size();
+                vector<pair<ExpT, ExpT>> Retval(NumTuples);
+                for (u32 i = 0; i < NumTuples; ++i) {
+                    auto const& Tuple = CPTuples[i];
+                    vector<ExpT> Conjuncts(NumUFExps);
+                    MgrT::SubstMapT SubstMap;
+
+                    for (u32 j = 0; j < NumUFExps; ++j) {
+                        auto CurVal = Mgr->MakeVal(Tuple[j], UFExpVec[j]->GetType());
+                        auto UFEQVal = Mgr->MakeExpr(LTSOps::OpEQ, UFExpVec[j], CurVal);
+                        Conjuncts[j] = UFEQVal;
+                        SubstMap[UFExpVec[j]] = CurVal;
+                    }
+
+                    auto Condition = MakeConjunction(Conjuncts, Mgr);
+                    auto Branch = Mgr->TermSubstitute(SubstMap, Exp);
+                    Retval[i] = make_pair(Condition, Branch);
+                }
+                return Retval;
+            }
+
+            void ConstraintPurifier::VisitVarExpression(const VarExpT* Exp)
+            {
+                ExpStack.push(Exp);
+            }
+
+            void ConstraintPurifier::VisitConstExpression(const ConstExpT* Exp)
+            {
+                ExpStack.push(Exp);
+            }
+
+            void ConstraintPurifier::VisitBoundVarExpression(const BoundVarExpT* Exp)
+            {
+                ExpStack.push(Exp);
+            }
+
+            void ConstraintPurifier::VisitEQuantifiedExpression(const EQExpT* Exp)
+            {
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                Exp->GetQExpression()->Accept(this);
+                auto NewBody = ExpStack.top();
+                ExpStack.pop();
+                ExpStack.push(Mgr->MakeExists(QVarTypes, NewBody));
+            }
+
+            void ConstraintPurifier::VisitAQuantifiedExpression(const AQExpT* Exp)
+            {
+                auto const& QVarTypes = Exp->GetQVarTypes();
+                Exp->GetQExpression()->Accept(this);
+                auto NewBody = ExpStack.top();
+                ExpStack.pop();
+                ExpStack.push(Mgr->MakeForAll(QVarTypes, NewBody));
+            }
+
+
+            void ConstraintPurifier::VisitOpExpression(const OpExpT* Exp)
+            {
+                auto OpCode = Exp->GetOpCode();
+                auto const& Children = Exp->GetChildren();
+                const u32 NumChildren = Children.size();
+
+                if (OpCode != LTSOps::OpSelect) {
+                    VisitorBaseT::VisitOpExpression(Exp);
+                    vector<ExpT> NewChildren(NumChildren);
+                    for (u32 i = 0; i < NumChildren; ++i) {
+                        NewChildren[NumChildren - i - 1] = ExpStack.top();
+                        ExpStack.pop();
+                    }
+                    ExpStack.push(Mgr->MakeExpr(OpCode, NewChildren));
+                } else {
+                    set<pair<ExpT, TypeRef>> UFIndexExps;
+                    FastExpSetT UFExps;
+                    UFIndexExpGatherer::Do(Exp, UFIndexExps, UFExps);
+
+                    MakeAssumptions(UFIndexExps);
+                    auto&& ITEBranches = MakeITEBranches(Exp, UFExps);
+                    auto ITEExp = ITEBranches[0].second;
+                    for (auto it = next(ITEBranches.begin()); it != ITEBranches.end(); ++it) {
+                        ITEExp = Mgr->MakeExpr(LTSOps::OpITE, (*it).first,
+                                               (*it).second, ITEExp);
+                    }
+                    ExpStack.push(Mgr->SimplifyFP(ITEExp));
+                }
+            }
+
+            ExpT ConstraintPurifier::Do(MgrT* Mgr, const ExpT& Exp, FastExpSetT& Assumptions)
+            {
+                ConstraintPurifier ThePurifier(Mgr, Assumptions);
+                Exp->Accept(&ThePurifier);
+                return ThePurifier.ExpStack.top();
             }
 
         } /* end namespace Detail */
