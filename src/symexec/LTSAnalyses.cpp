@@ -555,9 +555,15 @@ namespace ESMC {
 
                 auto const& Guard = Cmd->GetLoweredGuard();
 
-                Phi = Mgr->TermSubstitute(SubstMapForTransition, Phi);
+                Phi = Mgr->Substitute(SubstMapForTransition, Phi);
                 Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, Guard, Phi);
+
+                cout << "New Phi after propagating through command:" << endl
+                     << Cmd->ToString() << endl << Phi->ToString() << endl << endl;
+
                 Phi = Mgr->SimplifyFP(Phi);
+
+                cout << "Simplified:" << Phi->ToString() << endl << endl;
             }
 
             FastExpSetT Retval;
@@ -570,7 +576,7 @@ namespace ESMC {
                     auto RHS = Update->GetRHS();
                     InitStateSubstMap[LHS] = RHS;
                 }
-                auto NewPhi = Mgr->TermSubstitute(InitStateSubstMap, Phi);
+                auto NewPhi = Mgr->Substitute(InitStateSubstMap, Phi);
                 NewPhi = Mgr->SimplifyFP(NewPhi);
                 Retval.insert(NewPhi);
             }

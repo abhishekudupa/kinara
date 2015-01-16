@@ -66,6 +66,17 @@ int main()
 
     auto SimpExp = Mgr->Simplify(SelectExp);
     cout << SimpExp->ToString() << endl;
+
+    auto BoolType = Mgr->MakeType<BooleanType>();
+    auto BoolVarA = Mgr->MakeVar("BoolVarA", BoolType);
+    auto BoolVarB = Mgr->MakeVar("BoolVarB", BoolType);
+    auto BoolVarC = Mgr->MakeVar("BoolVarC", BoolType);
+
+    auto AAndB = Mgr->MakeExpr(LTSOps::OpAND, BoolVarA, BoolVarB);
+    auto AAndBAndC = Mgr->MakeExpr(LTSOps::OpAND, AAndB, BoolVarC);
+
+    cout << AAndBAndC->ToString() << endl
+         << Mgr->SimplifyFP(AAndBAndC) << endl;
 }
 
 //

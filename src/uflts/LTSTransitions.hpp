@@ -336,7 +336,7 @@ namespace ESMC {
             vector<LTSFairSetRef> FairnessSets;
             vector<LTSTransRef> ProductTrans;
             mutable u32 CmdID;
-            bool Tentative;
+            const bool Tentative;
             mutable bool FullyInterpreted;
             ExpT FixedInterpretation;
 

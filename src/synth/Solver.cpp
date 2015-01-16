@@ -156,9 +156,9 @@ namespace ESMC {
                 vector<ExpT> AssumptionVec(Assumptions.begin(), Assumptions.end());
 
                 // cout << "Purified to:" << endl << FinalAssertion->ToString() << endl;
-                FinalAssertion = Mgr->MakeExpr(LTSOps::OpIMPLIES,
-                                               MakeConjunction(AssumptionVec, Mgr),
-                                               FinalAssertion);
+                // FinalAssertion = Mgr->MakeExpr(LTSOps::OpIMPLIES,
+                //                                MakeConjunction(AssumptionVec, Mgr),
+                //                                FinalAssertion);
 
                 // throw InternalError(sstr.str());
             } else {
@@ -1151,8 +1151,8 @@ namespace ESMC {
             // flush(cout);
 
             auto Trace = TraceBase::MakeDeadlockViolation(PPath, Checker);
-            // cout << "Trace:" << endl << endl;
-            // cout << Trace->ToString(1) << endl << endl;
+            cout << "Trace:" << endl << endl;
+            cout << Trace->ToString(1) << endl << endl;
 
             // cout << "Done!" << endl
             //      << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
@@ -1206,8 +1206,8 @@ namespace ESMC {
                 GoodExp = Checker->LoweredDLFInvariant;
             }
 
-            // cout << "Computing Weakest Pre of: " << GoodExp->ToString() << endl << endl;
             GoodExp = Mgr->SimplifyFP(GoodExp);
+            cout << "Computing Weakest Pre of: " << GoodExp->ToString() << endl << endl;
 
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this, Trace->As<SafetyViolation>(), GoodExp);

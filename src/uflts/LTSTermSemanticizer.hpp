@@ -1497,11 +1497,22 @@ namespace ESMC {
                             ExpStack.push(Mgr->MakeVal("false", BoolType));
                         } else if (RedChildren.size() == 1) {
                             ExpStack.push(RedChildren[0]);
-                        } else if (AllOfOp(RedChildren, LTSOps::OpOR)) {
-                            auto&& FlattenedChildren = GetAllChildren(RedChildren);
-                            ExpStack.push(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
-                            ExpStack.push(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
+                            vector<ExpT> FinalChildren;
+                            for (auto const& RedChild : RedChildren) {
+                                auto RedChildAsOp = RedChild->template As<OpExpression>();
+                                if (RedChildAsOp != nullptr &&
+                                    RedChildAsOp->GetOpCode() == LTSOps::OpOR) {
+                                    auto const& RedChildChildren = RedChildAsOp->GetChildren();
+                                    FinalChildren.insert(FinalChildren.end(),
+                                                         RedChildChildren.begin(),
+                                                         RedChildChildren.end());
+                                } else {
+                                    FinalChildren.push_back(RedChild);
+                                }
+                            }
+
+                            ExpStack.push(MakeOpExp(Mgr, OpCode, FinalChildren, ExtData));
                         }
                     }
                     break;
@@ -1515,11 +1526,21 @@ namespace ESMC {
                             ExpStack.push(Mgr->MakeVal("true", BoolType));
                         } else if (RedChildren.size() == 1) {
                             ExpStack.push(RedChildren[0]);
-                        } else if (AllOfOp(RedChildren, LTSOps::OpAND)) {
-                            auto&& FlattenedChildren = GetAllChildren(RedChildren);
-                            ExpStack.push(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
-                            ExpStack.push(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
+                            vector<ExpT> FinalChildren;
+                            for (auto const& RedChild : RedChildren) {
+                                auto RedChildAsOp = RedChild->template As<OpExpression>();
+                                if (RedChildAsOp != nullptr &&
+                                    RedChildAsOp->GetOpCode() == LTSOps::OpAND) {
+                                    auto const& RedChildChildren = RedChildAsOp->GetChildren();
+                                    FinalChildren.insert(FinalChildren.end(),
+                                                         RedChildChildren.begin(),
+                                                         RedChildChildren.end());
+                                } else {
+                                    FinalChildren.push_back(RedChild);
+                                }
+                            }
+                            ExpStack.push(MakeOpExp(Mgr, OpCode, FinalChildren, ExtData));
                         }
                     }
                     break;
@@ -1603,11 +1624,21 @@ namespace ESMC {
                         auto&& RedChildren = PurgeInt(SimpChildren, 0);
                         if (RedChildren.size() == 1) {
                             ExpStack.push(RedChildren[0]);
-                        } else if (AllOfOp(RedChildren, LTSOps::OpADD)) {
-                            auto&& FlattenedChildren = GetAllChildren(RedChildren);
-                            ExpStack.push(MakeOpExp(Mgr, OpCode, FlattenedChildren, ExtData));
                         } else {
-                            ExpStack.push(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
+                            vector<ExpT> FinalChildren;
+                            for (auto const& RedChild : RedChildren) {
+                                auto RedChildAsOp = RedChild->template As<OpExpression>();
+                                if (RedChildAsOp != nullptr &&
+                                    RedChildAsOp->GetOpCode() == LTSOps::OpADD) {
+                                    auto const& RedChildChildren = RedChildAsOp->GetChildren();
+                                    FinalChildren.insert(FinalChildren.end(),
+                                                         RedChildChildren.begin(),
+                                                         RedChildChildren.end());
+                                } else {
+                                    FinalChildren.push_back(RedChild);
+                                }
+                            }
+                            ExpStack.push(MakeOpExp(Mgr, OpCode, FinalChildren, ExtData));
                         }
                     }
                     break;
@@ -1674,12 +1705,22 @@ namespace ESMC {
                             auto&& RedChildren = PurgeInt(SimpChildren, 1);
                             if (RedChildren.size() == 1) {
                                 ExpStack.push(RedChildren[0]);
-                            } else if (AllOfOp(RedChildren, LTSOps::OpMUL)) {
-                                auto&& FlattenedChildren = GetAllChildren(RedChildren);
-                                ExpStack.push(MakeOpExp(Mgr, OpCode, FlattenedChildren,
-                                                             ExtData));
                             } else {
-                                ExpStack.push(MakeOpExp(Mgr, OpCode, RedChildren, ExtData));
+                                vector<ExpT> FinalChildren;
+                                for (auto const& RedChild : RedChildren) {
+                                    auto RedChildAsOp = RedChild->template As<OpExpression>();
+                                    if (RedChildAsOp != nullptr &&
+                                        RedChildAsOp->GetOpCode() == LTSOps::OpMUL) {
+                                        auto const& RedChildChildren = RedChildAsOp->GetChildren();
+                                        FinalChildren.insert(FinalChildren.end(),
+                                                             RedChildChildren.begin(),
+                                                             RedChildChildren.end());
+                                    } else {
+                                        FinalChildren.push_back(RedChild);
+                                    }
+                                }
+
+                                ExpStack.push(MakeOpExp(Mgr, OpCode, FinalChildren, ExtData));
                             }
                         }
                     }
