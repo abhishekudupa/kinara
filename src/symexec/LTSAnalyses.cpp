@@ -539,31 +539,72 @@ namespace ESMC {
             for (auto TraceIterator = TraceElements.rbegin();
                  TraceIterator != TraceElements.rend(); ++TraceIterator) {
                 auto const& Cmd = TraceIterator->first;
-                const vector<LTSAssignRef>& Updates = Cmd->GetLoweredUpdates();
+                const vector<LTSAssignRef>& LUpdates = Cmd->GetLoweredUpdates();
 
                 MgrT::SubstMapT SubstMapForTransition;
 
                 // Assumption: There's only one update
                 // to each variable in a transition
-                for (auto UpdateIterator = Updates.begin();
-                     UpdateIterator != Updates.end(); ++UpdateIterator) {
+                for (auto UpdateIterator = LUpdates.begin();
+                     UpdateIterator != LUpdates.end(); ++UpdateIterator) {
                     auto const& Update = *UpdateIterator;
                     auto const& LHS = Update->GetLHS();
                     auto const& RHS = Update->GetRHS();
                     SubstMapForTransition[LHS] = RHS;
                 }
 
-                auto const& Guard = Cmd->GetLoweredGuard();
+                // Get the NEPreds for each of the updates
+                auto const& Updates = Cmd->GetUpdates();
+                const u32 NumUpdates = Updates.size();
+                vector<ExpT> UpdateNEPreds(NumUpdates);
+
+                for (u32 i = 0; i < NumUpdates; ++i) {
+                    auto const& Update = Updates[i];
+                    auto LHSNEPred =
+                        Update->GetLHS()->ExtensionData.Interp->GetNoExceptionPredicate();
+                    auto RHSNEPred =
+                        Update->GetRHS()->ExtensionData.Interp->GetNoExceptionPredicate();
+                    auto BoundsConstraint = Update->GetLoweredBoundsConstraint();
+                    UpdateNEPreds[i] = Mgr->MakeExpr(LTSOps::OpAND, LHSNEPred,
+                                                     RHSNEPred, BoundsConstraint);
+                }
+
+                auto UpdateNEPred = MakeConjunction(UpdateNEPreds, Mgr);
+                auto const& LGuard = Cmd->GetLoweredGuard();
+                auto const& Guard = Cmd->GetGuard();
 
                 Phi = Mgr->Substitute(SubstMapForTransition, Phi);
-                Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, Guard, Phi);
+                auto NEGuard = Guard->ExtensionData.Interp->GetNoExceptionPredicate();
+                auto Antecedent = Mgr->MakeExpr(LTSOps::OpAND, NEGuard, LGuard);
+                auto Consequent = Mgr->MakeExpr(LTSOps::OpAND, UpdateNEPred, Phi);
 
-                cout << "New Phi after propagating through command:" << endl
-                     << Cmd->ToString() << endl << Phi->ToString() << endl << endl;
+                Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, Antecedent, Consequent);
 
-                Phi = Mgr->SimplifyFP(Phi);
+                // cout << "New Phi after propagating through command:" << endl
+                //      << Cmd->ToString() << endl << Phi->ToString() << endl << endl;
 
-                cout << "Simplified:" << Phi->ToString() << endl << endl;
+                auto SimpPhi = Mgr->SimplifyFP(Phi);
+
+                if (SimpPhi == Mgr->MakeTrue()) {
+                    auto OrigPhi = Phi;
+                    auto OldPhi = Phi;
+                    auto NewPhi = OldPhi;
+
+                    do {
+                        OldPhi = NewPhi;
+                        NewPhi = Mgr->Simplify(OldPhi);
+
+                        if (NewPhi == Mgr->MakeTrue()) {
+                            cout << "Simplification of:" << endl
+                                 << OldPhi << endl << "resulted in true" << endl;
+                            NewPhi = Mgr->Simplify(OldPhi);
+                        }
+
+                    } while (NewPhi != OldPhi);
+                }
+
+                // cout << "Simplified:" << Phi->ToString() << endl << endl;
+                Phi = SimpPhi;
             }
 
             FastExpSetT Retval;

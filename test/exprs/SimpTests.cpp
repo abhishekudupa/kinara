@@ -77,6 +77,46 @@ int main()
 
     cout << AAndBAndC->ToString() << endl
          << Mgr->SimplifyFP(AAndBAndC) << endl;
+
+    // Test case for array record simplifier
+    auto CacheIDType = Mgr->MakeType<SymmetricType>("CacheIDType", 2);
+    auto AddressType = Mgr->MakeType<SymmetricType>("AddressType", 1);
+    auto DirIDType = Mgr->MakeType<SymmetricType>("DirIDType", 1);
+    auto SharersType = Mgr->MakeType<ArrayType>(CacheIDType, BoolType);
+    vector<pair<string, TypeRef>> DirMembers;
+    DirMembers.push_back(make_pair("Sharers", SharersType));
+    DirMembers.push_back(make_pair("ActiveID", CacheIDType));
+    auto DirRecType = Mgr->MakeType<RecordType>("Directory", DirMembers);
+    auto DirArrayType = Mgr->MakeType<ArrayType>(AddressType, DirRecType);
+    DirArrayType = Mgr->MakeType<ArrayType>(DirIDType, DirArrayType);
+    auto FAType = Mgr->MakeType<FieldAccessType>();
+
+    auto DirID0 = Mgr->MakeVal("DirIDType::0", DirIDType);
+    auto Address0 = Mgr->MakeVal("AddressType::0", AddressType);
+    auto CacheID0 = Mgr->MakeVal("CacheIDType::0", CacheIDType);
+    auto CacheID1 = Mgr->MakeVal("CacheIDType::1", CacheIDType);
+    auto TrueExp = Mgr->MakeTrue();
+    auto FalseExp = Mgr->MakeFalse();
+    auto DirVar = Mgr->MakeVar("Directory", DirArrayType);
+    auto DirExp = Mgr->MakeExpr(LTSOps::OpSelect, DirVar, DirID0);
+    DirExp = Mgr->MakeExpr(LTSOps::OpSelect, DirExp, Address0);
+
+    auto DirDotSharers = Mgr->MakeExpr(LTSOps::OpProject, DirExp,
+                                       Mgr->MakeVar("Sharers", FAType));
+    auto DirDotActiveID = Mgr->MakeExpr(LTSOps::OpProject, DirExp,
+                                        Mgr->MakeVar("ActiveID", FAType));
+
+    auto TestArrayExp = Mgr->MakeExpr(LTSOps::OpStore, DirDotSharers, CacheID0, FalseExp);
+    TestArrayExp = Mgr->MakeExpr(LTSOps::OpStore, TestArrayExp, CacheID1, FalseExp);
+    TestArrayExp = Mgr->MakeExpr(LTSOps::OpStore, TestArrayExp, DirDotActiveID, TrueExp);
+
+    auto TestExp = Mgr->MakeExpr(LTSOps::OpSelect, TestArrayExp, CacheID1);
+
+    cout << TestExp->ToString() << endl;
+
+    SimpExp = Mgr->Simplify(TestExp);
+    cout << SimpExp->ToString() << endl;
+
 }
 
 //

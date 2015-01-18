@@ -423,14 +423,22 @@ namespace ESMC {
             // Compile the guarded commands
             GuardedCommands = ElimMsgFromCommands(GuardedCommands);
 
-            // // Sort the guarded commands so that the tentative ones are at the end
-            // sort(GuardedCommands.begin(), GuardedCommands.end(),
-            //      [&] (const GCmdRef& Cmd1, const GCmdRef& Cmd2) -> bool
-            //      {
-            //          if (!Cmd1->IsTentative() && Cmd2->IsTentative()) {
-            //              return true;
-            //          }
-            //      }
+            // Sort the guarded commands so that the tentative ones are at the end
+            sort(GuardedCommands.begin(), GuardedCommands.end(),
+                 [&] (const GCmdRef& Cmd1, const GCmdRef& Cmd2) -> bool
+                 {
+                     if (!Cmd1->IsTentative() && Cmd2->IsTentative()) {
+                         return true;
+                     }
+                     if (Cmd1->IsTentative() && !Cmd2->IsTentative()) {
+                         return false;
+                     }
+                     return (Cmd1 < Cmd2);
+                 });
+            // Reset command IDs as well
+            for (u32 i = 0; i < GuardedCommands.size(); ++i) {
+                GuardedCommands[i]->SetCmdID(i);
+            }
 
             // Build the invariant and final condition
             for (auto const& NameEFSM : AllEFSMs) {

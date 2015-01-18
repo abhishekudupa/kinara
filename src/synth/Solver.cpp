@@ -1120,11 +1120,11 @@ namespace ESMC {
 
             auto const& TraceBlownInvar = Trace->GetInvariantBlown();
 
-            // cout << "Safety violation trace:" << endl;
-            // cout << Trace->ToString() << endl << endl;
+            cout << "Safety violation trace:" << endl;
+            cout << Trace->ToString() << endl << endl;
 
-            // cout << "Computing weakest pre (safety) of: " << endl <<
-            //     TraceBlownInvar->ToString() << endl << endl;
+            cout << "Computing weakest pre (safety) of: " << endl <<
+                TraceBlownInvar->ToString() << endl << endl;
 
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this, Trace, TraceBlownInvar);
@@ -1151,8 +1151,8 @@ namespace ESMC {
             // flush(cout);
 
             auto Trace = TraceBase::MakeDeadlockViolation(PPath, Checker);
-            cout << "Trace:" << endl << endl;
-            cout << Trace->ToString(1) << endl << endl;
+            cout << "Deadlock Trace:" << endl << endl;
+            cout << Trace->ToString() << endl << endl;
 
             // cout << "Done!" << endl
             //      << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl

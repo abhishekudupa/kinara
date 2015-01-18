@@ -349,6 +349,13 @@ namespace ESMC {
             auto const& Updates = Cmd->GetUpdates();
             auto Status = ApplyUpdates(Updates, InputState, Retval, NEPred);
             if (!Status) {
+                auto Mgr = NEPred->GetMgr();
+                auto GuardInterp = Cmd->GetGuard()->ExtensionData.Interp;
+                auto const& GuardNEPred = GuardInterp->GetNoExceptionPredicate();
+                NEPred = Mgr->MakeExpr(LTSOps::OpIMPLIES,
+                                       Mgr->MakeExpr(LTSOps::OpAND, GuardNEPred,
+                                                     Cmd->GetLoweredGuard()),
+                                       NEPred);
                 Retval->Recycle();
                 return nullptr;
             } else {

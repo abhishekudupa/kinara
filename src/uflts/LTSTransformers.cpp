@@ -358,16 +358,23 @@ namespace ESMC {
                 auto OpCode = Exp->GetOpCode();
                 auto const& Children = Exp->GetChildren();
 
-                VisitorBaseT::VisitOpExpression(Exp);
 
                 if (OpCode == LTSOps::OpSelect || OpCode == LTSOps::OpStore) {
+                    Children[0]->Accept(this);
+                    if (OpCode == LTSOps::OpStore) {
+                        Children[2]->Accept(this);
+                    }
+
                     auto ArrType = Children[0]->GetType()->As<ArrayType>();
                     auto const& IndexType = ArrType->GetIndexType();
+
                     auto&& SynthExps = GetSynthExps(Children[1]);
                     if (SynthExps.size() > 0) {
                         UFIndexExps.insert(make_pair(Children[1], IndexType));
                         UFExps.insert(SynthExps.begin(), SynthExps.end());
                     }
+                } else {
+                    VisitorBaseT::VisitOpExpression(Exp);
                 }
             }
 

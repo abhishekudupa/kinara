@@ -313,7 +313,8 @@ namespace ESMC {
                 typedef unordered_map<ExpT, ExpT, Exprs::ExpressionPtrHasher> FastExpMapT;
 
                 FastExpSetT KillSet;
-                FastExpMapT StoreSet;
+                deque<pair<ExpT, ExpT>> StoreStack;
+                deque<pair<ExpT, ExpT>> UpdateStack;
                 ExpT RelevantIndex;
                 ExpT RelevantField;
 
@@ -328,6 +329,8 @@ namespace ESMC {
                 inline bool IsProject(const ExpressionBase<E, S>* Exp);
                 inline bool IsUpdate(const ExpressionBase<E, S>* Exp);
                 inline bool IsIndexRelevant(const ExpT& IndexExp);
+                inline const ExpT& FindMatchingStore(const ExpT& IndexExp);
+                inline const ExpT& FindMatchingUpdate(const ExpT& FieldExp);
 
             public:
                 ArrayRecordSimplifier(MgrType* Mgr, Simplifier<E, S>* ExprSimplifier);
@@ -1971,12 +1974,56 @@ namespace ESMC {
                 if (RelevantIndex == ExpT::NullPtr) {
                     return true;
                 }
+
                 if (!RelevantIndex->template Is<ConstExpression>() ||
                     !IndexExp->template Is<ConstExpression>()) {
                     return true;
-                } else {
-                    return (RelevantIndex == IndexExp);
                 }
+
+                return (RelevantIndex == IndexExp);
+            }
+
+            template <typename E, template <typename> class S>
+            inline const typename ArrayRecordSimplifier<E, S>::ExpT&
+            ArrayRecordSimplifier<E, S>::FindMatchingStore(const ExpT& IndexExp)
+            {
+                bool IndexIsConst = IndexExp->template Is<ConstExpression>();
+
+                // The BACK of the store stack has the most recent store
+                for (auto it = StoreStack.rbegin(); it != StoreStack.rend(); ++it) {
+                    auto const& CurStore = *it;
+                    auto const& CurIndex = CurStore.first;
+                    auto const& CurVal = CurStore.second;
+
+                    if (IndexIsConst && !CurIndex->template Is<ConstExpression>()) {
+                        return ExpT::NullPtr;
+                    }
+                    if (IndexIsConst && CurIndex == IndexExp) {
+                        return CurVal;
+                    }
+                    if (!IndexIsConst && CurIndex->template Is<ConstExpression>()) {
+                        return ExpT::NullPtr;
+                    }
+                    if (!IndexIsConst && CurIndex == IndexExp) {
+                        return CurVal;
+                    }
+                }
+
+                return ExpT::NullPtr;
+            }
+
+            template <typename E, template <typename> class S>
+            inline const typename ArrayRecordSimplifier<E, S>::ExpT&
+            ArrayRecordSimplifier<E, S>::FindMatchingUpdate(const ExpT& FieldExp)
+            {
+                for (auto it = UpdateStack.rbegin(); it != UpdateStack.rend(); ++it) {
+                    auto const& CurUpdate = *it;
+                    if (CurUpdate.first == FieldExp) {
+                        return CurUpdate.second;
+                    }
+                }
+
+                return ExpT::NullPtr;
             }
 
             template <typename E, template <typename> class S>
@@ -1995,20 +2042,19 @@ namespace ESMC {
                     if (IsStore(Children[0])) {
                         RelevantIndex = SimpIndex;
                         Children[0]->Accept(this);
+                        RelevantIndex = ExpT::NullPtr;
                     } else {
                         VisitAlienExpression(Children[0]);
                     }
 
-                    auto it = StoreSet.find(SimpIndex);
-                    if (it != StoreSet.end()) {
-                        ExpStack.pop();
-                        ExpStack.push(it->second);
-                    } else {
+                    auto const& MatchingStore = FindMatchingStore(SimpIndex);
+                    if (MatchingStore == ExpT::NullPtr) {
                         auto NewArrExp = ExpStack.top();
                         ExpStack.pop();
-                        ExpStack.push(Mgr->MakeExpr(LTSOps::OpSelect,
-                                                         NewArrExp,
-                                                         SimpIndex));
+                        ExpStack.push(Mgr->MakeExpr(LTSOps::OpSelect, NewArrExp, SimpIndex));
+                    } else {
+                        ExpStack.pop();
+                        ExpStack.push(MatchingStore);
                     }
                 }
                     break;
@@ -2037,8 +2083,8 @@ namespace ESMC {
                     auto NewArrExp = ExpStack.top();
                     ExpStack.pop();
                     ExpStack.push(Mgr->MakeExpr(LTSOps::OpStore, NewArrExp,
-                                                     SimpIndex, NewValExp));
-                    StoreSet[SimpIndex] = NewValExp;
+                                                SimpIndex, NewValExp));
+                    StoreStack.push_back(make_pair(SimpIndex, NewValExp));
                 }
                     break;
 
@@ -2046,19 +2092,19 @@ namespace ESMC {
                     if (IsUpdate(Children[0])) {
                         RelevantField = Children[1];
                         Children[0]->Accept(this);
+                        RelevantField = ExpT::NullPtr;
                     } else {
                         VisitAlienExpression(Children[0]);
                     }
 
-                    auto it = StoreSet.find(Children[1]);
-                    if (it != StoreSet.end()) {
+                    auto const& MatchingUpdate = FindMatchingUpdate(Children[1]);
+                    if (MatchingUpdate != ExpT::NullPtr) {
                         ExpStack.pop();
-                        ExpStack.push(it->second);
+                        ExpStack.push(MatchingUpdate);
                     } else {
                         auto NewRecExp = ExpStack.top();
                         ExpStack.pop();
-                        ExpStack.push(Mgr->MakeExpr(LTSOps::OpProject,
-                                                         NewRecExp, Children[1]));
+                        ExpStack.push(Mgr->MakeExpr(LTSOps::OpProject, NewRecExp, Children[1]));
                     }
                 }
                     break;
@@ -2085,8 +2131,8 @@ namespace ESMC {
                     auto NewRecExp = ExpStack.top();
                     ExpStack.pop();
                     ExpStack.push(Mgr->MakeExpr(LTSOps::OpUpdate, NewRecExp,
-                                                     Children[1], NewValExp));
-                    StoreSet[Children[1]] = NewValExp;
+                                                Children[1], NewValExp));
+                    UpdateStack.push_back(make_pair(Children[1], NewValExp));
                 }
                     break;
 
