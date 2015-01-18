@@ -136,7 +136,7 @@ namespace ESMC {
             // Nothing here
         }
 
-        string BooleanType::ToString() const
+        string BooleanType::ToString(u32 Verbosity) const
         {
             return "(BooleanType)";
         }
@@ -223,7 +223,7 @@ namespace ESMC {
             boost::hash_combine(HashCode, "IntegerType");
         }
 
-        string IntegerType::ToString() const
+        string IntegerType::ToString(u32 Verbosity) const
         {
             return "(IntegerType)";
         }
@@ -333,7 +333,7 @@ namespace ESMC {
             return BytesForRange(RangeHigh - RangeLow + 1);
         }
 
-        string RangeType::ToString() const
+        string RangeType::ToString(u32 Verbosity) const
         {
             return ((string)"(Range [" + to_string(RangeLow) +
                     "-" + to_string(RangeHigh) + "])");
@@ -504,19 +504,23 @@ namespace ESMC {
             }
         }
 
-        string EnumType::ToString() const
+        string EnumType::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
-            sstr << "(Enum " << Name << " (";
-            bool First = true;
-            for (auto const& Member : MemberVec) {
-                if (!First) {
-                    sstr << " ";
+            if (Verbosity == 0) {
+                sstr << "(Enum " << Name << ")";
+            } else {
+                sstr << "(Enum " << Name << " (";
+                bool First = true;
+                for (auto const& Member : MemberVec) {
+                    if (!First) {
+                        sstr << " ";
+                    }
+                    First = false;
+                    sstr << Member;
                 }
-                First = false;
-                sstr << Member;
+                sstr << "))";
             }
-            sstr << "))";
             return sstr.str();
         }
 
@@ -656,7 +660,7 @@ namespace ESMC {
             return Index;
         }
 
-        string SymmetricType::ToString() const
+        string SymmetricType::ToString(u32 Verbosity) const
         {
             return (string)"(SymType " + Name + " " +
                 to_string(Size) + ")";
@@ -792,13 +796,13 @@ namespace ESMC {
             }
         }
 
-        string FuncType::ToString() const
+        string FuncType::ToString(u32 Verbosity) const
         {
             string Retval = (string)"(Func " + Name + " ";
             for (auto const& Arg : ArgTypes) {
-                Retval += Arg->ToString() + " -> ";
+                Retval += Arg->ToString(Verbosity) + " -> ";
             }
-            Retval += (EvalType->ToString() + ")");
+            Retval += (EvalType->ToString(Verbosity) + ")");
             return Retval;
         }
 
@@ -934,10 +938,10 @@ namespace ESMC {
             return Retval;
         }
 
-        string ArrayType::ToString() const
+        string ArrayType::ToString(u32 Verbosity) const
         {
-            return ((string)"(Array " + IndexType->ToString() + " -> " +
-                    ValueType->ToString() + ")");
+            return ((string)"(Array " + IndexType->ToString(Verbosity) +
+                    " -> " + ValueType->ToString(Verbosity) + ")");
         }
 
         i32 ArrayType::Compare(const TypeBase& Other) const
@@ -1118,19 +1122,24 @@ namespace ESMC {
             return it->second;
         }
 
-        string RecordType::ToString() const
+        string RecordType::ToString(u32 Verbosity) const
         {
             string Retval;
-            Retval += "(Rec " + Name + "(";
-            bool First = true;
-            for (auto const& NTPair : MemberVec) {
-                if (!First) {
-                    Retval += " ";
+            if (Verbosity == 0) {
+                Retval += "(Rec " + Name + ")";
+            } else {
+                Retval += "(Rec " + Name + "(";
+                bool First = true;
+                for (auto const& NTPair : MemberVec) {
+                    if (!First) {
+                        Retval += " ";
+                    }
+                    First = false;
+                    Retval += ("(" + NTPair.first + " : " +
+                               NTPair.second->ToString(Verbosity) + ")");
                 }
-                First = false;
-                Retval += ("(" + NTPair.first + " : " + NTPair.second->ToString() + ")");
+                Retval += "))";
             }
-            Retval += "))";
             return Retval;
         }
 
@@ -1254,13 +1263,13 @@ namespace ESMC {
             }
         }
 
-        string ParametricType::ToString() const
+        string ParametricType::ToString(u32 Verbosity) const
         {
             string Retval = "(ParamType ";
             for (auto const& ParameterType : ParameterTypes) {
-                Retval += (ParameterType->ToString() + " -> ");
+                Retval += (ParameterType->ToString(Verbosity) + " -> ");
             }
-            Retval += (BaseType->ToString() + ")");
+            Retval += (BaseType->ToString(Verbosity) + ")");
             return Retval;
         }
 
@@ -1397,7 +1406,7 @@ namespace ESMC {
             throw ESMCError((string)"Cannot get cardinality of non-scalar type");
         }
 
-        string FieldAccessType::ToString() const
+        string FieldAccessType::ToString(u32 Verbosity) const
         {
             return "(FieldAccessType)";
         }

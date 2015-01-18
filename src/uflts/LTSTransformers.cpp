@@ -340,10 +340,9 @@ namespace ESMC {
 
 
             // UFIndexExpGatherer implementation
-            UFIndexExpGatherer::UFIndexExpGatherer(set<pair<ExpT, TypeRef>>& UFIndexExps,
-                                                   FastExpSetT& UFExps)
+            UFIndexExpGatherer::UFIndexExpGatherer(set<pair<ExpT, TypeRef>>& UFIndexExps)
                 : VisitorBaseT("UFIndexExpGatherer"),
-                  UFIndexExps(UFIndexExps), UFExps(UFExps)
+                  UFIndexExps(UFIndexExps)
             {
                 // Nothing here
             }
@@ -358,23 +357,14 @@ namespace ESMC {
                 auto OpCode = Exp->GetOpCode();
                 auto const& Children = Exp->GetChildren();
 
-
+                VisitorBaseT::VisitOpExpression(Exp);
                 if (OpCode == LTSOps::OpSelect || OpCode == LTSOps::OpStore) {
-                    Children[0]->Accept(this);
-                    if (OpCode == LTSOps::OpStore) {
-                        Children[2]->Accept(this);
-                    }
-
-                    auto ArrType = Children[0]->GetType()->As<ArrayType>();
-                    auto const& IndexType = ArrType->GetIndexType();
-
-                    auto&& SynthExps = GetSynthExps(Children[1]);
-                    if (SynthExps.size() > 0) {
+                    auto&& SynthOps = GetSynthOps(Children[1]);
+                    if (SynthOps.size() > 0) {
+                        auto ArrType = Children[0]->GetType()->As<ArrayType>();
+                        auto const& IndexType = ArrType->GetIndexType();
                         UFIndexExps.insert(make_pair(Children[1], IndexType));
-                        UFExps.insert(SynthExps.begin(), SynthExps.end());
                     }
-                } else {
-                    VisitorBaseT::VisitOpExpression(Exp);
                 }
             }
 
@@ -388,11 +378,9 @@ namespace ESMC {
                 Exp->GetQExpression()->Accept(this);
             }
 
-            void UFIndexExpGatherer::Do(const ExpT& Exp,
-                                        set<pair<ExpT, TypeRef>>& UFIndexExps,
-                                        FastExpSetT& UFExps)
+            void UFIndexExpGatherer::Do(const ExpT& Exp, set<pair<ExpT, TypeRef>>& UFIndexExps)
             {
-                UFIndexExpGatherer TheGatherer(UFIndexExps, UFExps);
+                UFIndexExpGatherer TheGatherer(UFIndexExps);
                 Exp->Accept(&TheGatherer);
                 return;
             }
@@ -410,59 +398,41 @@ namespace ESMC {
                 // Nothing here
             }
 
-            inline void
-            ConstraintPurifier::MakeAssumptions(const set<pair<ExpT, TypeRef>>& UFIndexExps)
-            {
-                for (auto const& UFIndexExp : UFIndexExps) {
-                    auto const& IndexExp = UFIndexExp.first;
-                    auto const& IndexType = UFIndexExp.second;
-                    if (IndexType->Is<SymmetricType>()) {
-                        auto Assumption = Mgr->MakeExpr(LTSOps::OpEQ, IndexExp,
-                                                        Mgr->MakeVal(IndexType->GetClearValue(),
-                                                                     IndexType));
-                        Assumption = Mgr->MakeExpr(LTSOps::OpNOT, Assumption);
-                        Assumptions.insert(Assumption);
-                    } else if (IndexType->Is<RangeType>()) {
-                        auto Low = IndexType->SAs<RangeType>()->GetLow();
-                        auto High = IndexType->SAs<RangeType>()->GetHigh();
-                        auto Constraint1 = Mgr->MakeExpr(LTSOps::OpGE, IndexExp,
-                                                         Mgr->MakeVal(to_string(Low),
-                                                                      IndexType));
-                        auto Constraint2 = Mgr->MakeExpr(LTSOps::OpLE, IndexExp,
-                                                         Mgr->MakeVal(to_string(High),
-                                                                      IndexType));
-                        Assumptions.insert(Mgr->MakeExpr(LTSOps::OpAND, Constraint1,
-                                                         Constraint2));
-                    }
-                }
-            }
-
             inline vector<pair<ExpT, ExpT> >
-            ConstraintPurifier::MakeITEBranches(ExpT Exp, const FastExpSetT& UFExps)
+            ConstraintPurifier::MakeITEBranches(const ExpT& Exp,
+                                                const set<pair<ExpT, TypeRef>>& UFIndexExps)
             {
-                vector<ExpT> UFExpVec(UFExps.begin(), UFExps.end());
-                const u32 NumUFExps = UFExpVec.size();
+                vector<pair<ExpT, TypeRef>> UFIndexExpVec(UFIndexExps.begin(),
+                                                          UFIndexExps.end());
+                const u32 NumUFExps = UFIndexExpVec.size();
 
                 vector<vector<string>> ValueVectors;
-                for (auto const& UFExp : UFExpVec) {
-                    auto const ExpType = UFExp->GetType();
+
+                for (auto const& IndexExpType : UFIndexExpVec) {
+                    auto const& ExpType = IndexExpType.second;
                     ValueVectors.push_back(ExpType->GetElementsNoUndef());
                 }
 
                 auto&& CPTuples = CrossProduct<string>(ValueVectors.begin(),
                                                        ValueVectors.end());
+
                 const u32 NumTuples = CPTuples.size();
                 vector<pair<ExpT, ExpT>> Retval(NumTuples);
+
                 for (u32 i = 0; i < NumTuples; ++i) {
                     auto const& Tuple = CPTuples[i];
                     vector<ExpT> Conjuncts(NumUFExps);
                     MgrT::SubstMapT SubstMap;
 
                     for (u32 j = 0; j < NumUFExps; ++j) {
-                        auto CurVal = Mgr->MakeVal(Tuple[j], UFExpVec[j]->GetType());
-                        auto UFEQVal = Mgr->MakeExpr(LTSOps::OpEQ, UFExpVec[j], CurVal);
+                        auto const& CurUFIndexExp = UFIndexExpVec[j];
+                        auto const& CurIndexExp = CurUFIndexExp.first;
+                        auto const& CurIndexType = CurUFIndexExp.second;
+
+                        auto CurVal = Mgr->MakeVal(Tuple[j], CurIndexType);
+                        auto UFEQVal = Mgr->MakeExpr(LTSOps::OpEQ, CurIndexExp, CurVal);
                         Conjuncts[j] = UFEQVal;
-                        SubstMap[UFExpVec[j]] = CurVal;
+                        SubstMap[CurIndexExp] = CurVal;
                     }
 
                     auto Condition = MakeConjunction(Conjuncts, Mgr);
@@ -522,11 +492,9 @@ namespace ESMC {
                     ExpStack.push(Mgr->MakeExpr(OpCode, NewChildren));
                 } else {
                     set<pair<ExpT, TypeRef>> UFIndexExps;
-                    FastExpSetT UFExps;
-                    UFIndexExpGatherer::Do(Exp, UFIndexExps, UFExps);
+                    UFIndexExpGatherer::Do(Exp, UFIndexExps);
 
-                    MakeAssumptions(UFIndexExps);
-                    auto&& ITEBranches = MakeITEBranches(Exp, UFExps);
+                    auto&& ITEBranches = MakeITEBranches(Exp, UFIndexExps);
                     auto ITEExp = ITEBranches[0].second;
                     for (auto it = next(ITEBranches.begin()); it != ITEBranches.end(); ++it) {
                         ITEExp = Mgr->MakeExpr(LTSOps::OpITE, (*it).first,

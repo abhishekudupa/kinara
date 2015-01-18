@@ -108,7 +108,7 @@ namespace ESMC {
             return Initial;
         }
 
-        string LTSState::ToString() const
+        string LTSState::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
             sstr << StateName << " : "

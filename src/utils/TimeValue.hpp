@@ -46,7 +46,7 @@
 
 namespace ESMC {
 
-    class TimeValue
+    class TimeValue : public Stringifiable
     {
     private:
         struct timespec Value;
@@ -64,7 +64,7 @@ namespace ESMC {
         TimeValue operator - (const TimeValue& Other) const;
         TimeValue operator + (const TimeValue& Other) const;
         TimeValue operator += (const TimeValue& Other);
-        string ToString() const;
+        virtual string ToString(u32 Verbosity = 0) const override;
         u64 InMicroSeconds() const;
 
         static TimeValue GetTimeValue(clockid_t ClockID);

@@ -51,7 +51,7 @@ namespace ESMC {
 
         using namespace Decls;
 
-        class AutomatonBase
+        class AutomatonBase : public Stringifiable
         {
         protected:
             LabelledTS* TheLTS;
@@ -89,7 +89,6 @@ namespace ESMC {
             u32 GetNumInstances() const;
             u32 GetNumInstancesUnconstrained() const;
             u32 GetClassID() const;
-            virtual string ToString() const = 0;
 
             template <typename T>
             inline T* As()

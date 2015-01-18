@@ -151,47 +151,18 @@ namespace ESMC {
         }
     };
 
-    enum class MCExceptionType {
-        MCOOBWRITE, MCUNDEFVALUE
-    };
 
-    class MCException : public exception
+    // Base class for all stringifiable classes
+    class Stringifiable
     {
-    private:
-        MCExceptionType ExceptionType;
-        string ExceptionString;
-        u32 CmdID;
-
     public:
-        inline MCException(MCExceptionType ExceptionType,
-                           u32 CmdID)
-            : ExceptionType(ExceptionType), CmdID(CmdID)
-        {
-            if (ExceptionType == MCExceptionType::MCOOBWRITE) {
-                ExceptionString = "Out Of Bounds Write";
-            } else {
-                ExceptionString = "Undefined value in computation";
-            }
-        }
+        inline Stringifiable() {}
+        inline virtual ~Stringifiable() {}
 
-        inline virtual ~MCException() throw()
+        virtual string ToString(u32 Verbosity = 0) const = 0;
+        inline operator string () const
         {
-            // Nothing here
-        }
-
-        inline MCExceptionType GetType() const
-        {
-            return ExceptionType;
-        }
-
-        inline u32 GetCmdID() const
-        {
-            return CmdID;
-        }
-
-        inline const char* what() const throw () override
-        {
-            return (ExceptionString.c_str());
+            return ToString();
         }
     };
 

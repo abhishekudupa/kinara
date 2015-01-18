@@ -165,18 +165,15 @@ namespace ESMC {
             {
             private:
                 set<pair<ExpT, TypeRef>>& UFIndexExps;
-                FastExpSetT& UFExps;
 
             public:
-                UFIndexExpGatherer(set<pair<ExpT, TypeRef>>& UFIndexExps,
-                                   FastExpSetT& UFExps);
+                UFIndexExpGatherer(set<pair<ExpT, TypeRef>>& UFIndexExps);
                 virtual ~UFIndexExpGatherer();
 
                 virtual void VisitOpExpression(const OpExpT* Exp) override;
                 virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
                 virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
-                static void Do(const ExpT& Exp, set<pair<ExpT, TypeRef>>& UFIndexExps,
-                               FastExpSetT& UFExps);
+                static void Do(const ExpT& Exp, set<pair<ExpT, TypeRef>>& UFIndexExps);
             };
 
             class ConstraintPurifier : public VisitorBaseT
@@ -190,9 +187,9 @@ namespace ESMC {
                 ConstraintPurifier(MgrT* Mgr, FastExpSetT& Assumptions);
                 virtual ~ConstraintPurifier();
 
-                inline void MakeAssumptions(const set<pair<ExpT, TypeRef>>& UFIndexExps);
-                inline vector<pair<ExpT, ExpT>> MakeITEBranches(ExpT Exp,
-                                                                const FastExpSetT& UFExps);
+                inline vector<pair<ExpT, ExpT>>
+                    MakeITEBranches(const ExpT& Exp,
+                                    const set<pair<ExpT, TypeRef>>& UFIndexExps);
 
                 virtual void VisitVarExpression(const VarExpT* Exp) override;
                 virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;

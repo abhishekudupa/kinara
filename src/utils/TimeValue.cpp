@@ -123,7 +123,7 @@ namespace ESMC {
         return ((u64)Value.tv_sec * (u64)1000000 + ((u64)Value.tv_nsec) / 1000);
     }
 
-    string TimeValue::ToString() const
+    string TimeValue::ToString(u32 Verbosity) const
     {
         ostringstream sstr;
         sstr << ((double)Value.tv_sec + ((double)Value.tv_nsec / 1000000000.0));

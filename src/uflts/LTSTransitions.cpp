@@ -167,21 +167,20 @@ namespace ESMC {
             // Nothing here
         }
 
-        string LTSTransitionInput::ToString(u32 Indent) const
+        string LTSTransitionInput::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
-            string IndentString(Indent, ' ');
 
-            sstr << IndentString << "transition {" << endl;
-            sstr << IndentString << "    on state " << InitState.GetName() << endl;
-            sstr << IndentString << "    on input message \"" << MessageName
-                 << "\" of type " << MessageType->ToString() << endl;
-            sstr << IndentString << "    Guard: " << Guard->ToString() << endl;
-            sstr << IndentString << "    Updates:" << endl;
+            sstr << "transition {" << endl;
+            sstr << "    on state " << InitState.GetName() << endl;
+            sstr << "    on input message \"" << MessageName
+                 << "\" of type " << MessageType->ToString(Verbosity) << endl;
+            sstr << "    Guard: " << Guard->ToString(Verbosity) << endl;
+            sstr << "    Updates:" << endl;
             for (auto const& Asgn : Updates) {
-                sstr << IndentString << "    " << Asgn->ToString() << endl;
+                sstr << "    " << Asgn->ToString(Verbosity) << endl;
             }
-            sstr << IndentString << "}" << endl;
+            sstr << "}" << endl;
             return sstr.str();
         }
 
@@ -211,21 +210,21 @@ namespace ESMC {
             return CompOfFairnessSets;
         }
 
-        string LTSTransitionOutput::ToString(u32 Indent) const
+        string LTSTransitionOutput::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
-            string IndentString(Indent, ' ');
 
-            sstr << IndentString << "transition {" << endl;
-            sstr << IndentString << "    on state " << InitState.GetName() << endl;
-            sstr << IndentString << "    with output message \"" << MessageName
-                 << "\" of type " << MessageType->ToString() << endl;
-            sstr << IndentString << "    Guard: " << Guard->ToString() << endl;
-            sstr << IndentString << "    Updates:" << endl;
+            sstr << "transition {" << endl;
+            sstr << "    on state " << InitState.GetName() << endl;
+            sstr << "    with output message \"" << MessageName
+                 << "\" of type " << MessageType->ToString(Verbosity) << endl;
+            sstr << "    Guard: " << Guard->ToString(Verbosity) << endl;
+            sstr << "    Updates:" << endl;
             for (auto const& Asgn : Updates) {
-                sstr << IndentString << "    " << Asgn->ToString() << endl;
+                sstr << "    " << Asgn->ToString(Verbosity) << endl;
             }
-            sstr << IndentString << "}" << endl;
+
+            sstr << "}" << endl;
             return sstr.str();
         }
 
@@ -252,20 +251,19 @@ namespace ESMC {
             return CompOfFairnessSets;
         }
 
-        string LTSTransitionInternal::ToString(u32 Indent) const
+        string LTSTransitionInternal::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
-            string IndentString(Indent, ' ');
 
-            sstr << IndentString << "transition {" << endl;
-            sstr << IndentString << "    on state " << InitState.GetName() << endl;
-            sstr << IndentString << "    internal" << endl;
-            sstr << IndentString << "    Guard: " << Guard->ToString() << endl;
-            sstr << IndentString << "    Updates:" << endl;
+            sstr << "transition {" << endl;
+            sstr << "    on state " << InitState.GetName() << endl;
+            sstr << "    internal" << endl;
+            sstr << "    Guard: " << Guard->ToString(Verbosity) << endl;
+            sstr << "    Updates:" << endl;
             for (auto const& Asgn : Updates) {
-                sstr << IndentString << "    " << Asgn->ToString() << endl;
+                sstr << "    " << Asgn->ToString(Verbosity) << endl;
             }
-            sstr << IndentString << "}" << endl;
+            sstr << "}" << endl;
             return sstr.str();
         }
 
@@ -408,25 +406,27 @@ namespace ESMC {
             return ProductTrans;
         }
 
-        string LTSGuardedCommand::ToString() const
+        string LTSGuardedCommand::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
             sstr << "guarded command {" << endl;
             if (MsgType != TypeRef::NullPtr) {
-                sstr << "    label: " << MsgType->As<RecordType>()->GetName() << endl;
+                sstr << "    label: " << MsgType->ToString(Verbosity) << endl;
             } else {
                 sstr << "    label: none (internal transition)" << endl;
             }
-            sstr << "    " << Guard->ToString() << " ->" << endl;
+            sstr << "    " << Guard->ToString(Verbosity) << " ->" << endl;
             for (auto const& Update : Updates) {
-                sstr << "        " << Update->ToString() << endl;
+                sstr << "        " << Update->ToString(Verbosity) << endl;
             }
 
-            if (LoweredGuard != ExpT::NullPtr && LoweredUpdates.size() > 0) {
+            if (LoweredGuard != ExpT::NullPtr &&
+                LoweredUpdates.size() > 0 &&
+                Verbosity > 0) {
                 sstr << endl << "Lowered:" << endl;
-                sstr << "    " << LoweredGuard->ToString() << " ->" << endl;
+                sstr << "    " << LoweredGuard->ToString(Verbosity) << " ->" << endl;
                 for (auto const& Update : LoweredUpdates) {
-                    sstr << "        " << Update->ToString() << endl;
+                    sstr << "        " << Update->ToString(Verbosity) << endl;
                 }
             }
             sstr << "}" << endl;
@@ -572,18 +572,18 @@ namespace ESMC {
             // Nothing here
         }
 
-        string LTSSymbInputTransition::ToString() const
+        string LTSSymbInputTransition::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
             sstr << "Symbolic Input Transition {" << endl;
-            sstr << "    on " << MessageName << " of " << MessageType->ToString();
+            sstr << "    on " << MessageName << " of " << MessageType->ToString(Verbosity);
             for (auto const& MParam : MessageParams) {
-                sstr << "[" << MParam->ToString() << "]";
+                sstr << "[" << MParam->ToString(Verbosity) << "]";
             }
             sstr << endl << "    " << "from " << InitState.GetName();
-            sstr << endl << "    " << Guard->ToString() << " ->" << endl;
+            sstr << endl << "    " << Guard->ToString(Verbosity) << " ->" << endl;
             for (auto const& Update : Updates) {
-                sstr << "    " << Update->ToString() << endl;
+                sstr << "    " << Update->ToString(Verbosity) << endl;
             }
             sstr << "}" << endl;
             return sstr.str();
@@ -594,18 +594,18 @@ namespace ESMC {
             // Nothing here
         }
 
-        string LTSSymbOutputTransition::ToString() const
+        string LTSSymbOutputTransition::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
             sstr << "Symbolic Output Transition {" << endl;
-            sstr << "    with " << MessageName << " of " << MessageType->ToString();
+            sstr << "    with " << MessageName << " of " << MessageType->ToString(Verbosity);
             for (auto const& MParam : MessageParams) {
                 sstr << "[" << MParam->ToString() << "]";
             }
             sstr << endl << "    " << "from " << InitState.GetName();
-            sstr << endl << "    " << Guard->ToString() << " ->" << endl;
+            sstr << endl << "    " << Guard->ToString(Verbosity) << " ->" << endl;
             for (auto const& Update : Updates) {
-                sstr << "    " << Update->ToString() << endl;
+                sstr << "    " << Update->ToString(Verbosity) << endl;
             }
             sstr << "}" << endl;
             return sstr.str();
@@ -616,14 +616,14 @@ namespace ESMC {
             // Nothing here
         }
 
-        string LTSSymbInternalTransition::ToString() const
+        string LTSSymbInternalTransition::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
             sstr << "Symbolic Internal Transition {" << endl;
             sstr << endl << "    " << "from " << InitState.GetName();
-            sstr << endl << "    " << Guard->ToString() << " ->" << endl;
+            sstr << endl << "    " << Guard->ToString(Verbosity) << " ->" << endl;
             for (auto const& Update : Updates) {
-                sstr << "    " << Update->ToString() << endl;
+                sstr << "    " << Update->ToString(Verbosity) << endl;
             }
             sstr << "}" << endl;
             return sstr.str();
@@ -656,18 +656,18 @@ namespace ESMC {
             this->LoweredUpdates = LoweredUpdates;
         }
 
-        string LTSInitStateGenerator::ToString() const
+        string LTSInitStateGenerator::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
             sstr << "initstate {" << endl;
             for (auto const& Update : Updates) {
-                sstr << "    " << Update->ToString() << endl;
+                sstr << "    " << Update->ToString(Verbosity) << endl;
             }
 
-            if (LoweredUpdates.size() > 0) {
+            if (LoweredUpdates.size() > 0 && Verbosity > 0) {
                 sstr << endl << "Lowered Updates:" << endl;
                 for (auto const& Update : LoweredUpdates) {
-                    sstr << "    " << Update->ToString() << endl;
+                    sstr << "    " << Update->ToString(Verbosity) << endl;
                 }
             }
 

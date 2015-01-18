@@ -49,7 +49,7 @@
 namespace ESMC {
     namespace LTS {
 
-        class AutomatonTransitionBase : public RefCountable
+        class AutomatonTransitionBase : public RefCountable, public Stringifiable
         {
         protected:
             AutomatonBase* Automaton;
@@ -70,8 +70,6 @@ namespace ESMC {
             const LTSState& GetInitState() const;
             const ExpT& GetGuard() const;
             const vector<ExpT>& GetParamInst() const;
-
-            virtual string ToString(u32 Indent = 0) const = 0;
 
             template <typename T>
             T* As()
@@ -104,7 +102,7 @@ namespace ESMC {
             }
         };
 
-        class LTSSymbTransitionBase : public RefCountable
+        class LTSSymbTransitionBase : public RefCountable, public Stringifiable
         {
         protected:
             vector<ExpT> TransParams;
@@ -135,8 +133,6 @@ namespace ESMC {
             const ExpT& GetGuard() const;
             const vector<LTSAssignRef>& GetUpdates() const;
             bool IsTentative() const;
-
-            virtual string ToString() const = 0;
 
             template <typename T>
             inline T* As()
@@ -201,7 +197,7 @@ namespace ESMC {
             using LTSSymbIOTransitionBase::LTSSymbIOTransitionBase;
             virtual ~LTSSymbInputTransition();
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity) const override;
         };
 
         class LTSSymbOutputTransition : public LTSSymbIOTransitionBase
@@ -210,7 +206,7 @@ namespace ESMC {
             using LTSSymbIOTransitionBase::LTSSymbIOTransitionBase;
             virtual ~LTSSymbOutputTransition();
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity) const override;
         };
 
         class LTSSymbInternalTransition : public LTSSymbTransitionBase
@@ -218,7 +214,7 @@ namespace ESMC {
             using LTSSymbTransitionBase::LTSSymbTransitionBase;
             virtual ~LTSSymbInternalTransition();
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity) const override;
         };
 
         class LTSTransitionBase : public AutomatonTransitionBase
@@ -277,7 +273,7 @@ namespace ESMC {
                                const LTSSymbTransRef& SymbolicTransition);
             virtual ~LTSTransitionInput();
 
-            virtual string ToString(u32 Indent = 0) const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
         };
 
         class LTSTransitionOutput : public LTSTransitionIOBase
@@ -299,7 +295,7 @@ namespace ESMC {
 
             const set<string>& GetCompOfFairnessSets() const;
 
-            virtual string ToString(u32 Indent = 0) const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
         };
 
         class LTSTransitionInternal : public LTSTransitionBase
@@ -318,10 +314,10 @@ namespace ESMC {
             virtual ~LTSTransitionInternal();
 
             const set<string>& GetCompOfFairnessSets() const;
-            virtual string ToString(u32 Indent = 0) const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
         };
 
-        class LTSGuardedCommand : public RefCountable
+        class LTSGuardedCommand : public RefCountable, public Stringifiable
         {
         private:
             MgrT* Mgr;
@@ -360,7 +356,7 @@ namespace ESMC {
             const vector<LTSTransRef>& GetProductTransition() const;
             u32 GetCmdID() const;
             void SetCmdID(u32 CmdID) const;
-            string ToString() const;
+            virtual string ToString(u32 Verbosity = 0) const override;
             bool IsTentative() const;
             bool IsFullyInterpreted() const;
             void SetFullyInterpreted(bool NewValue) const;
@@ -389,7 +385,7 @@ namespace ESMC {
             const vector<LTSAssignRef>& GetUpdates() const;
         };
 
-        class LTSInitStateGenerator : public RefCountable
+        class LTSInitStateGenerator : public RefCountable, public Stringifiable
         {
         private:
             vector<LTSAssignRef> Updates;
@@ -402,7 +398,7 @@ namespace ESMC {
             const vector<LTSAssignRef>& GetUpdates() const;
             void SetLoweredUpdates(const vector<LTSAssignRef>& LoweredUpdates) const;
             const vector<LTSAssignRef>& GetLoweredUpdates() const;
-            string ToString() const;
+            virtual string ToString(u32 Verbosity = 0) const override;
         };
 
     } /* end namespace LTS */

@@ -137,7 +137,7 @@ namespace ESMC {
             }
         };
 
-        class TraceBase
+        class TraceBase : public Stringifiable
         {
         protected:
             StateVecPrinter* Printer;
@@ -147,8 +147,6 @@ namespace ESMC {
             virtual ~TraceBase();
 
             StateVecPrinter* GetPrinter() const;
-
-            virtual string ToString(u32 Verbosity = 0) const = 0;
 
             template <typename T>
             inline T* As()

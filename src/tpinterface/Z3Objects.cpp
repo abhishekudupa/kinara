@@ -174,7 +174,7 @@ namespace ESMC {
             return (Z3_is_eq_ast(*Ctx, AST, OtherPtr->AST));
         }
 
-        string Z3Expr::ToString() const
+        string Z3Expr::ToString(u32 Verbosity) const
         {
             if (Ctx != Z3Ctx::NullPtr && AST != nullptr) {
                 return Z3_ast_to_string(*Ctx, AST);
@@ -307,7 +307,7 @@ namespace ESMC {
             return (Z3_is_eq_sort(*Ctx, Sort, OtherAsPtr->Sort));
         }
 
-        string Z3Sort::ToString() const
+        string Z3Sort::ToString(u32 Verbosity) const
         {
             if (Ctx != Z3Ctx::NullPtr && Sort != nullptr) {
                 return Z3_sort_to_string(*Ctx, Sort);
@@ -405,7 +405,7 @@ namespace ESMC {
                     (OtherAsPtr->Solver == Solver));
         }
 
-        string Z3Solver::ToString() const
+        string Z3Solver::ToString(u32 Verbosity) const
         {
             if (Ctx != Z3Ctx::NullPtr && Solver != nullptr) {
                 return string(Z3_solver_to_string(*Ctx, Solver));
@@ -489,7 +489,7 @@ namespace ESMC {
                     TPPtr == OtherAsPtr->TPPtr);
         }
 
-        string Z3Model::ToString() const
+        string Z3Model::ToString(u32 Verbosity) const
         {
             return string(Z3_model_to_string(*Ctx, Model));
         }

@@ -90,7 +90,7 @@ namespace ESMC {
         };
 
 
-        class TypeBase : public RefCountable
+        class TypeBase : public RefCountable, public Stringifiable
         {
         private:
             mutable i64 TypeID;
@@ -108,7 +108,6 @@ namespace ESMC {
             TypeBase();
             virtual ~TypeBase();
 
-            virtual string ToString() const = 0;
             virtual i32 Compare(const TypeBase& Other) const = 0;
             virtual vector<string> GetElements() const = 0;
             virtual vector<string> GetElementsNoUndef() const = 0;
@@ -239,7 +238,7 @@ namespace ESMC {
             BooleanType();
             virtual ~BooleanType();
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
@@ -264,7 +263,7 @@ namespace ESMC {
             IntegerType();
             virtual ~IntegerType();
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElementsNoUndef() const override;
             virtual vector<string> GetElements() const override;
@@ -295,7 +294,7 @@ namespace ESMC {
             i64 GetHigh() const;
             u64 GetSize() const;
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
@@ -329,7 +328,7 @@ namespace ESMC {
             bool IsMember(const string& MemberName) const;
             u32 GetMemberIdx(const string& MemberName) const;
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
@@ -373,7 +372,7 @@ namespace ESMC {
             void SetIndex(u32 Index) const;
             u32 GetIndex() const;
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
@@ -407,7 +406,7 @@ namespace ESMC {
             const TypeRef& GetEvalType() const;
             const string& GetMangledName() const;
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
@@ -437,7 +436,7 @@ namespace ESMC {
             TypeRef GetBaseValueType() const;
             u32 GetLevelsOfIndex() const;
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
@@ -478,7 +477,7 @@ namespace ESMC {
             u32 GetFieldOffset(const string& FieldName) const;
             u32 GetFieldIdx(const string& FieldName) const;
 
-            virtual string ToString() const;
+            virtual string ToString(u32 Verbosity = 0) const;
             virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
@@ -509,7 +508,7 @@ namespace ESMC {
             const vector<TypeRef>& GetParameterTypes() const;
             const string& GetName() const;
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;
@@ -529,7 +528,7 @@ namespace ESMC {
             FieldAccessType();
             virtual ~FieldAccessType();
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual i32 Compare(const TypeBase& Other) const override;
             virtual vector<string> GetElements() const override;
             virtual vector<string> GetElementsNoUndef() const override;

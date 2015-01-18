@@ -47,7 +47,7 @@
 namespace ESMC {
     namespace LTS {
 
-        class LTSAssignBase : public RefCountable
+        class LTSAssignBase : public RefCountable, public Stringifiable
         {
         protected:
             ExpT LHS;
@@ -66,7 +66,6 @@ namespace ESMC {
             const ExpT& GetLoweredBoundsConstraint() const;
             void SetLoweredBoundsConstraint(const ExpT& Constraint) const;
 
-            virtual string ToString() const = 0;
             virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const = 0;
 
             template <typename T>
@@ -106,7 +105,7 @@ namespace ESMC {
             using LTSAssignBase::LTSAssignBase;
             virtual ~LTSAssignSimple();
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const override;
         };
 
@@ -124,7 +123,7 @@ namespace ESMC {
             const vector<ExpT>& GetParams() const;
             const ExpT& GetConstraint() const;
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const override;
         };
 

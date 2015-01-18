@@ -1,9 +1,7 @@
-// LTSState.hpp ---
-//
-// Filename: LTSState.hpp
+// LogManager.hpp ---
+// Filename: LogManager.hpp
 // Author: Abhishek Udupa
-// Created: Fri Aug  8 13:43:46 2014 (-0400)
-//
+// Created: Sun Jan 18 16:14:58 2015 (-0500)
 //
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
@@ -37,56 +35,58 @@
 
 // Code:
 
-#if !defined ESMC_LTS_STATE_HPP_
-#define ESMC_LTS_STATE_HPP_
+#if !defined ESMC_LOG_MANAGER_HPP_
+#define ESMC_LOG_MANAGER_HPP_
+
+#include <type_traits>
 
 #include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
-    namespace LTS {
+    namespace Logging {
 
-        class LTSState : public Stringifiable
+        class LogManager
         {
-            friend class AutomatonBase;
         private:
-            string StateName;
-            bool Accepting;
-            bool Final;
-            bool Error;
-            bool Initial;
+            static unordered_set<string> EnabledLogOptions;
+            static ostream* LogStream;
+            static bool IsInitialized;
 
-        private:
-            LTSState(const string& StateName, bool Initial,
-                     bool Final, bool Accepting, bool Error);
+            LogManager();
+
+            static inline void AssertInitialized();
 
         public:
-            LTSState(const LTSState& Other);
-            LTSState();
-            ~LTSState();
+            LogManager(const LogManager& Other) = delete;
+            LogManager(LogManager&& Other) = delete;
 
-            LTSState& operator = (const LTSState& Other);
+            static void Initialize(const string& LogStreamName = "", bool AppendMode = false);
+            static void Finalize();
 
-            string GetName() const;
-            bool IsAccepting() const;
-            bool IsFinal() const;
-            bool IsError() const;
-            bool IsInitial() const;
-            virtual string ToString(u32 Verbosity = 0) const override;
-
-            static LTSState MakeEFSMState(const string& StateName,
-                                          bool Initial = false,
-                                          bool Final = false,
-                                          bool Error = false);
-
-            static LTSState MakeMonitorState(const string& StateName,
-                                             bool Initial = false,
-                                             bool Accepting = false);
+            static ostream& GetLogStream();
+            static const unordered_set<string>& GetEnabledLogOptions();
+            static bool IsOptionEnabled(const string& OptionName);
+            template <typename T>
+            static inline void Print(const T& Obj)
+            {
+            }
         };
 
-    } /* end namespace LTS */
+    } /* end namespace Logging */
 } /* end namespace ESMC */
 
-#endif /* ESMC_LTS_STATE_HPP_ */
+
+// Inspired from Z3's tracing/logging mechanism
+
+#define ESMC_LOG_CODE (CODE) { CODE } ((void)0)
+
+#define ESMC_LOG_FULL (TAG, CODE) \
+    EMSC_LOG_CODE(\
+    if (ESMC::Logging::LogManager::IsOptionEnabled(TAG)) {\
+        ostream& Out = ESMC::Logging::LogManager::GetLogStream();\
+        Out <<
+
+#endif /* ESMC_LOG_MANAGER_HPP_ */
 
 //
-// LTSState.hpp ends here
+// LogManager.hpp ends here

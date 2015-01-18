@@ -104,7 +104,7 @@ namespace ESMC {
             return (!Input);
         }
 
-        string SymmetricMessageDecl::ToString() const
+        string SymmetricMessageDecl::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
             if (Input) {
@@ -115,14 +115,14 @@ namespace ESMC {
             if (NewParams.size() > 0) {
                 sstr << "New Params: " << endl;
                 for (auto const& NewParam : NewParams) {
-                    sstr << "    " << NewParam->ToString() << endl;
+                    sstr << "    " << NewParam->ToString(Verbosity) << endl;
                 }
-                sstr << "Constraint: " << Constraint->ToString() << endl;
+                sstr << "Constraint: " << Constraint->ToString(Verbosity) << endl;
             }
-            sstr << "Message Type: " << MessageType->ToString() << endl;
+            sstr << "Message Type: " << MessageType->ToString(Verbosity) << endl;
             sstr << "Message Params: " << endl;
             for (auto const& MessageParam : MessageParams) {
-                sstr << "    " << MessageParam->ToString() << endl;
+                sstr << "    " << MessageParam->ToString(Verbosity) << endl;
             }
             sstr << endl;
             return sstr.str();
@@ -1585,7 +1585,7 @@ namespace ESMC {
             }
         }
 
-        string EFSMBase::ToString() const
+        string EFSMBase::ToString(u32 Verbosity) const
         {
             ostringstream sstr;
 

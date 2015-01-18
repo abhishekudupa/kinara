@@ -67,7 +67,7 @@ namespace ESMC {
         };
 
         // Base class for all Z3 refcounted objects
-        class Z3Object
+        class Z3Object : public Stringifiable
         {
         protected:
             Z3Ctx Ctx;
@@ -82,7 +82,6 @@ namespace ESMC {
 
             virtual bool operator == (const Z3Object& Other) const = 0;
             virtual u64 Hash() const = 0;
-            virtual string ToString() const = 0;
 
             template <typename T>
             inline T* As()
@@ -130,7 +129,7 @@ namespace ESMC {
             Z3Expr& operator = (Z3Expr Other);
 
             virtual bool operator == (const Z3Object& Other) const override;
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual u64 Hash() const override;
 
 
@@ -174,7 +173,7 @@ namespace ESMC {
             Z3Sort& operator = (Z3Sort Other);
 
             virtual bool operator == (const Z3Object& Other) const override;
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual u64 Hash() const override;
 
             // unsafe! for internal use only
@@ -201,7 +200,7 @@ namespace ESMC {
             Z3Solver& operator = (Z3Solver Other);
 
             virtual bool operator == (const Z3Object& Other) const override;
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual u64 Hash() const override;
 
             operator Z3_solver () const;
@@ -226,7 +225,7 @@ namespace ESMC {
             Z3Model& operator = (Z3Model Other);
 
             virtual bool operator == (const Z3Object& Other) const override;
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             virtual u64 Hash() const override;
 
             operator Z3_model () const;

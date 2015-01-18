@@ -112,9 +112,9 @@ namespace ESMC {
             // Nothing here
         }
 
-        string LTSAssignSimple::ToString() const
+        string LTSAssignSimple::ToString(u32 Verbosity) const
         {
-            return (LHS->ToString() + " := " + RHS->ToString());
+            return (LHS->ToString(Verbosity) + " := " + RHS->ToString(Verbosity));
         }
 
         vector<LTSAssignRef> LTSAssignSimple::ExpandNonScalarUpdates() const
@@ -241,7 +241,7 @@ namespace ESMC {
             return Constraint;
         }
 
-        string LTSAssignParam::ToString() const
+        string LTSAssignParam::ToString(u32 Verbosity) const
         {
             return (LHS->ToString() + " := " + RHS->ToString());
         }

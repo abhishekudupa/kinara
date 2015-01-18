@@ -177,7 +177,7 @@ namespace ESMC {
         };
 
         template <typename E, template <typename> class S>
-        class ExpressionBase : public RefCountable
+        class ExpressionBase : public RefCountable, public Stringifiable
         {
             friend class ExprMgr<E, S>;
         private:
@@ -207,7 +207,7 @@ namespace ESMC {
             inline bool LE(const ExpressionBase<E, S>* Other) const;
             inline bool GE(const ExpressionBase<E, S>* Other) const;
             inline bool GT(const ExpressionBase<E, S>* Other) const;
-            inline string ToString() const;
+            virtual string ToString(u32 Verbosity = 0) const override;
 
             // Abstract methods
         protected:
@@ -283,7 +283,7 @@ namespace ESMC {
             inline bool LE(const ExpressionBase<ExtListT, S>* Other) const;
             inline bool GE(const ExpressionBase<ExtListT, S>* Other) const;
             inline bool GT(const ExpressionBase<ExtListT, S>* Other) const;
-            inline string ToString() const;
+            virtual string ToString(u32 Verbosity = 0) const override;
 
             // Abstract methods
         protected:
@@ -1489,7 +1489,7 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
-        inline string ExpressionBase<E, S>::ToString() const
+        string ExpressionBase<E, S>::ToString(u32 Verbosity) const
         {
             auto Sem = Mgr->GetSemanticizer();
             return (Sem->ExprToString(this));
@@ -1594,7 +1594,7 @@ namespace ESMC {
         }
 
         template <template <typename> class S>
-        inline string ExpressionBase<ExtListT, S>::ToString() const
+        string ExpressionBase<ExtListT, S>::ToString(u32 Verbosity) const
         {
             auto Sem = Mgr->GetSemanticizer();
             return (Sem->ExprToString(this));

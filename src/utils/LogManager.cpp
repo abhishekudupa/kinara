@@ -1,9 +1,7 @@
-// LTSState.hpp ---
-//
-// Filename: LTSState.hpp
+// LogManager.cpp ---
+// Filename: LogManager.cpp
 // Author: Abhishek Udupa
-// Created: Fri Aug  8 13:43:46 2014 (-0400)
-//
+// Created: Sun Jan 18 16:34:01 2015 (-0500)
 //
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
@@ -37,56 +35,31 @@
 
 // Code:
 
-#if !defined ESMC_LTS_STATE_HPP_
-#define ESMC_LTS_STATE_HPP_
-
-#include "../common/ESMCFwdDecls.hpp"
+#include "LogManager.hpp"
 
 namespace ESMC {
-    namespace LTS {
+    namespace Logging {
 
-        class LTSState : public Stringifiable
+        unordered_set<string> LogManager::EnabledLogOptions;
+        ostream* LogManager::LogStream = nullptr;
+        bool LogManager::IsInitialized = false;
+
+        LogManager::LogManager()
         {
-            friend class AutomatonBase;
-        private:
-            string StateName;
-            bool Accepting;
-            bool Final;
-            bool Error;
-            bool Initial;
+            // Nothing here
+        }
 
-        private:
-            LTSState(const string& StateName, bool Initial,
-                     bool Final, bool Accepting, bool Error);
+        void LogManager::Initialize(const string& LogStreamName, bool AppendMode)
+        {
+            if (LogStreamName == "") {
+                LogStream = &std::cout;
+            } else {
+                LogStream = new ofstream(LogStreamName.c_str())
+            }
+        }
 
-        public:
-            LTSState(const LTSState& Other);
-            LTSState();
-            ~LTSState();
-
-            LTSState& operator = (const LTSState& Other);
-
-            string GetName() const;
-            bool IsAccepting() const;
-            bool IsFinal() const;
-            bool IsError() const;
-            bool IsInitial() const;
-            virtual string ToString(u32 Verbosity = 0) const override;
-
-            static LTSState MakeEFSMState(const string& StateName,
-                                          bool Initial = false,
-                                          bool Final = false,
-                                          bool Error = false);
-
-            static LTSState MakeMonitorState(const string& StateName,
-                                             bool Initial = false,
-                                             bool Accepting = false);
-        };
-
-    } /* end namespace LTS */
+    } /* end namespace Logging */
 } /* end namespace ESMC */
 
-#endif /* ESMC_LTS_STATE_HPP_ */
-
 //
-// LTSState.hpp ends here
+// LogManager.cpp ends here

@@ -49,7 +49,7 @@ namespace ESMC {
 
         // Used to remember what messages were declared
         // as a set of symmetric message types
-        class SymmetricMessageDecl : public RefCountable
+        class SymmetricMessageDecl : public RefCountable, public Stringifiable
         {
         private:
             TypeRef MessageType;
@@ -73,7 +73,7 @@ namespace ESMC {
             const vector<ExpT>& GetMessageParams() const;
             bool IsInput() const;
             bool IsOutput() const;
-            string ToString() const;
+            virtual string ToString(u32 Verbosity = 0) const override;
         };
 
         class EFSMBase : public AutomatonBase
@@ -368,7 +368,7 @@ namespace ESMC {
                                                 const string& SplatFairnessName = "",
                                                 bool Tentative = false);
 
-            virtual string ToString() const override;
+            virtual string ToString(u32 Verbosity = 0) const override;
             const MgrT::SubstMapT& GetRebaseSubstMap(const vector<ExpT>& ParamInst) const;
 
             const vector<LTSSymbTransRef>& GetSymbolicTransitions() const;

@@ -874,7 +874,7 @@ namespace ESMC {
                              "(internal transition)") << endl;
                 } else {
                     sstr << "Fired Guarded Command:" << endl;
-                    sstr << TraceElem.first->ToString() << endl;
+                    sstr << TraceElem.first->ToString(Verbosity) << endl;
                 }
                 sstr << "Obtained next state (delta from previous state):" << endl;
                 sstr << "-----------------------------------------------------" << endl;
@@ -980,7 +980,7 @@ namespace ESMC {
                              "(internal transition)") << endl;
                 } else {
                     sstr << "Fired Guarded Command:" << endl;
-                    sstr << TraceElem.first->ToString() << endl;
+                    sstr << TraceElem.first->ToString(Verbosity) << endl;
                 }
                 if (i != NumStemSteps - 1) {
                     sstr << "Obtained next state (delta from previous state):" << endl;
@@ -998,7 +998,7 @@ namespace ESMC {
                          << "been applied to get the first state of loop from the stem:" << endl;
                     sstr << "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-" << endl << endl;
                     for (auto const& Update : StemSortPermutation) {
-                        sstr << Update->ToString() << endl;
+                        sstr << Update->ToString(Verbosity) << endl;
                     }
                     sstr << "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-" << endl << endl;
                 }
@@ -1019,7 +1019,7 @@ namespace ESMC {
                              "(internal transition)") << endl;
                 } else {
                     sstr << "Fired Guarded Command:" << endl;
-                    sstr << TraceElem.first->ToString() << endl;
+                    sstr << TraceElem.first->ToString(Verbosity) << endl;
                 }
                 sstr << "Obtained next state (delta from previous state):" << endl;
                 sstr << "-----------------------------------------------------" << endl;
@@ -1038,7 +1038,7 @@ namespace ESMC {
                  << "state in the loop:" << endl;
             sstr << "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-" << endl << endl;
             for (auto const& Update : LoopSortPermutation) {
-                sstr << Update->ToString() << endl;
+                sstr << Update->ToString(Verbosity) << endl;
             }
             sstr << "-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-*-" << endl << endl;
 
