@@ -39,6 +39,9 @@
 #define ESMC_LOG_MANAGER_HPP_
 
 #include <type_traits>
+#include <unordered_set>
+#include <map>
+#include <vector>
 
 #include "../common/ESMCFwdDecls.hpp"
 
@@ -51,6 +54,9 @@ namespace ESMC {
             static unordered_set<string> EnabledLogOptions;
             static ostream* LogStream;
             static bool IsInitialized;
+            static bool AtExitHandlerInstalled;
+            static const map<string, string> LogOptionDescriptions;
+            static bool NoLoggingEnabled;
 
             LogManager();
 
@@ -60,17 +66,32 @@ namespace ESMC {
             LogManager(const LogManager& Other) = delete;
             LogManager(LogManager&& Other) = delete;
 
-            static void Initialize(const string& LogStreamName = "", bool AppendMode = false);
+            static void Initialize(const string& LogStreamName = "",
+                                   bool CompressedStream = false,
+                                   bool AppendMode = false);
             static void Finalize();
 
             static ostream& GetLogStream();
+            static void EnableLogOption(const string& OptionName);
+            static void EnableLogOptions(const vector<string>& OptionNames);
+            template <typename ForwardIterator>
+            static inline void EnableLogOptions(const ForwardIterator& First,
+                                                const ForwardIterator& Last);
+            static void DisableLogOption(const string& OptionName);
             static const unordered_set<string>& GetEnabledLogOptions();
             static bool IsOptionEnabled(const string& OptionName);
-            template <typename T>
-            static inline void Print(const T& Obj)
-            {
-            }
+            static bool IsLoggingDisabled();
+            static string GetLogOptions();
         };
+
+        template <typename ForwardIterator>
+        inline void LogManager::EnableLogOptions(const ForwardIterator& First,
+                                                 const ForwardIterator& Last)
+        {
+            for (auto it = First; it != Last; ++it) {
+                EnableLogOption(*it);
+            }
+        }
 
     } /* end namespace Logging */
 } /* end namespace ESMC */
@@ -78,13 +99,70 @@ namespace ESMC {
 
 // Inspired from Z3's tracing/logging mechanism
 
-#define ESMC_LOG_CODE (CODE) { CODE } ((void)0)
+#ifdef ESMC_ENABLE_TRACING_
+#define ESMC_LOG_CODE(CODE_) { CODE_ } ((void)0)
+#else
+#define ESMC_LOG_CODE(CODE_) ((void)0)
+#endif /* ESMC_ENABLE_TRACING_ */
 
-#define ESMC_LOG_FULL (TAG, CODE) \
-    EMSC_LOG_CODE(\
-    if (ESMC::Logging::LogManager::IsOptionEnabled(TAG)) {\
-        ostream& Out = ESMC::Logging::LogManager::GetLogStream();\
-        Out <<
+#define ESMC_LOG_FULL(TAG_, CODE_) \
+    ESMC_LOG_CODE(if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_)) { \
+        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
+        Out_ << "------------- [" << TAG << "], at " << __FUNCTION__ << ", "\
+             << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
+        CODE_ \
+        Out_ << "-----------------------------------------------------------" \
+             << "--------------------" << endl;                         \
+        Out_.flush(); \
+    })
+
+#define ESMC_LOG_SHORT(TAG_, CODE_) \
+    ESMC_LOG_CODE(\
+    if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_)) {\
+        CODE_ \
+        ESMC::Logging::LogManager::GetLogStream().flush(); \
+    })
+
+#define ESMC_LOG_COND_FULL(TAG_, CODE_, COND_) \
+    ESMC_LOG_CODE(\
+    if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_) && (COND_)) {\
+        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
+        Out_ << "------------- [" << TAG << "], at " << __FUNCTION__ << ", "\
+             << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
+        CODE_ \
+        Out_ << "-----------------------------------------------------------" \
+             << "--------------------" << endl;                         \
+        Out_.flush(); \
+    })
+
+#define ESMC_LOG_COND_SHORT(TAG_, CODE_, COND_)      \
+    ESMC_LOG_CODE(\
+    if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_) && (COND_)) {  \
+        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
+        CODE_ \
+        Out_.flush(); \
+    })
+
+#define ESMC_LOG_MIN_FULL(CODE_) \
+    if (!ESMC::Logging::LogManager::IsLoggingDisabled()) {\
+        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
+        Out_ << "------------- [" << TAG << "], at " << __FUNCTION__ << ", "\
+             << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
+        CODE_ \
+        Out_ << "-----------------------------------------------------------" \
+             << "--------------------" << endl;                         \
+        Out_.flush(); \
+    }\
+    ((void)0)
+
+#define ESMC_LOG_MIN_SHORT(CODE_) \
+    if (!ESMC::Logging::LogManager::IsLoggingDisabled()) {\
+        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
+        CODE_ \
+        Out_.flush(); \
+    }\
+    ((void)0)
+
 
 #endif /* ESMC_LOG_MANAGER_HPP_ */
 

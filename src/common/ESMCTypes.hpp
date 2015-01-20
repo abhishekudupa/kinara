@@ -151,7 +151,6 @@ namespace ESMC {
         }
     };
 
-
     // Base class for all stringifiable classes
     class Stringifiable
     {

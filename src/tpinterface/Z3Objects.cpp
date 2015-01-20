@@ -41,6 +41,7 @@
 #include <random>
 
 #include "Z3Objects.hpp"
+#include "../utils/LogManager.hpp"
 
 namespace ESMC {
     namespace TP {
@@ -54,12 +55,27 @@ namespace ESMC {
 
         Z3CtxWrapper::Z3CtxWrapper()
         {
-            Z3_global_param_set("model_evaluator.completion", "true");
-            auto Cfg = Z3_mk_config();
+            u32 SMTSeed;
+            u32 SATSeed;
+
             // random_device rd;
-            // auto Seed = rd() % (1 << 30);
-            // cout << "Z3 Random Seed: " << Seed << endl << endl;
-            // Z3_set_param_value(Cfg, "RANDOM_SEED", to_string(Seed).c_str());
+            // SMTSeed = rd() % (1 << 30);
+            // SATSeed = rd() % (1 << 30);
+
+            SMTSeed = 0;
+            SATSeed = 0;
+
+            Z3_global_param_set("model_evaluator.completion", "true");
+            Z3_global_param_set("smt.random_seed", to_string(SMTSeed).c_str());
+            Z3_global_param_set("sat.random_seed", to_string(SATSeed).c_str());
+
+            ESMC_LOG_FULL(
+                          "TheoremProver.RandomSeed",
+                          Out_ << "Z3 SMT Random Seed: " << SMTSeed << endl;
+                          Out_ << "Z3 SAT Random Seed: " << SATSeed << endl;
+                          );
+
+            auto Cfg = Z3_mk_config();
             Ctx = Z3_mk_context_rc(Cfg);
             Z3_del_config(Cfg);
         }

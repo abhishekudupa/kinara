@@ -115,7 +115,7 @@ int main()
     cout << TestExp->ToString() << endl;
 
     SimpExp = Mgr->Simplify(TestExp);
-    cout << SimpExp->ToString() << endl;
+    cout << SimpExp << endl;
 
 }
 

@@ -35,6 +35,12 @@
 
 // Code:
 
+#include <stdlib.h>
+#include <boost/iostreams/filtering_stream.hpp>
+#include <boost/iostreams/filter/bzip2.hpp>
+#include <boost/iostreams/device/file.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+
 #include "LogManager.hpp"
 
 namespace ESMC {
@@ -43,19 +49,237 @@ namespace ESMC {
         unordered_set<string> LogManager::EnabledLogOptions;
         ostream* LogManager::LogStream = nullptr;
         bool LogManager::IsInitialized = false;
+        bool LogManager::AtExitHandlerInstalled = false;
+        bool LogManager::NoLoggingEnabled = false;
+
+        const map<string, string> LogManager::LogOptionDescriptions =
+            {
+                {
+                    "Solver.Traces",
+                    "Print error traces for counterexamples obtained by the solver."
+                },
+                {
+                    "Solver.Purification",
+                    (string)"Print information about expression purification performed " +
+                    "by the solver whenever applicable."
+                },
+                {
+                    "Solver.CEXAssertions",
+                    (string)"Print information about assertions obtained by " +
+                    "analysis of counterexamples in the solver."
+                },
+                {
+                    "Solver.Duplicates",
+                    (string)"Print information about duplicate assertions when " +
+                    "encountered in the solver."
+                },
+                {
+                    "Solver.OtherAssertions",
+                    (string)"Print information about determinism and symmetry " +
+                    "assertions asserted by the solver."
+                },
+                {
+                    "Solver.Models",
+                    (string)"Print model obtained from Z3 in each iteration in the solver."
+                },
+                {
+                    "Solver.Stats",
+                    (string)"Print stats about solve resource consumption, etc."
+                },
+                {
+                    "IncompleteEFSM.Assertions",
+                    (string)"Print assertions made in during processing of IncompleteEFSMs."
+                },
+                {
+                    "TheoremProver.Unrolled",
+                    (string)"Print unrolled assertions in the theorem prover as they are " +
+                    "generated."
+                },
+                {
+                    "TheoremProver.RandomSeed",
+                    (string)"Print random seed used by the theorem prover (if any)."
+                },
+                {
+                    "Simplifier.PerIteration",
+                    "Print progress in each iteration of simplifier."
+                },
+                {
+                    "Trace.Generation",
+                    "Print unwinding process in trace generation."
+                },
+                {
+                    "Checker.Fairness",
+                    (string)"Print information from fairness checkers " +
+                    "during the check for liveness properties."
+                },
+                {
+                    "Checker.AQSDetailed",
+                    (string)"Print detailed information during AQS construction " +
+                    "in the model checker."
+                },
+                {
+                    "Checker.Stats",
+                    (string)"Print statistics from AQS construction."
+                },
+                {
+                    "Analyses.Detailed",
+                    (string)"Track detailed progress in weakest pre analyses."
+                },
+                {
+                    "Canonicalizer.Detailed",
+                    (string)"Print detailed information about canonicalization steps."
+                },
+                {
+                    "ESMC.Minimal",
+                    (string)"Bare minimal trace output from model checker and solver, " +
+                    "serving only to indicate progress. Disabling this will cause NOTHING " +
+                    "to ever be printed on the trace stream by the ESMC libraries. This " +
+                    "is option is always enabled, unless disabled by ESMC.None below. " +
+                    "Further, this option is enabled, even if the ESMC libraries have been " +
+                    "built without -DESMC_ENABLE_TRACING_ set."
+                },
+                {
+                    "ESMC.None",
+                    (string)"Turns of ALL tracing options (including ESMC.Minimal)."
+                }
+            };
 
         LogManager::LogManager()
         {
             // Nothing here
         }
 
-        void LogManager::Initialize(const string& LogStreamName, bool AppendMode)
+        inline void LogManager::AssertInitialized()
         {
+            if (!IsInitialized) {
+                throw ESMCError((string)"Log Manager has not been initialized!");
+            }
+        }
+
+        void LogManager::Initialize(const string& LogStreamName,
+                                    bool CompressedStream,
+                                    bool AppendMode)
+        {
+            if (IsInitialized) {
+                Finalize();
+            }
+
             if (LogStreamName == "") {
                 LogStream = &std::cout;
             } else {
-                LogStream = new ofstream(LogStreamName.c_str())
+                auto LogStreamFileName = LogStreamName;
+                auto LocalLogStream = new boost::iostreams::filtering_ostream();
+                if (CompressedStream) {
+                    LocalLogStream->push(boost::iostreams::bzip2_compressor(9));
+                    if (!boost::algorithm::ends_with(LogStreamFileName, ".bz2")) {
+                        LogStreamFileName = LogStreamFileName + ".bz2";
+                    }
+                }
+
+                auto OpenFlags = ios_base::out | (AppendMode ? ios_base::app : ios_base::trunc);
+                if (CompressedStream) {
+                    OpenFlags = OpenFlags | ios_base::binary;
+                }
+
+                LocalLogStream->push(boost::iostreams::file_sink(LogStreamFileName, OpenFlags));
+                LogStream = LocalLogStream;
             }
+            IsInitialized = true;
+
+            if (!AtExitHandlerInstalled) {
+                auto Res = atexit(LogManager::Finalize);
+                if (Res != 0) {
+                    throw ESMCError((string)"Could not register atexit() handler for " +
+                                    "the ESMC Library!");
+                }
+                AtExitHandlerInstalled = true;
+            }
+        }
+
+        void LogManager::Finalize()
+        {
+            if (!IsInitialized) {
+                return;
+            }
+            IsInitialized = false;
+            if (LogStream != nullptr && LogStream != &cout) {
+                dynamic_cast<ofstream*>(LogStream)->close();
+                delete LogStream;
+            }
+            LogStream = nullptr;
+            EnabledLogOptions.clear();
+        }
+
+        ostream& LogManager::GetLogStream()
+        {
+            AssertInitialized();
+            return *LogStream;
+        }
+
+        void LogManager::EnableLogOption(const string& OptionName)
+        {
+            AssertInitialized();
+            if (LogOptionDescriptions.find(OptionName) ==
+                LogOptionDescriptions.end()) {
+                throw ESMCError((string)"Log option \"" + OptionName + "\" is not " +
+                                "a recognized log option.\nIn call to " + __FUNCTION__ +
+                                " at " + __FILE__ + ":" + to_string(__LINE__));
+            }
+
+            if (OptionName == "ESMC.None") {
+                NoLoggingEnabled = true;
+                EnabledLogOptions.clear();
+            }
+            if (!NoLoggingEnabled) {
+                EnabledLogOptions.insert(OptionName);
+            }
+        }
+
+        void LogManager::EnableLogOptions(const vector<string>& OptionNames)
+        {
+            EnableLogOptions(OptionNames.begin(), OptionNames.end());
+        }
+
+        void LogManager::DisableLogOption(const string& OptionName)
+        {
+            AssertInitialized();
+            if (LogOptionDescriptions.find(OptionName) ==
+                LogOptionDescriptions.end()) {
+                throw ESMCError((string)"Log option \"" + OptionName + "\" is not " +
+                                "a recognized log option.\nIn call to " + __FUNCTION__ +
+                                " at " + __FILE__ + ":" + to_string(__LINE__));
+            }
+            EnabledLogOptions.erase(OptionName);
+        }
+
+        const unordered_set<string>& LogManager::GetEnabledLogOptions()
+        {
+            AssertInitialized();
+            return EnabledLogOptions;
+        }
+
+        bool LogManager::IsOptionEnabled(const string& OptionName)
+        {
+            AssertInitialized();
+            return (!NoLoggingEnabled && (EnabledLogOptions.find(OptionName) !=
+                                          EnabledLogOptions.end()));
+        }
+
+        bool LogManager::IsLoggingDisabled()
+        {
+            return NoLoggingEnabled;
+        }
+
+        string LogManager::GetLogOptions()
+        {
+            ostringstream sstr;
+            const string IndentString(16, ' ');
+            sstr << IndentString << "Available logging options:" << endl;
+            for (auto const& Option : LogOptionDescriptions) {
+                sstr << IndentString << left << setw(24) << setfill(' ') << Option.first
+                     << ": " << Option.second << endl;
+            }
+            return sstr.str();
         }
 
     } /* end namespace Logging */

@@ -181,10 +181,9 @@ namespace ESMC {
             private:
                 MgrT* Mgr;
                 stack<ExpT> ExpStack;
-                FastExpSetT& Assumptions;
 
             public:
-                ConstraintPurifier(MgrT* Mgr, FastExpSetT& Assumptions);
+                ConstraintPurifier(MgrT* Mgr);
                 virtual ~ConstraintPurifier();
 
                 inline vector<pair<ExpT, ExpT>>
@@ -198,7 +197,7 @@ namespace ESMC {
                 virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
                 virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
 
-                static ExpT Do(MgrT* Mgr, const ExpT& Exp, FastExpSetT& Assumptions);
+                static ExpT Do(MgrT* Mgr, const ExpT& Exp);
             };
 
         } /* end namespace Detail */

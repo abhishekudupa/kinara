@@ -2504,20 +2504,12 @@ namespace ESMC {
         inline typename ExprMgr<E, S>::ExpT
         ExprMgr<E, S>::SimplifyFP(const ExpT &Exp)
         {
-            // u32 NumIters = 0;
             auto OldExp = Exp;
             ExpT SimpExp = OldExp;
             do {
-                // ++NumIters;
                 OldExp = SimpExp;
                 SimpExp = Simplify(OldExp);
-
-                // cout << "[Simplifier] iteration " << NumIters << endl
-                //      << "Simplified:" << endl << OldExp->ToString() << endl
-                //      << "To:" << endl << SimpExp->ToString() << endl;
             } while (SimpExp != OldExp);
-            // cout << "[Simplifier] Done Simplifying in " << NumIters
-            //      << "iterations!" << endl << endl;
             return SimpExp;
         }
 
@@ -2577,25 +2569,6 @@ namespace ESMC {
         inline ExprMgr<E, S>* ExprMgr<E, S>::Make()
         {
             return new ExprMgr<E, S>();
-        }
-
-        // pretty printer
-        template <typename E, template <typename> class S>
-        static inline
-        ostream& operator << (ostream& Out,
-                              const SmartPtr<ExpressionBase<E, S>>& Ptr)
-        {
-            Out << Ptr->ToString();
-            return Out;
-        }
-
-        template <typename E, template <typename> class S>
-        static inline
-        ostream& operator << (ostream& Out,
-                              const CSmartPtr<ExpressionBase<E, S>>& Ptr)
-        {
-            Out << Ptr->ToString();
-            return Out;
         }
 
     } /* end namespace */

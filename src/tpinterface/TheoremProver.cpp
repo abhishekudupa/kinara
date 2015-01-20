@@ -128,20 +128,27 @@ namespace ESMC {
             }
             auto LoweredAssertion = Mgr->LowerExpr(UnrolledExp, LTSCtx);
 
-            // cout << "[TheoremProver] Asserting Expr:" << endl
-            //      << Assertion->ToString() << endl;
-            // cout << "[TheoremProver] Asserting Unrolled Expr:"
-            //      << UnrolledExp->ToString() << endl;
-            // cout << "[TheoremProver] Asserting Lowered Expr:" << endl
-            //      << LoweredAssertion.ToString() << endl;
+            ESMC_LOG_FULL(
+                          "TheoremProver.Unrolled",
+                          Out_ << "Asserting Expr:" << endl
+                          << Assertion << endl;
+                          Out_ << "Asserting Unrolled Expr:"
+                          << UnrolledExp << endl;
+                          Out_ << "Asserting Lowered Expr:" << endl
+                          << LoweredAssertion << endl;
+                          );
 
             Z3_solver_assert(*Ctx, Solver, LoweredAssertion);
             auto const& Assumptions = LTSCtx->GetAllAssumptions();
             assert(Assumptions.size() == 1);
             for (auto const& AssumptionSet : Assumptions) {
                 for (auto const& Assumption : AssumptionSet) {
-                    // cout << "[TheoremProver] Asserting Assumption:" << endl
-                    //      << Assumption.ToString() << endl;
+                    ESMC_LOG_FULL(
+                                  "TheoremProver.Unrolled",
+                                  Out_ << "Asserting Assumption:" << endl
+                                       << Assumption << endl;
+                                  );
+
                     Z3_solver_assert(*Ctx, Solver, Assumption);
                 }
             }
@@ -156,18 +163,30 @@ namespace ESMC {
 
         void Z3TheoremProver::Assert(const Z3Expr& Assertion)
         {
-            cout << "[TheoremProver] Asserting pre-lowered assertion:" << endl
-                 << Assertion.ToString() << endl;
+            ESMC_LOG_FULL(
+                          "TheoremProver.Unrolled",
+                          Out_ << "Asserting pre-lowered assertion:" << endl
+                               << Assertion << endl;
+                          );
+
             Z3_solver_assert(*Ctx, Solver, Assertion);
         }
 
         TPResult Z3TheoremProver::CheckSat()
         {
             auto ASTVec = Z3_solver_get_assertions(*Ctx, Solver);
-            cout << "Checking SAT with " << Z3_ast_vector_size(*Ctx, ASTVec)
-                 << " assertions... ";
+            ESMC_LOG_MIN_SHORT(
+                               Out_ << "Checking SAT with "
+                                    << Z3_ast_vector_size(*Ctx, ASTVec)
+                                    << " assertions... ";
+                               );
+
             auto Res = Z3_solver_check(*Ctx, Solver);
-            cout << "Done!" << endl;
+
+            ESMC_LOG_MIN_SHORT(
+                               Out_ << "Done!" << endl;
+                               );
+
             if (Res == Z3_L_FALSE) {
                 LastSolveResult = TPResult::UNSATISFIABLE;
             } else if (Res == Z3_L_TRUE) {
@@ -226,12 +245,20 @@ namespace ESMC {
             }
 
             auto ASTVec = Z3_solver_get_assertions(*Ctx, Solver);
-            cout << "Checking SAT with " << Z3_ast_vector_size(*Ctx, ASTVec)
-                 << " assertions on stack... ";
+            ESMC_LOG_MIN_SHORT(
+
+                               Out_ << "Checking SAT with "
+                                    << Z3_ast_vector_size(*Ctx, ASTVec)
+                                    << " assertions on stack... ";
+                               );
+
             auto Res = Z3_solver_check_assumptions(*Ctx, Solver,
                                                    NumAssumptions,
                                                    AssumptionVec);
-            cout << "Done!" << endl;
+            ESMC_LOG_MIN_SHORT(
+                               Out_ << "Done!" << endl;
+                               );
+
             if (Res == Z3_L_TRUE) {
                 LastSolveResult = TPResult::SATISFIABLE;
             } else if (Res == Z3_L_FALSE) {
@@ -255,11 +282,20 @@ namespace ESMC {
             }
 
             auto ASTVec = Z3_solver_get_assertions(*Ctx, Solver);
-            cout << "Checking SAT with " << Z3_ast_vector_size(*Ctx, ASTVec)
-                 << " assertions on stack" << endl;
+
+            ESMC_LOG_MIN_SHORT(
+                               Out_ << "Checking SAT with "
+                                    << Z3_ast_vector_size(*Ctx, ASTVec)
+                                    << " assertions on stack... " << endl;
+                               );
+
             auto Res = Z3_solver_check_assumptions(*Ctx, Solver,
                                                    NumAssumptions,
                                                    AssumptionVec);
+            ESMC_LOG_MIN_SHORT(
+                               Out_ << "Done!" << endl;
+                               );
+
             if (Res == Z3_L_TRUE) {
                 LastSolveResult = TPResult::SATISFIABLE;
             } else if (Res == Z3_L_FALSE) {

@@ -137,44 +137,36 @@ namespace ESMC {
                                           return true;
                                       });
             if (Vars.size() > 0) {
-
-                // ostringstream sstr;
-                // sstr << "Encountered Stray Variables in Solver::CheckedAssert()" << endl
-                //      << "Assertion:" << endl << Assertion->ToString() << endl
-                //      << "Variables Found:" << endl;
-                // for (auto const& Var : Vars) {
-                //     sstr << Var->SAs<VarExpression>()->GetVarName() << endl;
-                // }
-                // sstr << endl;
-                // sstr << "At: " << __FILE__ << ":" << __LINE__ << endl;
-
-                // cout << sstr.str();
-
-                FastExpSetT Assumptions;
                 FinalAssertion =
-                    Mgr->ApplyTransform<LTS::Detail::ConstraintPurifier>(Assertion, Assumptions);
-                vector<ExpT> AssumptionVec(Assumptions.begin(), Assumptions.end());
+                    Mgr->ApplyTransform<LTS::Detail::ConstraintPurifier>(Assertion);
 
-                // cout << "Purified to:" << endl << FinalAssertion->ToString() << endl;
-                // FinalAssertion = Mgr->MakeExpr(LTSOps::OpIMPLIES,
-                //                                MakeConjunction(AssumptionVec, Mgr),
-                //                                FinalAssertion);
-
-                // throw InternalError(sstr.str());
+                ESMC_LOG_FULL(
+                              "Solver.Purification",
+                              Out_ << "Purified Expression:" << endl << Assertion << endl;
+                              Out_ << "To:" << endl << FinalAssertion << endl;
+                              );
             } else {
                 FinalAssertion = Assertion;
             }
 
             if (AssertedConstraints.find(FinalAssertion) != AssertedConstraints.end()) {
                 if (FinalAssertion != TheLTS->MakeTrue()) {
-                    cout << "Not asserting previously asserted constraint:" << endl
-                         << FinalAssertion->ToString() << endl;
+                    ESMC_LOG_FULL(
+                                  "Solver.Duplicates",
+                                  Out_ << "Not asserting duplicate constraint:"
+                                       << endl << FinalAssertion->ToString() << endl;
+                                  );
                 }
                 return;
             }
 
             AssertedConstraints.insert(FinalAssertion);
-            // cout << "Asserting: " << Assertion->ToString() << endl;
+            ESMC_LOG_FULL(
+                          "Solver.Duplicates",
+                          Out_ << "Asserting (non-duplicate): "
+                               << Assertion->ToString() << endl;
+                          );
+
             TP->Assert(FinalAssertion, Options.UnrollQuantifiers);
         }
 
@@ -224,6 +216,13 @@ namespace ESMC {
             }
             auto QBody = Mgr->BoundSubstitute(SubstMap, MutexExp);
             auto Constraint = Mgr->MakeForAll(QVarTypes, QBody);
+
+            ESMC_LOG_SHORT(
+                           "Solver.OtherAssertions",
+                           Out_ << "Determinism constraint:" << endl
+                                << Constraint << endl;
+                           );
+
             CheckedAssert(Constraint);
         }
 
@@ -298,20 +297,31 @@ namespace ESMC {
 
             auto GuardExp = ExpIt->second;
 
-            // cout << "Unveiling Guard Exp: " << GuardExp->ToString() << endl;
-            // cout << "Asserting Symmetry constraints:" << endl;
+            ESMC_LOG_FULL(
+                          "Solver.OtherAssertions",
+                          Out_ << "Unveiling Guard Exp: " << GuardExp << endl;
+                          Out_ << "Asserting Symmetry constraints:" << endl;
+                          );
 
             // This is a new guard
             // Assert the symmetry constraints
             auto it = GuardSymmetryConstraints.find(GuardOp);
             if (it != GuardSymmetryConstraints.end()) {
                 for (auto const& Constraint : it->second) {
+                    ESMC_LOG_SHORT(
+                                   "Solver.OtherAssertions",
+                                   Out_ << "Symmetry constraint:" << endl
+                                        << Constraint << endl;
+                                   );
                     CheckedAssert(Constraint);
                 }
             }
 
-            // cout << "End of Symmetry constraints:" << endl;
-            // cout << "Asserting Determinism constraints:" << endl;
+            ESMC_LOG_SHORT(
+                           "Solver.OtherAssertions",
+                           Out_ << "End of Symmetry constraints:" << endl;
+                           Out_ << "Asserting Determinism constraints:" << endl;
+                           );
 
             // Assert the determinism constraints wrt guards
             // that have already been unveiled
@@ -327,20 +337,32 @@ namespace ESMC {
                     CreateMutualExclusionConstraint(GuardExp, OtherGuard);
                 }
             }
-            // cout << "End of Determinism constraints:" << endl;
-            // cout << "Asserting Symmetry constraints on updates:" << endl;
+
+            ESMC_LOG_SHORT(
+                           "Solver.OtherAssertions",
+                           Out_ << "End of Determinism constraints:" << endl;
+                           Out_ << "Asserting Symmetry constraints on updates:" << endl;
+                           );
 
             // add the symmetry constraints for updates associated with
             // this guard
             auto it3 = GuardOpToUpdateSymmetryConstraints.find(GuardOp);
             if (it3 != GuardOpToUpdateSymmetryConstraints.end()) {
                 for (auto const& Constraint : it3->second) {
-                    // cout << Constraint->ToString() << endl;
+
+                    ESMC_LOG_SHORT(
+                                   "Solver.OtherAssertions",
+                                   Out_ << Constraint->ToString() << endl;
+                                   );
+
                     CheckedAssert(Constraint);
                 }
             }
 
-            // cout << "End of Symmetry constraints on updates:" << endl;
+            ESMC_LOG_SHORT(
+                           "Solver.OtherAssertions",
+                           Out_ << "End of Symmetry constraints on updates:" << endl;
+                           );
 
             // Mark the guard and its updates as unveiled
             UnveiledGuardOps.insert(GuardOp);
@@ -1103,14 +1125,7 @@ namespace ESMC {
         {
             auto AQS = Checker->AQS;
 
-            // cout << "Handling one safety violation, computing shortest path... ";
-            // flush(cout);
-
             auto PPath = AQS->FindShortestPath(ErrorState, CostFunction);
-            // auto PPath = AQS->FindPath(ErrorState);
-
-            // cout << "Done!" << endl << "Unwinding trace... ";
-            // flush(cout);
             SafetyViolation* Trace;
             if (BlownInvariant == Checker->LoweredInvariant) {
                 Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
@@ -1120,17 +1135,28 @@ namespace ESMC {
 
             auto const& TraceBlownInvar = Trace->GetInvariantBlown();
 
-            cout << "Safety violation trace:" << endl;
-            cout << Trace->ToString() << endl << endl;
+            ESMC_LOG_FULL(
+                          "Solver.Traces",
+                          Out_ << "Safety violation trace:" << endl;
+                          Out_ << Trace->ToString() << endl;
+                          );
 
-            cout << "Computing weakest pre (safety) of: " << endl <<
-                TraceBlownInvar->ToString() << endl << endl;
+            ESMC_LOG_FULL(
+                          "Solver.CEXAssertions",
+                          Out_ << "Computing weakest pre (safety) of: " << endl
+                               << TraceBlownInvar << endl;
+                          );
 
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this, Trace, TraceBlownInvar);
             for (auto const& Pred : WPConditions) {
-                cout << "Obtained Safety Pre:" << endl
-                     << Pred->ToString() << endl << endl;
+
+                ESMC_LOG_SHORT(
+                               "Solver.CEXAssertions",
+                               Out_ << "Obtained Safety Pre:" << endl
+                                    << Pred << endl;
+                               );
+
                 MakeAssertion(Pred);
             }
 
@@ -1142,27 +1168,15 @@ namespace ESMC {
             auto Mgr = TheLTS->GetMgr();
             auto AQS = Checker->AQS;
 
-            // cout << "Handling one deadlock violation, computing shortest path... ";
-            // flush(cout);
-
             auto PPath = AQS->FindShortestPath(ErrorState, CostFunction);
 
-            // cout << "Done!" << endl << "Unwinding trace... ";
-            // flush(cout);
-
             auto Trace = TraceBase::MakeDeadlockViolation(PPath, Checker);
-            cout << "Deadlock Trace:" << endl << endl;
-            cout << Trace->ToString() << endl << endl;
 
-            // cout << "Done!" << endl
-            //      << "Got trace with " << Trace->GetTraceElems().size() << " steps" << endl
-            //      << "Computing Disjuncts... ";
-            // flush(cout);
-
-            // cout << "The Deadlock Trace:" << endl << Trace->ToString() << endl << endl
-            //      << "The Error State:" << endl;
-            // Checker->Printer->PrintState(ErrorState, cout);
-            // cout << endl << endl;
+            ESMC_LOG_FULL(
+                          "Solver.Traces",
+                          Out_ << "Deadlock Trace:" << endl;
+                          Out_ << Trace->ToString() << endl;
+                          );
 
             ExpT GoodExp = ExpT::NullPtr;
 
@@ -1192,9 +1206,6 @@ namespace ESMC {
                 UnreachableExp = Mgr->MakeExpr(LTSOps::OpNOT, UnreachableExp);
                 UnreachableExp = Mgr->ApplyTransform<ArrayRValueTransformer>(UnreachableExp);
 
-                // cout << "Unreachable Exp: " << endl
-                //      << UnreachableExp->ToString() << endl << endl;
-
                 Disjuncts.push_back(UnreachableExp);
 
                 if (Disjuncts.size() == 1) {
@@ -1207,32 +1218,36 @@ namespace ESMC {
             }
 
             GoodExp = Mgr->SimplifyFP(GoodExp);
-            cout << "Computing Weakest Pre of: " << GoodExp->ToString() << endl << endl;
+
+            ESMC_LOG_FULL(
+                          "Solver.CEXAssertions",
+                          Out_ << "Computing Weakest Pre of: " << GoodExp << endl;
+                          );
 
             auto&& WPConditions =
                 TraceAnalyses::WeakestPrecondition(this, Trace->As<SafetyViolation>(), GoodExp);
 
             for (auto const& Pred : WPConditions) {
-                cout << "Obtained Deadlock Pre:" << endl << Pred->ToString() << endl << endl;
+                ESMC_LOG_FULL(
+                              "Solver.CEXAssertions",
+                              Out_ << "Obtained Deadlock Pre:" << endl << Pred << endl;
+                              );
+
                 MakeAssertion(Pred);
             }
 
-            // cout << "Done!" << endl;
-            // flush(cout);
             delete Trace;
         }
 
         inline void Solver::HandleSafetyViolations()
         {
             auto const& ErrorStates = Checker->GetAllErrorStates();
-            const u32 NumTotalErrors = ErrorStates.size();
             set<ExpT> BlownInvariantsCovered;
-            cout << "Found " << NumTotalErrors << " error states in all!" << endl;
-            cout << "Building constraints for " << NumTotalErrors
-                 << " errors..." << endl;
-            cout << "   % complete";
-            u32 NumErrorsHandled = 0;
-            u32 PercentComplete = 0;
+
+            ESMC_LOG_MIN_SHORT(
+                               Out_ << "Building Constraints for errors...";
+                               );
+
             for (auto const& ErrorState : ErrorStates) {
                 auto SVPtr = ErrorState.first;
                 auto const& BlownInvariant = ErrorState.second;
@@ -1241,17 +1256,11 @@ namespace ESMC {
                 } else {
                     HandleOneSafetyViolation(SVPtr, BlownInvariant);
                 }
-                NumErrorsHandled++;
-                auto NewPercentComplete = (NumErrorsHandled * 100) / NumTotalErrors;
-                if (NewPercentComplete != PercentComplete) {
-                    PercentComplete = NewPercentComplete;
-                    cout << "\b\b\b\b\b\b\b\b\b\b\b\b\b" << setw(3)
-                         << setfill('0') << PercentComplete << "% complete";
-                    flush(cout);
-                }
             }
 
-            cout << endl << " Done!" << endl << endl;
+            ESMC_LOG_MIN_SHORT(
+                               Out_ << " Done!" << endl;
+                               );
         }
 
         inline void Solver::HandleLivenessViolation(const LivenessViolation* Trace,
@@ -1259,8 +1268,6 @@ namespace ESMC {
         {
             auto Predicate =
                 TraceAnalyses::WeakestPreconditionForLiveness(this, Monitor, Trace);
-            // cout << "Obtained predicate for liveness violation:" << endl
-            //      << Predicate->ToString() << endl << endl;
             MakeAssertion(Predicate);
             delete Trace;
         }
@@ -1305,8 +1312,6 @@ namespace ESMC {
 
             auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundsVariable);
 
-            // cout << "Asserting Bounds Constraint: " << endl
-            //      << EQExp->ToString() << endl << endl;
 
             TP->Assert(EQExp, Options.UnrollQuantifiers);
             for (auto const& Assertion : AssertedConstraints) {
@@ -1346,38 +1351,48 @@ namespace ESMC {
             Stats.FinalNumAssertions = 0;
         }
 
-        inline void Solver::PrintStats(ostream& Out)
+        inline void Solver::PrintStats()
         {
-            auto SolveTimeInMicroSecs = (Stats.SolveEndTime -
-                                         Stats.SolveStartTime).InMicroSeconds();
-            Out << "Solver Stats:" << endl << endl;
-            Out << "----------------------------------------------------------------"
-                << endl;
-            Out << "Solve Time: " << ((float)SolveTimeInMicroSecs / 1000000.0)
-                << " (s)" << endl;
-            Out << "Initial Asserts: " << Stats.InitialNumAssertions << endl;
-            Out << "Final Asserts: " << Stats.FinalNumAssertions << endl;
-            Out << "Num Iterations: " << Stats.NumIterations << endl;
-            Out << "Total SMT Time: " << Stats.TotalSMTTime << " (uS)" << endl;
-            Out << "Min SMT Time: " << Stats.MinSMTTime << " (uS)" << endl;
-            Out << "Max SMT Time: " << Stats.MaxSMTTime << " (uS)" << endl;
-            Out << "Avg SMT Time: "
-                << ((float)Stats.TotalSMTTime / Stats.NumIterations)
-                << " (uS)" << endl;
-            Out << "Final Bound: " << Bound << endl;
-            Out << "----------------------------------------------------------------"
-                << endl << endl;
+            ESMC_LOG_FULL(
+                          "Solver.Stats",
+                          auto SolveTimeInMicroSecs = (Stats.SolveEndTime -
+                                                       Stats.SolveStartTime).InMicroSeconds();
+
+                          Out_ << "Solver Stats:" << endl << endl;
+                          Out_ << "----------------------------------------------------------------"
+                               << endl;
+                          Out_ << "Solve Time: " << ((float)SolveTimeInMicroSecs / 1000000.0)
+                               << " (s)" << endl;
+                          Out_ << "Initial Asserts: " << Stats.InitialNumAssertions << endl;
+                          Out_ << "Final Asserts: " << Stats.FinalNumAssertions << endl;
+                          Out_ << "Num Iterations: " << Stats.NumIterations << endl;
+                          Out_ << "Total SMT Time: " << Stats.TotalSMTTime << " (uS)" << endl;
+                          Out_ << "Min SMT Time: " << Stats.MinSMTTime << " (uS)" << endl;
+                          Out_ << "Max SMT Time: " << Stats.MaxSMTTime << " (uS)" << endl;
+                          Out_ << "Avg SMT Time: "
+                               << ((float)Stats.TotalSMTTime / Stats.NumIterations)
+                               << " (uS)" << endl;
+                          Out_ << "Final Bound: " << Bound << endl;
+                          Out_ << "----------------------------------------------------------------"
+                               << endl;
+                          );
         }
 
         inline void Solver::HandleResourceLimit()
         {
             Stats.SolveEndTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
             if (ResourceLimitManager::CheckMemOut()) {
-                cout << "Memory limit reached. Aborting with Memout!" << endl << endl;
+                ESMC_LOG_FULL(
+                              "Solver.Stats",
+                              Out_ << "Memory limit reached. Aborting with Memout!" << endl;
+                              );
             } else {
-                cout << "CPU Time limit reached. Aborting with Timeout" << endl << endl;
+                ESMC_LOG_FULL(
+                              "Solver.Stats",
+                              Out_ << "CPU Time limit reached. Aborting with Timeout" << endl;
+                              );
             }
-            PrintStats(cout);
+            PrintStats();
             ResourceLimitManager::QueryEnd();
             exit(1);
         }
@@ -1449,7 +1464,10 @@ namespace ESMC {
 
                 if (TPRes == TPResult::UNSATISFIABLE) {
                     ++Bound;
-                    cout << "UNSAT! Relaxed bound to " << Bound << endl;
+                    ESMC_LOG_MIN_SHORT(
+                                       Out_ << "UNSAT! Relaxed bound to " << Bound << endl;
+                                       );
+
                     if (CurrentAssumptions.size() > 0) {
                         CurrentAssumptions.pop_front();
                     }
@@ -1460,15 +1478,17 @@ namespace ESMC {
                     ResourceLimitManager::QueryEnd();
                     throw ESMCError((string)"Could not solve constraints!");
                 } else if (TPRes == TPResult::UNKNOWN) {
-                    cout << "Solver: Timeout on TP call!" << endl << endl;
                     HandleResourceLimit();
                 }
 
                 // all good. extract a model
                 auto const& Model = TP->GetModel();
-                if (Options.ShowModel) {
-                    cout << "Model:" << endl << PrintModel(Model) << endl;
-                }
+
+                ESMC_LOG_FULL(
+                              "Solver.Models",
+                              Out_ << "Model:" << endl << PrintModel(Model) << endl;
+                              );
+
                 Compiler->UpdateModel(Model, InterpretedOps, AllFalsePreds);
 
                 // Okay, we're good to model check now
@@ -1481,10 +1501,6 @@ namespace ESMC {
                     CExBound = Options.NumCExToProcess;
                 }
                 auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, CExBound);
-
-                // cout << "Model Used:" << endl;
-                // PrintFinalSolution(cout);
-                // cout << "End of model" << endl << endl;
 
                 if (!Safe) {
                     HandleSafetyViolations();
@@ -1510,121 +1526,26 @@ namespace ESMC {
                 } else {
                     ResourceLimitManager::QueryEnd();
                     Stats.SolveEndTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
-                    cout << "Found Correct Completion!" << endl;
-                    cout << "With Bound = " << Bound << ", Model:" << endl;
-                    PrintFinalSolution(cout);
-                    PrintStats(cout);
+
+                    ESMC_LOG_MIN_SHORT(
+                                       Out_ << "Found Correct Completion!" << endl;
+                                       Out_ << "With Bound = " << Bound << ", Model:" << endl;
+                                       PrintFinalSolution(Out_);
+                                       PrintStats();
+                                       );
                     return;
                 }
             }
 
-            cout << "[Solver]: Exceeded limit on number of transitions "
-                 << "that were allowed to be added. Bailing..." << endl << endl;
+            ESMC_LOG_MIN_SHORT(
+                               Out_ << "Exceeded max bound, bailing!" << endl;
+                               );
         }
 
-        void Solver::PrintUFModel(i64 UFCode) {
-            auto Mgr = TheLTS->GetMgr();
-            vector<vector<string>> CPElems;
-            auto UFType = Mgr->LookupUninterpretedFunction(UFCode);
-            auto UFTypeAsFunc = UFType->As<FuncType>();
-            auto ArgTypes = UFTypeAsFunc->GetArgTypes();
-            for (auto ArgType : ArgTypes) {
-                CPElems.push_back(ArgType->GetElementsNoUndef());
-            }
-            auto&& CPRes = CrossProduct<string>(CPElems.begin(), CPElems.end());
-            for (auto ArgVector : CPRes) {
-                vector<ExpT> Args;
-                for (u32 i = 0; i < ArgVector.size(); ++i) {
-                    auto StringArg = ArgVector[i];
-                    auto ArgType = ArgTypes[i];
-                    auto Arg = Mgr->MakeVal(StringArg, ArgType);
-                    cout << Arg << " ";
-                    Args.push_back(Arg);
-                }
-                auto AppExp = Mgr->MakeExpr(UFCode, Args);
-                auto ModelValue = TP->Evaluate(AppExp);
-                cout << "-> " << ModelValue << endl;
-            }
-        }
 
         ExpT Solver::Evaluate(const ExpT& Input)
         {
             return TP->Evaluate(Input);
-        }
-
-        void Solver::PrintSolution()
-        {
-            auto HasUF = [&] (const ExpBaseT* Exp) -> bool
-                {
-                    auto ExpAsOpExp = Exp->As<OpExpression>();
-                    if (ExpAsOpExp != nullptr) {
-                        auto Code = ExpAsOpExp->GetOpCode();
-                        return (Code >= LTSOps::UFOffset);
-                    }
-                    return false;
-                };
-            auto IsIncomplete = [&](const EFSMBase* EFSM)
-                {
-                    return EFSM->Is<IncompleteEFSM>();
-                };
-            auto Model = TP->GetModel();
-            vector<LTSTransRef> AllTransitions;
-            auto IncompleteEFSMs = TheLTS->GetEFSMs(IsIncomplete);
-            for (auto IncompleteEFSM : IncompleteEFSMs) {
-                auto OutputMsgs = IncompleteEFSM->GetOutputs();
-                for (auto OutputMsg : OutputMsgs) {
-                    auto OutputTransitions =
-                        IncompleteEFSM->GetOutputTransitionsOnMsg(OutputMsg);
-                    for (auto OutputTransition : OutputTransitions) {
-                        AllTransitions.push_back(OutputTransition);
-                    }
-                }
-                auto InputMsgs = IncompleteEFSM->GetInputs();
-                for (auto InputMsg : InputMsgs) {
-                    auto InputTransitionsPerParam =
-                        IncompleteEFSM->GetInputTransitionsOnMsg(InputMsg);
-                    auto InputTransitions = InputTransitionsPerParam[0];
-                    for (auto InputTransition : InputTransitions) {
-                        AllTransitions.push_back(InputTransition);
-                    }
-                }
-                auto InternalTransitions = IncompleteEFSM->GetInternalTransitions();
-                for (auto InternalTransition : InternalTransitions) {
-                    AllTransitions.push_back(InternalTransition);
-                }
-            }
-            cout << "The solution is the following:" << endl;
-            for (auto NewOpIndicatorVar : AllFalsePreds) {
-                auto NewOp = NewOpIndicatorVar.first;
-                auto IndicatorVar = NewOpIndicatorVar.second;
-                auto IndicatorValue = TP->Evaluate(IndicatorVar);
-                if (IndicatorValue->ToString() == "1") {
-                    for (auto Transition : AllTransitions) {
-                        auto Guard = Transition->GetGuard();
-                        auto UFFunctionsInGuard = Guard->GetMgr()->Gather(Guard, HasUF);
-                        bool PrintTransition = false;
-                        for (auto UFFunction : UFFunctionsInGuard) {
-                            auto OpCode = UFFunction->As<OpExpression>()->GetOpCode();
-                            if (OpCode == NewOp) {
-                                PrintTransition = true;
-                            }
-                        }
-                        if (PrintTransition) {
-                            cout << Transition->ToString() << endl;
-                            cout << Guard << endl;
-                            PrintUFModel(NewOp);
-                            for (auto Update : Transition->GetUpdates()) {
-                                auto RHS = Update->GetRHS();
-                                if (RHS->Is<OpExpression>()) {
-                                    auto OpCode = RHS->As<OpExpression>()->GetOpCode();
-                                    cout << Update->ToString() << endl;
-                                    PrintUFModel(OpCode);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
 
         void Solver::PrintOneUFFinalSolution(const vector<const UFInterpreter*>& Interps,

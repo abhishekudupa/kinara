@@ -580,31 +580,18 @@ namespace ESMC {
 
                 Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, Antecedent, Consequent);
 
-                // cout << "New Phi after propagating through command:" << endl
-                //      << Cmd->ToString() << endl << Phi->ToString() << endl << endl;
+                ESMC_LOG_FULL(
+                              "Analyses.Detailed",
+                              Out_ << "New Phi after propagating through command:" << endl
+                                   << Cmd->ToString() << endl << Phi->ToString() << endl;
+                              );
 
-                auto SimpPhi = Mgr->SimplifyFP(Phi);
+                Phi = Mgr->SimplifyFP(Phi);
 
-                if (SimpPhi == Mgr->MakeTrue()) {
-                    auto OrigPhi = Phi;
-                    auto OldPhi = Phi;
-                    auto NewPhi = OldPhi;
-
-                    do {
-                        OldPhi = NewPhi;
-                        NewPhi = Mgr->Simplify(OldPhi);
-
-                        if (NewPhi == Mgr->MakeTrue()) {
-                            cout << "Simplification of:" << endl
-                                 << OldPhi << endl << "resulted in true" << endl;
-                            NewPhi = Mgr->Simplify(OldPhi);
-                        }
-
-                    } while (NewPhi != OldPhi);
-                }
-
-                // cout << "Simplified:" << Phi->ToString() << endl << endl;
-                Phi = SimpPhi;
+                ESMC_LOG_FULL(
+                              "Analyses.Detailed",
+                              Out_ << "Simplified:" << Phi->ToString() << endl;
+                              );
             }
 
             FastExpSetT Retval;

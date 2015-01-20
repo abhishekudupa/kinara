@@ -64,6 +64,7 @@
 #include "../expr/Expressions.hpp"
 #include "../tpinterface/Z3Objects.hpp"
 #include "../utils/CombUtils.hpp"
+#include "../utils/LogManager.hpp"
 
 #include "LTSSemTypes.hpp"
 
@@ -3437,7 +3438,15 @@ namespace ESMC {
         inline typename LTSTermSemanticizer<E>::ExpT
         LTSTermSemanticizer<E>::Simplify(const ExpT& Exp)
         {
-            return Detail::Simplifier<E, LTS::LTSTermSemanticizer>::Do(Mgr, Exp, BoolType, IntType);
+            auto SimpExp =
+                Detail::Simplifier<E, LTS::LTSTermSemanticizer>::Do(Mgr, Exp, BoolType, IntType);
+
+            ESMC_LOG_FULL(
+                          "Simplifier.PerIteration",
+                          Out_ << "Simplied:" << endl << Exp << endl
+                               << "To:" << SimpExp << endl;
+                          );
+            return SimpExp;
         }
 
         template <typename E>

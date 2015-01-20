@@ -584,20 +584,51 @@ namespace ESMC {
     }
 
     template <typename T>
-    static inline ostream& operator << (ostream& Out, const SmartPtr<T>& Ptr)
+    static inline void PrintSmartPtr_(ostream& Out, const SmartPtr<T>& Ptr,
+                                      const false_type& Ununsed)
     {
         Out << Ptr->GetPtr_();
+    }
+
+    template <typename T>
+    static inline void PrintSmartPtr_(ostream& Out, const SmartPtr<T>& Ptr,
+                                      const true_type& Unused)
+    {
+        Out << Ptr->ToString();
+    }
+
+    template <typename T>
+    static inline void PrintSmartPtr_(ostream& Out, const CSmartPtr<T>& Ptr,
+                                      const false_type& Ununsed)
+    {
+        Out << Ptr->GetPtr_();
+    }
+
+    template <typename T>
+    static inline void PrintSmartPtr_(ostream& Out, const CSmartPtr<T>& Ptr,
+                                      const true_type& Unused)
+    {
+        Out << Ptr->ToString();
+    }
+
+
+    template <typename T>
+    static inline ostream& operator << (ostream& Out, const SmartPtr<T>& Ptr)
+    {
+        typedef typename is_base_of<ESMC::Stringifiable, T>::type StringifiableType;
+        PrintSmartPtr_(Out, Ptr, StringifiableType());
         return Out;
     }
 
     template <typename T>
     static inline ostream& operator << (ostream& Out, const CSmartPtr<T>& Ptr)
     {
-        Out << Ptr->GetPtr_();
+        typedef typename is_base_of<ESMC::Stringifiable, T>::type StringifiableType;
+        PrintSmartPtr_(Out, Ptr, StringifiableType());
         return Out;
     }
 
-} /* end namespace */
+} /* end namespace ESMC */
 
 #endif /* ESMC_SMART_PTR_HPP_ */
 

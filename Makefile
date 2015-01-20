@@ -8,7 +8,7 @@ BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
 CXX?=g++
 
-CXXFLAGS=-std=c++11 -Wall -pedantic -pipe
+CXXFLAGS+=-std=c++11 -Wall -pedantic -pipe
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/z3/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/sparsehash
@@ -36,7 +36,7 @@ PROJECT_MODULES= \
 
 
 PROJECT_EXECUTABLES=esmc
-esmc_LINK_LIBS_COMMON=z3 rt boost_system
+esmc_LINK_LIBS_COMMON=z3 rt boost_system boost_iostreams boost_bzip2
 esmc_LINK_LIBS_LTO=esmc
 
 esmc_DEP_LIBS=esmc
@@ -61,6 +61,7 @@ libesmc_OBJS= \
 	Compiler.o \
 	IndexSet.o \
 	LabelledTS.o \
+	LogManager.o \
 	LTSAnalyses.o \
 	LTSAssign.o \
 	LTSAutomaton.o \

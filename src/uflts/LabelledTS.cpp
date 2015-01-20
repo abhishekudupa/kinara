@@ -580,9 +580,6 @@ namespace ESMC {
                             Mgr->GetSemanticizer()->InstantiateType(ParamType, PermParams);
                         u32 PermTypeID = UMType->GetTypeIDForMemberType(PermType);
                         MsgCanonMap[CurMTypeID][CurPermIndex] = PermTypeID;
-
-                        // cout << CurMType->ToString() << " -> " << PermType->ToString()
-                        //      << " on permutation " << Symm::PermToString(CurPerm) << endl;
                     }
                 }
             }
@@ -621,8 +618,6 @@ namespace ESMC {
                 // Not strictly our job, but it's easiest to
                 // add the extension data right here
                 CurStateVar->ExtensionData.Offset = StateVectorSize;
-                // cout << "Var \"" << Name << "\" assigned to offset " << StateVectorSize
-                //      << " - " << StateVectorSize + StateVarType->GetByteSize() << endl;
                 StateVectorVars.push_back(CurStateVar);
                 StateVectorSize += StateVarType->GetByteSize();
                 ValidAutomata[EFSM->Name] =

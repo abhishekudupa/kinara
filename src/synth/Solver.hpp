@@ -253,7 +253,7 @@ namespace ESMC {
                                                 StateBuchiAutomaton* Monitor);
             inline void UpdateCommands();
             inline void ResetStats();
-            inline void PrintStats(ostream& Out);
+            inline void PrintStats();
             inline void HandleResourceLimit();
 
             // Returns the set of update ops associated with the guard
@@ -304,8 +304,6 @@ namespace ESMC {
             void UnveilNonCompletionGuardOp(i64 Op);
             void UnveilNonCompletionOp(i64 Op);
             void Solve();
-            void PrintUFModel(i64 UFCode);
-            void PrintSolution();
             ExpT Evaluate(const ExpT& Input);
             void PrintOneUFFinalSolution(const vector<const UFInterpreter*>& Interps,
                                          ostream& Out);

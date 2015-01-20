@@ -559,21 +559,28 @@ namespace ESMC {
             for (auto it = PermSet->Begin(); it != PermSet->End(); ++it) {
                 WorkingStateVec->Set(*InputVector);
 
-                // cout << "Canonicalizer: Working state before any permutations are applied "
-                //      << endl;
-                // cout << "-----------------------------------------" << endl;
-                // Printer->PrintState(WorkingStateVec, cout);
-                // cout << "-----------------------------------------" << endl;
+                ESMC_LOG_FULL(
+                              "Canonicalizer.Detailed",
+                              Out_ << "Canonicalizer: Working state before any "
+                                   << "permutations are applied:" << endl;
+                              Out_ << "-----------------------------------------" << endl;
+                              Printer->PrintState(WorkingStateVec, Out_);
+                              Out_ << "-----------------------------------------" << endl;
+                              );
 
                 for (auto Permuter : Permuters) {
                     Permuter->Permute(InputVector, WorkingStateVec, it);
-                    // cout << "Canonicalizer: After applying permuter "
-                    //      << "with offset " << Permuter->GetOffset()
-                    //      << " and permutation " + PermToString(it.GetPerm())
-                    //      << endl;
-                    // cout << "-----------------------------------------" << endl;
-                    // Printer->PrintState(WorkingStateVec, cout);
-                    // cout << "-----------------------------------------" << endl;
+
+                    ESMC_LOG_SHORT(
+                                   "Canonicalizer.Detailed",
+                                   Out_ << "Canonicalizer: After applying permuter "
+                                        << "with offset " << Permuter->GetOffset()
+                                        << " and permutation " + PermToString(it.GetPerm())
+                                        << endl;
+                                   Out_ << "-----------------------------------------" << endl;
+                                   Printer->PrintState(WorkingStateVec, Out_);
+                                   Out_ << "-----------------------------------------" << endl;
+                                   );
                 }
 
                 for (auto Sorter : Sorters) {
@@ -585,29 +592,31 @@ namespace ESMC {
                     PermID = it.GetIndex();
                 }
 
-                // cout << "Canonicalizer: Current Best State:" << endl;
-                // cout << "-----------------------------------------" << endl;
-                // Printer->PrintState(BestStateVec, cout);
-                // cout << "-----------------------------------------" << endl;
+                ESMC_LOG_SHORT(
+                               "Canonicalizer.Detailed",
+                               Out_ << "Canonicalizer: Current Best State:" << endl;
+                               Out_ << "-----------------------------------------" << endl;
+                               Printer->PrintState(BestStateVec, Out_);
+                               Out_ << "-----------------------------------------" << endl;
+                               );
             }
 
-            // if (InputVector->Equals(*BestStateVec)) {
-            //     cout << "Canonicalizer: Original and Canonical states are the same!" << endl;
-            // } else {
-            //     cout << "Canonicalizer: Original State:" << endl;
-            //     cout << "-----------------------------------------" << endl;
-            //     Printer->PrintState(InputVector, cout);
-            //     cout << "-----------------------------------------" << endl;
-            //     cout << "Canonicalizer: Canonicalized State:" << endl;
-            //     cout << "-----------------------------------------" << endl;
-            //     Printer->PrintState(BestStateVec, cout);
-            //     cout << "-----------------------------------------" << endl << endl;
-            // }
-
+            ESMC_LOG_FULL
+                ("Canonicalizer.Detailed",
+                 if (InputVector->Equals(*BestStateVec)) {
+                     Out_ << "Canonicalizer: Original and Canonical states are the same!" << endl;
+                 } else {
+                     Out_ << "Canonicalizer: Original State:" << endl;
+                     Out_ << "-----------------------------------------" << endl;
+                     Printer->PrintState(InputVector, Out_);
+                     Out_ << "-----------------------------------------" << endl;
+                     Out_ << "Canonicalizer: Canonicalized State:" << endl;
+                     Out_ << "-----------------------------------------" << endl;
+                     Printer->PrintState(BestStateVec, Out_);
+                     Out_ << "-----------------------------------------" << endl;
+                 });
 
             WorkingStateVec->Recycle();
-            InputVector->Recycle();
-
             return BestStateVec;
         }
 

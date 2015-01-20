@@ -207,13 +207,16 @@ namespace ESMC {
                     return;
                 }
 
-                // cout << "Fairness Checker for fairness set: "
-                //      << FairSet->GetName() << " on EFSM "
-                //      << FairSet->GetEFSM()->GetName() << " with tracked index "
-                //      << TrackedIndex << endl;
-                // cout << "Considering state:" << endl;
-                // Checker->Printer->PrintState(State, cout);
-                // cout << endl;
+                ESMC_LOG_FULL(
+                              "Checker.Fairness",
+                              Out_ << "Fairness Checker for fairness set: "
+                                   << FairSet->GetName() << " on EFSM "
+                                   << FairSet->GetEFSM()->GetName() << " with tracked index "
+                                   << TrackedIndex << endl;
+                              Out_ << "Considering state:" << endl;
+                              Checker->Printer->PrintState(State, _Out);
+                              Out_ << endl;
+                              );
 
                 auto const SCCID = State->Status.InSCC;
 
@@ -227,22 +230,29 @@ namespace ESMC {
                     // This command causes this state to be marked
                     // enabled
 
-                    // cout << "Marking as Enabled, because command "
-                    //      << GCmdIndex << " is enabled" << endl;
+                    ESMC_LOG_FULL(
+                                  "Checker.Fairness",
+                                  Out_ << "Marking as Enabled, because command "
+                                       << GCmdIndex << " is enabled" << endl;
+                                  );
 
                     Enabled = true;
                     EnabledPerInstance[InstanceID] = true;
                     AtLeastOneEnabled = true;
 
                     if (NextState->IsInSCC(SCCID)) {
-                        // auto PermSet = Checker->TheCanonicalizer->GetPermSet();
-                        // cout << "Marking as Executed, because, next state is in SCC"
-                        //      << endl;
-                        // cout << "Next State:" << endl;
-                        // Checker->Printer->PrintState(NextState, cout);
-                        // cout << endl << "With permutation:" << endl << endl;
-                        // PermSet->Print(Edge->GetPermutation(), cout);
-                        // cout << endl;
+
+                        ESMC_LOG_FULL(
+                                      "Checker.Fairness",
+                                      auto PermSet = Checker->TheCanonicalizer->GetPermSet();
+                                      Out_ << "Marking as Executed, because, next state is in SCC"
+                                           << endl;
+                                      Out_ << "Next State:" << endl;
+                                      Checker->Printer->PrintState(NextState, Out_);
+                                      Out_ << endl << "With permutation:" << endl << endl;
+                                      PermSet->Print(Edge->GetPermutation(), Out_);
+                                      Out_ << endl;
+                                      );
 
                         Executed = true;
                         ExecutedPerInstance[InstanceID] = true;
@@ -533,15 +543,19 @@ namespace ESMC {
                 auto& CurEntry = DFSStack.top();
                 auto State = CurEntry.GetState();
 
-                // cout << "Considering State:" << endl;
-                // cout << "--------------------------------------------------------" << endl;
-                // Printer->PrintState(State, cout);
-                // cout << "--------------------------------------------------------" << endl;
+                ESMC_LOG_FULL(
+                              "Checker.AQSDetailed",
+                              Out_ << "[DFS] Considering State:" << endl;
+                              Out_ << "--------------------------------------------------------"
+                                   << endl;
+                              Printer->PrintState(State, Out_);
+                              Out_ << "--------------------------------------------------------"
+                                   << endl;
+                              );
 
                 auto& LastFired = CurEntry.GetLastFired();
                 bool Deadlocked = (LastFired == -1);
                 StateVec* NextState = nullptr;
-                // StateVec* TempNextState = nullptr;
 
                 bool Exception = false;
                 ExpT NEPred = ExpT::NullPtr;
@@ -557,7 +571,12 @@ namespace ESMC {
                             return;
                         }
                     }
-                    // cout << "No more successors, popping from stack!" << endl;
+
+                    ESMC_LOG_SHORT(
+                                   "Checker.AQSDetailed",
+                                   Out_ << "No more successors, popping from stack!" << endl;
+                                   );
+
                     // Done exploring this state
                     DFSStack.pop();
                     continue;
@@ -578,30 +597,39 @@ namespace ESMC {
                     continue;
                 }
 
-                // cout << "Firing guarded command:" << endl;
-                // cout << Cmd->ToString() << endl;
-                // cout << "Got Next State (Uncanonicalized):" << endl;
-                // cout << "--------------------------------------------------------" << endl;
-                // Printer->PrintState(NextState, cout);
-                // cout << "--------------------------------------------------------" << endl;
-                // TempNextState = NextState->Clone();
+                ESMC_LOG_SHORT(
+                               "Checker.AQSDetailed",
+                               Out_ << "Firing guarded command:" << endl;
+                               Out_ << Cmd->ToString() << endl;
+                               Out_ << "Got Next State (Uncanonicalized):" << endl;
+                               Out_ << "--------------------------------------------------------"
+                                    << endl;
+                               Printer->PrintState(NextState, Out_);
+                               Out_ << "--------------------------------------------------------"
+                                    << endl;
+                               );
 
 
                 u32 PermID;
                 auto CanonState = TheCanonicalizer->Canonicalize(NextState, PermID);
 
-                // cout << "Canonicalized Next State with Permutation ID "
-                //      << PermID << ":" << endl;
-                // cout << "--------------------------------------------------------" << endl;
-                // if (CanonState->Equals(*TempNextState)) {
-                //     cout << "Canonicalized state is the same as uncanonicalized state!"
-                //          << endl;
-                // } else {
-                //     Printer->PrintState(CanonState, cout);
-                // }
-                // cout << "--------------------------------------------------------" << endl;
-                // TempNextState->Recycle();
+                ESMC_LOG_SHORT(
+                               "Checker.AQSDetailed",
+                               Out_ << "Canonicalized Next State with Permutation ID "
+                                    << PermID << ":" << endl;
+                               Out_ << "--------------------------------------------------------"
+                                    << endl;
+                               if (CanonState->Equals(*NextState)) {
+                                   Out_ << "Canonicalized state is the same as "
+                                        << "uncanonicalized state!" << endl;
+                               } else {
+                                   Printer->PrintState(CanonState, Out_);
+                               }
+                               Out_ << "--------------------------------------------------------"
+                                    << endl;
+                               );
 
+                NextState->Recycle();
 
                 auto ExistingState = AQS->Find(CanonState);
 
@@ -609,7 +637,10 @@ namespace ESMC {
 
                     AQS->Insert(CanonState);
 
-                    // cout << "Pushed new successor onto stack." << endl;
+                    ESMC_LOG_SHORT(
+                                   "Checker.AQSDetailed",
+                                   Out_ << "Pushed new successor onto stack." << endl;
+                                   );
 
                     AQS->AddEdge(State, CanonState, PermID, LastFired);
                     DFSStack.push(DFSStackEntry(CanonState));
@@ -633,11 +664,12 @@ namespace ESMC {
                 } else {
                     // Successor already explored, add edge
                     // and continue
-                    // cout << "Successor has been previously encountered." << endl;
-                    // auto InvPermID = PermSet->GetIteratorForInv(PermID).GetIndex();
 
-                    // We do not invert. Since all transformations call for the
-                    // inverse of the inverse anyway!
+                    ESMC_LOG_SHORT(
+                                   "Checker.AQSDetailed",
+                                   Out_ << "Successor has been previously encountered." << endl;
+                                   );
+
                     AQS->AddEdge(State, ExistingState, PermID, LastFired);
                     CanonState->Recycle();
                     continue;
@@ -658,6 +690,17 @@ namespace ESMC {
             while (BFSQueue.size() > 0) {
                 ++IterCount;
                 auto CurState = BFSQueue.front();
+
+                ESMC_LOG_FULL(
+                              "Checker.AQSDetailed",
+                              Out_ << "[BFS] Considering State:" << endl;
+                              Out_ << "--------------------------------------------------------"
+                              << endl;
+                              Printer->PrintState(CurState, Out_);
+                              Out_ << "--------------------------------------------------------"
+                                   << endl;
+                              );
+
                 BFSQueue.pop_front();
 
                 bool Deadlocked = true;
@@ -683,20 +726,54 @@ namespace ESMC {
                     if (NextState != nullptr) {
                         u32 PermID = 0;
                         Deadlocked = false;
+
+                        ESMC_LOG_SHORT(
+                                       "Checker.AQSDetailed",
+                                       Out_ << "Got Next State (Uncanonicalized), by firing "
+                                            << "guarded command:" endl << Cmd->ToString() << endl;
+                                       Out_ << "--------------------------------------------------------"
+                                            << endl;
+                                       Printer->PrintState(NextState, Out_);
+                                       Out_ << "--------------------------------------------------------"
+                                            << endl;
+                                       );
+
                         auto CanonNextState = TheCanonicalizer->Canonicalize(NextState, PermID);
+
+                        ESMC_LOG_SHORT(
+                                       "Checker.AQSDetailed",
+                                       Out_ << "Canonicalized Next State with Permutation ID "
+                                            << PermID << ":" << endl;
+                                       Out_ << "--------------------------------------------------------"
+                                            << endl;
+                                       if (CanonNextState->Equals(*NextState)) {
+                                           Out_ << "Canonicalized state is the same as "
+                                                << "uncanonicalized state!" << endl;
+                                       } else {
+                                           Printer->PrintState(CanonNextState, Out_);
+                                       }
+                                       Out_ << "--------------------------------------------------------"
+                                            << endl;
+                                       );
+
+                        NextState->Recycle();
 
                         auto ExistingState = AQS->Find(CanonNextState);
                         if (ExistingState != nullptr) {
                             AQS->AddEdge(CurState, ExistingState, PermID, i);
                             CanonNextState->Recycle();
+                            ESMC_LOG_SHORT(
+                                           "Checker.AQSDetailed",
+                                           Out_ << "Successor has been previously encountered."
+                                                << endl;
+                                           );
                         } else {
 
-                            // cout << "New State:" << endl;
-                            // cout << "-------------------------------------------------------"
-                            //      << endl;
-                            // Printer->PrintState(CanonNextState, cout);
-                            // cout << "-------------------------------------------------------"
-                            //      << endl;
+                            ESMC_LOG_SHORT(
+                                           "Checker.AQSDetailed",
+                                           Out_ << "Enqueueing new successor onto BFS queue."
+                                                << endl;
+                                           );
 
                             AQS->Insert(CanonNextState);
                             AQS->AddEdge(CurState, CanonNextState, PermID, i);
@@ -747,12 +824,9 @@ namespace ESMC {
             // Gather the commands that are relevant
             InterpretedCommands.clear();
 
-            // cout << "Interpreted Commands:" << endl;
-
             for (auto const& Cmd : GuardedCommands) {
                 if (Cmd->IsFullyInterpreted()) {
                     InterpretedCommands.insert(Cmd->GetCmdID());
-                    // cout << Cmd->ToString() << endl << endl;
                 }
             }
 
@@ -768,13 +842,35 @@ namespace ESMC {
                     throw ESMCError((string)"Could not construct initial state!");
                 }
 
-                // cout << "Initial State:" << endl;
-                // cout << "--------------------------------------------------------" << endl;
-                // Printer->PrintState(CurState, cout);
-                // cout << "--------------------------------------------------------" << endl;
+                ESMC_LOG_FULL(
+                              "Checker.AQSDetailed",
+                              Out_ << "Initial State (Uncanonicalized):" << endl;
+                              Out_ << "--------------------------------------------------------"
+                                   << endl;
+                              Printer->PrintState(CurState, Out_);
+                              Out_ << "--------------------------------------------------------"
+                                   << endl;
+                              );
 
                 u32 CanonPerm = 0;
                 auto CanonState = TheCanonicalizer->Canonicalize(CurState, CanonPerm);
+
+                ESMC_LOG_FULL(
+                              "Checker.AQSDetailed",
+                              Out_ << "Initial State (Canonicalized):" << endl;
+                              Out_ << "--------------------------------------------------------"
+                                   << endl;
+                              if (CanonState->Equals(*CurState)) {
+                                  Out_ << "Same as uncanonicalized initial state." << endl;
+                              } else {
+                                  Printer->PrintState(CurState, Out_);
+                              }
+                              Out_ << "--------------------------------------------------------"
+                                   << endl;
+                              );
+
+                CurState->Recycle();
+
                 InitStates.push_back(CanonState);
             }
 
@@ -791,14 +887,16 @@ namespace ESMC {
                 DoBFS(InitStates, NumErrors);
             }
 
-            // TODO: Handle any violations found during model checking
+            ESMC_LOG_MIN_SHORT(
+                               Out_ << "AQS Built, contains " << AQS->GetNumStates()
+                                    << " and " << AQS->GetNumEdges() << " edges. ";
+                               if (ErrorStates.size() > 0) {
+                                   Out_ << "AQS contains one or more errors, and may "
+                                        << "not be complete." << endl;
+                               }
+                               );
 
-            cout << "AQS Built!" << endl;
-            cout << "AQS contains " << AQS->GetNumStates() << " states and "
-                 << AQS->GetNumEdges() << " edges." << endl;
-            cout << Factory->GetNumActiveStates() << " active states from state factory." << endl;
             if (ErrorStates.size() > 0) {
-                cout << "One or more safety/deadlock violations found!" << endl;
                 return false;
             }
             return true;
@@ -918,9 +1016,12 @@ namespace ESMC {
                 }
             }
 
-            cout << "Product construction complete!" << endl;
-            cout << "Product Structure contains " << ThePS->GetNumStates()
-                 << " states and " << ThePS->GetNumEdges() << " edges." << endl;
+            ESMC_LOG_MIN_SHORT(
+                               Out_ << "Product construction complete!" << endl;
+                               Out_ << "Product Structure contains " << ThePS->GetNumStates()
+                                    << " states and " << ThePS->GetNumEdges()
+                                    << " edges." << endl;
+                               );
         }
 
         inline void LTSChecker::DoThreadedBFS(const ProductState *SCCRoot, u32 IndexID)
@@ -932,10 +1033,13 @@ namespace ESMC {
             // since the classes will not change
             const u32 ClassID = SysIdxSet->GetClassID(IndexID);
 
-            // cout << "Doing threaded BFS on product state:"
-            //      << endl;
-            // Printer->PrintState(SCCRoot, cout);
-            // cout << "With threaded tracked index " << IndexID << endl;
+            ESMC_LOG_FULL(
+                          "Checker.AQSDetailed",
+                          Out_ << "Doing threaded BFS on product state:"
+                               << endl;
+                          Printer->PrintState(SCCRoot, Out_);
+                          Out_ << "With threaded tracked index " << IndexID << endl;
+                          );
 
             BFSQueue.push_back(make_pair(SCCRoot, IndexID));
             auto PermSet = TheCanonicalizer->GetPermSet();
@@ -974,7 +1078,10 @@ namespace ESMC {
                 }
             }
 
-            // cout << "Threaded BFS done!" << endl;
+            ESMC_LOG_FULL(
+                          "Checker.AQSDetailed",
+                          Out_ << "Threaded BFS done!" << endl;
+                          );
         }
 
         inline bool LTSChecker::CheckSCCFairness(const ProductState *SCCRoot,
@@ -1002,7 +1109,12 @@ namespace ESMC {
 
                 auto ClassID = SysIdxSet->GetClassID(IndexID);
 
-                // cout << "Checking fairness of SCC with tracked index " << IndexID << endl;
+                ESMC_LOG_FULL(
+                              "Checker.AQSDetailed",
+                              Out_ << "Checking fairness of SCC with tracked index "
+                                   << IndexID << endl;
+                              );
+
                 DoThreadedBFS(SCCRoot, IndexID);
                 // Are all the fairness requirements satisfied?
                 for (auto FChecker : FairnessCheckers[ClassID]) {
@@ -1132,20 +1244,7 @@ namespace ESMC {
                         } else {
                             // Non-singular AND accepting
                             // Send this for further processing
-
-                            // cout << "Accepting SCC:" << endl;
-                            // for (auto SCCState : SCCStateVec) {
-                            //     cout << "State:" << endl
-                            //          << "------------------------------------------"
-                            //          << endl;
-                            //     Printer->PrintState(SCCState, cout);
-                            //     cout << "------------------------------------------"
-                            //          << endl;
-                            // }
-
                             Retval.push_back(CurState);
-                            // cout << "[Checker:] Found SCC with " << NumStatesInSCC
-                            //      << " states" << endl;
                             ++CurSCCID;
                         }
                     }
@@ -1184,7 +1283,10 @@ namespace ESMC {
                 ThePS = nullptr;
             }
 
-            cout << "Constructing Product..." << endl;
+            ESMC_LOG_MIN_SHORT(
+                               Out_ << "Constructing Product..." << endl;
+                               );
+
             ConstructProduct(Monitor);
 
             bool FixPoint = false;
@@ -1192,15 +1294,22 @@ namespace ESMC {
 
             while (!FixPoint) {
                 FixPoint = true;
-                cout << "Getting accepting SCCs... " << endl;
+
+                ESMC_LOG_MIN_SHORT(
+                                   Out_ << "Getting accepting SCCs... " << endl;
+                                   );
+
                 auto&& SCCRoots = GetAcceptingSCCs();
                 // Check if each of the SCCs are fair
                 vector<const ProductState*> UnfairStates;
-                if (SCCRoots.size() > 0) {
-                    cout << "Checking Fairness of SCCs..." << endl;
-                } else {
-                    cout << "No accepting SCCs!" << endl;
-                }
+
+                ESMC_LOG_MIN_SHORT(
+                                   if (SCCRoots.size() > 0) {
+                                       Out_ << "Checking Fairness of SCCs..." << endl;
+                                   } else {
+                                       Out_ << "No accepting SCCs!" << endl;
+                                   });
+
                 for (auto SCCRoot : SCCRoots) {
                     UnfairStates.clear();
                     auto IsFair = CheckSCCFairness(SCCRoot, UnfairStates);
@@ -1211,7 +1320,11 @@ namespace ESMC {
                         FixPoint = false;
                         // Mark all states as being unexplored
                         ThePS->ClearAllMarkings();
-                        cout << "Deleting unfair states..." << endl;
+
+                        ESMC_LOG_MIN_SHORT(
+                                           Out_ << "Deleting unfair states..." << endl;
+                                           );
+
                         for (auto UnfairState : AllUnfairStates) {
                             UnfairState->MarkDeleted();
                         }
@@ -1223,14 +1336,21 @@ namespace ESMC {
                         continue;
                     } else {
                         // Fair, turn this into a counterexample
-                        cout << "Found fair accepting SCC" << endl;
+
+                        ESMC_LOG_MIN_SHORT(
+                                           Out_ << "Found fair accepting SCC" << endl;
+                                           );
+
                         auto Trace = TraceBase::MakeLivenessViolation(SCCRoot, this);
                         return Trace;
                     }
                 }
             }
 
-            cout << "No liveness violations found! :-)" << endl;
+            ESMC_LOG_MIN_SHORT(
+                               Out_ << "No liveness violations found!" << endl;
+                               );
+
             return nullptr;
         }
 

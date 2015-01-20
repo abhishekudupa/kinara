@@ -386,9 +386,8 @@ namespace ESMC {
             }
 
             // ConstraintPurifier implementation
-            ConstraintPurifier::ConstraintPurifier(MgrT* Mgr, FastExpSetT& Assumptions)
-                : VisitorBaseT("ConstraintPurifier"),
-                  Mgr(Mgr), Assumptions(Assumptions)
+            ConstraintPurifier::ConstraintPurifier(MgrT* Mgr)
+                : VisitorBaseT("ConstraintPurifier"), Mgr(Mgr)
             {
                 // Nothing here
             }
@@ -504,9 +503,9 @@ namespace ESMC {
                 }
             }
 
-            ExpT ConstraintPurifier::Do(MgrT* Mgr, const ExpT& Exp, FastExpSetT& Assumptions)
+            ExpT ConstraintPurifier::Do(MgrT* Mgr, const ExpT& Exp)
             {
-                ConstraintPurifier ThePurifier(Mgr, Assumptions);
+                ConstraintPurifier ThePurifier(Mgr);
                 Exp->Accept(&ThePurifier);
                 return ThePurifier.ExpStack.top();
             }

@@ -107,19 +107,26 @@ namespace ESMC {
                 InvPermAlongPath = InvPermAlongPathIt.GetIndex();
                 auto NextPermState = Edge->GetTarget();
 
-                // cout << "Permuted State:" << endl;
-                // cout << "-------------------------------------------" << endl;
-                // Printer->PrintState(NextPermState, cout);
-                // cout << "-------------------------------------------" << endl;
+                ESMC_LOG_FULL(
+                              "Trace.Generation",
+                              Out_ << "Permuted State:" << endl;
+                              Out_ << "-------------------------------------------" << endl;
+                              Printer->PrintState(NextPermState, Out_);
+                              Out_ << "-------------------------------------------" << endl;
+                              );
 
                 auto NextUnwoundState = TheCanonicalizer->ApplyPermutation(NextPermState,
                                                                            InvPermAlongPath);
                 u32 Dummy;
                 TheCanonicalizer->Sort(NextUnwoundState);
-                // cout << "Unwound State:" << endl;
-                // cout << "-------------------------------------------" << endl;
-                // Printer->PrintState(NextUnwoundState, cout);
-                // cout << "-------------------------------------------" << endl;
+
+                ESMC_LOG_FULL(
+                              "Trace.Generation",
+                              Out_ << "Unwound State:" << endl;
+                              Out_ << "-------------------------------------------" << endl;
+                              Printer->PrintState(NextUnwoundState, Out_);
+                              Out_ << "-------------------------------------------" << endl;
+                              );
 
                 // Now find out which command takes us from the current
                 // unwound state to the next unwound state
@@ -622,8 +629,6 @@ namespace ESMC {
             auto TheCanonicalizer = Checker->TheCanonicalizer;
 
             auto&& SCCNodes = ExpandSCC(SCCRoot, Checker);
-            // cout << "[Trace:]" << "ExpandedSCC contains " << SCCNodes.size()
-            //      << " states" << endl << endl;
             u32 InvPermAlongPath = 0;
 
             // Find a path from the initial state to one of the SCC nodes
