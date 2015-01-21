@@ -502,12 +502,17 @@ namespace ESMC {
                     IndexID == Other->IndexID);
         }
 
-        void ProductState::ClearMarkings() const
+        void ProductState::ClearAllMarkings() const
+        {
+            ClearSCCMarkings();
+            Status.Accepting = false;
+        }
+
+        void ProductState::ClearSCCMarkings() const
         {
             Status.InSCC = -1;
             Status.OnStack = false;
             Status.ThreadedVisted = false;
-            Status.Accepting = false;
             Status.Deleted = false;
             DFSNum = -1;
             LowLink = -1;
@@ -722,10 +727,17 @@ namespace ESMC {
             return PSHashSet.size();
         }
 
+        void ProductStructure::ClearSCCMarkings() const
+        {
+            for (auto const& PS : PSHashSet) {
+                PS.first->ClearSCCMarkings();
+            }
+        }
+
         void ProductStructure::ClearAllMarkings() const
         {
             for (auto const& PS : PSHashSet) {
-                PS.first->ClearMarkings();
+                PS.first->ClearAllMarkings();
             }
         }
 

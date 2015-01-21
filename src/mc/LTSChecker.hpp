@@ -92,7 +92,7 @@ namespace ESMC {
                 }
             };
 
-            class FairnessChecker
+            class FairnessChecker : public Stringifiable
             {
                 friend class ESMC::MC::TraceBase;
                 friend class ESMC::MC::LTSChecker;
@@ -154,6 +154,8 @@ namespace ESMC {
 
                 const unordered_set<const ProductState*>& GetEnabledStates() const;
                 const unordered_set<u32>& GetCmdIDsToRespondTo(u32 InstanceID) const;
+
+                virtual string ToString(u32 Verbosity = 0) const override;
             };
 
         } /* end namespace Detail */
@@ -215,6 +217,10 @@ namespace ESMC {
             inline void DoBFS(const vector<StateVec*>& Roots, u32 NumErrors);
 
             inline void ConstructProduct(StateBuchiAutomaton* Monitor);
+            inline vector<const ProductState*>
+            GetAcceptingSCCsFromInitState(const ProductState* InitState,
+                                          u32& LowestUnusedIndex,
+                                          u32& LowestUnusedSCCID);
             inline vector<const ProductState*> GetAcceptingSCCs();
 
             inline void DoThreadedBFS(const ProductState* SCCRoot,

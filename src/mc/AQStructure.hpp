@@ -358,7 +358,8 @@ namespace ESMC {
             bool operator == (const ProductState& Other) const;
             bool Equals(const ProductState* Other) const;
 
-            void ClearMarkings() const;
+            void ClearAllMarkings() const;
+            void ClearSCCMarkings() const;
 
             void MarkOnStack() const;
             void MarkNotOnStack() const;
@@ -491,6 +492,7 @@ namespace ESMC {
             u32 GetNumStates() const;
             u32 GetNumEdges() const;
             void ClearAllMarkings() const;
+            void ClearSCCMarkings() const;
             u32 GetNumProcesses() const;
 
             void ApplyToAllStates(const function<void(const ProductState*)>& Func) const;

@@ -48,6 +48,27 @@
 namespace ESMC {
     namespace LTS {
 
+        class LTSFairnessObject : public RefCountable
+        {
+        private:
+            string Name;
+            vector<ExpT> InstanceParams;
+            u32 InstanceID;
+            LTSFairnessSet* FairnessSet;
+        };
+
+        class LTSFairnessSet : public RefCountable
+        {
+        private:
+            string Name;
+            vector<ExpT> Parameters;
+            ExpT Constraint;
+            map<vector<ExpT>, LTSFairObjRef> FairnessObjects;
+            u32 ClassID;
+            u32 NumInstances;
+            FairSetFairnessType FairnessType;
+        };
+
         // One fairness object, that can consist
         // of multiple transitions, all parameterized
         // by the same index vector

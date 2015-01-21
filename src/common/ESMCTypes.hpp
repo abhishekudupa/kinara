@@ -165,6 +165,12 @@ namespace ESMC {
         }
     };
 
+    static inline ostream& operator << (ostream& Out, const Stringifiable& Obj)
+    {
+        Out << Obj.ToString();
+        return Out;
+    }
+
 } /* end namespace ESMC */
 
 #endif /* ESMC_ESMC_ESMCTYPES_HPP_ */

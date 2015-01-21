@@ -97,7 +97,7 @@ int main()
     auto S2CChan = TheLTS->MakeChannel("S2CChan", Params, TrueExp, 1, false, true,
                                        false, false, LTSFairnessType::Strong);
 
-    C2SChan->AddMsgs(Params, TrueExp, DataMsgType, Params, LTSFairnessType::None, LossDupFairnessType::None);
+    C2SChan->AddMsgs(Params, TrueExp, DataMsgType, Params, LTSFairnessType::Strong, LossDupFairnessType::None);
     S2CChan->AddMsg(AckMsgType, Params, LTSFairnessType::Strong, LossDupFairnessType::None);
 
     // Server structure

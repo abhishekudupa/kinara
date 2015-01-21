@@ -442,6 +442,10 @@ namespace ESMC {
                 delete CurUnsortedPS;
             } // End BFS
 
+            if (!ReachedTarget) {
+                return nullptr;
+            }
+
             // We now need to assemble a path from the predecessors
             auto CurTuple = TargetPSPerm;
             auto it = PredMap.find(CurTuple);
@@ -692,7 +696,7 @@ namespace ESMC {
                                         return (SatCmds.find(CmdID) != SatCmds.end());
                                     };
                             }
-                            // if not then, we're trivially satisfied
+                            // We wouldn't be here otherwise
                         } else {
                             if (!FChecker->IsDisabled(InstanceID)) {
                                 MatchPred =
@@ -722,9 +726,24 @@ namespace ESMC {
                             }
                         }
 
-                        CurEndOfPath = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
-                                                    InvSortPermAlongPath, MatchPred,
-                                                    CurElems, SCCNodes);
+                        auto NewEndOfPath = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
+                                                         InvSortPermAlongPath, MatchPred,
+                                                         CurElems, SCCNodes);
+                        if (NewEndOfPath == nullptr) {
+                            ostringstream sstr;
+                            sstr << "Could not connect the end of path to a state satisfying "
+                                 << "the next fairness requirement." << endl
+                                 << "Current end of path:" << endl;
+                            Checker->Printer->PrintState(CurEndOfPath, sstr);
+                            sstr << endl << "Fairness requirement:" << endl;
+                            sstr << FChecker->ToString() << " on instance id: "
+                                 << InstanceID << endl;
+                            sstr << "At: " << __FUNCTION__ << ", " << __FILE__ << ":"
+                                 << __LINE__ << endl;
+                            throw InternalError(sstr.str());
+                        } else {
+                            CurEndOfPath = NewEndOfPath;
+                        }
 
                         PathSoFar.insert(PathSoFar.end(), CurElems.begin(), CurElems.end());
                     }

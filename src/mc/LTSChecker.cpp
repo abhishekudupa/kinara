@@ -271,6 +271,13 @@ namespace ESMC {
                 }
             }
 
+            string FairnessChecker::ToString(u32 Verbosity) const
+            {
+                return
+                    ((string)"Fairness Checker for fairness set: " +
+                     FairSet->GetName() + " on EFSM " + FairSet->GetEFSM()->GetName());
+            }
+
             bool FairnessChecker::IsFair() const
             {
                 if (IsStrong) {
@@ -1140,117 +1147,145 @@ namespace ESMC {
             return true;
         }
 
-        inline vector<const ProductState*> LTSChecker::GetAcceptingSCCs()
+        inline vector<const ProductState*>
+        LTSChecker::GetAcceptingSCCs()
+        {
+            vector<const ProductState*> Retval;
+            u32 CurIndex = 0;
+            u32 CurSCCID = 0;
+
+            auto const& AllStates = ThePS->GetAllStates();
+            for (auto it = AllStates.begin(); it != AllStates.end(); ++it) {
+                auto const& PS = it->first;
+                if (PS->DFSNum == -1 && !PS->IsDeleted()) {
+                    auto&& CurSCCRoots = GetAcceptingSCCsFromInitState(PS, CurIndex, CurSCCID);
+                    Retval.insert(Retval.end(), CurSCCRoots.begin(), CurSCCRoots.end());
+                }
+            }
+            return Retval;
+        }
+
+        inline vector<const ProductState*>
+        LTSChecker::GetAcceptingSCCsFromInitState(const ProductState* InitState,
+                                                  u32& LowestUnusedIndex,
+                                                  u32& LowestUnusedSCCID)
         {
             // Find the SCCs on the fly
             stack<pair<const ProductState*, u32>> DFSStack;
             stack<ProductState*> SCCStack;
             vector<const ProductState*> Retval;
 
-            u32 CurIndex = 0;
-            u32 CurSCCID = 0;
+            u32 CurIndex = LowestUnusedIndex;
+            u32 CurSCCID = LowestUnusedSCCID;
 
-            for (auto InitState : ThePS->GetInitialStates()) {
-                if (InitState->DFSNum != -1 || InitState->IsDeleted()) {
-                    // already explored this initial state
+            InitState->DFSNum = CurIndex;
+            InitState->LowLink = CurIndex;
+            InitState->MarkOnStack();
+            DFSStack.push(make_pair(InitState, 0));
+            SCCStack.push(const_cast<ProductState*>(InitState));
+            ++CurIndex;
+
+            while (DFSStack.size() > 0) {
+                auto const& CurEntry = DFSStack.top();
+                auto CurState = const_cast<ProductState*>(CurEntry.first);
+                auto EdgeToExplore = CurEntry.second;
+                auto const& Edges = ThePS->GetEdges(CurState);
+
+                if (EdgeToExplore >= Edges.size()) {
+                    // We're done with this state
+                    DFSStack.pop();
+                    // Update my ancestor's lowlink
+                    // if I have an ancestor!
+                    if (DFSStack.size() > 0) {
+                        auto PrevState = DFSStack.top().first;
+                        PrevState->LowLink = min(PrevState->LowLink, CurState->LowLink);
+                    }
+                } else {
+                    ++DFSStack.top().second;
+                    // Push successor onto stack
+                    // if unexplored, else update lowlink
+                    auto it = Edges.begin();
+                    for (u32 i = 0; i < EdgeToExplore; ++i) {
+                        ++it;
+                    }
+                    auto CurEdge = *(it);
+                    auto NextState = const_cast<ProductState*>(CurEdge->GetTarget());
+                    if (NextState->DFSNum == -1 && (!(NextState->IsDeleted()))) {
+                        // unexplored and not deleted
+                        NextState->DFSNum = CurIndex;
+                        NextState->LowLink = CurIndex;
+                        NextState->MarkOnStack();
+                        DFSStack.push(make_pair(NextState, 0));
+                        SCCStack.push(NextState);
+                        ++CurIndex;
+                    } else if (NextState->IsOnStack()) {
+                        // explored
+                        CurState->LowLink = min(CurState->LowLink, NextState->DFSNum);
+                    }
                     continue;
                 }
 
-                InitState->DFSNum = CurIndex;
-                InitState->LowLink = CurIndex;
-                InitState->MarkOnStack();
-                DFSStack.push(make_pair(InitState, 0));
-                SCCStack.push(InitState);
-                ++CurIndex;
-
-                while (DFSStack.size() > 0) {
-                    auto const& CurEntry = DFSStack.top();
-                    auto CurState = const_cast<ProductState*>(CurEntry.first);
-                    auto EdgeToExplore = CurEntry.second;
-                    auto const& Edges = ThePS->GetEdges(CurState);
-
-                    if (EdgeToExplore >= Edges.size()) {
-                        // We're done with this state
-                        DFSStack.pop();
-                        // Update my ancestor's lowlink
-                        // if I have an ancestor!
-                        if (DFSStack.size() > 0) {
-                            auto PrevState = DFSStack.top().first;
-                            PrevState->LowLink = min(PrevState->LowLink, CurState->LowLink);
+                // We only get here if we've popped a state
+                // from the DFS stack.
+                if (CurState->LowLink == CurState->DFSNum) {
+                    u32 NumStatesInSCC = 0;
+                    ProductState* SCCState = nullptr;
+                    vector<ProductState*> SCCStateVec;
+                    bool FoundAccepting = false;
+                    do {
+                        SCCState = SCCStack.top();
+                        SCCState->MarkInSCC(CurSCCID);
+                        SCCState->MarkNotOnStack();
+                        SCCStack.pop();
+                        if (SCCState->IsAccepting()) {
+                            FoundAccepting = true;
                         }
-                    } else {
-                        ++DFSStack.top().second;
-                        // Push successor onto stack
-                        // if unexplored, else update lowlink
-                        auto it = Edges.begin();
-                        for (u32 i = 0; i < EdgeToExplore; ++i) {
-                            ++it;
-                        }
-                        auto CurEdge = *(it);
-                        auto NextState = const_cast<ProductState*>(CurEdge->GetTarget());
-                        if (NextState->DFSNum == -1 && (!(NextState->IsDeleted()))) {
-                            // unexplored and not deleted
-                            NextState->DFSNum = CurIndex;
-                            NextState->LowLink = CurIndex;
-                            NextState->MarkOnStack();
-                            DFSStack.push(make_pair(NextState, 0));
-                            SCCStack.push(NextState);
-                            ++CurIndex;
-                        } else if (NextState->IsOnStack()) {
-                            // explored
-                            CurState->LowLink = min(CurState->LowLink, NextState->DFSNum);
-                        }
-                        continue;
-                    }
+                        ++NumStatesInSCC;
+                        SCCStateVec.push_back(SCCState);
+                    } while (SCCState != CurState);
 
-                    // We only get here if we've popped a state
-                    // from the DFS stack.
-                    if (CurState->LowLink == CurState->DFSNum) {
-                        u32 NumStatesInSCC = 0;
-                        ProductState* SCCState = nullptr;
-                        vector<ProductState*> SCCStateVec;
-                        bool FoundAccepting = false;
-                        do {
-                            SCCState = SCCStack.top();
-                            SCCState->MarkInSCC(CurSCCID);
-                            SCCState->MarkNotOnStack();
-                            SCCStack.pop();
-                            if (SCCState->IsAccepting()) {
-                                FoundAccepting = true;
+                    if (NumStatesInSCC == 1) {
+                        auto const& Edges = ThePS->GetEdges(SCCState);
+                        bool SelfLoop = false;
+                        for (auto const& Edge : Edges) {
+                            if (Edge->GetTarget() == SCCState) {
+                                SelfLoop = true;
+                                break;
                             }
-                            ++NumStatesInSCC;
-                            SCCStateVec.push_back(SCCState);
-                        } while (SCCState != CurState);
-
-                        if (NumStatesInSCC == 1) {
-                            auto const& Edges = ThePS->GetEdges(SCCState);
-                            bool SelfLoop = false;
-                            for (auto const& Edge : Edges) {
-                                if (Edge->GetTarget() == SCCState) {
-                                    SelfLoop = true;
-                                    // TODO Maybe put a break
-                                }
-                            }
-                            if (!SelfLoop) {
-                                SCCState->MarkNotInSCC();
-                            } else {
-                                Retval.push_back(CurState);
-                                ++CurSCCID;
-                            }
-                        } else if (!FoundAccepting) {
-                            // Unmark all the SCCs
-                            for (auto SCCState : SCCStateVec) {
-                                SCCState->MarkNotInSCC();
-                            }
+                        }
+                        if (!SelfLoop) {
+                            SCCState->MarkNotInSCC();
                         } else {
-                            // Non-singular AND accepting
-                            // Send this for further processing
                             Retval.push_back(CurState);
                             ++CurSCCID;
                         }
+                    } else if (!FoundAccepting) {
+                        // Unmark all the SCCs
+                        for (auto SCCState : SCCStateVec) {
+                            SCCState->MarkNotInSCC();
+                        }
+                    } else {
+                        // Non-singular AND accepting
+                        // Send this for further processing
+
+                        ESMC_LOG_FULL("Checker.Fairness",
+                                      Out_ << "Accepting SCC " << CurSCCID << ":" << endl;
+                                      for (auto const& SCCState : SCCStateVec) {
+                                          Out_ << "--------------------------------" << endl;
+                                          Printer->PrintState(SCCState, Out_);
+                                          Out_ << "--------------------------------" << endl;
+                                      }
+                                      Out_ << "End of accepting SCC" << endl;
+                                      );
+
+                        Retval.push_back(CurState);
+                        ++CurSCCID;
                     }
                 }
             }
+
+            LowestUnusedSCCID = CurSCCID;
+            LowestUnusedIndex = CurIndex;
             return Retval;
         }
 
@@ -1291,65 +1326,44 @@ namespace ESMC {
             ConstructProduct(Monitor);
 
             bool FixPoint = false;
-            set<const ProductState*> AllUnfairStates;
+            unordered_set<const ProductState*> AllUnfairStates;
 
-            while (!FixPoint) {
+            do {
                 FixPoint = true;
-
                 ESMC_LOG_MIN_SHORT(
                                    Out_ << "Getting accepting SCCs... " << endl;
                                    );
 
+                ThePS->ClearSCCMarkings();
+                for (auto const& UnfairState : AllUnfairStates) {
+                    UnfairState->MarkDeleted();
+                }
                 auto&& SCCRoots = GetAcceptingSCCs();
 
                 ESMC_LOG_MIN_SHORT(
                                    Out_ << "Found " << SCCRoots.size()
                                         << " accepting SCCs" << endl;
-                                   );
-
-                // Check if each of the SCCs are fair
-                vector<const ProductState*> UnfairStates;
-
-                ESMC_LOG_MIN_SHORT(
                                    if (SCCRoots.size() > 0) {
                                        Out_ << "Checking Fairness of SCCs..." << endl;
                                    } else {
                                        Out_ << "No accepting SCCs!" << endl;
                                    });
 
+                u32 SCCNum = 0;
                 for (auto SCCRoot : SCCRoots) {
-                    UnfairStates.clear();
+                    // Check if each of the SCCs are fair
+                    vector<const ProductState*> UnfairStates;
                     auto IsFair = CheckSCCFairness(SCCRoot, UnfairStates);
+
                     if (!IsFair && UnfairStates.size() > 0) {
-                        AllUnfairStates.insert(UnfairStates.begin(),
-                                               UnfairStates.end());
-                        // Not fair, due to a strong fairness
-                        FixPoint = false;
-                        // Mark all states as being unexplored
-                        ThePS->ClearAllMarkings();
-
                         ESMC_LOG_MIN_SHORT(
-                                           Out_ << "Deleting unfair states..." << endl;
+                                           Out_ << "SCC " << SCCNum << " is unfair." << endl;
                                            );
-
-                        for (auto UnfairState : AllUnfairStates) {
-
-                            ESMC_LOG_FULL(
-                                          "Checker.Fairness",
-                                          cout << "Deleting Unfair State:" << endl;
-                                          Printer->PrintState(UnfairState, Out_);
-                                          );
-                            UnfairState->MarkDeleted();
-                        }
-                        // Redo SCCs
-                        // break;
+                        AllUnfairStates.insert(UnfairStates.begin(), UnfairStates.end());
+                        FixPoint = false;
                     } else if (!IsFair) {
-                        // Not fair due to weak fairness, can't help
-                        // Check if some other SCC is fair
                         continue;
                     } else {
-                        // Fair, turn this into a counterexample
-
                         ESMC_LOG_MIN_SHORT(
                                            Out_ << "Found fair accepting SCC" << endl;
                                            );
@@ -1357,8 +1371,9 @@ namespace ESMC {
                         auto Trace = TraceBase::MakeLivenessViolation(SCCRoot, this);
                         return Trace;
                     }
+                    ++SCCNum;
                 }
-            }
+            } while (!FixPoint);
 
             ESMC_LOG_MIN_SHORT(
                                Out_ << "No liveness violations found!" << endl;

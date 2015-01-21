@@ -279,7 +279,7 @@ namespace ESMC {
         class LTSTransitionOutput : public LTSTransitionIOBase
         {
         private:
-            set<string> CompOfFairnessSets;
+            set<LTSFairObjRef> FairnessObjectsSatisfied;
 
         public:
             LTSTransitionOutput(EFSMBase* TheEFSM,
