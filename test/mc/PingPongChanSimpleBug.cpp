@@ -105,7 +105,6 @@ int main()
     Server->AddState("SendState");
     Server->FreezeStates();
 
-    Server->AddVariable("LastMsg", RangeType);
     Server->AddVariable("LastReq", ClientIDType);
 
     Server->AddInputMsgs(Params, TrueExp, DataMsgTypeP, Params);
@@ -114,16 +113,13 @@ int main()
     Server->FreezeVars();
 
     vector<LTSAssignRef> ServerInputUpdates;
-    auto LastMsgExp = TheLTS->MakeVar("LastMsg", RangeType);
     auto LastReqExp = TheLTS->MakeVar("LastReq", ClientIDType);
 
     auto DataMsgExp = TheLTS->MakeVar("InMsg", DataMsgTypeP);
     auto FAType = TheLTS->MakeFieldAccessType();
     auto DataAccFieldExp = TheLTS->MakeVar("Data", FAType);
     auto DataAccExp = TheLTS->MakeOp(LTSOps::OpField, DataMsgExp, DataAccFieldExp);
-    ServerInputUpdates.push_back(new LTSAssignSimple(LastMsgExp, DataAccExp));
     ServerInputUpdates.push_back(new LTSAssignSimple(LastReqExp, ParamExp));
-
 
     Server->AddInputTransitions(Params, TrueExp, "InitState", "SendState",
                                 TrueExp, ServerInputUpdates, "InMsg",
@@ -133,9 +129,7 @@ int main()
     auto AckMsgExp = TheLTS->MakeVar("OutMsg", AckMsgType);
     auto AckAccFieldExp = TheLTS->MakeVar("Data", FAType);
     auto AckAccExp = TheLTS->MakeOp(LTSOps::OpField, AckMsgExp, AckAccFieldExp);
-    ServerOutputUpdates.push_back(new LTSAssignSimple(AckAccExp, LastMsgExp));
     ServerOutputUpdates.push_back(new LTSAssignSimple(LastReqExp, TheLTS->MakeVal("clear", ClientIDType)));
-    ServerOutputUpdates.push_back(new LTSAssignSimple(LastMsgExp, TheLTS->MakeVal("clear", RangeType)));
     auto ServerGuard = TheLTS->MakeOp(LTSOps::OpEQ, LastReqExp, ParamExp);
 
     Server->AddOutputTransitions(Params, TrueExp, "SendState", "InitState", ServerGuard,
@@ -146,13 +140,10 @@ int main()
     // Client structure
     ClientEFSM->AddState("InitState");
     ClientEFSM->AddState("RecvState");
-    ClientEFSM->AddState("DecideState");
-    ClientEFSM->AddState("ErrorState", false, false, false, true);
 
     ClientEFSM->FreezeStates();
 
     ClientEFSM->AddVariable("Count", RangeType);
-    ClientEFSM->AddVariable("LastMsg", RangeType);
     ClientEFSM->AddOutputMsg(DataMsgType, Params);
     ClientEFSM->AddInputMsg(AckMsgTypeP, Params);
 
@@ -180,17 +171,8 @@ int main()
     auto RecvMsgAccExp = TheLTS->MakeOp(LTSOps::OpField, RecvMsgExp, RecvMsgAccFieldExp);
 
     vector<LTSAssignRef> ClientInputUpdates;
-    ClientInputUpdates.push_back(new LTSAssignSimple(LastMsgExp, RecvMsgAccExp));
-    ClientEFSM->AddInputTransition("RecvState", "DecideState", TrueExp, ClientInputUpdates, "InMsg", AckMsgTypeP, Params);
-
-    vector<LTSAssignRef> ClientDecideUpdates;
-    ClientDecideUpdates.push_back(new LTSAssignSimple(CountExp, CountIncExp));
-    ClientDecideUpdates.push_back(new LTSAssignSimple(LastMsgExp, TheLTS->MakeVal("clear", RangeType)));
-    auto DecideGuard = TheLTS->MakeOp(LTSOps::OpEQ, LastMsgExp, CountExp);
-    ClientEFSM->AddInternalTransition("DecideState", "InitState", DecideGuard, ClientDecideUpdates);
-
-    auto ErrorGuard = TheLTS->MakeOp(LTSOps::OpNOT, DecideGuard);
-    ClientEFSM->AddInternalTransition("DecideState", "ErrorState", ErrorGuard, vector<LTSAssignRef>());
+    ClientInputUpdates.push_back(new LTSAssignSimple(CountExp, CountIncExp));
+    ClientEFSM->AddInputTransition("RecvState", "InitState", TrueExp, ClientInputUpdates, "InMsg", AckMsgTypeP, Params);
 
     cout << C2SChan->ToString() << endl;
     cout << S2CChan->ToString() << endl;
@@ -211,12 +193,9 @@ int main()
     auto ServerStateVar = TheLTS->MakeVar("Server", ServerType);
     auto ServerDotState = TheLTS->MakeOp(LTSOps::OpField, ServerStateVar,
                                          TheLTS->MakeVar("state", FAType));
-    auto ServerDotLast = TheLTS->MakeOp(LTSOps::OpField, ServerStateVar,
-                                         TheLTS->MakeVar("LastMsg", FAType));
     auto ServerDotReq = TheLTS->MakeOp(LTSOps::OpField, ServerStateVar,
                                        TheLTS->MakeVar("LastReq", FAType));
     InitUpdates.push_back(new LTSAssignSimple(ServerDotState, TheLTS->MakeVal("InitState", ServerDotState->GetType())));
-    InitUpdates.push_back(new LTSAssignSimple(ServerDotLast, TheLTS->MakeVal("clear", ServerDotLast->GetType())));
     InitUpdates.push_back(new LTSAssignSimple(ServerDotReq, TheLTS->MakeVal("clear", ServerDotReq->GetType())));
 
 
@@ -227,13 +206,10 @@ int main()
 
     auto ClientDotState = TheLTS->MakeOp(LTSOps::OpField, ClientStateVar,
                                          TheLTS->MakeVar("state", FAType));
-    auto ClientDotLast = TheLTS->MakeOp(LTSOps::OpField, ClientStateVar,
-                                         TheLTS->MakeVar("LastMsg", FAType));
     auto ClientDotCount = TheLTS->MakeOp(LTSOps::OpField, ClientStateVar,
                                          TheLTS->MakeVar("Count", FAType));
 
     InitUpdates.push_back(new LTSAssignParam(ClientUpdParams, TrueExp, ClientDotState, TheLTS->MakeVal("InitState", ClientDotState->GetType())));
-    InitUpdates.push_back(new LTSAssignParam(ClientUpdParams, TrueExp, ClientDotLast, TheLTS->MakeVal("clear", ClientDotLast->GetType())));
     InitUpdates.push_back(new LTSAssignParam(ClientUpdParams, TrueExp, ClientDotCount, TheLTS->MakeVal("0", ClientDotCount->GetType())));
 
     InitStates.push_back(new LTSInitState(vector<ExpT>(), TrueExp, InitUpdates));

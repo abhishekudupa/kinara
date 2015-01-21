@@ -49,7 +49,6 @@ namespace ESMC {
         unordered_set<string> LogManager::EnabledLogOptions;
         ostream* LogManager::LogStream = nullptr;
         bool LogManager::IsInitialized = false;
-        bool LogManager::AtExitHandlerInstalled = false;
         bool LogManager::NoLoggingEnabled = false;
 
         const map<string, string> LogManager::LogOptionDescriptions =
@@ -185,15 +184,6 @@ namespace ESMC {
                 LogStream = LocalLogStream;
             }
             IsInitialized = true;
-
-            if (!AtExitHandlerInstalled) {
-                auto Res = atexit(LogManager::Finalize);
-                if (Res != 0) {
-                    throw ESMCError((string)"Could not register atexit() handler for " +
-                                    "the ESMC Library!");
-                }
-                AtExitHandlerInstalled = true;
-            }
         }
 
         void LogManager::Finalize()

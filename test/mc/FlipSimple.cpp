@@ -40,12 +40,14 @@
 // Test for multiple indices of same symmetric type
 
 #include "../../src/uflts/LabelledTS.hpp"
+#include "../../src/mc/Trace.hpp"
 #include "../../src/uflts/LTSEFSM.hpp"
 #include "../../src/uflts/LTSChannelEFSM.hpp"
 #include "../../src/uflts/LTSAssign.hpp"
 #include "../../src/uflts/LTSTransitions.hpp"
 #include "../../src/mc/LTSChecker.hpp"
 #include "../../src/mc/OmegaAutomaton.hpp"
+#include "../../src/utils/LogManager.hpp"
 
 using namespace ESMC;
 using namespace LTS;
@@ -55,8 +57,11 @@ using namespace MC;
 int main()
 {
     auto TheLTS = new LabelledTS();
+    ESMC::Logging::LogManager::Initialize();
+    ESMC::Logging::LogManager::EnableLogOption("Checker.AQSDetailed");
+    ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
 
-    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 5);
+    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 2);
     auto BoolType = TheLTS->MakeBoolType();
     auto ParamExp = TheLTS->MakeVar("ClientID", ClientIDType);
     vector<ExpT> Params = { ParamExp };
@@ -64,7 +69,7 @@ int main()
 
     // Add the message types
     vector<pair<string, TypeRef>> MsgFields;
-    auto RangeType = TheLTS->MakeRangeType(0, 9);
+    auto RangeType = TheLTS->MakeRangeType(0, 1);
     MsgFields.push_back(make_pair("Data", RangeType));
 
     vector<ExpT> MsgParams = { ParamExp };
@@ -190,7 +195,13 @@ int main()
     Monitor->Freeze();
 
     Checker->BuildAQS();
-    Checker->CheckLiveness("GFClear");
+    auto Trace = Checker->CheckLiveness("GFClear");
+    if (Trace != nullptr) {
+        cout << Trace->ToString() << endl;
+        delete Trace;
+    }
+
+    // Checker->CheckLiveness("GFClear");
     delete Checker;
 }
 

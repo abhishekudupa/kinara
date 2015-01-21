@@ -50,6 +50,7 @@
 #include "../../src/mc/LTSChecker.hpp"
 #include "../../src/mc/OmegaAutomaton.hpp"
 #include "../../src/mc/Trace.hpp"
+#include "../../src/utils/LogManager.hpp"
 
 using namespace ESMC;
 using namespace LTS;
@@ -63,6 +64,7 @@ const u32 NumDirs = 1;
 
 int main()
 {
+    Logging::LogManager::Initialize();
     auto TheLTS = new LabelledTS();
 
     auto TrueExp = TheLTS->MakeTrue();
@@ -225,17 +227,32 @@ int main()
     TheLTS->FreezeMsgs();
 
     // The request channel from cache to directory
-    auto ReqChannelEFSM = TheLTS->MakeChannel("ReqChannel",
-                                              { CacheParam, DirParam, AddressParam },
+    // auto ReqChannelEFSM = TheLTS->MakeChannel("ReqChannel",
+    //                                           { CacheParam, DirParam, AddressParam },
+    //                                           TrueExp, NumCaches, false, false, false,
+    //                                           false, LTSFairnessType::None);
+
+    // ReqChannelEFSM->AddMsg(GetXMsgType, { CacheParam, DirParam, AddressParam },
+    //                        LTSFairnessType::Strong);
+    // ReqChannelEFSM->AddMsg(GetSMsgType, { CacheParam, DirParam, AddressParam },
+    //                        LTSFairnessType::Strong);
+    // ReqChannelEFSM->AddMsg(WBMsgType, { CacheParam, DirParam, AddressParam },
+    //                        LTSFairnessType::Strong);
+
+    auto ReqChannelEFSM = TheLTS->MakeChannel("ReqChannel", { DirParam, AddressParam },
                                               TrueExp, NumCaches, false, false, false,
                                               false, LTSFairnessType::None);
+    ReqChannelEFSM->AddMsgs({ CacheParam }, TrueExp, GetXMsgType,
+                            { CacheParam, DirParam, AddressParam },
+                            LTSFairnessType::None, LossDupFairnessType::None);
 
-    ReqChannelEFSM->AddMsg(GetXMsgType, { CacheParam, DirParam, AddressParam },
-                           LTSFairnessType::Strong);
-    ReqChannelEFSM->AddMsg(GetSMsgType, { CacheParam, DirParam, AddressParam },
-                           LTSFairnessType::Strong);
-    ReqChannelEFSM->AddMsg(WBMsgType, { CacheParam, DirParam, AddressParam },
-                           LTSFairnessType::Strong);
+    ReqChannelEFSM->AddMsgs({ CacheParam }, TrueExp, GetSMsgType,
+                            { CacheParam, DirParam, AddressParam },
+                            LTSFairnessType::None, LossDupFairnessType::None);
+
+    ReqChannelEFSM->AddMsgs({ CacheParam }, TrueExp, WBMsgType,
+                            { CacheParam, DirParam, AddressParam },
+                            LTSFairnessType::None, LossDupFairnessType::None);
 
     ReqChannelEFSM->Freeze();
 

@@ -19,7 +19,7 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/sparsehash
 
 PROJECT_EXECUTABLES ?= PingPongChan Flip FlipSimple PingPongChanBug ABP \
 	ABP_generated MSI Fischer LeaderElection Dijkstra4 MSI_no_busy_data_no_pending_unblock_e \
-	MSIC2D PingPongChanSynth MSISynth ElevatorIncomplete Dijkstra4Synth ElevatorIncomplete2 \
+	MSIC2D PingPongChanSimpleBug PingPongChanSynth MSISynth ElevatorIncomplete Dijkstra4Synth ElevatorIncomplete2 \
 	MSIC2DSynth MSIC2DSynth2Missing MSIC2DSynth4Missing MSIC2DSynth6Missing \
 	MSIC2DSynth2MissingNoState MSIC2DSynth4MissingNoState MSIC2DSynth6MissingNoState
 #	WeakestPreconditionTest
@@ -33,7 +33,7 @@ libz3_MAKE_DIR=$(PROJECT_ROOT)/../../thirdparty/z3/
 libesmc_FULL_PATH=$(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)/libesmc.so
 libesmc_MAKE_DIR=$(PROJECT_ROOT)/../../
 
-$(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_LINK_LIBS_COMMON=z3 boost_system rt boost_program_options))
+$(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_LINK_LIBS_COMMON=z3 boost_system rt boost_program_options boost_iostreams boost_bzip2))
 $(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_LINK_LIBS_LTO=esmc))
 $(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_OBJS=$(exec).o))
 $(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_LIB_PATHS=$(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX) \

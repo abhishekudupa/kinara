@@ -89,7 +89,6 @@ namespace ESMC {
         {
             auto TheLTS = Checker->TheLTS;
             auto TheCanonicalizer = Checker->TheCanonicalizer;
-            // auto Printer = Checker->Printer;
 
             auto const& GuardedCommands = TheLTS->GetGuardedCmds();
             auto CurUnwoundState = PermPath->GetOrigin()->Clone();
@@ -109,6 +108,7 @@ namespace ESMC {
 
                 ESMC_LOG_FULL(
                               "Trace.Generation",
+                              auto Printer = Checker->Printer;
                               Out_ << "Permuted State:" << endl;
                               Out_ << "-------------------------------------------" << endl;
                               Printer->PrintState(NextPermState, Out_);
@@ -122,6 +122,7 @@ namespace ESMC {
 
                 ESMC_LOG_FULL(
                               "Trace.Generation",
+                              auto Printer = Checker->Printer;
                               Out_ << "Unwound State:" << endl;
                               Out_ << "-------------------------------------------" << endl;
                               Printer->PrintState(NextUnwoundState, Out_);

@@ -38,11 +38,40 @@
 #if !defined ESMC_ESMC_LIB_HPP_
 #define ESMC_ESMC_LIB_HPP_
 
+#include <set>
+
+#include "../common/ESMCFwdDecls.hpp"
+
 namespace ESMC {
 
     class ESMCLibOptionsT
     {
+    public:
+        string LogFileName;
+        bool CompressLog;
+        set<string> LoggingOptions;
 
+        ESMCLibOptionsT();
+        virtual ~ESMCLibOptionsT();
+
+        ESMCLibOptionsT(const ESMCLibOptionsT& Other);
+        ESMCLibOptionsT& operator = (const ESMCLibOptionsT& Other);
+    };
+
+    class ESMCLib
+    {
+    private:
+        static ESMCLibOptionsT ESMCLibOptions;
+        static bool AtExitHandlerInstalled;
+
+        ESMCLib();
+        ESMCLib(const ESMCLib& Other) = delete;
+        ESMCLib(ESMCLib&& Other) = delete;
+
+    public:
+        static void Initialize();
+        static void Initialize(const ESMCLibOptionsT& LibOptions);
+        static void Finalize();
     };
 
 } /* end namespace ESMC */

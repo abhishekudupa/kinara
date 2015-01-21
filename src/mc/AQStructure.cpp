@@ -697,6 +697,11 @@ namespace ESMC {
             return InitialStates;
         }
 
+        const ProductStateHashSetT& ProductStructure::GetAllStates() const
+        {
+            return PSHashSet;
+        }
+
         const ProductEdgeSetT& ProductStructure::GetEdges(ProductState* State) const
         {
             auto it = PSHashSet.find(State);

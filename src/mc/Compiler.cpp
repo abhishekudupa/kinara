@@ -728,7 +728,7 @@ namespace ESMC {
             EvaluateSubInterps(StateVector);
             if (SubEvals[0] == ExceptionValue) {
                 return ExceptionValue;
-            } else if (SubEvals[0] == 0) {
+            } else if (SubEvals[0] != 0) {
                 return SubEvals[1];
             } else {
                 return SubEvals[2];

@@ -485,6 +485,7 @@ namespace ESMC {
             BuchiAutomatonBase* GetMonitor() const;
 
             const vector<ProductState*>& GetInitialStates() const;
+            const ProductStateHashSetT& GetAllStates() const;
             const ProductEdgeSetT& GetEdges(ProductState* State) const;
 
             u32 GetNumStates() const;

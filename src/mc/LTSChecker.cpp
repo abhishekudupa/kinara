@@ -214,7 +214,7 @@ namespace ESMC {
                                    << FairSet->GetEFSM()->GetName() << " with tracked index "
                                    << TrackedIndex << endl;
                               Out_ << "Considering state:" << endl;
-                              Checker->Printer->PrintState(State, _Out);
+                              Checker->Printer->PrintState(State, Out_);
                               Out_ << endl;
                               );
 
@@ -730,7 +730,7 @@ namespace ESMC {
                         ESMC_LOG_SHORT(
                                        "Checker.AQSDetailed",
                                        Out_ << "Got Next State (Uncanonicalized), by firing "
-                                            << "guarded command:" endl << Cmd->ToString() << endl;
+                                            << "guarded command:" << endl << Cmd->ToString() << endl;
                                        Out_ << "--------------------------------------------------------"
                                             << endl;
                                        Printer->PrintState(NextState, Out_);
@@ -889,7 +889,8 @@ namespace ESMC {
 
             ESMC_LOG_MIN_SHORT(
                                Out_ << "AQS Built, contains " << AQS->GetNumStates()
-                                    << " and " << AQS->GetNumEdges() << " edges. ";
+                                    << " states and " << AQS->GetNumEdges() << " edges. "
+                                    << endl;
                                if (ErrorStates.size() > 0) {
                                    Out_ << "AQS contains one or more errors, and may "
                                         << "not be complete." << endl;
@@ -1300,6 +1301,12 @@ namespace ESMC {
                                    );
 
                 auto&& SCCRoots = GetAcceptingSCCs();
+
+                ESMC_LOG_MIN_SHORT(
+                                   Out_ << "Found " << SCCRoots.size()
+                                        << " accepting SCCs" << endl;
+                                   );
+
                 // Check if each of the SCCs are fair
                 vector<const ProductState*> UnfairStates;
 
@@ -1326,10 +1333,16 @@ namespace ESMC {
                                            );
 
                         for (auto UnfairState : AllUnfairStates) {
+
+                            ESMC_LOG_FULL(
+                                          "Checker.Fairness",
+                                          cout << "Deleting Unfair State:" << endl;
+                                          Printer->PrintState(UnfairState, Out_);
+                                          );
                             UnfairState->MarkDeleted();
                         }
                         // Redo SCCs
-                        break;
+                        // break;
                     } else if (!IsFair) {
                         // Not fair due to weak fairness, can't help
                         // Check if some other SCC is fair

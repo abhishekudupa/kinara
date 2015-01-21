@@ -35,7 +35,74 @@
 
 // Code:
 
+#include <stdlib.h>
+#include <string.h>
 
+#include "../utils/LogManager.hpp"
+
+#include "ESMCLib.hpp"
+
+namespace ESMC {
+
+    ESMCLibOptionsT::ESMCLibOptionsT()
+        : LogFileName(""), CompressLog(false),
+          LoggingOptions()
+    {
+        // Nothing here
+    }
+
+    ESMCLibOptionsT::~ESMCLibOptionsT()
+    {
+        // Nothing here
+    }
+
+    ESMCLibOptionsT::ESMCLibOptionsT(const ESMCLibOptionsT& Other)
+    {
+        memcpy(this, &Other, sizeof(ESMCLibOptionsT));
+    }
+
+    ESMCLibOptionsT& ESMCLibOptionsT::operator = (const ESMCLibOptionsT& Other)
+    {
+        if (&Other == this) {
+            return *this;
+        }
+
+        memcpy(this, &Other, sizeof(ESMCLibOptionsT));
+        return *this;
+    }
+
+    ESMCLibOptionsT ESMCLib::ESMCLibOptions;
+    bool ESMCLib::AtExitHandlerInstalled = false;
+
+    ESMCLib::ESMCLib()
+    {
+        // Nothing here
+    }
+
+    void ESMCLib::Initialize()
+    {
+        ESMCLibOptionsT EmptyOptions;
+        Initialize(EmptyOptions);
+    }
+
+    void ESMCLib::Initialize(const ESMCLibOptionsT& LibOptions)
+    {
+        ESMCLibOptions = LibOptions;
+        Logging::LogManager::Initialize(ESMCLibOptions.LogFileName, ESMCLibOptions.CompressLog);
+        Logging::LogManager::EnableLogOptions(ESMCLibOptions.LoggingOptions.begin(),
+                                              ESMCLibOptions.LoggingOptions.end());
+        if (!AtExitHandlerInstalled) {
+            atexit(ESMCLib::Finalize);
+        }
+    }
+
+    void ESMCLib::Finalize()
+    {
+        Logging::LogManager::Finalize();
+    }
+
+
+} /* end namespace ESMC */
 
 //
 // ESMCLib.cpp ends here

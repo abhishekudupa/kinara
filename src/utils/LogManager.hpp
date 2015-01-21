@@ -54,7 +54,6 @@ namespace ESMC {
             static unordered_set<string> EnabledLogOptions;
             static ostream* LogStream;
             static bool IsInitialized;
-            static bool AtExitHandlerInstalled;
             static const map<string, string> LogOptionDescriptions;
             static bool NoLoggingEnabled;
 
@@ -108,7 +107,7 @@ namespace ESMC {
 #define ESMC_LOG_FULL(TAG_, CODE_) \
     ESMC_LOG_CODE(if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_)) { \
         ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
-        Out_ << "------------- [" << TAG << "], at " << __FUNCTION__ << ", "\
+        Out_ << "------------- [" << TAG_ << "], at " << __FUNCTION__ << ", "\
              << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
         CODE_ \
         Out_ << "-----------------------------------------------------------" \
@@ -119,6 +118,7 @@ namespace ESMC {
 #define ESMC_LOG_SHORT(TAG_, CODE_) \
     ESMC_LOG_CODE(\
     if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_)) {\
+        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();  \
         CODE_ \
         ESMC::Logging::LogManager::GetLogStream().flush(); \
     })
@@ -127,7 +127,7 @@ namespace ESMC {
     ESMC_LOG_CODE(\
     if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_) && (COND_)) {\
         ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
-        Out_ << "------------- [" << TAG << "], at " << __FUNCTION__ << ", "\
+        Out_ << "------------- [" << TAG_ << "], at " << __FUNCTION__ << ", "\
              << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
         CODE_ \
         Out_ << "-----------------------------------------------------------" \

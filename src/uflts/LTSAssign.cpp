@@ -210,7 +210,8 @@ namespace ESMC {
             // make sure that it does not refer to any of the params
             if (LHS->GetType()->Is<SymmetricType>()) {
                 if (RHS->Is<Exprs::ConstExpression>()) {
-                    if (RHS->SAs<Exprs::ConstExpression>()->GetConstValue() != "clear") {
+                    if (RHS->SAs<Exprs::ConstExpression>()->GetConstValue() !=
+                        LHS->GetType()->GetClearValue()) {
                         throw ESMCError((string)"Cannot make a parametric assignment " +
                                         "to an arbitrary constant of a symmetric type");
                     }

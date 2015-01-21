@@ -52,6 +52,7 @@
 #include "../../src/mc/LTSChecker.hpp"
 #include "../../src/mc/OmegaAutomaton.hpp"
 #include "../../src/mc/Trace.hpp"
+#include "../../src/utils/LogManager.hpp"
 
 using namespace ESMC;
 using namespace LTS;
@@ -61,6 +62,8 @@ using namespace MC;
 int main()
 {
     auto TheLTS = new LabelledTS();
+    Logging::LogManager::Initialize();
+    Logging::LogManager::EnableLogOption("Checker.AQSDetailed");
 
     auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 2);
     auto ParamExp = TheLTS->MakeVar("ClientID", ClientIDType);

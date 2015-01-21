@@ -1009,8 +1009,8 @@ namespace ESMC {
 
         ExpT LabelledTS::MakeVal(const string& ValString, const TypeRef& Type)
         {
-            if (ValString == "clear") {
-                return Mgr->MakeVal(ValString, Type);
+            if (ValString == "clear" && Type->Is<ScalarType>()) {
+                return Mgr->MakeVal(Type->GetClearValue(), Type);
             } else {
                 if (Type->Is<SymmetricType>()) {
                     throw ESMCError((string)"Only constant of a symmetric type that " +

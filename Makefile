@@ -25,6 +25,7 @@ PROJECT_MODULES= \
 	decls \
 	expr \
 	hash \
+	lib \
 	main \
 	mc \
 	symexec \
@@ -59,6 +60,7 @@ PROJECT_LIBS=esmc
 libesmc_OBJS= \
 	AQStructure.o \
 	Compiler.o \
+	ESMCLib.o \
 	IndexSet.o \
 	LabelledTS.o \
 	LogManager.o \

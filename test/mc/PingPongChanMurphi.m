@@ -1,6 +1,6 @@
 CONST
-    NUMCLIENTS : 4;
-    NUMVALUES : 10;
+    NUMCLIENTS : 2;
+    NUMVALUES : 2;
     C2SCHANSIZE : 2;
     S2CCHANSIZE : 1;
 
@@ -8,7 +8,7 @@ TYPE
     ClientIDType : ScalarSet(NUMCLIENTS);
     ValueType : 0..NUMVALUES-1;
     MType : enum { DataMsg, AckMsg };
-    MsgType : record 
+    MsgType : record
         mtype : MType;
         client : ClientIDType;
         value : ValueType;
@@ -18,10 +18,10 @@ TYPE
     ServerStateType : enum { SInit, SSend };
 
 VAR
-    C2SChan : record 
+    C2SChan : record
         MsgBuffer : multiset[C2SCHANSIZE] of MsgType;
     end;
-    
+
     S2CChan : array [ClientIDType] of record
         MsgCount : 0..S2CCHANSIZE;
         MsgBuffer : array[0..S2CCHANSIZE-1] of MsgType
@@ -33,7 +33,7 @@ VAR
         State : ClientStateType;
     end;
 
-    Server : record 
+    Server : record
         LastMsg : ValueType;
         LastReq : ClientIDType;
         State : ServerStateType;
@@ -44,7 +44,7 @@ begin
     if (S2CCHANSIZE = 1 | S2CChan[id].MsgCount = 1) then
         S2CChan[id].MsgCount := S2CChan[id].MsgCount - 1;
         undefine S2CChan[id].MsgBuffer[0];
-    else 
+    else
         for i := 0 to S2CChan[id].MsgCount-2 do
             S2CChan[id].MsgBuffer[i] := S2CChan[id].MsgBuffer[i+1];
         endfor;
@@ -55,7 +55,7 @@ end;
 
 Ruleset clientid : ClientIDType do
 Rule "Send Message"
-    (Client[clientid].State = CInit) & 
+    (Client[clientid].State = CInit) &
     (Multisetcount(i:C2SChan.MsgBuffer, true) < C2SCHANSIZE) ==>
 var
     OutMsg : MsgType;

@@ -51,6 +51,7 @@
 #include "../../src/mc/OmegaAutomaton.hpp"
 #include "../../src/mc/Trace.hpp"
 #include "../../src/synth/Solver.hpp"
+#include "../../src/utils/LogManager.hpp"
 
 using namespace ESMC;
 using namespace LTS;
@@ -65,6 +66,7 @@ const u32 NumDirs = 1;
 
 int main()
 {
+    ESMC::Logging::LogManager::Initialize();
     auto TheLTS = new LabelledTS();
 
     auto TrueExp = TheLTS->MakeTrue();
