@@ -98,7 +98,7 @@ int main()
                                        false, false, LTSFairnessType::None);
 
     C2SChan->AddMsgs(Params, TrueExp, DataMsgType, Params, true, LTSFairnessType::Strong, LossDupFairnessType::None);
-    S2CChan->AddMsg(AckMsgType, Params, LTSFairnessType::Strong, LossDupFairnessType::None);
+    S2CChan->AddMsg(AckMsgType, Params, LTSFairnessType::None, LossDupFairnessType::None);
 
     // Server structure
     Server->AddState("InitState");

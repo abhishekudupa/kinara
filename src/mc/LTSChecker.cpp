@@ -165,7 +165,7 @@ namespace ESMC {
                         auto const& FairObjs = Cmd->GetFairnessObjsSatisfied();
                         for (auto const& FairObj : FairObjs) {
                             if (FairObj->GetFairnessSet() == FairSet &&
-                                FairObj->GetInstanceID() == (u32)InstanceID) {
+                                FairObj->GetInstanceNumber() == (u32)InstanceID) {
                                 GCmdsToRespondTo[TrackedIndex][i] = true;
                                 GCmdIDsToRespondTo[InstanceID].insert(i);
                             }
