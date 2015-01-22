@@ -348,7 +348,7 @@ namespace ESMC {
 
         public:
             ProductState(const StateVec* SVPtr, u32 MonitorState,
-                         u32 IndexID, u32 NumProcesses);
+                         u32 IndexID, u32 NumTrackingBits);
             ~ProductState();
 
             const StateVec* GetSVPtr() const;
@@ -461,7 +461,7 @@ namespace ESMC {
         class ProductStructure
         {
         private:
-            u32 NumProcesses;
+            u32 NumTrackingBits;
             ProductStateHashSetT PSHashSet;
             ProductEdgeHashSetT EdgeHashSet;
             vector<ProductState*> InitialStates;
@@ -471,7 +471,7 @@ namespace ESMC {
             BuchiAutomatonBase* Monitor;
 
         public:
-            ProductStructure(u32 NumProcesses, BuchiAutomatonBase* Monitor);
+            ProductStructure(u32 NumTrackingBits, BuchiAutomatonBase* Monitor);
             ~ProductStructure();
 
             ProductState* AddInitialState(const StateVec* SVPtr,
@@ -493,7 +493,7 @@ namespace ESMC {
             u32 GetNumEdges() const;
             void ClearAllMarkings() const;
             void ClearSCCMarkings() const;
-            u32 GetNumProcesses() const;
+            u32 GetNumTrackingBits() const;
 
             void ApplyToAllStates(const function<void(const ProductState*)>& Func) const;
 

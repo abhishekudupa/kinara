@@ -452,10 +452,10 @@ namespace ESMC {
         }
 
         ProductState::ProductState(const StateVec* SVPtr, u32 MonitorState,
-                                   u32 IndexID, u32 NumProcesses)
+                                   u32 IndexID, u32 NumTrackingBits)
             : SVPtr(SVPtr), MonitorState(MonitorState), IndexID(IndexID),
               Status(), DFSNum(-1), LowLink(-1),
-              TrackingBits(NumProcesses, false)
+              TrackingBits(NumTrackingBits, false)
         {
             // Nothing here
         }
@@ -620,8 +620,8 @@ namespace ESMC {
             }
         }
 
-        ProductStructure::ProductStructure(u32 NumProcesses, BuchiAutomatonBase* Monitor)
-            : NumProcesses(NumProcesses),
+        ProductStructure::ProductStructure(u32 NumTrackingBits, BuchiAutomatonBase* Monitor)
+            : NumTrackingBits(NumTrackingBits),
               PSPool(new boost::object_pool<ProductState>()),
               PEPool(new boost::pool<>(sizeof(ProductEdge))),
               Monitor(Monitor)
@@ -658,7 +658,7 @@ namespace ESMC {
         {
             auto NewPS =
                 new (PSPool->malloc())
-                ProductState(SVPtr, MonitorState, IndexID, NumProcesses);
+                ProductState(SVPtr, MonitorState, IndexID, NumTrackingBits);
 
             auto it = PSHashSet.find(NewPS);
             if (it == PSHashSet.end()) {
@@ -741,9 +741,9 @@ namespace ESMC {
             }
         }
 
-        u32 ProductStructure::GetNumProcesses() const
+        u32 ProductStructure::GetNumTrackingBits() const
         {
-            return NumProcesses;
+            return NumTrackingBits;
         }
 
         void

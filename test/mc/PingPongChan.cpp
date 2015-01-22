@@ -92,7 +92,7 @@ int main()
     auto S2CChan = TheLTS->MakeChannel("S2CChan", Params, TrueExp, 1, false, true,
                                        false, false, LTSFairnessType::Strong);
 
-    C2SChan->AddMsgs(Params, TrueExp, DataMsgType, Params, LTSFairnessType::Strong, LossDupFairnessType::None);
+    C2SChan->AddMsgs(Params, TrueExp, DataMsgType, Params, true, LTSFairnessType::Strong, LossDupFairnessType::None);
     S2CChan->AddMsg(AckMsgType, Params, LTSFairnessType::Strong, LossDupFairnessType::None);
 
     // Server structure
@@ -133,10 +133,10 @@ int main()
     ServerOutputUpdates.push_back(new LTSAssignSimple(LastMsgExp, TheLTS->MakeVal("clear", RangeType)));
     auto ServerGuard = TheLTS->MakeOp(LTSOps::OpEQ, LastReqExp, ParamExp);
 
+    Server->AddFairnessSet("RspFairness", FairSetFairnessType::Strong, Params, TrueExp);
     Server->AddOutputTransitions(Params, TrueExp, "SendState", "InitState", ServerGuard,
                                  ServerOutputUpdates, "OutMsg", AckMsgType, Params,
-                                 LTSFairnessType::Strong, SplatFairnessType::Individual,
-                                 "RspFairness");
+                                 {}, { "RspFairness" });
 
     // Client structure
     ClientEFSM->AddState("InitState");

@@ -1167,8 +1167,7 @@ namespace ESMC {
                                      InitStateName, GuardExp, Updates, "OutMsg",
                                      MsgDecl->GetMessageType(),
                                      MsgDecl->GetMessageParams(),
-                                     LTSFairnessType::None, SplatFairnessType::None,
-                                     "", true);
+                                     set<string>(), set<string>(), true);
             }
 
             AddedTransitionsByState[InitStateName].insert(GuardExp);

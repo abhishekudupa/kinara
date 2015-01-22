@@ -40,25 +40,26 @@
 #include "LTSFairnessSet.hpp"
 #include "LTSTransitions.hpp"
 #include "LTSEFSMBase.hpp"
+#include "LTSUtils.hpp"
 
 namespace ESMC {
     namespace LTS {
 
-        UIDGenerator LTSFairnessObject::FairnessUIDGenerator;
+        // Implementation of LTSFairnessObject
 
-        LTSFairnessObject::LTSFairnessObject(LTSFairnessSet* FairnessSet,
-                                             const string& Name, EFSMBase* TheEFSM,
-                                             const vector<ExpT>& IndexInst,
-                                             FairSetFairnessType Fairness, u32 InstanceID)
-            : Name(Name), TheEFSM(TheEFSM), IndexInst(IndexInst),
-              InstanceID(InstanceID), Fairness(Fairness),
-              FairnessID(FairnessUIDGenerator.GetUID()),
-              FairnessSetID(FairnessSet->GetFairnessSetID()),
-              FairnessSet(FairnessSet)
+        UIDGenerator LTSFairnessObject::InstanceUIDGenerator;
+
+        LTSFairnessObject::LTSFairnessObject(const string& BaseName,
+                                             const vector<ExpT>& InstanceParams,
+                                             LTSFairnessSet* FairnessSet,
+                                             u32 InstanceNumber)
+            : Name(BaseName), InstanceParams(InstanceParams),
+              InstanceID(InstanceUIDGenerator.GetUID()),
+              InstanceNumber(InstanceNumber), FairnessSet(FairnessSet)
         {
-            // Instantiate the name with the index instance
-            for (auto const& IndexExp : IndexInst) {
-                this->Name += ((string)"[" + IndexExp->ToString() + "]");
+            for (auto const& InstParam : InstanceParams) {
+                Name += ((string)"[" +
+                         InstParam->As<ConstExpression>()->GetConstValue() + "]");
             }
         }
 
@@ -72,24 +73,9 @@ namespace ESMC {
             return Name;
         }
 
-        EFSMBase* LTSFairnessObject::GetEFSM() const
+        const vector<ExpT>& LTSFairnessObject::GetInstanceParams() const
         {
-            return TheEFSM;
-        }
-
-        const vector<ExpT>& LTSFairnessObject::GetIndexInst() const
-        {
-            return IndexInst;
-        }
-
-        FairSetFairnessType LTSFairnessObject::GetFairnessType() const
-        {
-            return Fairness;
-        }
-
-        u32 LTSFairnessObject::GetFairnessID() const
-        {
-            return FairnessID;
+            return InstanceParams;
         }
 
         u32 LTSFairnessObject::GetInstanceID() const
@@ -97,14 +83,9 @@ namespace ESMC {
             return InstanceID;
         }
 
-        u32 LTSFairnessObject::GetFairnessSetID() const
+        u32 LTSFairnessObject::GetInstanceNumber() const
         {
-            return FairnessSetID;
-        }
-
-        void LTSFairnessObject::ResetFairnessUID()
-        {
-            FairnessUIDGenerator.Reset();
+            return InstanceNumber;
         }
 
         LTSFairnessSet* LTSFairnessObject::GetFairnessSet() const
@@ -112,31 +93,79 @@ namespace ESMC {
             return FairnessSet;
         }
 
-
-        UIDGenerator LTSFairnessSet::FairnessSetUIDGenerator;
-
-        LTSFairnessSet::LTSFairnessSet(LTSProcessFairnessGroup* PFGroup,
-                                       const string& Name, EFSMBase* TheEFSM,
-                                       const vector<vector<ExpT>>& AllInstances,
-                                       FairSetFairnessType Fairness)
-            : Name(Name), TheEFSM(TheEFSM), AllInstances(AllInstances),
-              Fairness(Fairness), FairnessSetID(FairnessSetUIDGenerator.GetUID()),
-              PFGroup(PFGroup)
+        const string& LTSFairnessObject::GetBaseName() const
         {
-            // Instantiate a fairness object for every instance
-            NumInstances = AllInstances.size();
+            return FairnessSet->GetName();
+        }
 
+        const vector<ExpT>& LTSFairnessObject::GetFairnessSetParams() const
+        {
+            return FairnessSet->GetParameters();
+        }
+
+        const ExpT& LTSFairnessObject::GetFairnessSetConstraint() const
+        {
+            return FairnessSet->GetConstraint();
+        }
+
+        const vector<vector<ExpT>>& LTSFairnessObject::GetSiblingInstances() const
+        {
+            return FairnessSet->GetAllInstances();
+        }
+
+        u32 LTSFairnessObject::GetFairnessSetNumInstances() const
+        {
+            return FairnessSet->GetNumInstances();
+        }
+
+        const map<vector<ExpT>, LTSFairObjRef>& LTSFairnessObject::GetSiblings() const
+        {
+            return FairnessSet->GetAllFairnessObjs();
+        }
+
+        FairSetFairnessType LTSFairnessObject::GetFairnessType() const
+        {
+            return FairnessSet->GetFairnessType();
+        }
+
+        EFSMBase* LTSFairnessObject::GetEFSM() const
+        {
+            return FairnessSet->GetEFSM();
+        }
+
+        const LTSProcessFairnessGroup* LTSFairnessObject::GetFairnessGroup() const
+        {
+            return FairnessSet->GetFairnessGroup();
+        }
+
+        string LTSFairnessObject::ToString(u32 Verbosity) const
+        {
+            return Name;
+        }
+
+
+        // Implementation of LTSFairnessSet
+        UIDGenerator LTSFairnessSet::ClassUIDGenerator;
+
+        LTSFairnessSet::LTSFairnessSet(const string& Name,
+                                       const vector<ExpT>& Parameters,
+                                       const ExpT& Constraint,
+                                       FairSetFairnessType FairnessType,
+                                       const LTSProcessFairnessGroup* FairnessGroup)
+            : Name(Name), Parameters(Parameters), Constraint(Constraint),
+              AllInstances(InstantiateParams(Parameters, Constraint,
+                                             Constraint->GetMgr())),
+              NumInstances(AllInstances.size()), ClassID(ClassUIDGenerator.GetUID()),
+              FairnessType(FairnessType), FairnessGroup(FairnessGroup)
+
+        {
+            // create the fairness objects
             for (u32 i = 0; i < NumInstances; ++i) {
-                auto CurFairObj = new LTSFairnessObject(this, Name, TheEFSM,
-                                                        AllInstances[i], Fairness, i);
-                if (i == 0) {
-                    FairnessIDLow = CurFairObj->GetFairnessID();
-                }
-                if (i == NumInstances - 1) {
-                    FairnessIDHigh = CurFairObj->GetFairnessID();
-                }
-                FairnessObjects[AllInstances[i]] = CurFairObj;
+                auto const& Inst = AllInstances[i];
+                FairnessObjects[Inst] = new LTSFairnessObject(Name, Inst, this, i);
             }
+            InstanceIDLow = FairnessObjects[AllInstances[0]]->GetInstanceID();
+            InstanceIDHigh = FairnessObjects[AllInstances.back()]->GetInstanceID();
         }
 
         LTSFairnessSet::~LTSFairnessSet()
@@ -144,19 +173,19 @@ namespace ESMC {
             // Nothing here
         }
 
-        u32 LTSFairnessSet::GetFairnessSetID() const
-        {
-            return FairnessSetID;
-        }
-
         const string& LTSFairnessSet::GetName() const
         {
             return Name;
         }
 
-        EFSMBase* LTSFairnessSet::GetEFSM() const
+        const vector<ExpT>& LTSFairnessSet::GetParameters() const
         {
-            return TheEFSM;
+            return Parameters;
+        }
+
+        const ExpT& LTSFairnessSet::GetConstraint() const
+        {
+            return Constraint;
         }
 
         const vector<vector<ExpT>>& LTSFairnessSet::GetAllInstances() const
@@ -164,48 +193,91 @@ namespace ESMC {
             return AllInstances;
         }
 
-        const map<vector<ExpT>, LTSFairObjRef>& LTSFairnessSet::GetFairnessObjs() const
-        {
-            return FairnessObjects;
-        }
-
-        u32 LTSFairnessSet::GetFairnessIDLow() const
-        {
-            return FairnessIDLow;
-        }
-
-        u32 LTSFairnessSet::GetFairnessIDHigh() const
-        {
-            return FairnessIDHigh;
-        }
-
         u32 LTSFairnessSet::GetNumInstances() const
         {
             return NumInstances;
         }
 
-        FairSetFairnessType LTSFairnessSet::GetFairnessType() const
+        u32 LTSFairnessSet::GetClassID() const
         {
-            return Fairness;
+            return ClassID;
         }
 
-        const LTSFairObjRef&
-        LTSFairnessSet::GetFairnessObj(const vector<ExpT>& Instance) const
+        const map<vector<ExpT>, LTSFairObjRef>& LTSFairnessSet::GetAllFairnessObjs() const
+        {
+            return FairnessObjects;
+        }
+
+        const LTSFairObjRef& LTSFairnessSet::GetFairnessObj(const vector<ExpT>& Instance) const
         {
             auto it = FairnessObjects.find(Instance);
             if (it == FairnessObjects.end()) {
-                return LTSFairObjRef::NullPtr;
+                ostringstream sstr;
+                sstr << "Could not find fairness object for instance:" << endl;
+                sstr << "<";
+                for (auto const& Exp : Instance) {
+                    sstr << " " << Exp;
+                }
+                sstr << " >" << endl;
+                sstr << "In fairness set " << Name << endl;
+                sstr << "At: " << __FUNCTION__ << ", " << __FILE__ << ":" << __LINE__;
+                throw InternalError(sstr.str());
+            } else {
+                return it->second;
             }
-
-            return it->second;
         }
 
-        LTSProcessFairnessGroup* LTSFairnessSet::GetPFGroup() const
+        const LTSFairObjRef& LTSFairnessSet::GetFairnessObj(u32 InstanceNumber) const
         {
-            return PFGroup;
+            if (InstanceNumber >= NumInstances) {
+                throw InternalError((string)"Fairness Set \"" + Name + "\" has only " +
+                                    to_string(NumInstances) + " instances, but a request " +
+                                    "was made for instance number " + to_string(InstanceNumber) +
+                                    "\nAt: " + __FUNCTION__ + ", " + __FILE__ + ":" +
+                                    to_string(__LINE__));
+            }
+            return GetFairnessObj(AllInstances[InstanceNumber]);
+        }
+
+        FairSetFairnessType LTSFairnessSet::GetFairnessType() const
+        {
+            return FairnessType;
+        }
+
+        const LTSProcessFairnessGroup* LTSFairnessSet::GetFairnessGroup() const
+        {
+            return FairnessGroup;
+        }
+
+        u32 LTSFairnessSet::GetInstanceIDLow() const
+        {
+            return InstanceIDLow;
+        }
+
+        u32 LTSFairnessSet::GetInstanceIDHigh() const
+        {
+            return InstanceIDHigh;
+        }
+
+        string LTSFairnessSet::ToString(u32 Verbosity) const
+        {
+            ostringstream sstr;
+            sstr << Name;
+            for (auto const& Param : Parameters) {
+                auto ParamAsVar = Param->As<VarExpression>();
+                sstr << "[" << ParamAsVar->GetVarName() << ":"
+                     << ParamAsVar->GetVarType()->ToString() << "]";
+            }
+            return sstr.str();
+        }
+
+        EFSMBase* LTSFairnessSet::GetEFSM() const
+        {
+            return FairnessGroup->GetEFSM();
         }
 
 
+        // Implementation of LTSProcessFairnessGroup
         LTSProcessFairnessGroup::LTSProcessFairnessGroup(EFSMBase* TheEFSM)
             : TheEFSM(TheEFSM)
         {
@@ -218,15 +290,19 @@ namespace ESMC {
         }
 
         void LTSProcessFairnessGroup::AddFairnessSet(const string& Name,
-                                                     FairSetFairnessType FairnessType) const
+                                                     FairSetFairnessType FairnessType,
+                                                     const vector<ExpT>& Params,
+                                                     const ExpT& Constraint) const
         {
-            if (FairnessSets.find(Name) != FairnessSets.end()) {
-                throw ESMCError((string)"Fairness set named \"" + Name + "\" already " +
-                                "declared in EFSM named \"" + TheEFSM->GetName() + "\"");
+            auto it = FairnessSets.find(Name);
+            if (it != FairnessSets.end()) {
+                throw InternalError((string)"Fairness set named \"" + Name + "\" already " +
+                                    "exists in fairness group for EFSM \"" + TheEFSM->GetName() +
+                                    "\"\nAt: " + __FUNCTION__ + ", " + __FILE__ + ":" +
+                                    to_string(__LINE__));
             }
-            FairnessSets[Name] = new LTSFairnessSet(const_cast<LTSProcessFairnessGroup*>(this),
-                                                    Name, TheEFSM, TheEFSM->ParamInsts,
-                                                    FairnessType);
+            FairnessSets[Name] = new LTSFairnessSet(Name, Params, Constraint,
+                                                    FairnessType, this);
         }
 
         EFSMBase* LTSProcessFairnessGroup::GetEFSM() const
@@ -234,31 +310,39 @@ namespace ESMC {
             return TheEFSM;
         }
 
-        const map<string, LTSFairSetRef>& LTSProcessFairnessGroup::GetFairnessSets() const
+        const map<string, LTSFairSetRef>& LTSProcessFairnessGroup::GetAllFairnessSets() const
         {
             return FairnessSets;
         }
 
-        const LTSFairSetRef&
-        LTSProcessFairnessGroup::GetFairnessSet(const string &Name) const
+        const LTSFairSetRef& LTSProcessFairnessGroup::GetFairnessSet(const string& Name) const
         {
             auto it = FairnessSets.find(Name);
             if (it == FairnessSets.end()) {
-                throw ESMCError((string)"Fairness set named \"" + Name + "\"" +
-                                "not declared in EFSM \"" + TheEFSM->GetName() + "\"");
+                return LTSFairSetRef::NullPtr;
             }
-
             return it->second;
         }
 
         const LTSFairObjRef&
-        LTSProcessFairnessGroup::GetFairnessObj(const string &Name,
-                                                const vector<ExpT> &Instance) const
+        LTSProcessFairnessGroup::GetFairnessObj(const string& Name,
+                                                const vector<ExpT>& Instance) const
         {
-            auto const& FSet = GetFairnessSet(Name);
-            return FSet->GetFairnessObj(Instance);
+            auto const& FairSet = GetFairnessSet(Name);
+            return FairSet->GetFairnessObj(Instance);
         }
 
+        const LTSFairObjRef& LTSProcessFairnessGroup::GetFairnessObj(const string& Name,
+                                                                     u32 InstanceNumber) const
+        {
+            auto const& FairSet = GetFairnessSet(Name);
+            return FairSet->GetFairnessObj(InstanceNumber);
+        }
+
+        string LTSProcessFairnessGroup::ToString(u32 Verbosity) const
+        {
+            return (string)"Process Fairness Group for EFSM \"" + TheEFSM->GetName() + "\"";
+        }
     } /* end namespace LTS */
 } /* end namespace ESMC */
 

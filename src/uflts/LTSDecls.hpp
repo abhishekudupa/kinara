@@ -54,11 +54,6 @@ namespace ESMC {
             None, Weak, Strong
         };
 
-
-        enum class SplatFairnessType {
-            None, Group, Individual
-        };
-
         enum class FairSetFairnessType {
             Weak, Strong
         };

@@ -177,8 +177,10 @@ namespace ESMC {
             ProductStructure* ThePS;
             vector<GCmdRef> GuardedCommands;
             u32 NumGuardedCmds;
-            // Total number of processes
-            u32 NumProcesses;
+            // Total number of fairness objects
+            u32 NumFairnessObjects;
+            // Total number of fairness sets
+            u32 NumFairnessSets;
             // The system index set
             SystemIndexSet* SysIdxSet;
             // Fairness Checkers by class id

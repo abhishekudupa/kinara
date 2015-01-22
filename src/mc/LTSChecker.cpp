@@ -143,7 +143,7 @@ namespace ESMC {
                   IsStrong(FairSet->GetFairnessType() == FairSetFairnessType::Strong),
                   SysIdxSet(SysIdxSet), Enabled(false),
                   Executed(false), Disabled(false),
-                  ClassID(FairSet->GetEFSM()->GetClassID()),
+                  ClassID(FairSet->GetClassID()),
                   GCmdsToRespondTo(SysIdxSet->GetNumTrackedIndices(),
                                    vector<bool>(GuardedCommands.size())),
                   GCmdIDsToRespondTo(NumInstances),
@@ -162,7 +162,7 @@ namespace ESMC {
 
                     u32 i = 0;
                     for (auto const& Cmd : GuardedCommands) {
-                        auto const& FairObjs = Cmd->GetFairnessObjs();
+                        auto const& FairObjs = Cmd->GetFairnessObjsSatisfied();
                         for (auto const& FairObj : FairObjs) {
                             if (FairObj->GetFairnessSet() == FairSet &&
                                 FairObj->GetInstanceID() == (u32)InstanceID) {
@@ -432,32 +432,42 @@ namespace ESMC {
             ZeroState = Factory->MakeState();
             NumGuardedCmds = GuardedCommands.size();
 
-            NumProcesses = 0;
-
-            vector<vector<vector<ExpT>>> ProcessInsts(TheLTS->AllEFSMs.size());
-            FairnessCheckers = vector<vector<Detail::FairnessChecker*>>(TheLTS->AllEFSMs.size());
+            NumFairnessObjects = 0;
+            NumFairnessSets = 0;
 
             for (auto const& NameEFSM : TheLTS->AllEFSMs) {
                 auto EFSM = NameEFSM.second;
-                u32 ClassID = EFSM->GetClassID();
-                ProcessInsts[ClassID] = EFSM->GetParamInsts();
-                NumProcesses += EFSM->GetNumInstances();
+                auto const& FairnessGroup = EFSM->GetFairnessGroup();
+                auto const& FairnessSetMap = FairnessGroup->GetAllFairnessSets();
+                NumFairnessSets += FairnessSetMap.size();
             }
 
-            SysIdxSet = new SystemIndexSet(ProcessInsts);
+            vector<vector<vector<ExpT>>> FairnessSetInsts(NumFairnessSets);
+            FairnessCheckers = vector<vector<FairnessChecker*>>(NumFairnessSets);
 
             for (auto const& NameEFSM : TheLTS->AllEFSMs) {
                 auto EFSM = NameEFSM.second;
-                u32 ClassID = EFSM->GetClassID();
+                auto const& FairnessGroup = EFSM->GetFairnessGroup();
+                auto const& FairnessSetMap = FairnessGroup->GetAllFairnessSets();
+                for (auto const& NameFairnessSet : FairnessSetMap) {
+                    auto const& FairnessSet = NameFairnessSet.second;
+                    FairnessSetInsts[FairnessSet->GetClassID()] = FairnessSet->GetAllInstances();
+                    NumFairnessObjects += FairnessSet->GetNumInstances();
+                }
+            }
 
-                auto const& AllFairnesses = EFSM->GetAllFairnessSets();
-                auto const& AllFairnessSets = AllFairnesses->GetFairnessSets();
+            SysIdxSet = new SystemIndexSet(FairnessSetInsts);
 
-                for (auto const& NameFS : AllFairnessSets) {
-                    auto const& FS = NameFS.second;
-                    auto CurChecker = new FairnessChecker(FS, SysIdxSet,
+            for (auto const& NameEFSM : TheLTS->AllEFSMs) {
+                auto EFSM = NameEFSM.second;
+                auto const& FairnessGroup = EFSM->GetFairnessGroup();
+                auto const& FairnessSetMap = FairnessGroup->GetAllFairnessSets();
+                for (auto const& NameFairnessSet : FairnessSetMap) {
+                    auto const& FairnessSet = NameFairnessSet.second;
+                    auto ClassID = FairnessSet->GetClassID();
+                    auto CurChecker = new FairnessChecker(FairnessSet, SysIdxSet,
                                                           GuardedCommands, this);
-                    if (FS->GetFairnessType() == FairSetFairnessType::Strong) {
+                    if (FairnessSet->GetFairnessType() == FairSetFairnessType::Strong) {
                         FairnessCheckers[ClassID].push_back(CurChecker);
                     } else {
                         FairnessCheckers[ClassID].insert(FairnessCheckers[ClassID].begin(),
@@ -979,7 +989,7 @@ namespace ESMC {
         inline void LTSChecker::ConstructProduct(StateBuchiAutomaton *Monitor)
         {
             deque<ProductState*> BFSQueue;
-            ThePS = new ProductStructure(NumProcesses, Monitor);
+            ThePS = new ProductStructure(NumFairnessObjects, Monitor);
             auto MonIndexSet = Monitor->GetIndexSet();
             auto PermSet = TheCanonicalizer->GetPermSet();
 
@@ -1253,7 +1263,7 @@ namespace ESMC {
                                 break;
                             }
                         }
-                        if (!SelfLoop) {
+                        if (!SelfLoop || !FoundAccepting) {
                             SCCState->MarkNotInSCC();
                         } else {
                             Retval.push_back(CurState);

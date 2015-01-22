@@ -90,18 +90,11 @@ namespace ESMC {
             // SubstMap to rebase expressions
             // to use the state var fields
             map<vector<ExpT>, MgrT::SubstMapT> RebaseSubstMaps;
-            UIDGenerator FairnessUIDGenerator;
-
             // Symbolic Transitions
             vector<LTSSymbTransRef> SymbolicTransitions;
-
             // Transitions per instance
             map<vector<ExpT>, vector<LTSTransRef>> Transitions;
-
             LTSPFGRef Fairnesses;
-            // mapping between internal fairness sets and user
-            // defined names for fairnesses
-            map<string, set<string>> UserToInternalFairness;
 
             // Inputs and outputs per instance
             map<vector<ExpT>, set<TypeRef>> Inputs;
@@ -171,7 +164,7 @@ namespace ESMC {
                                            const string& MessageName,
                                            const TypeRef& MessageType,
                                            const TypeRef& ActMType,
-                                           const set<string>& AddToFairnessSets,
+                                           const set<LTSFairObjRef>& FairnessObjsSatisfied,
                                            const LTSSymbTransRef& SymbTrans);
 
             void AddInternalTransForInstance(u32 InstanceID,
@@ -179,7 +172,7 @@ namespace ESMC {
                                              const string& InitState,
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
-                                             const set<string>& AddToFairnessSets,
+                                             const set<LTSFairObjRef>& FairnessObjsSatisfied,
                                              const LTSSymbTransRef& SymbTrans);
 
         public:
@@ -206,13 +199,17 @@ namespace ESMC {
 
             virtual LTSFairnessType GetFairnessType() const;
 
-            virtual void AddFairnessSet(const string& Name, FairSetFairnessType Fairness);
-            virtual const LTSFairSetRef& GetFairnessSet(const string& FairnessName) const;
-            virtual const LTSFairObjRef&
-            GetFairnessForInst(const string& FairnessName,
-                               const vector<ExpT>& InstParams) const;
+            virtual void AddFairnessSet(const string& Name, FairSetFairnessType FairnessType);
+            virtual void AddFairnessSet(const string& Name, FairSetFairnessType FairnessType,
+                                        const vector<ExpT> NewParams, const ExpT& Constraint);
 
-            virtual const LTSPFGRef& GetAllFairnessSets() const;
+            virtual const LTSFairSetRef& GetFairnessSet(const string& FairnessName) const;
+            virtual const LTSFairObjRef& GetFairnessObj(const string& FairnessName,
+                                                        const vector<ExpT>& InstParams) const;
+            virtual const LTSFairObjRef& GetFairnessObj(const string& FairnessName,
+                                                        u32 InstanceNumber) const;
+
+            virtual const LTSPFGRef& GetFairnessGroup() const;
 
             virtual void FreezeStates() override;
             virtual void FreezeVars();
@@ -307,9 +304,9 @@ namespace ESMC {
                                               const string& MessageName,
                                               const TypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
-                                              LTSFairnessType FairnessKind,
-                                              SplatFairnessType SplatFairness,
-                                              const string& SplatFairnessName,
+                                              const set<string>& GroupFairnessSets = set<string>(),
+                                              const set<string>& IndividualFairnessSets =
+                                              set<string>(),
                                               bool Tentative = false);
 
             // Final state specified in updates
@@ -321,9 +318,9 @@ namespace ESMC {
                                               const string& MessageName,
                                               const TypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
-                                              LTSFairnessType FairnessKind,
-                                              SplatFairnessType SplatFairness,
-                                              const string& SplatFairnessName,
+                                              const set<string>& GroupFairnessSets = set<string>(),
+                                              const set<string>& IndividualFairnessSets =
+                                              set<string>(),
                                               bool Tentative = false);
 
             virtual void AddInternalTransition(const string& InitState,
@@ -348,11 +345,10 @@ namespace ESMC {
                                                 const string& FinalState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
-                                                LTSFairnessType FairnessKind =
-                                                LTSFairnessType::None,
-                                                SplatFairnessType SplatFairness =
-                                                SplatFairnessType::None,
-                                                const string& SplatFairnessName = "",
+                                                const set<string>& GroupFairnessSets =
+                                                set<string>(),
+                                                const set<string>& IndividualFairnessSets =
+                                                set<string>(),
                                                 bool Tentative = false);
 
             // Final state specified in updates
@@ -361,11 +357,10 @@ namespace ESMC {
                                                 const string& InitState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
-                                                LTSFairnessType FairnessKind =
-                                                LTSFairnessType::None,
-                                                SplatFairnessType SplatFairness =
-                                                SplatFairnessType::None,
-                                                const string& SplatFairnessName = "",
+                                                const set<string>& GroupFairnessSets =
+                                                set<string>(),
+                                                const set<string>& IndividualFairnessSets =
+                                                set<string>(),
                                                 bool Tentative = false);
 
             virtual string ToString(u32 Verbosity = 0) const override;

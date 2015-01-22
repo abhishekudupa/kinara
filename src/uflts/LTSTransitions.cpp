@@ -191,11 +191,11 @@ namespace ESMC {
                                                  const vector<LTSAssignRef>& Updates,
                                                  const string& MessageName,
                                                  const TypeRef& MessageType,
-                                                 const set<string>& CompOfFairnessSets,
+                                                 const set<LTSFairObjRef>& FairnessObjsSatisfied,
                                                  const LTSSymbTransRef& SymbolicTransition)
             : LTSTransitionIOBase(TheEFSM, ParamInst, InitState, Guard, Updates,
                                   MessageName, MessageType, SymbolicTransition),
-              CompOfFairnessSets(CompOfFairnessSets)
+              FairnessObjsSatisfied(FairnessObjsSatisfied)
         {
             // Nothing here
         }
@@ -205,9 +205,9 @@ namespace ESMC {
             // Nothing here
         }
 
-        const set<string>& LTSTransitionOutput::GetCompOfFairnessSets() const
+        const set<LTSFairObjRef>& LTSTransitionOutput::GetFairnessObjsSatisfied() const
         {
-            return CompOfFairnessSets;
+            return FairnessObjsSatisfied;
         }
 
         string LTSTransitionOutput::ToString(u32 Verbosity) const
@@ -233,10 +233,10 @@ namespace ESMC {
                                                      const LTSState& InitState,
                                                      const ExpT& Guard,
                                                      const vector<LTSAssignRef>& Updates,
-                                                     const set<string>& CompOfFairnessSets,
+                                                     const set<LTSFairObjRef>& FairnessObjsSatisfied,
                                                      const LTSSymbTransRef& SymbolicTransition)
             : LTSTransitionBase(TheEFSM, ParamInst, InitState, Guard, Updates, SymbolicTransition),
-              CompOfFairnessSets(CompOfFairnessSets)
+              FairnessObjsSatisfied(FairnessObjsSatisfied)
         {
             // Nothing here
         }
@@ -246,9 +246,9 @@ namespace ESMC {
             // Nothing here
         }
 
-        const set<string>& LTSTransitionInternal::GetCompOfFairnessSets() const
+        const set<LTSFairObjRef>& LTSTransitionInternal::GetFairnessObjsSatisfied() const
         {
-            return CompOfFairnessSets;
+            return FairnessObjsSatisfied;
         }
 
         string LTSTransitionInternal::ToString(u32 Verbosity) const
@@ -271,11 +271,9 @@ namespace ESMC {
                                              const vector<ExpT>& GuardComps,
                                              const vector<LTSAssignRef>& Updates,
                                              const TypeRef& MsgType, i32 MsgTypeID,
-                                             const set<LTSFairObjRef>& Fairnesses,
                                              const vector<LTSTransRef>& ProductTrans)
             : Mgr(Mgr), GuardComps(GuardComps), Updates(Updates), MsgType(MsgType),
-              MsgTypeID(MsgTypeID), FairnessObjs(Fairnesses.begin(), Fairnesses.end()),
-              ProductTrans(ProductTrans),
+              MsgTypeID(MsgTypeID), ProductTrans(ProductTrans),
               Tentative(any_of(ProductTrans.begin(), ProductTrans.end(),
                                [&] (const LTSTransRef& Trans) -> bool
                                {
@@ -283,15 +281,27 @@ namespace ESMC {
                                })),
               FullyInterpreted(!Tentative)
         {
-            set<LTSFairSetRef> FairSets;
-            for (auto const& FairObj : FairnessObjs) {
-                FairSets.insert(FairObj->GetFairnessSet());
-            }
-
-            FairnessSets.insert(FairnessSets.begin(), FairSets.begin(), FairSets.end());
             // Make the guard
             Guard = MakeConjunction(GuardComps, Mgr);
             Guard = Mgr->SimplifyFP(Guard);
+
+            auto LeaderOutput = ProductTrans[0]->As<LTSTransitionOutput>();
+            if (LeaderOutput != nullptr) {
+                auto const& Objs = LeaderOutput->GetFairnessObjsSatisfied();
+                FairnessObjsSatisfied.insert(FairnessObjsSatisfied.end(),
+                                             Objs.begin(), Objs.end());
+            } else {
+                auto LeaderInternal = ProductTrans[0]->As<LTSTransitionInternal>();
+                if (LeaderInternal == nullptr) {
+                    throw InternalError((string)"Strange kind of leader transition in " +
+                                        __FUNCTION__ + ", at: " + __FILE__ + ":" +
+                                        to_string(__LINE__));
+                    auto const& Objs = LeaderInternal->GetFairnessObjsSatisfied();
+                    FairnessObjsSatisfied.insert(FairnessObjsSatisfied.end(),
+                                                 Objs.begin(), Objs.end());
+                }
+            }
+
 
             // Set up the fixed interpretation
             vector<ExpT> FixedComps;
@@ -391,14 +401,9 @@ namespace ESMC {
             return MsgTypeID;
         }
 
-        const vector<LTSFairObjRef>& LTSGuardedCommand::GetFairnessObjs() const
+        const vector<LTSFairObjRef>& LTSGuardedCommand::GetFairnessObjsSatisfied() const
         {
-            return FairnessObjs;
-        }
-
-        const vector<LTSFairSetRef>& LTSGuardedCommand::GetFairnessSets() const
-        {
-            return FairnessSets;
+            return FairnessObjsSatisfied;
         }
 
         const vector<LTSTransRef>& LTSGuardedCommand::GetProductTransition() const

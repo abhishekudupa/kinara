@@ -252,15 +252,11 @@ namespace ESMC {
                     }
                 }
 
-                set<LTSFairObjRef> FairObjSet(Cmd->GetFairnessObjs().begin(),
-                                              Cmd->GetFairnessObjs().end());
-
                 Retval.push_back(new LTSGuardedCommand(Cmd->GetMgr(),
                                                        Cmd->GetGuardComps(),
                                                        NewUpdates,
                                                        Cmd->GetMsgType(),
                                                        Cmd->GetMsgTypeID(),
-                                                       FairObjSet,
                                                        Cmd->GetProductTransition()));
                 Retval.back()->SetCmdID(Cmd->GetCmdID());
             }
@@ -314,22 +310,10 @@ namespace ESMC {
                 }
             }
 
-            // Get the fairness sets
-            auto OutputTrans = ProductTrans[0]->As<LTSTransitionOutput>();
-            auto OutputEFSM = OutputTrans->GetAutomaton()->As<EFSMBase>();
-            auto const& ParamInst = OutputTrans->GetParamInst();
-            auto const& StrFairnesses = OutputTrans->GetCompOfFairnessSets();
-
-            set<LTSFairObjRef> ActualFairnesses;
-            for (auto const& StrFairness : StrFairnesses) {
-                auto const& ActFairness =
-                    OutputEFSM->Fairnesses->GetFairnessObj(StrFairness, ParamInst);
-                ActualFairnesses.insert(ActFairness);
-            }
             auto UMTypeAsUnion = UnifiedMsgType->As<UnionType>();
             auto MsgTypeID = UMTypeAsUnion->GetTypeIDForMemberType(MsgType);
             return (new LTSGuardedCommand(Mgr, GuardComps, UpdateComps, MsgType,
-                                          MsgTypeID, ActualFairnesses, ProductTrans));
+                                          MsgTypeID, ProductTrans));
         }
 
         void LabelledTS::Freeze()
@@ -398,23 +382,9 @@ namespace ESMC {
                 auto EFSM = NameEFSM.second;
                 auto&& CurTrans = EFSM->GetInternalTransitions();
                 for (auto const& Trans : CurTrans) {
-                    auto TransAsInt = Trans->As<LTSTransitionInternal>();
-                    auto const& StrFairnesses = TransAsInt->GetCompOfFairnessSets();
-                    auto const& ParamInst = Trans->GetParamInst();
-
-                    set<LTSFairObjRef> ActualFairSet;
-                    for (auto const& StrFairness : StrFairnesses) {
-                        auto const& ActFairness =
-                            EFSM->Fairnesses->GetFairnessObj(StrFairness, ParamInst);
-                        ActualFairSet.insert(ActFairness);
-                    }
-
-                    auto CurGCmd = new LTSGuardedCommand(Mgr,
-                                                         { Trans->GetGuard() },
-                                                         Trans->GetUpdates(),
-                                                         TypeRef::NullPtr,
-                                                         -1, ActualFairSet,
-                                                         { Trans });
+                    auto CurGCmd = new LTSGuardedCommand(Mgr, { Trans->GetGuard() },
+                                                         Trans->GetUpdates(), TypeRef::NullPtr,
+                                                         -1, { Trans });
                     GuardedCommands.push_back(CurGCmd);
                     GuardedCommands.back()->SetCmdID(GCmdCounter++);
                 }

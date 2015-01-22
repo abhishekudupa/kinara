@@ -80,13 +80,15 @@ namespace ESMC {
             inline void MakeInputTransition(u32 InstanceID,
                                             const MgrT::SubstMapT& SubstMap,
                                             const TypeRef& MessageType,
-                                            const set<string>& AddToFairnessSets);
+                                            const set<LTSFairObjRef>& FairnessObjsSatisfied);
 
             inline void MakeOutputTransition(u32 InstanceID,
                                              const MgrT::SubstMapT& SubstMap,
                                              const TypeRef& MessageType,
-                                             const set<string>& NonDupOutputFairnessSets,
-                                             const set<string>& DupOutputFairnessSets);
+                                             const set<LTSFairObjRef>&
+                                             FairnessObjsSatisfiedByNonDupOutputs,
+                                             const set<LTSFairObjRef>&
+                                             FairnessObjsSatisfiedByDupOutputs);
 
         public:
             ChannelEFSM(LabelledTS* TheLTS, const string& Name,
@@ -112,6 +114,7 @@ namespace ESMC {
                          const ExpT& Constraint,
                          const TypeRef& MessageType,
                          const vector<ExpT>& MessageParams = vector<ExpT>(),
+                         bool IndividualFairness = true,
                          LTSFairnessType MessageFairness = LTSFairnessType::None,
                          LossDupFairnessType LossDupFairness = LossDupFairnessType::None);
 
@@ -174,9 +177,8 @@ namespace ESMC {
                                               const string& MessageName,
                                               const TypeRef& MessageType,
                                               const vector<ExpT>& MessageParams,
-                                              LTSFairnessType MessageFairness,
-                                              SplatFairnessType SplatFairness,
-                                              const string& SplatFairnessName,
+                                              const set<string>& GroupFairnessSets,
+                                              const set<string>& IndividualFairness,
                                               bool Tentative = false) override;
 
             virtual void AddInternalTransition(const string& InitState,
@@ -191,9 +193,8 @@ namespace ESMC {
                                                 const string& InitState,
                                                 const ExpT& Guard,
                                                 const vector<LTSAssignRef>& Updates,
-                                                LTSFairnessType MessageFairness,
-                                                SplatFairnessType SplatFairness,
-                                                const string& SplatFairnessName,
+                                                const set<string>& GroupFairnessSets,
+                                                const set<string>& IndividualFairnessSets,
                                                 bool Tentative = false) override;
 
             vector<LTSAssignRef> GetUpdatesForPermutation(const vector<u08>& Permutation,

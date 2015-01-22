@@ -160,7 +160,7 @@ namespace ESMC {
 
             // method 3
             for (auto GuardedCommand: TheLTS->GetGuardedCmds()) {
-                for (auto FairnessObject: GuardedCommand->GetFairnessObjs()) {
+                for (auto FairnessObject: GuardedCommand->GetFairnessObjsSatisfied()) {
                     Retval.insert(FairnessObject);
                 }
             }
@@ -268,7 +268,7 @@ namespace ESMC {
             set<LTSFairObjRef> Retval;
             for (auto TraceElement: LivenessViolation->GetLoop()) {
                 auto GuardedCommand = TraceElement.first;
-                auto FairObjects = GuardedCommand->GetFairnessObjs();
+                auto const& FairObjects = GuardedCommand->GetFairnessObjsSatisfied();
                 for (auto FairObject: FairObjects) {
                     Retval.insert(FairObject);
                 }
@@ -410,7 +410,7 @@ namespace ESMC {
                     // Check if there is any guarded command that conains
                     // the fairness object.
                     for (auto Cmd : TheLTS->GetGuardedCmds()) {
-                        auto GCmdFairObjs = Cmd->GetFairnessObjs();
+                        auto const& GCmdFairObjs = Cmd->GetFairnessObjsSatisfied();
                         auto it = find(GCmdFairObjs.begin(), GCmdFairObjs.end(), FairnessObject);
                         if (it != GCmdFairObjs.end()) {
                             auto const& FixedInterp = Cmd->GetFixedInterpretation();

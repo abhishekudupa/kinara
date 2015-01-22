@@ -279,7 +279,7 @@ namespace ESMC {
         class LTSTransitionOutput : public LTSTransitionIOBase
         {
         private:
-            set<LTSFairObjRef> FairnessObjectsSatisfied;
+            set<LTSFairObjRef> FairnessObjsSatisfied;
 
         public:
             LTSTransitionOutput(EFSMBase* TheEFSM,
@@ -289,11 +289,11 @@ namespace ESMC {
                                 const vector<LTSAssignRef>& Updates,
                                 const string& MessageName,
                                 const TypeRef& MessageType,
-                                const set<string>& CompOfFairnessSets,
+                                const set<LTSFairObjRef>& FairnessObjsSatisfied,
                                 const LTSSymbTransRef& SymbolicTransition);
             virtual ~LTSTransitionOutput();
 
-            const set<string>& GetCompOfFairnessSets() const;
+            const set<LTSFairObjRef>& GetFairnessObjsSatisfied() const;
 
             virtual string ToString(u32 Verbosity = 0) const override;
         };
@@ -301,7 +301,7 @@ namespace ESMC {
         class LTSTransitionInternal : public LTSTransitionBase
         {
         private:
-            set<string> CompOfFairnessSets;
+            set<LTSFairObjRef> FairnessObjsSatisfied;
 
         public:
             LTSTransitionInternal(EFSMBase* TheEFSM,
@@ -309,11 +309,11 @@ namespace ESMC {
                                   const LTSState& InitState,
                                   const ExpT& Guard,
                                   const vector<LTSAssignRef>& Updates,
-                                  const set<string>& CompOfFairnessSets,
+                                  const set<LTSFairObjRef>& FairnessObjsSatisfied,
                                   const LTSSymbTransRef& SymbolicTransition);
             virtual ~LTSTransitionInternal();
 
-            const set<string>& GetCompOfFairnessSets() const;
+            const set<LTSFairObjRef>& GetFairnessObjsSatisfied() const;
             virtual string ToString(u32 Verbosity = 0) const override;
         };
 
@@ -328,8 +328,7 @@ namespace ESMC {
             mutable vector<LTSAssignRef> LoweredUpdates;
             TypeRef MsgType;
             i32 MsgTypeID;
-            vector<LTSFairObjRef> FairnessObjs;
-            vector<LTSFairSetRef> FairnessSets;
+            vector<LTSFairObjRef> FairnessObjsSatisfied;
             vector<LTSTransRef> ProductTrans;
             mutable u32 CmdID;
             const bool Tentative;
@@ -341,7 +340,6 @@ namespace ESMC {
                               const vector<ExpT>& GuardComps,
                               const vector<LTSAssignRef>& Updates,
                               const TypeRef& MsgType, i32 MsgTypeID,
-                              const set<LTSFairObjRef>& Fairnesses,
                               const vector<LTSTransRef>& ProductTrans);
             virtual ~LTSGuardedCommand();
 
@@ -351,8 +349,7 @@ namespace ESMC {
             const vector<LTSAssignRef>& GetUpdates() const;
             const TypeRef& GetMsgType() const;
             i32 GetMsgTypeID() const;
-            const vector<LTSFairObjRef>& GetFairnessObjs() const;
-            const vector<LTSFairSetRef>& GetFairnessSets() const;
+            const vector<LTSFairObjRef>& GetFairnessObjsSatisfied() const;
             const vector<LTSTransRef>& GetProductTransition() const;
             u32 GetCmdID() const;
             void SetCmdID(u32 CmdID) const;
