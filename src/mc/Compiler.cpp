@@ -1460,7 +1460,7 @@ namespace ESMC {
 
         LTSAssignRef LTSCompiler::ArrayTransformAssignment(const ExpT& LHS,
                                                            const ExpT& RHS,
-                                                           const MgrT::SubstMapT& AccumMap) const
+                                                           const MgrT::SubstMapT& AccumMap)
         {
             auto Mgr = LHS->GetMgr();
             if (LHS->Is<VarExpression>()) {
@@ -1493,7 +1493,7 @@ namespace ESMC {
         }
 
         inline vector<LTSAssignRef>
-        LTSCompiler::ArrayTransformAssignments(const vector<LTSAssignRef>& Updates, MgrT* Mgr) const
+        LTSCompiler::ArrayTransformAssignments(const vector<LTSAssignRef>& Updates, MgrT* Mgr)
         {
             MgrT::SubstMapT AccumMap;
             for (auto const& Update : Updates) {

@@ -65,6 +65,7 @@ namespace ESMC {
             friend class MC::StateBuchiAutomaton;
             friend class Synth::Solver;
             friend class ESMC::Analyses::TraceAnalyses;
+            friend class ESMC::MC::TraceBase;
 
             static const string ProductMsgName;
 

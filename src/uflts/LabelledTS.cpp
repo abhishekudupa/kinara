@@ -618,6 +618,14 @@ namespace ESMC {
                         UsedSymmTypes.insert(Decl.second->GetType());
                     }
                 }
+                auto const& SymmMsgDecls = EFSM->GetSymmetricMessages();
+                for (auto const& SymmMsgDecl : SymmMsgDecls) {
+                    for (auto const& NewParam : SymmMsgDecl->GetNewParams()) {
+                        if (NewParam->GetType()->Is<SymmetricType>()) {
+                            UsedSymmTypes.insert(NewParam->GetType());
+                        }
+                    }
+                }
             }
 
             // Again, not strictly our job, but it makes it

@@ -271,6 +271,16 @@ namespace ESMC {
             }
         }
 
+        i32 SystemIndexSet::GetIndexIDForClassIndex(u32 ClassIndex, u32 ClassID) const
+        {
+            auto const& Bounds = ClassIDBounds[ClassID];
+            if (ClassIndex > (Bounds.second - Bounds.first)) {
+                return -1;
+            } else {
+                return Bounds.first + ClassIndex;
+            }
+        }
+
     } /* end namespace MC */
 } /* end namespace ESMC */
 

@@ -48,6 +48,7 @@
 #include "../uflts/LTSAssign.hpp"
 #include "../uflts/LTSTransformers.hpp"
 #include "../symmetry/SymmCanonicalizer.hpp"
+#include "../mc/Compiler.hpp"
 
 #include "StateVec.hpp"
 #include "StateVecPrinter.hpp"
@@ -64,6 +65,12 @@ namespace ESMC {
         using LTS::LabelledTS;
         using Symm::Canonicalizer;
         using LTS::ExpT;
+
+        static function<bool(u32, const ProductState*)> TrueLambda =
+            ([&] (u32 Arg1, const ProductState* Arg2) -> bool
+            {
+                return true;
+            });
 
         TraceBase::TraceBase(StateVecPrinter* Printer)
             : Printer(Printer)
@@ -298,6 +305,8 @@ namespace ESMC {
                                 const LTSChecker* Checker,
                                 u32& InvPermAlongPathOut,
                                 u32& InvSortPermForRoot,
+                                FairnessChecker* FChecker,
+                                u32 InstanceID,
                                 const function<bool(u32, const ProductState*)>& MatchPred,
                                 vector<PSTraceElemT>& PathElems,
                                 const unordered_set<const ProductState*>& Bounds)
@@ -308,6 +317,9 @@ namespace ESMC {
             auto SortPermSet = TheCanonicalizer->GetSortPermSet();
             auto Monitor = ThePS->GetMonitor();
             auto ProcIdxSet = Monitor->GetIndexSet();
+            auto SysIdxSet = Checker->SysIdxSet;
+            auto const ClassID = SysIdxSet->GetClassID(InstanceID);
+            auto const Instance = SysIdxSet->GetIndexForClassID(InstanceID, ClassID);
             auto const& GuardedCmds = Checker->GuardedCommands;
             const u32 NumGuardedCmds = GuardedCmds.size();
 
@@ -332,6 +344,10 @@ namespace ESMC {
                 auto CurPermIndex = get<1>(CurTuple);
                 auto CurSortPermIdx = get<2>(CurTuple);
 
+                auto const& ActualPermutation = PermSet->GetIterator(CurPermIndex).GetPerm();
+                auto PermutedInstanceID = SysIdxSet->Permute(InstanceID, ActualPermutation);
+                auto PermutedInstance = SysIdxSet->GetIndexForClassID(PermutedInstanceID, ClassID);
+
                 auto CurUnsortedPS = TheCanonicalizer->ApplyPermutation(CurPermPS,
                                                                         CurPermIndex,
                                                                         ProcIdxSet);
@@ -352,12 +368,13 @@ namespace ESMC {
                     auto EdgeInvPermIt = PermSet->GetIteratorForInv(EdgePermIndex);
                     auto NextPermIt = PermSet->Compose(CurPermIndex, EdgeInvPermIt.GetIndex());
                     auto NextPermIndex = NextPermIt.GetIndex();
-
                     auto NextPair = make_pair(NextPermPS, NextPermIndex);
+
                     if (VisitedStates.find(NextPair) != VisitedStates.end()) {
                         // Already visited
                         continue;
                     }
+
 
                     VisitedStates.insert(NextPair);
                     auto NextUnwoundPS = TheCanonicalizer->ApplyPermutation(NextPermPS,
@@ -406,9 +423,18 @@ namespace ESMC {
                             PredMap[NextTuple] = make_pair(i, CurTuple);
                             BFSQueue.push_back(NextTuple);
 
-                            if (MatchPred(i, NextUnsortedPS)) {
-                                ReachedTarget = true;
-                                TargetPSPerm = NextTuple;
+                            if (FChecker != nullptr) {
+                                if (FChecker->CheckInstanceSatisfaction(Instance, PermutedInstance,
+                                                                        i, NextUnsortedPS)) {
+                                    ReachedTarget = true;
+                                    TargetPSPerm = NextTuple;
+                                    FChecker->SetInstanceSatisfiedInTrace(Instance);
+                                }
+                            } else {
+                                if (MatchPred(i, NextUnsortedPS)) {
+                                    ReachedTarget = true;
+                                    TargetPSPerm = NextTuple;
+                                }
                             }
 
                             // delete the next unsorted ps
@@ -460,7 +486,7 @@ namespace ESMC {
             InvPermAlongPathOut = CurPerm;
             InvSortPermForRoot = CurSortPerm;
 
-            vector<PSTraceElemT> RTraceElems;
+            vector<pair<PSTraceElemT, u32>> RTraceElems;
             while (it != PredMap.end()) {
                 // Unwind the pred state
                 auto UnwoundEdge = it->second;
@@ -475,18 +501,59 @@ namespace ESMC {
                 TheCanonicalizer->Sort(UnsortedPredPS);
                 TheCanonicalizer->ApplySort(UnsortedPredPS, PredSortPerm);
 
-                RTraceElems.push_back(PSTraceElemT(GuardedCmds[CmdID], CurUnsortedPS));
+                RTraceElems.push_back(make_pair(PSTraceElemT(GuardedCmds[CmdID],
+                                                             CurUnsortedPS),
+                                                PredPerm));
                 it = PredMap.find(PredStatePerm);
                 CurUnsortedPS = UnsortedPredPS;
             }
+
+            // Check what fairnesses are satisfied by this trace
+            MarkFairnessesSatisfied(RTraceElems, Checker);
 
             // delete the origin
             CurUnsortedPS->GetSVPtr()->Recycle();
             delete CurUnsortedPS;
 
             PathElems.clear();
-            PathElems.insert(PathElems.end(), RTraceElems.rbegin(), RTraceElems.rend());
+            for (auto it = RTraceElems.rbegin(); it != RTraceElems.rend(); ++it) {
+                PathElems.push_back(it->first);
+            }
             return get<0>(TargetPSPerm);
+        }
+
+        inline void
+        TraceBase::MarkFairnessesSatisfied(const vector<pair<PSTraceElemT, u32>>& PathSegment,
+                                           const ESMC::MC::LTSChecker* Checker)
+        {
+            auto const& AllFCheckers = Checker->FairnessCheckers;
+            auto SysIdxSet = Checker->SysIdxSet;
+            auto PermSet = Checker->TheCanonicalizer->GetPermSet();
+
+            for (auto const& FCheckers : AllFCheckers) {
+                for (auto const& FChecker : FCheckers) {
+                    const u32 NumInstances = FChecker->NumInstances;
+                    const u32 ClassID = FChecker->ClassID;
+
+                    for (u32 Instance = 0; Instance < NumInstances; ++Instance) {
+                        auto InstanceID = SysIdxSet->GetIndexIDForClassIndex(Instance, ClassID);
+                        for (auto const& TraceElemPerm : PathSegment) {
+                            auto PermIndex = TraceElemPerm.second;
+                            auto CmdID = TraceElemPerm.first.first->GetCmdID();
+                            auto PS = TraceElemPerm.first.second;
+
+                            auto const& ActualPerm = PermSet->GetIterator(PermIndex).GetPerm();
+                            auto PermInstanceID = SysIdxSet->Permute(InstanceID, ActualPerm);
+                            auto PermInstance = SysIdxSet->GetIndexForClassID(PermInstanceID, ClassID);
+
+                            if (FChecker->CheckInstanceSatisfaction(Instance, PermInstance,
+                                                                    CmdID, PS)) {
+                                FChecker->SetInstanceSatisfiedInTrace(Instance);
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         inline bool
@@ -632,6 +699,9 @@ namespace ESMC {
             auto ThePS = Checker->ThePS;
             auto const& GuardedCmds = Checker->GuardedCommands;
             auto TheCanonicalizer = Checker->TheCanonicalizer;
+            auto SysIdxSet = Checker->SysIdxSet;
+            auto PermSet = TheCanonicalizer->GetPermSet();
+            auto Mgr = Checker->TheLTS->GetMgr();
 
             auto&& SCCNodes = ExpandSCC(SCCRoot, Checker);
             u32 InvPermAlongPath = 0;
@@ -645,6 +715,7 @@ namespace ESMC {
             vector<PSTraceElemT> StemPath;
             auto InitState = UnwindPermPath(StemPPath, Checker, StemPath, InvPermAlongPath);
 
+            auto InvPermAtEndOfStem = PermSet->GetIterator(InvPermAlongPath).GetPerm();
             auto StemPathBackPair = StemPath.back();
             auto StartOfLoop = StemPathBackPair.second;
 
@@ -653,6 +724,7 @@ namespace ESMC {
             auto SortedSOLSV = TheCanonicalizer->SortChans(StartOfLoop->GetSVPtr(), true,
                                                            StemPermID);
             auto StemPermUpdates = TheCanonicalizer->GetChanUpdatesForPermutation(StemPermID);
+            StemPermUpdates = LTSCompiler::ArrayTransformAssignments(StemPermUpdates, Mgr);
 
             auto SortedStartOfLoop = new ProductState(SortedSOLSV,
                                                       StartOfLoop->GetMonitorState(),
@@ -671,64 +743,40 @@ namespace ESMC {
             auto const& AllFCheckers = Checker->FairnessCheckers;
             vector<PSTraceElemT> PathSoFar;
 
+            // Mark all the trivially satisfied fairness checkers as such
             for (auto const& FCheckers : AllFCheckers) {
                 for (auto FChecker : FCheckers) {
                     const u32 NumInstances = FChecker->NumInstances;
+                    const u32 ClassID = FChecker->ClassID;
+                    for (u32 Instance = 0; Instance < NumInstances; ++Instance) {
+                        auto InstanceID = SysIdxSet->GetIndexIDForClassIndex(Instance, ClassID);
+                        auto PermInstanceID = SysIdxSet->Permute(InstanceID, InvPermAtEndOfStem);
+                        auto PermInstance = SysIdxSet->GetIndexForClassID(PermInstanceID, ClassID);
 
-                    for (u32 InstanceID = 0; InstanceID < NumInstances; ++InstanceID) {
+                        if (FChecker->IsTriviallySatisfied(Instance, PermInstance)) {
+                            FChecker->SetInstanceSatisfiedInTrace(Instance);
+                        }
+                    }
+                }
+            }
 
+            for (auto const& FCheckers : AllFCheckers) {
+                for (auto FChecker : FCheckers) {
+                    const u32 NumInstances = FChecker->NumInstances;
+                    const u32 ClassID = FChecker->ClassID;
+
+                    for (u32 Instance = 0; Instance < NumInstances; ++Instance) {
                         // Check if this fairness is already satisfied
-                        auto AlreadySat = CheckFairnessSat(PathSoFar, FChecker,
-                                                           GuardedCmds, InstanceID);
-                        if (AlreadySat) {
+                        if (FChecker->IsInstanceSatisfiedInTrace(Instance)) {
                             continue;
                         }
+                        auto InstanceID = SysIdxSet->GetIndexIDForClassIndex(Instance, ClassID);
 
                         vector<PSTraceElemT> CurElems;
-                        function<bool(u32, const ProductState*)> MatchPred;
-                        auto const& SatCmds = FChecker->GetCmdIDsToRespondTo(InstanceID);
                         // extend this path
-                        if (FChecker->IsStrongFairness()) {
-                            if (FChecker->IsEnabled(InstanceID)) {
-                                MatchPred =
-                                    [&] (u32 CmdID, const ProductState* State) -> bool
-                                    {
-                                        return (SatCmds.find(CmdID) != SatCmds.end());
-                                    };
-                            }
-                            // We wouldn't be here otherwise
-                        } else {
-                            if (!FChecker->IsDisabled(InstanceID)) {
-                                MatchPred =
-                                    [&] (u32 CmdID, const ProductState* State) -> bool
-                                    {
-                                        return (SatCmds.find(CmdID) != SatCmds.end());
-                                    };
-
-                            } else {
-                                MatchPred =
-                                    [&] (u32 CmdID, const ProductState* State) -> bool
-                                    {
-                                        for (auto SatCmdID : SatCmds) {
-                                            // we ignore exceptions here
-                                            bool Exception = false;
-                                            ExpT NEPred;
-                                            auto NS = TryExecuteCommand(GuardedCmds[SatCmdID],
-                                                                        State->GetSVPtr(),
-                                                                        Exception, NEPred);
-                                            if (NS != nullptr) {
-                                                NS->Recycle();
-                                                return false;
-                                            }
-                                        }
-                                        return true;
-                                    };
-                            }
-                        }
-
                         auto NewEndOfPath = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
-                                                         InvSortPermAlongPath, MatchPred,
-                                                         CurElems, SCCNodes);
+                                                         InvSortPermAlongPath, FChecker, InstanceID,
+                                                         TrueLambda, CurElems, SCCNodes);
                         if (NewEndOfPath == nullptr) {
                             ostringstream sstr;
                             sstr << "Could not connect the end of path to a state satisfying "
@@ -796,6 +844,7 @@ namespace ESMC {
                 vector<PSTraceElemT> TempPath;
                 CurEndOfPath = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
                                             InvSortPermAlongPath,
+                                            nullptr, 0,
                                             [&] (u32 CmdID, const ProductState* State) -> bool
                                             {
                                                 return (!State->Equals(StartOfLoop));
@@ -821,7 +870,7 @@ namespace ESMC {
                 };
 
             DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
-                         InvSortPermAlongPath,
+                         InvSortPermAlongPath, nullptr, 0,
                          FinalPred, LoopBack, SCCNodes);
             // Sort the final state and include the updates
             auto OldEndOfPathPair = LoopBack.back();
@@ -837,6 +886,7 @@ namespace ESMC {
 
             LoopBack.push_back(PSTraceElemT(OldEndOfPathPair.first, SortedEndOfPath));
             auto&& LoopPermUpdates = TheCanonicalizer->GetChanUpdatesForPermutation(FinalPermID);
+            LoopPermUpdates = LTSCompiler::ArrayTransformAssignments(LoopPermUpdates, Mgr);
 
             PathSoFar.insert(PathSoFar.end(), LoopBack.begin(), LoopBack.end());
 

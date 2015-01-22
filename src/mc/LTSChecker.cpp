@@ -150,7 +150,8 @@ namespace ESMC {
                   Checker(Checker),
                   EnabledPerInstance(NumInstances, false),
                   ExecutedPerInstance(NumInstances, false),
-                  DisabledPerInstance(NumInstances, false)
+                  DisabledPerInstance(NumInstances, false),
+                  SatisfiedInTrace(NumInstances, false)
 
             {
                 const u32 NumTrackedIndices = SysIdxSet->GetNumTrackedIndices();
@@ -196,6 +197,53 @@ namespace ESMC {
                     DisabledPerInstance[i] = false;
                     ExecutedPerInstance[i] = false;
                 }
+                ClearTraceSatisfactionBits();
+            }
+
+            void FairnessChecker::ClearTraceSatisfactionBits() const
+            {
+                for (u32 i = 0; i < NumInstances; ++i) {
+                    SatisfiedInTrace[i] = false;
+                }
+            }
+
+            bool FairnessChecker::IsInstanceSatisfiedInTrace(u32 Instance) const
+            {
+                return SatisfiedInTrace[Instance];
+            }
+
+            void FairnessChecker::SetInstanceSatisfiedInTrace(u32 Instance) const
+            {
+                SatisfiedInTrace[Instance] = true;
+            }
+
+            bool FairnessChecker::CheckInstanceSatisfaction(u32 Instance,
+                                                            u32 PermutedInstance,
+                                                            u32 CmdID,
+                                                            const ProductState* ReachedState)
+            {
+                if (IsStrong || !DisabledPerInstance[Instance]) {
+                    return (GCmdsToRespondTo[PermutedInstance][CmdID]);
+                } else {
+                    for (auto CmdID : GCmdIDsToRespondTo[PermutedInstance]) {
+                        bool Exception;
+                        ExpT NEPred;
+                        auto NSVec = TryExecuteCommand(Checker->GuardedCommands[CmdID],
+                                                       ReachedState->GetSVPtr(), Exception,
+                                                       NEPred);
+                        if (NSVec != nullptr) {
+                            NSVec->Recycle();
+                            return false;
+                        }
+                    }
+                    return true;
+                }
+            }
+
+            bool FairnessChecker::IsTriviallySatisfied(u32 Instance,
+                                                       u32 PermutedInstance)
+            {
+                return (IsStrong && !EnabledPerInstance[PermutedInstance]);
             }
 
             void FairnessChecker::ProcessSCCState(const ProductState* State,
@@ -1366,9 +1414,10 @@ namespace ESMC {
                     auto IsFair = CheckSCCFairness(SCCRoot, UnfairStates);
 
                     if (!IsFair && UnfairStates.size() > 0) {
-                        ESMC_LOG_MIN_SHORT(
-                                           Out_ << "SCC " << SCCNum << " is unfair." << endl;
-                                           );
+                        ESMC_LOG_FULL(
+                                      "Checker.Fairness",
+                                      Out_ << "SCC " << SCCNum << " is unfair." << endl;
+                                      );
                         AllUnfairStates.insert(UnfairStates.begin(), UnfairStates.end());
                         FixPoint = false;
                     } else if (!IsFair) {

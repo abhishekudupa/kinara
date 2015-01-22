@@ -64,7 +64,11 @@ const u32 NumDirs = 1;
 
 int main()
 {
-    Logging::LogManager::Initialize();
+    // Logging::LogManager::Initialize();
+    Logging::LogManager::Initialize("MSILog", true, false);
+    ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
+    // ESMC::Logging::LogManager::EnableLogOption("Checker.AQSDetailed");
+
     auto TheLTS = new LabelledTS();
 
     auto TrueExp = TheLTS->MakeTrue();
@@ -244,15 +248,15 @@ int main()
                                               false, LTSFairnessType::None);
     ReqChannelEFSM->AddMsgs({ CacheParam }, TrueExp, GetXMsgType,
                             { CacheParam, DirParam, AddressParam },
-                            LTSFairnessType::None, LossDupFairnessType::None);
+                            true, LTSFairnessType::Strong, LossDupFairnessType::None);
 
     ReqChannelEFSM->AddMsgs({ CacheParam }, TrueExp, GetSMsgType,
                             { CacheParam, DirParam, AddressParam },
-                            LTSFairnessType::None, LossDupFairnessType::None);
+                            true, LTSFairnessType::None, LossDupFairnessType::None);
 
     ReqChannelEFSM->AddMsgs({ CacheParam }, TrueExp, WBMsgType,
                             { CacheParam, DirParam, AddressParam },
-                            LTSFairnessType::None, LossDupFairnessType::None);
+                            true, LTSFairnessType::Strong, LossDupFairnessType::None);
 
     ReqChannelEFSM->Freeze();
 
@@ -262,15 +266,15 @@ int main()
                                               TrueExp, NumCaches, false, false, false,
                                               false, LTSFairnessType::None);
     RspChannelEFSM->AddMsg(WBAckMsgType, { CacheParam, DirParam, AddressParam },
-                           LTSFairnessType::Strong);
+                           LTSFairnessType::Strong, LossDupFairnessType::None);
     RspChannelEFSM->AddMsg(DataMsgD2CType, { CacheParam, DirParam, AddressParam },
-                           LTSFairnessType::Strong);
+                           LTSFairnessType::Strong, LossDupFairnessType::None);
     RspChannelEFSM->AddMsgs({ CacheParam1 }, CacheNEQCache1, DataMsgC2CType,
                             { CacheParam1, CacheParam, DirParam, AddressParam },
-                            LTSFairnessType::Strong);
+                            true, LTSFairnessType::Strong, LossDupFairnessType::None);
     RspChannelEFSM->AddMsgs({ CacheParam1 }, CacheNEQCache1, InvAckMsgType,
                             { CacheParam1, CacheParam, DirParam, AddressParam },
-                            LTSFairnessType::Strong);
+                            true, LTSFairnessType::Strong, LossDupFairnessType::None);
     RspChannelEFSM->Freeze();
 
     // The unblock channel INTO each directory
@@ -280,13 +284,13 @@ int main()
                                                   false, LTSFairnessType::None);
     UnblockChannelEFSM->AddMsgs({ CacheParam }, TrueExp, UnblockSMsgType,
                                 { CacheParam, DirParam, AddressParam },
-                                LTSFairnessType::Strong, LossDupFairnessType::None);
+                                true, LTSFairnessType::Strong, LossDupFairnessType::None);
     UnblockChannelEFSM->AddMsgs({ CacheParam }, TrueExp, UnblockXMsgType,
                                 { CacheParam, DirParam, AddressParam },
-                                LTSFairnessType::Strong, LossDupFairnessType::None);
+                                true, LTSFairnessType::Strong, LossDupFairnessType::None);
     UnblockChannelEFSM->AddMsgs({ CacheParam }, TrueExp, DataMsgC2DType,
                                 { CacheParam, DirParam, AddressParam },
-                                LTSFairnessType::Strong, LossDupFairnessType::None);
+                                true, LTSFairnessType::Strong, LossDupFairnessType::None);
 
     UnblockChannelEFSM->Freeze();
 
@@ -307,7 +311,7 @@ int main()
 
     vector<LTSAssignRef> Updates;
     auto CoherenceMonitor = TheLTS->MakeGenEFSM("CoherenceMonitor", { DirParam, AddressParam },
-                                                TrueExp, LTSFairnessType::None);
+                                                TrueExp, LTSFairnessType::Strong);
     CoherenceMonitor->AddState("InitialState");
     CoherenceMonitor->AddState("DecideState");
     CoherenceMonitor->AddState("ErrorState", false, false, false, true);
@@ -392,7 +396,7 @@ int main()
                                   "PendingSTState",
                                   TrueExp, Updates, "OutMsg", STMsgType,
                                   { CacheParam, DirParam, AddressParam },
-                                  LTSFairnessType::None, SplatFairnessType::None, "");
+                                  {}, {});
     Updates.clear();
 
     Updates.push_back(new LTSAssignSimple(LastSeenStoreValueExp, STAckMsgInDotStoredValue));
@@ -557,7 +561,7 @@ int main()
     CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1, "C_I_FWD", "C_I",
                                     Guard, Updates, "OutMsg", InvAckMsgType,
                                     { CacheParam, CacheParam1, DirParam, AddressParam },
-                                    LTSFairnessType::None, SplatFairnessType::None, "");
+                                    {}, {});
     Updates.clear();
 
     // Transitions from S
@@ -598,8 +602,7 @@ int main()
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheFwdToCacheExp, CacheParam1);
     CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1, "C_S_FWD", "C_I",
                                     Guard, Updates, "OutMsg", InvAckMsgType,
-                                    { CacheParam, CacheParam1, DirParam, AddressParam },
-                                    LTSFairnessType::None, SplatFairnessType::None, "");
+                                    { CacheParam, CacheParam1, DirParam, AddressParam });
     Updates.clear();
 
     // Transitions from M
@@ -642,8 +645,7 @@ int main()
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheFwdToCacheExp, CacheParam1);
     CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1, "C_M_FWDS", "C_M_FWDS_C2D",
                                     Guard, Updates, "OutMsg", DataMsgC2CType,
-                                    { CacheParam, CacheParam1, DirParam, AddressParam },
-                                    LTSFairnessType::None, SplatFairnessType::None, "");
+                                    { CacheParam, CacheParam1, DirParam, AddressParam });
     Updates.clear();
 
     Updates.push_back(new LTSAssignSimple(DataMsgC2DOutDotData, CacheDataExp));
@@ -668,8 +670,7 @@ int main()
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheFwdToCacheExp, CacheParam1);
     CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1, "C_M_FWDX", "C_I", Guard, Updates,
                                     "OutMsg", DataMsgC2CType,
-                                    { CacheParam, CacheParam1, DirParam, AddressParam },
-                                    LTSFairnessType::None, SplatFairnessType::None, "");
+                                    { CacheParam, CacheParam1, DirParam, AddressParam });
 
     Updates.clear();
 
@@ -686,8 +687,7 @@ int main()
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheFwdToCacheExp, CacheParam1);
     CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1, "C_IM_FWD", "C_IM",
                                     Guard, Updates, "OutMsg", InvAckMsgType,
-                                    { CacheParam, CacheParam1, DirParam, AddressParam },
-                                    LTSFairnessType::None, SplatFairnessType::None, "");
+                                    { CacheParam, CacheParam1, DirParam, AddressParam });
     Updates.clear();
 
     // C_IM on DataMsgC2C'
@@ -747,8 +747,7 @@ int main()
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheFwdToCacheExp, CacheParam1);
     CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1, "C_SM_FWD", "C_IM", Guard,
                                     Updates, "OutMsg", InvAckMsgType,
-                                    { CacheParam, CacheParam1, DirParam, AddressParam },
-                                    LTSFairnessType::None, SplatFairnessType::None, "");
+                                    { CacheParam, CacheParam1, DirParam, AddressParam });
     Updates.clear();
 
     // C_SM on DataMsgD2C'
@@ -797,8 +796,7 @@ int main()
     CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1,
                                     "C_IS_FWD", "C_IS", Guard, Updates,
                                     "OutMsg", InvAckMsgType,
-                                    { CacheParam, CacheParam1, DirParam, AddressParam },
-                                    LTSFairnessType::None, SplatFairnessType::None, "");
+                                    { CacheParam, CacheParam1, DirParam, AddressParam });
     Updates.clear();
 
     // C_IS on DataMsgD2C'
@@ -844,8 +842,8 @@ int main()
     // CacheEFSM->AddOutputTransitions({ CacheParam1 }, CacheNEQCache1,
     //                                 "C_II_FWD", "C_I", Guard, Updates,
     //                                 "OutMsg", InvAckMsgType,
-    //                                 { CacheParam, CacheParam1, DirParam, AddressParam },
-    //                                 LTSFairnessType::None, SplatFairnessType::None, "");
+    //                                 { CacheParam, CacheParam1, DirParam, AddressParam });
+
     Updates.clear();
 
     // C_II on FwdGetSMsg'
@@ -941,8 +939,7 @@ int main()
     DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp,
                                   "D_I_GETX", "D_BUSY", Guard,
                                   Updates, "OutMsg", DataMsgD2CType,
-                                  CacheParams, LTSFairnessType::None,
-                                  SplatFairnessType::None, "");
+                                  CacheParams);
     Updates.clear();
 
     // GetS on D_I
@@ -959,8 +956,7 @@ int main()
                                           TheLTS->MakeVal("0", AckType)));
     DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_I_GETS",
                                   "D_BUSY", Guard, Updates, "OutMsg",
-                                  DataMsgD2CType, CacheParams,
-                                  LTSFairnessType::None, SplatFairnessType::None, "");
+                                  DataMsgD2CType, CacheParams);
     Updates.clear();
 
     // Transitions on D_S
@@ -982,8 +978,8 @@ int main()
 
     DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_S_GETX",
                                   "D_S_GETX_INV", Guard, Updates, "OutMsg",
-                                  DataMsgD2CType, CacheParams,
-                                  LTSFairnessType::None, SplatFairnessType::None, "");
+                                  DataMsgD2CType, CacheParams);
+
     Updates.clear();
     Guard = TheLTS->MakeOp(LTSOps::OpIndex, DirSharersExp, DirActiveIDExp);
     Guard = TheLTS->MakeOp(LTSOps::OpNOT, Guard);
@@ -996,8 +992,8 @@ int main()
 
     DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_S_GETX",
                                   "D_S_GETX_INV", Guard, Updates, "OutMsg",
-                                  DataMsgD2CType, CacheParams,
-                                  LTSFairnessType::None, SplatFairnessType::None, "");
+                                  DataMsgD2CType, CacheParams);
+
     Updates.clear();
 
     // Send out the invalidations
@@ -1030,8 +1026,8 @@ int main()
     DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_S_GETX_INV",
                                   "D_S_GETX_INV", Guard, Updates, "OutMsg",
                                   FwdGetXMsgType,
-                                  { CacheParam, DirParam, AddressParam },
-                                  LTSFairnessType::None, SplatFairnessType::None, "");
+                                  { CacheParam, DirParam, AddressParam });
+
     Updates.clear();
 
     // GetS on D_S
@@ -1047,8 +1043,8 @@ int main()
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheParam, DirActiveIDExp);
     DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_S_GETS",
                                   "D_BUSY", Guard, Updates,
-                                  "OutMsg", DataMsgD2CType, CacheParams,
-                                  LTSFairnessType::None, SplatFairnessType::None, "");
+                                  "OutMsg", DataMsgD2CType, CacheParams);
+
     Updates.clear();
 
     // Transitions on D_M
@@ -1063,8 +1059,7 @@ int main()
     Updates.push_back(new LTSAssignSimple(FwdGetXMsgOutDotRequester, DirActiveIDExp));
     DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_M_GETX", "D_BUSY",
                                   Guard, Updates, "OutMsg", FwdGetXMsgType,
-                                  CacheParams, LTSFairnessType::None,
-                                  SplatFairnessType::None, "");
+                                  CacheParams);
     Updates.clear();
 
     // GetS on D_M
@@ -1078,8 +1073,7 @@ int main()
     Updates.push_back(new LTSAssignSimple(FwdGetSMsgOutDotRequester, DirActiveIDExp));
     DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_M_GETS", "D_BUSY_DATA",
                                   Guard, Updates, "OutMsg", FwdGetSMsgType,
-                                  CacheParams, LTSFairnessType::None,
-                                  SplatFairnessType::None, "");
+                                  CacheParams);
     Updates.clear();
 
     // WB on D_M
@@ -1108,8 +1102,7 @@ int main()
 
     DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_M_WB", "D_I",
                                   Guard, Updates, "OutMsg", WBAckMsgType,
-                                  CacheParams, LTSFairnessType::None,
-                                  SplatFairnessType::None, "");
+                                  CacheParams);
     Updates.clear();
 
     // Transitions from BUSY
@@ -1143,9 +1136,8 @@ int main()
     Guard = TheLTS->MakeOp(LTSOps::OpEQ, DirActiveIDExp, CacheParam);
     DirEFSM->AddOutputTransitions({ CacheParam }, TrueExp, "D_BUSY_WB",
                                   "D_BUSY", Guard, Updates,
-                                  "OutMsg", DataMsgD2CType, CacheParams,
-                                  LTSFairnessType::None,
-                                  SplatFairnessType::None, "");
+                                  "OutMsg", DataMsgD2CType, CacheParams);
+
     Updates.clear();
 
     // UnblockX on BUSY

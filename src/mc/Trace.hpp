@@ -94,10 +94,13 @@ namespace ESMC {
 
             // For storing unwound edges
             // unwound(first) <-- unwound(second.second) with command (second.first)
-            typedef unordered_map<BFSQueueEntryT, pair<u32, BFSQueueEntryT>,
+            typedef unordered_map<BFSQueueEntryT,
+                                  pair<u32, BFSQueueEntryT>,
                                   BFSQueueEntryHasher> UnwoundPredMapT;
 
         } /* end namespace detail */
+
+        using namespace Detail;
 
         // A straightforward permuted path
         // where states are successors modulo some
@@ -208,6 +211,8 @@ namespace ESMC {
                          const LTSChecker* Checker,
                          u32& InvPermAlongPathOut,
                          u32& InvSortPermForRoot,
+                         FairnessChecker* FChecker,
+                         u32 InstanceID,
                          const function<bool(u32, const ProductState*)>& MatchPred,
                          vector<PSTraceElemT>& PathElems,
                          const unordered_set<const ProductState*>& Bounds);
@@ -216,6 +221,10 @@ namespace ESMC {
                                                 const Detail::FairnessChecker* FChecker,
                                                 const vector<GCmdRef>& GuardedCmds,
                                                 u32 InstanceID);
+
+            static inline void
+            MarkFairnessesSatisfied(const vector<pair<PSTraceElemT, u32>>& PathSegment,
+                                    const LTSChecker* Checker);
 
 
         public:

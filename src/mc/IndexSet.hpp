@@ -172,6 +172,7 @@ namespace ESMC {
 
             u32 GetClassID(u32 IndexID) const;
             i32 GetIndexForClassID(u32 IndexID, u32 ClassID) const;
+            i32 GetIndexIDForClassIndex(u32 ClassIndex, u32 ClassID) const;
         };
 
     } /* end namespace MC */

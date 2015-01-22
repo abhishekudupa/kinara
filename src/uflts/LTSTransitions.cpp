@@ -296,10 +296,10 @@ namespace ESMC {
                     throw InternalError((string)"Strange kind of leader transition in " +
                                         __FUNCTION__ + ", at: " + __FILE__ + ":" +
                                         to_string(__LINE__));
-                    auto const& Objs = LeaderInternal->GetFairnessObjsSatisfied();
-                    FairnessObjsSatisfied.insert(FairnessObjsSatisfied.end(),
-                                                 Objs.begin(), Objs.end());
                 }
+                auto const& Objs = LeaderInternal->GetFairnessObjsSatisfied();
+                FairnessObjsSatisfied.insert(FairnessObjsSatisfied.end(),
+                                             Objs.begin(), Objs.end());
             }
 
 

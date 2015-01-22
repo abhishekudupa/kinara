@@ -129,6 +129,10 @@ namespace ESMC {
                 vector<bool> ExecutedPerInstance;
                 vector<bool> DisabledPerInstance;
 
+                // The instances of this fairness that we've
+                // already satisfied in the trace so far
+                mutable vector<bool> SatisfiedInTrace;
+
             public:
                 FairnessChecker(const LTSFairSetRef& FairSet,
                                 SystemIndexSet* SysIdxSet,
@@ -151,6 +155,15 @@ namespace ESMC {
                 bool IsEnabled(u32 InstanceID) const;
                 bool IsDisabled(u32 InstanceID) const;
                 bool IsExecuted(u32 InstanceID) const;
+
+                void ClearTraceSatisfactionBits() const;
+                bool IsInstanceSatisfiedInTrace(u32 Instance) const;
+                void SetInstanceSatisfiedInTrace(u32 Instance) const;
+                bool CheckInstanceSatisfaction(u32 Instance,
+                                               u32 PermutedInstance,
+                                               u32 CmdID,
+                                               const ProductState* ReachedState);
+                bool IsTriviallySatisfied(u32 Instance, u32 PermutedInstance);
 
                 const unordered_set<const ProductState*>& GetEnabledStates() const;
                 const unordered_set<u32>& GetCmdIDsToRespondTo(u32 InstanceID) const;

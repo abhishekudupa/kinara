@@ -470,13 +470,6 @@ namespace ESMC {
 
             inline bool HasMsgLValue(const ExpT& Exp, LabelledTS* TheLTS);
 
-            inline vector<LTSAssignRef>
-            ArrayTransformAssignments(const vector<LTSAssignRef>& Updates, MgrT* Mgr) const;
-            LTSAssignRef ArrayTransformAssignment(const ExpT& LHS,
-                                                  const ExpT& RHS,
-                                                  const MgrT::SubstMapT& AccumMap) const;
-
-
         public:
             LTSCompiler();
             ~LTSCompiler();
@@ -488,6 +481,15 @@ namespace ESMC {
                              const unordered_set<i64>& InterpretedOps,
                              const unordered_map<i64, ExpT>& AllFalsePreds);
             const unordered_map<i64, vector<const UFInterpreter*>>& GetUFInterpreters() const;
+
+
+            static vector<LTSAssignRef>
+            ArrayTransformAssignments(const vector<LTSAssignRef>& Updates, MgrT* Mgr);
+            static LTSAssignRef
+            ArrayTransformAssignment(const ExpT& LHS,
+                                     const ExpT& RHS,
+                                     const MgrT::SubstMapT& AccumMap);
+
         };
 
     } /* end namespace MC */
