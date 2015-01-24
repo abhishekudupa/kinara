@@ -189,10 +189,10 @@ namespace ESMC {
 
                 // Rule: Given a permutation <p1, p2, ... pn>, we
                 // interpret this is as a map:
-                // Arr[0] |-> p1
-                // Arr[1] |-> p2
+                // Arr[0] |-> Arr[p1]
+                // Arr[1] |-> Arr[p2]
                 // ...
-                // Arr[n] |-> pn
+                // Arr[n] |-> Arr[pn]
                 auto NewOutStateVector = OutStateVector->Clone();
 
                 for (u32 i = 0; i < PermSize; ++i) {
@@ -550,13 +550,40 @@ namespace ESMC {
         }
 
         StateVec* Canonicalizer::Canonicalize(const StateVec* InputVector,
-                                              u32& PermID) const
+                                              u32& PermID,
+                                              const AQStructure* AQS) const
         {
             StateVec* BestStateVec = InputVector->Clone();
+            bool FoundExisting = false;
+            bool ShortCutEnabled = false;
+            // Check if the input vector is already canonical
+            if (AQS != nullptr) {
+                auto ExistingSV = AQS->Find(InputVector);
+                if (ExistingSV != nullptr) {
+                    FoundExisting = true;
+                    ShortCutEnabled = true;
+                }
+                // Okay, that didn't work, let's see if we can get away with just
+                // sorting the damn thing
+                for (auto Sorter : Sorters) {
+                    Sorter->Sort(BestStateVec, false);
+                }
+                ExistingSV = AQS->Find(BestStateVec);
+                if (ExistingSV != nullptr) {
+                    FoundExisting = true;
+                    ShortCutEnabled = true;
+                }
+                // Nothing worked, proceed onto the main
+                // canonicalization loop!
+                BestStateVec->Set(*InputVector);
+            }
+
             auto WorkingStateVec = InputVector->Clone();
             PermID = 0;
 
-            for (auto it = PermSet->Begin(); it != PermSet->End(); ++it) {
+            auto it = PermSet->Begin();
+            ++it;
+            for ((void(0)); it != PermSet->End() && !ShortCutEnabled; ++it) {
                 WorkingStateVec->Set(*InputVector);
 
                 ESMC_LOG_FULL(
@@ -587,6 +614,17 @@ namespace ESMC {
                     Sorter->Sort(WorkingStateVec, false);
                 }
 
+                // Check if the working state is in the AQS already
+                if (AQS != nullptr) {
+                    auto ExistingSV = AQS->Find(WorkingStateVec);
+                    if (ExistingSV != nullptr) {
+                        BestStateVec->Recycle();
+                        BestStateVec = WorkingStateVec;
+                        FoundExisting = true;
+                        break;
+                    }
+                }
+
                 if (BestStateVec->Compare(*WorkingStateVec) > 0) {
                     BestStateVec->Set(*WorkingStateVec);
                     PermID = it.GetIndex();
@@ -599,6 +637,7 @@ namespace ESMC {
                                Printer->PrintState(BestStateVec, Out_);
                                Out_ << "-----------------------------------------" << endl;
                                );
+
             }
 
             ESMC_LOG_FULL
@@ -616,7 +655,10 @@ namespace ESMC {
                      Out_ << "-----------------------------------------" << endl;
                  });
 
-            WorkingStateVec->Recycle();
+            if (!FoundExisting) {
+                WorkingStateVec->Recycle();
+            }
+
             return BestStateVec;
         }
 

@@ -139,39 +139,30 @@ namespace ESMC {
                                              SystemIndexSet* SysIdxSet,
                                              const vector<GCmdRef>& GuardedCommands,
                                              LTSChecker* Checker)
-                : FairSet(FairSet), NumInstances(FairSet->GetNumInstances()),
+                : Enabled(false), Disabled(false), Executed(false),
+                  FairSet(FairSet), NumInstances(FairSet->GetNumInstances()),
                   IsStrong(FairSet->GetFairnessType() == FairSetFairnessType::Strong),
-                  SysIdxSet(SysIdxSet), Enabled(false),
-                  Executed(false), Disabled(false),
-                  ClassID(FairSet->GetClassID()),
-                  GCmdsToRespondTo(SysIdxSet->GetNumTrackedIndices(),
-                                   vector<bool>(GuardedCommands.size())),
+                  SysIdxSet(SysIdxSet), ClassID(FairSet->GetClassID()),
+                  GCmdsToRespondTo(NumInstances, BitSet(GuardedCommands.size(), false)),
                   GCmdIDsToRespondTo(NumInstances),
                   Checker(Checker),
                   EnabledPerInstance(NumInstances, false),
                   ExecutedPerInstance(NumInstances, false),
                   DisabledPerInstance(NumInstances, false),
                   SatisfiedInTrace(NumInstances, false)
-
             {
-                const u32 NumTrackedIndices = SysIdxSet->GetNumTrackedIndices();
-                for (u32 TrackedIndex = 0; TrackedIndex < NumTrackedIndices; ++TrackedIndex) {
-                    auto InstanceID = SysIdxSet->GetIndexForClassID(TrackedIndex, ClassID);
-                    if (InstanceID < 0) {
-                        continue;
-                    }
-
-                    u32 i = 0;
-                    for (auto const& Cmd : GuardedCommands) {
+                for (u32 Instance = 0; Instance < NumInstances; ++Instance) {
+                    const u32 NumGuardedCommands = GuardedCommands.size();
+                    for (auto u32 i = 0 : i < NumGuardedCommands; ++i) {
+                        auto const& Cmd = GuardedCommands[i];
                         auto const& FairObjs = Cmd->GetFairnessObjsSatisfied();
                         for (auto const& FairObj : FairObjs) {
                             if (FairObj->GetFairnessSet() == FairSet &&
-                                FairObj->GetInstanceNumber() == (u32)InstanceID) {
-                                GCmdsToRespondTo[TrackedIndex][i] = true;
+                                FairObj->GetInstanceNumber() == Instance) {
+                                GCmdsToRespondTo[TrackedIndex].Set(i);
                                 GCmdIDsToRespondTo[InstanceID].insert(i);
                             }
                         }
-                        ++i;
                     }
                 }
             }
@@ -181,7 +172,15 @@ namespace ESMC {
                 // Nothing here
             }
 
-            void FairnessChecker::ResetFairness()
+            void FairnessChecker::InitializeForNewSCC()
+            {
+                InitializeForThreadedTraversal();
+                EnabledPerInstance.Clear();
+                ExecutedPerInstance.Clear();
+                DisabledPerInstance.Clear();
+            }
+
+            void FairnessChecker::InitializeForNewThread()
             {
                 Enabled = false;
                 Disabled = false;
@@ -189,43 +188,38 @@ namespace ESMC {
                 EnabledStates.clear();
             }
 
-            void FairnessChecker::ResetFull()
+            void FairnessChecker::Reset()
             {
-                ResetFairness();
-                for (u32 i = 0; i < NumInstances; ++i) {
-                    EnabledPerInstance[i] = false;
-                    DisabledPerInstance[i] = false;
-                    ExecutedPerInstance[i] = false;
-                }
+                InitializeForNewSCC();
                 ClearTraceSatisfactionBits();
             }
 
             void FairnessChecker::ClearTraceSatisfactionBits() const
             {
-                for (u32 i = 0; i < NumInstances; ++i) {
-                    SatisfiedInTrace[i] = false;
-                }
+                SatisfiedInTrace.Clear();
             }
 
             bool FairnessChecker::IsInstanceSatisfiedInTrace(u32 Instance) const
             {
-                return SatisfiedInTrace[Instance];
+                return SatisfiedInTrace.Test(Instance);
             }
 
             void FairnessChecker::SetInstanceSatisfiedInTrace(u32 Instance) const
             {
-                SatisfiedInTrace[Instance] = true;
+                SatisfiedInTrace.Set(Instance);
             }
 
-            bool FairnessChecker::CheckInstanceSatisfaction(u32 Instance,
-                                                            u32 PermutedInstance,
-                                                            u32 CmdID,
-                                                            const ProductState* ReachedState)
+            bool
+            FairnessChecker::CheckInstanceSatisfaction(u32 Instance,
+                                                       u32 CmdID,
+                                                       const ProductState* ReachedState) const
             {
+                // Assumes that we're not trivially satisfied
                 if (IsStrong || !DisabledPerInstance[Instance]) {
-                    return (GCmdsToRespondTo[PermutedInstance][CmdID]);
+                    return (GCmdIDsToRespondTo[Instance].find(CmdID) !=
+                            GCmdIDsToRespondTo[Instance].end());
                 } else {
-                    for (auto CmdID : GCmdIDsToRespondTo[PermutedInstance]) {
+                    for (auto CmdID : GCmdIDsToRespondTo[Instance]) {
                         bool Exception;
                         ExpT NEPred;
                         auto NSVec = TryExecuteCommand(Checker->GuardedCommands[CmdID],
@@ -240,18 +234,17 @@ namespace ESMC {
                 }
             }
 
-            bool FairnessChecker::IsTriviallySatisfied(u32 Instance,
-                                                       u32 PermutedInstance)
+            void FairnessChecker::AcceptSCCState(const ProductState* State,
+                                                 const ProductEdgeSetT& Edges,
+                                                 u32 CurrentTrackedIndex,
+                                                 u32 OriginalTrackedIndex)
             {
-                return (IsStrong && !EnabledPerInstance[PermutedInstance]);
-            }
+                auto CurrentInstance =
+                    SysIdxSet->GetIndexForClassID(CurrentTrackedIndex, ClassID);
+                auto OriginalInstance =
+                    SysIdxSet->GetIndexForClassID(OriginalTrackedIndex, ClassID);
 
-            void FairnessChecker::ProcessSCCState(const ProductState* State,
-                                                  const ProductEdgeSetT& Edges,
-                                                  u32 TrackedIndex)
-            {
-                auto InstanceID = SysIdxSet->GetIndexForClassID(TrackedIndex, ClassID);
-                if (InstanceID < 0) {
+                if (CurrentInstance < 0 || OriginalInstance < 0) {
                     return;
                 }
 
@@ -259,8 +252,11 @@ namespace ESMC {
                               "Checker.Fairness",
                               Out_ << "Fairness Checker for fairness set: "
                                    << FairSet->GetName() << " on EFSM "
-                                   << FairSet->GetEFSM()->GetName() << " with tracked index "
-                                   << TrackedIndex << endl;
+                                   << FairSet->GetEFSM()->GetName()
+                                   << " with current tracked index "
+                                   << CurrentTrackedIndex
+                                   << " and original tracked index "
+                                   << OriginalTrackedIndex << endl;
                               Out_ << "Considering state:" << endl;
                               Checker->Printer->PrintState(State, Out_);
                               Out_ << endl;
@@ -272,25 +268,25 @@ namespace ESMC {
                 for (auto const& Edge : Edges) {
                     auto NextState = Edge->GetTarget();
                     auto GCmdIndex = Edge->GetGCmdIndex();
-                    if (!GCmdsToRespondTo[TrackedIndex][GCmdIndex]) {
+                    if (!GCmdsToRespondTo[CurrentInstance].Test(GCmdIndex)) {
                         continue;
                     }
-                    // This command causes this state to be marked
-                    // enabled
 
-                    ESMC_LOG_FULL(
+                    // This command causes this state to be marked enabled
+
+                    ESMC_LOG_SHORT(
                                   "Checker.Fairness",
                                   Out_ << "Marking as Enabled, because command "
-                                       << GCmdIndex << " is enabled" << endl;
+                                       << GCmdIndex << " is enabled." << endl;
                                   );
 
                     Enabled = true;
-                    EnabledPerInstance[InstanceID] = true;
+                    EnabledPerInstance.Set(OriginalInstance);
                     AtLeastOneEnabled = true;
 
                     if (NextState->IsInSCC(SCCID)) {
 
-                        ESMC_LOG_FULL(
+                        ESMC_LOG_SHORT(
                                       "Checker.Fairness",
                                       auto PermSet = Checker->TheCanonicalizer->GetPermSet();
                                       Out_ << "Marking as Executed, because, next state is in SCC"
@@ -303,7 +299,7 @@ namespace ESMC {
                                       );
 
                         Executed = true;
-                        ExecutedPerInstance[InstanceID] = true;
+                        ExecutedPerInstance.Set(OriginalInstance);
                         if (EnabledStates.size() > 0) {
                             EnabledStates.clear();
                         }
@@ -315,7 +311,7 @@ namespace ESMC {
                 // if no commands are enabled, then we're disabled!
                 if (!AtLeastOneEnabled) {
                     Disabled = true;
-                    DisabledPerInstance[InstanceID] = true;
+                    DisabledPerInstance.Set(OriginalInstance);
                 }
             }
 
@@ -323,7 +319,8 @@ namespace ESMC {
             {
                 return
                     ((string)"Fairness Checker for fairness set: " +
-                     FairSet->GetName() + " on EFSM " + FairSet->GetEFSM()->GetName());
+                     FairSet->GetName() + " on EFSM " + FairSet->GetEFSM()->GetName() +
+                     " with " + to_string(NumInstances) << " instances");
             }
 
             bool FairnessChecker::IsFair() const
@@ -355,19 +352,19 @@ namespace ESMC {
                 return Disabled;
             }
 
-            bool FairnessChecker::IsEnabled(u32 InstanceID) const
+            bool FairnessChecker::IsEnabled(u32 Instance) const
             {
-                return EnabledPerInstance[InstanceID];
+                return EnabledPerInstance.Test(Instance);
             }
 
-            bool FairnessChecker::IsExecuted(u32 InstanceID) const
+            bool FairnessChecker::IsExecuted(u32 Instance) const
             {
-                return ExecutedPerInstance[InstanceID];
+                return ExecutedPerInstance.Test(Instance);
             }
 
-            bool FairnessChecker::IsDisabled(u32 InstanceID) const
+            bool FairnessChecker::IsDisabled(u32 Instance) const
             {
-                return DisabledPerInstance[InstanceID];
+                return DisabledPerInstance.Test(Instance);
             }
 
             const unordered_set<const ProductState*>& FairnessChecker::GetEnabledStates() const
@@ -375,9 +372,36 @@ namespace ESMC {
                 return EnabledStates;
             }
 
-            const unordered_set<u32>& FairnessChecker::GetCmdIDsToRespondTo(u32 InstanceID) const
+            void FairnessChecker::Permute(const vector<u08>& Permutation)
             {
-                return GCmdIDsToRespondTo[InstanceID];
+                // Construct a local permutation vector for my instances
+                vector<u32> InstancePermutation(NumInstances, 0);
+                for (u32 Instance = 0; Instance < NumInstances; ++i) {
+                    auto GlobalIndex = SysIdxSet->GetIndexIDForClassIndex(Instance, ClassID);
+                    auto PermutedGlobalIndex = SysIdxSet->Permute(GlobalIndex, Permutation);
+                    auto PermutedInstance = SysIdxSet->GetIndexForClassID(GlobalIndex, ClassID);
+                    InstancePermutation[Instance] = PermutedInstance;
+                }
+
+                // Apply the local permutation to all the per instance structures
+                auto OriginalGCmdsToRespondTo = GCmdsToRespondTo;
+                auto OriginalGCmdIDsToRespondTo = GCmdIDsToRespondTo;
+                auto OriginalExecutedPerInstance = ExecutedPerInstance;
+                auto OriginalEnabledPerInstance = EnabledPerInstance;
+                auto OriginalDisabledPerInstance = DisabledPerInstance;
+
+                for (u32 Instace = 0; Instance < NumInstances; ++Instance) {
+                    GCmdsToRespondTo[Instance] =
+                        OriginalGCmdsToRespondTo[InstancePermutation[Instance]];
+                    GCmdIDsToRespondTo =
+                        OriginalGCmdIDsToRespondTo[InstancePermutation[Instance]];
+                    ExecutedPerInstance =
+                        OriginalExecutedPerInstance[InstancePermutation[Instance]];
+                    EnabledPerInstance =
+                        OriginalEnabledPerInstance[InstancePermutation[Instance]];
+                    DisabledPerInstance =
+                        OriginalDisabledPerInstance[InstancePermutation[Instance]];
+                }
             }
 
         } /* end namespace Detail */
@@ -676,7 +700,7 @@ namespace ESMC {
 
 
                 u32 PermID;
-                auto CanonState = TheCanonicalizer->Canonicalize(NextState, PermID);
+                auto CanonState = TheCanonicalizer->Canonicalize(NextState, PermID, AQS);
 
                 ESMC_LOG_SHORT(
                                "Checker.AQSDetailed",
@@ -803,7 +827,7 @@ namespace ESMC {
                                             << endl;
                                        );
 
-                        auto CanonNextState = TheCanonicalizer->Canonicalize(NextState, PermID);
+                        auto CanonNextState = TheCanonicalizer->Canonicalize(NextState, PermID, AQS);
 
                         ESMC_LOG_SHORT(
                                        "Checker.AQSDetailed",
@@ -1090,24 +1114,24 @@ namespace ESMC {
                                );
         }
 
-        inline void LTSChecker::DoThreadedBFS(const ProductState *SCCRoot, u32 IndexID)
+        inline void LTSChecker::DoThreadedBFS(const ProductState *SCCRoot, u32 TrackedIndex)
         {
             deque<pair<const ProductState*, u32>> BFSQueue;
-            SCCRoot->MarkTracked(IndexID);
+            SCCRoot->MarkTracked(TrackedIndex);
             const u32 SCCID = SCCRoot->Status.InSCC;
             // We can set the class id here,
             // since the classes will not change
-            const u32 ClassID = SysIdxSet->GetClassID(IndexID);
+            const u32 ClassID = SysIdxSet->GetClassID(TrackedIndex);
 
             ESMC_LOG_FULL(
                           "Checker.AQSDetailed",
                           Out_ << "Doing threaded BFS on product state:"
                                << endl;
                           Printer->PrintState(SCCRoot, Out_);
-                          Out_ << "With threaded tracked index " << IndexID << endl;
+                          Out_ << "Tracking thread index: " << TrackedIndex << endl;
                           );
 
-            BFSQueue.push_back(make_pair(SCCRoot, IndexID));
+            BFSQueue.push_back(make_pair(SCCRoot, TrackedIndex));
             auto PermSet = TheCanonicalizer->GetPermSet();
 
             while (BFSQueue.size() > 0) {
@@ -1121,7 +1145,7 @@ namespace ESMC {
 
                 // process this state for fairness
                 for (auto Checker : FairnessCheckers[ClassID]) {
-                    Checker->ProcessSCCState(CurState, CurEdges, CurIndex);
+                    Checker->AcceptSCCState(CurState, CurEdges, CurIndex, TrackedIndex);
                 }
 
                 for (auto Edge : CurEdges) {
@@ -1155,51 +1179,42 @@ namespace ESMC {
         {
             for (auto FCheckers : FairnessCheckers) {
                 for (auto FChecker : FCheckers) {
-                    FChecker->ResetFull();
+                    FChecker->InitializeForNewSCC();
                 }
             }
 
-            const u32 IndexMax = SysIdxSet->GetNumTrackedIndices();
-            for (u32 IndexID = 0; IndexID < IndexMax; ++IndexID) {
+            const u32 MaxTrackedIndex = SysIdxSet->GetNumTrackedIndices();
+            for (u32 TrackedIndex = 0; TrackedIndex < MaxTrackedIndex; ++TrackedIndex) {
 
-                if (SCCRoot->IsTracked(IndexID)) {
+                if (SCCRoot->IsTracked(TrackedIndex)) {
                     continue;
                 }
 
-                // Reset all the fairness checkers first
-                for (auto FCheckers : FairnessCheckers) {
-                    for (auto FChecker : FCheckers) {
-                        FChecker->ResetFairness();
-                    }
-                }
+                auto ClassID = SysIdxSet->GetClassID(TrackedIndex);
 
-                auto ClassID = SysIdxSet->GetClassID(IndexID);
+                // Reset all the fairness checkers in this class
+                for (auto FChecker : FairnessCheckers[ClassID]) {
+                    FChecker->InitializeForNewThread();
+                }
 
                 ESMC_LOG_FULL(
                               "Checker.AQSDetailed",
                               Out_ << "Checking fairness of SCC with tracked index "
-                                   << IndexID << endl;
+                                   << TrackedIndex << endl;
                               );
 
-                DoThreadedBFS(SCCRoot, IndexID);
+                DoThreadedBFS(SCCRoot, TrackedIndex);
                 // Are all the fairness requirements satisfied?
                 for (auto FChecker : FairnessCheckers[ClassID]) {
                     if (!FChecker->IsFair()) {
-                        if (!FChecker->IsStrongFairness()) {
-                            // Weak fairness, nothing to do
-                            return false;
-                        } else {
-                            // Find the states that cause this
-                            // particular fairness to fail
-                            // i.e., states where this fairness
-                            // is enabled
+                        if (FChecker->IsStrongFairness()) {
                             auto const& EnabledStates = FChecker->GetEnabledStates();
+                            UnfairStates.clear();
                             UnfairStates.insert(UnfairStates.end(), EnabledStates.begin(),
                                                 EnabledStates.end());
-                            return false;
                         }
+                        return false;
                     }
-                    // This fairness set is satisfied!
                 }
             }
             return true;
@@ -1384,7 +1399,7 @@ namespace ESMC {
             ConstructProduct(Monitor);
 
             bool FixPoint = false;
-            unordered_set<const ProductState*> AllUnfairStates;
+            vector<const ProductState*> AllUnfairStates;
 
             do {
                 FixPoint = true;
@@ -1418,7 +1433,9 @@ namespace ESMC {
                                       "Checker.Fairness",
                                       Out_ << "SCC " << SCCNum << " is unfair." << endl;
                                       );
-                        AllUnfairStates.insert(UnfairStates.begin(), UnfairStates.end());
+                        AllUnfairStates.insert(AllUnfairStates.end(),
+                                               UnfairStates.begin(),
+                                               UnfairStates.end());
                         FixPoint = false;
                     } else if (!IsFair) {
                         continue;

@@ -212,18 +212,15 @@ namespace ESMC {
                          u32& InvPermAlongPathOut,
                          u32& InvSortPermForRoot,
                          FairnessChecker* FChecker,
-                         u32 InstanceID,
+                         u32 OrigInstanceID,
+                         u32 PermutedInstanceID,
                          const function<bool(u32, const ProductState*)>& MatchPred,
                          vector<PSTraceElemT>& PathElems,
                          const unordered_set<const ProductState*>& Bounds);
 
-            static inline bool CheckFairnessSat(const vector<PSTraceElemT>& PathSoFar,
-                                                const Detail::FairnessChecker* FChecker,
-                                                const vector<GCmdRef>& GuardedCmds,
-                                                u32 InstanceID);
-
             static inline void
-            MarkFairnessesSatisfied(const vector<pair<PSTraceElemT, u32>>& PathSegment,
+            MarkFairnessesSatisfied(const vector<PSTraceElemT>& PathSegment,
+                                    const vector<u08>& InversePermutation,
                                     const LTSChecker* Checker);
 
 

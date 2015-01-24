@@ -211,7 +211,8 @@ namespace ESMC {
             Canonicalizer(const LabelledTS* TheLTS, StateVecPrinter* Printer);
             ~Canonicalizer();
 
-            StateVec* Canonicalize(const StateVec* InputVector, u32& PermID) const;
+            StateVec* Canonicalize(const StateVec* InputVector, u32& PermID,
+                                   const AQStructure* AQS = nullptr) const;
             StateVec* SortChans(const StateVec* InputVector, bool RememberPerm, u32& PermID) const;
 
             StateVec* ApplyPermutation(const StateVec* InputVector, u32 PermID) const;

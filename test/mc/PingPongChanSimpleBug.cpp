@@ -90,14 +90,15 @@ int main()
     auto Server = TheLTS->MakeGenEFSM("Server", vector<ExpT>(), TrueExp, LTSFairnessType::None);
 
     auto ClientIDParam = TheLTS->MakeVar("ClientID", ClientIDType);
-    auto ClientEFSM = TheLTS->MakeGenEFSM("Client", Params, TrueExp, LTSFairnessType::Strong);
+    auto ClientEFSM = TheLTS->MakeGenEFSM("Client", Params, TrueExp, LTSFairnessType::None);
 
     auto C2SChan = TheLTS->MakeChannel("C2SChan", vector<ExpT>(), TrueExp, 2, false,
                                        false, false, false, LTSFairnessType::None);
     auto S2CChan = TheLTS->MakeChannel("S2CChan", Params, TrueExp, 1, false, true,
                                        false, false, LTSFairnessType::None);
 
-    C2SChan->AddMsgs(Params, TrueExp, DataMsgType, Params, true, LTSFairnessType::None, LossDupFairnessType::None);
+    C2SChan->AddMsgs(Params, TrueExp, DataMsgType, Params, true, LTSFairnessType::Strong, LossDupFairnessType::None);
+
     S2CChan->AddMsg(AckMsgType, Params, LTSFairnessType::Strong, LossDupFairnessType::None);
 
     // Server structure

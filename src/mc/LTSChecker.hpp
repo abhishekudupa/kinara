@@ -44,6 +44,7 @@
 
 #include "../common/ESMCFwdDecls.hpp"
 #include "../uflts/LTSDecls.hpp"
+#include "../utils/BitSet.hpp"
 
 #include "AQStructure.hpp"
 
@@ -98,40 +99,45 @@ namespace ESMC {
                 friend class ESMC::MC::LTSChecker;
 
             private:
+                // Info that needs to be reset before each ThreadedBFS
+                bool Enabled;
+                bool Disabled;
+                bool Executed;
+                // Set of states where I'm enabled, but not taken.
+                // Needed for removing unfair states from SCCs.
+                unordered_set<const ProductState*>> EnabledStates;
+                // end of info that needs to reset before each ThreadedBFS
+
+                // The fairness set that I check satisfaction of
                 LTSFairSetRef FairSet;
                 // How many instances do I have
                 u32 NumInstances;
                 // Are we tracking a strong fairness
                 bool IsStrong;
-                // The system index set
+                // The global system index set
                 SystemIndexSet* SysIdxSet;
-                // Status bits
-                bool Enabled;
-                bool Executed;
-                bool Disabled;
-                // The class (process class) id that this
-                // fairness belongs to
+                // The fairness class ID of the fairness set
                 u32 ClassID;
-                // Guarded commands I need to respond to
-                // for each tracked index
-                vector<vector<bool>> GCmdsToRespondTo;
-                // Same info as above, but in the form of
-                // sets
+                // Guarded commands I need to respond to for each instance
+                vector<BitSet> GCmdsToRespondTo;
+                // Same info as above, but in the form of sets
                 vector<unordered_set<u32>> GCmdIDsToRespondTo;
-                // Set of states where I'm enabled, but
-                // not taken
-                unordered_set<const ProductState*> EnabledStates;
                 LTSChecker* Checker;
 
-                // Info about how various fairnesses were
-                // satisfied
-                vector<bool> EnabledPerInstance;
-                vector<bool> ExecutedPerInstance;
-                vector<bool> DisabledPerInstance;
 
-                // The instances of this fairness that we've
-                // already satisfied in the trace so far
-                mutable vector<bool> SatisfiedInTrace;
+                // Fields that help in trace generation
+                // These fields need to be reset for each SCC
+
+                // The instances that have already satisfied in the trace so far
+                // Info about how instances were satisfied
+                BitSet EnabledPerInstance;
+                BitSet ExecutedPerInstance;
+                BitSet DisabledPerInstance;
+                // End of fields that need to be reset for each SCC
+
+                // This field is used only in trace generation
+                mutable BitSet SatisfiedInTrace;
+                // End of fields to help in trace generation
 
             public:
                 FairnessChecker(const LTSFairSetRef& FairSet,
@@ -140,35 +146,46 @@ namespace ESMC {
                                 LTSChecker* Checker);
                 ~FairnessChecker();
 
-                void ResetFairness();
-                void ResetFull();
-                void ProcessSCCState(const ProductState* State,
+                void InitializeForNewSCC();
+                void InitializeForNewThread();
+
+                // Reset everything as if just constructed
+                void Reset();
+                void AcceptSCCState(const ProductState* State,
                                      const ProductEdgeSetT& Edges,
-                                     u32 TrackedIndex);
+                                     u32 CurrentTrackedIndex,
+                                     u32 OriginalTrackedIndex);
+
+                bool IsEnabled() const;
+                bool IsExecuted() const;
+                bool IsDisabled() const;
 
                 bool IsFair() const;
                 bool IsStrongFairness() const;
-                bool IsEnabled() const;
-                bool IsDisabled() const;
-                bool IsExecuted() const;
+                virtual string ToString(u32 Verbosity = 0) const override;
 
-                bool IsEnabled(u32 InstanceID) const;
-                bool IsDisabled(u32 InstanceID) const;
-                bool IsExecuted(u32 InstanceID) const;
+                const unordered_set<const ProductState*>& GetEnabledStates() const;
 
+
+                // Methods to help in trace generation
                 void ClearTraceSatisfactionBits() const;
                 bool IsInstanceSatisfiedInTrace(u32 Instance) const;
                 void SetInstanceSatisfiedInTrace(u32 Instance) const;
                 bool CheckInstanceSatisfaction(u32 Instance,
-                                               u32 PermutedInstance,
                                                u32 CmdID,
-                                               const ProductState* ReachedState);
-                bool IsTriviallySatisfied(u32 Instance, u32 PermutedInstance);
+                                               const ProductState* ReachedState) const;
 
-                const unordered_set<const ProductState*>& GetEnabledStates() const;
-                const unordered_set<u32>& GetCmdIDsToRespondTo(u32 InstanceID) const;
-
-                virtual string ToString(u32 Verbosity = 0) const override;
+                // Permutes the info stored in this checker
+                // This is currently IRREVERSIBLE!
+                // (no use case yet for undoing this)
+                // Of course, one can remember the permutation
+                // originally applied and then apply the
+                // corresponding inverse permutation to reverse it!
+                void Permute(const vector<u08>& Permutation);
+                bool IsEnabled(u32 Instance) const;
+                bool IsDisabled(u32 Instance) const;
+                bool IsExecuted(u32 Instance) const;
+                // end of methods to help in trace generation
             };
 
         } /* end namespace Detail */

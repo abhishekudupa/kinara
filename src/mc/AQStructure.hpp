@@ -50,6 +50,7 @@
 #include <boost/functional/hash.hpp>
 
 #include "../common/ESMCFwdDecls.hpp"
+#include "../utils/BitSet.hpp"
 
 #include "StateVec.hpp"
 
@@ -317,10 +318,9 @@ namespace ESMC {
         struct ThreadedGraphStatusT
         {
             bool OnStack : 1;
-            bool ThreadedVisted : 1;
             bool Accepting : 1;
             bool Deleted : 1;
-            i32 InSCC : 28;
+            i32 InSCC : 29;
 
             inline ThreadedGraphStatusT()
                 : OnStack(false), ThreadedVisted(false), Accepting(false),
@@ -344,7 +344,7 @@ namespace ESMC {
 
             mutable i32 DFSNum;
             mutable i32 LowLink;
-            mutable vector<bool> TrackingBits;
+            mutable BitSet TrackingBits;
 
         public:
             ProductState(const StateVec* SVPtr, u32 MonitorState,

@@ -462,7 +462,7 @@ namespace ESMC {
 
         ProductState::~ProductState()
         {
-            TrackingBits.clear();
+            // Nothing here
         }
 
         const StateVec* ProductState::GetSVPtr() const
@@ -516,10 +516,7 @@ namespace ESMC {
             Status.Deleted = false;
             DFSNum = -1;
             LowLink = -1;
-
-            for (u32 i = 0; i < TrackingBits.size(); ++i) {
-                TrackingBits[i] = false;
-            }
+            TrackingBits.Clear();
         }
 
         void ProductState::MarkInSCC(u32 SCCID) const
@@ -600,24 +597,22 @@ namespace ESMC {
 
         void ProductState::MarkTracked(u32 BitNum) const
         {
-            TrackingBits[BitNum] = true;
+            TrackingBits.Set(BitNum);
         }
 
         void ProductState::MarkNotTracked(u32 BitNum) const
         {
-            TrackingBits[BitNum] = false;
+            TrackingBits.Clear(BitNum);
         }
 
         bool ProductState::IsTracked(u32 BitNum) const
         {
-            return TrackingBits[BitNum];
+            return TrackingBits.Test(BitNum);
         }
 
         void ProductState::ClearAllTracked() const
         {
-            for (u32 i = 0; i < TrackingBits.size(); ++i) {
-                TrackingBits[i] = false;
-            }
+            TrackingBits.Clear();
         }
 
         ProductStructure::ProductStructure(u32 NumTrackingBits, BuchiAutomatonBase* Monitor)
