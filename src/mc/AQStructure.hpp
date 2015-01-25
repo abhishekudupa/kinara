@@ -323,8 +323,7 @@ namespace ESMC {
             i32 InSCC : 29;
 
             inline ThreadedGraphStatusT()
-                : OnStack(false), ThreadedVisted(false), Accepting(false),
-                  Deleted(false), InSCC(-1)
+                : OnStack(false), Accepting(false), Deleted(false), InSCC(-1)
             {
                 // Nothing here
             }
@@ -365,10 +364,6 @@ namespace ESMC {
             void MarkNotOnStack() const;
             bool IsOnStack() const;
 
-            void MarkThreadedVisited() const;
-            void MarkNotThreadedVisited() const;
-            bool IsThreadedVisited() const;
-
             void MarkAccepting() const;
             void MarkNotAccepting() const;
             bool IsAccepting() const;
@@ -380,6 +375,7 @@ namespace ESMC {
             void MarkInSCC(u32 SCCID) const;
             void MarkNotInSCC() const;
             bool IsInSCC(u32 SCCID) const;
+            i32 GetSCCID() const;
 
             void MarkTracked(u32 BitNum) const;
             void MarkNotTracked(u32 BitNum) const;

@@ -62,9 +62,11 @@ namespace ESMC {
     public:
         class BitRef
         {
+        private:
             BitSet* TheBitSet;
             u32 BitNum;
 
+        public:
             inline BitRef(BitSet* TheBitSet, u32 BitNum);
             inline BitRef(const BitRef& Other);
             inline ~BitRef();
@@ -91,7 +93,7 @@ namespace ESMC {
         inline ~BitSet();
 
         inline BitSet& operator = (const BitSet& Other);
-        inline BitSet& operator = (const BitSet&& Other);
+        inline BitSet& operator = (BitSet&& Other);
 
         inline bool operator == (const BitSet& Other) const;
         inline bool operator < (const BitSet& Other) const;
@@ -144,6 +146,7 @@ namespace ESMC {
         }
         TheBitSet = Other.TheBitSet;
         BitNum = Other.BitNum;
+        return *this;
     }
 
     inline BitSet::BitRef& BitSet::BitRef::operator = (bool Value)
@@ -259,6 +262,7 @@ namespace ESMC {
     {
         swap(NumBits, Other.NumBits);
         swap(BitArray, Other.BitArray);
+        return *this;
     }
 
     inline i32 BitSet::Compare(const BitSet& Other) const

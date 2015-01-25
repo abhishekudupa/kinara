@@ -153,14 +153,14 @@ namespace ESMC {
             {
                 for (u32 Instance = 0; Instance < NumInstances; ++Instance) {
                     const u32 NumGuardedCommands = GuardedCommands.size();
-                    for (auto u32 i = 0 : i < NumGuardedCommands; ++i) {
+                    for (u32 i = 0; i < NumGuardedCommands; ++i) {
                         auto const& Cmd = GuardedCommands[i];
                         auto const& FairObjs = Cmd->GetFairnessObjsSatisfied();
                         for (auto const& FairObj : FairObjs) {
                             if (FairObj->GetFairnessSet() == FairSet &&
                                 FairObj->GetInstanceNumber() == Instance) {
-                                GCmdsToRespondTo[TrackedIndex].Set(i);
-                                GCmdIDsToRespondTo[InstanceID].insert(i);
+                                GCmdsToRespondTo[Instance].Set(i);
+                                GCmdIDsToRespondTo[Instance].insert(i);
                             }
                         }
                     }
@@ -174,7 +174,7 @@ namespace ESMC {
 
             void FairnessChecker::InitializeForNewSCC()
             {
-                InitializeForThreadedTraversal();
+                InitializeForNewThread();
                 EnabledPerInstance.Clear();
                 ExecutedPerInstance.Clear();
                 DisabledPerInstance.Clear();
@@ -209,15 +209,23 @@ namespace ESMC {
                 SatisfiedInTrace.Set(Instance);
             }
 
-            bool
-            FairnessChecker::CheckInstanceSatisfaction(u32 Instance,
-                                                       u32 CmdID,
-                                                       const ProductState* ReachedState) const
+            bool FairnessChecker::CheckInstanceSatisfaction(u32 Instance) const
             {
+                return (!EnabledPerInstance.Test(Instance));
+            }
+
+            bool FairnessChecker::CheckInstanceSatisfaction(u32 Instance,
+                                                            u32 CmdID,
+                                                            const ProductState* ReachedState) const
+            {
+                // Do we even need to look at the cmd and the state?
+                if (CheckInstanceSatisfaction(Instance)) {
+                    return true;
+                }
+
                 // Assumes that we're not trivially satisfied
-                if (IsStrong || !DisabledPerInstance[Instance]) {
-                    return (GCmdIDsToRespondTo[Instance].find(CmdID) !=
-                            GCmdIDsToRespondTo[Instance].end());
+                if (IsStrong || !DisabledPerInstance.Test(Instance)) {
+                    return GCmdsToRespondTo[Instance].Test(CmdID);
                 } else {
                     for (auto CmdID : GCmdIDsToRespondTo[Instance]) {
                         bool Exception;
@@ -320,7 +328,7 @@ namespace ESMC {
                 return
                     ((string)"Fairness Checker for fairness set: " +
                      FairSet->GetName() + " on EFSM " + FairSet->GetEFSM()->GetName() +
-                     " with " + to_string(NumInstances) << " instances");
+                     " with " + to_string(NumInstances) + " instances");
             }
 
             bool FairnessChecker::IsFair() const
@@ -376,10 +384,13 @@ namespace ESMC {
             {
                 // Construct a local permutation vector for my instances
                 vector<u32> InstancePermutation(NumInstances, 0);
-                for (u32 Instance = 0; Instance < NumInstances; ++i) {
-                    auto GlobalIndex = SysIdxSet->GetIndexIDForClassIndex(Instance, ClassID);
-                    auto PermutedGlobalIndex = SysIdxSet->Permute(GlobalIndex, Permutation);
-                    auto PermutedInstance = SysIdxSet->GetIndexForClassID(GlobalIndex, ClassID);
+                for (u32 Instance = 0; Instance < NumInstances; ++Instance) {
+                    auto GlobalIndex =
+                        SysIdxSet->GetIndexIDForClassIndex(Instance, ClassID);
+                    auto PermutedGlobalIndex =
+                        SysIdxSet->Permute(GlobalIndex, Permutation);
+                    auto PermutedInstance =
+                        SysIdxSet->GetIndexForClassID(PermutedGlobalIndex, ClassID);
                     InstancePermutation[Instance] = PermutedInstance;
                 }
 
@@ -390,16 +401,16 @@ namespace ESMC {
                 auto OriginalEnabledPerInstance = EnabledPerInstance;
                 auto OriginalDisabledPerInstance = DisabledPerInstance;
 
-                for (u32 Instace = 0; Instance < NumInstances; ++Instance) {
+                for (u32 Instance = 0; Instance < NumInstances; ++Instance) {
                     GCmdsToRespondTo[Instance] =
                         OriginalGCmdsToRespondTo[InstancePermutation[Instance]];
-                    GCmdIDsToRespondTo =
+                    GCmdIDsToRespondTo[Instance] =
                         OriginalGCmdIDsToRespondTo[InstancePermutation[Instance]];
-                    ExecutedPerInstance =
+                    ExecutedPerInstance[Instance] =
                         OriginalExecutedPerInstance[InstancePermutation[Instance]];
-                    EnabledPerInstance =
+                    EnabledPerInstance[Instance] =
                         OriginalEnabledPerInstance[InstancePermutation[Instance]];
-                    DisabledPerInstance =
+                    DisabledPerInstance[Instance] =
                         OriginalDisabledPerInstance[InstancePermutation[Instance]];
                 }
             }

@@ -254,7 +254,7 @@ namespace ESMC {
 
         // Specialization for extension lists
         template <template <typename> class S>
-        class ExpressionBase<ExtListT, S> : public RefCountable
+        class ExpressionBase<ExtListT, S> : public RefCountable, public Stringifiable
         {
             friend class ExprMgr<ExtListT, S>;
         private:

@@ -105,7 +105,7 @@ namespace ESMC {
                 bool Executed;
                 // Set of states where I'm enabled, but not taken.
                 // Needed for removing unfair states from SCCs.
-                unordered_set<const ProductState*>> EnabledStates;
+                unordered_set<const ProductState*> EnabledStates;
                 // end of info that needs to reset before each ThreadedBFS
 
                 // The fairness set that I check satisfaction of
@@ -171,6 +171,7 @@ namespace ESMC {
                 void ClearTraceSatisfactionBits() const;
                 bool IsInstanceSatisfiedInTrace(u32 Instance) const;
                 void SetInstanceSatisfiedInTrace(u32 Instance) const;
+                bool CheckInstanceSatisfaction(u32 Instance) const;
                 bool CheckInstanceSatisfaction(u32 Instance,
                                                u32 CmdID,
                                                const ProductState* ReachedState) const;

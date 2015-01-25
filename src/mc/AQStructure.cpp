@@ -512,7 +512,6 @@ namespace ESMC {
         {
             Status.InSCC = -1;
             Status.OnStack = false;
-            Status.ThreadedVisted = false;
             Status.Deleted = false;
             DFSNum = -1;
             LowLink = -1;
@@ -540,6 +539,11 @@ namespace ESMC {
             Status.OnStack = true;
         }
 
+        i32 ProductState::GetSCCID() const
+        {
+            return Status.InSCC;
+        }
+
         void ProductState::MarkNotOnStack() const
         {
             Status.OnStack = false;
@@ -548,21 +552,6 @@ namespace ESMC {
         bool ProductState::IsOnStack() const
         {
             return Status.OnStack;
-        }
-
-        void ProductState::MarkThreadedVisited() const
-        {
-            Status.ThreadedVisted = true;
-        }
-
-        void ProductState::MarkNotThreadedVisited() const
-        {
-            Status.ThreadedVisted = false;
-        }
-
-        bool ProductState::IsThreadedVisited() const
-        {
-            return Status.ThreadedVisted;
         }
 
         void ProductState::MarkAccepting() const
@@ -626,8 +615,8 @@ namespace ESMC {
 
         ProductStructure::~ProductStructure()
         {
-            delete PSPool;
             delete PEPool;
+            delete PSPool;
         }
 
         BuchiAutomatonBase* ProductStructure::GetMonitor() const

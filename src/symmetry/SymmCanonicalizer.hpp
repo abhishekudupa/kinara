@@ -54,6 +54,7 @@ namespace ESMC {
         using ESMC::LTS::TypeRef;
         using ESMC::LTS::LabelledTS;
         using ESMC::LTS::ExpT;
+        using ESMC::MC::AQStructure;
         using ESMC::MC::StateVecPrinter;
         using ESMC::MC::ProductState;
         using ESMC::MC::ProcessIndexSet;

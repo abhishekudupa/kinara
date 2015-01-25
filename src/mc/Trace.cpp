@@ -66,11 +66,6 @@ namespace ESMC {
         using Symm::Canonicalizer;
         using LTS::ExpT;
 
-        static function<bool(u32, const ProductState*)> TrueLambda =
-            ([&] (u32 Arg1, const ProductState* Arg2) -> bool
-            {
-                return true;
-            });
 
         TraceBase::TraceBase(StateVecPrinter* Printer)
             : Printer(Printer)
@@ -86,6 +81,38 @@ namespace ESMC {
         StateVecPrinter* TraceBase::GetPrinter() const
         {
             return Printer;
+        }
+
+        inline tuple<GCmdRef, StateVec*, u32>
+        TraceBase::FindCommandForTransition(const vector<GCmdRef>& Commands,
+                                            Canonicalizer* TheCanonicalizer,
+                                            const StateVec* UnwoundFromState,
+                                            const StateVec* UnwoundToState,
+                                            bool RememberSortPermIdx)
+        {
+            for (auto const& Cmd : Commands) {
+                bool Exception = false;
+                ExpT NEPred;
+                auto CandidateSV = TryExecuteCommand(Cmd, UnwoundFromState,
+                                                     Exception, NEPred);
+                if (CandidateSV == nullptr) {
+                    continue;
+                }
+
+                u32 SortPermIdx = 0;
+                auto SortedCandidateSV =
+                    TheCanonicalizer->SortChans(CandidateSV, RememberSortPermIdx, SortPermIdx);
+                if (SortedCandidateSV->Equals(*UnwoundToState)) {
+                    SortedCandidateSV->Recycle();
+                    return make_tuple(Cmd, CandidateSV, SortPermIdx);
+                } else {
+                    SortedCandidateSV->Recycle();
+                    CandidateSV->Recycle();
+                }
+            }
+
+            // We couldn't find a command!
+            return make_tuple(GCmdRef::NullPtr, nullptr, 0);
         }
 
         inline const StateVec*
@@ -124,7 +151,6 @@ namespace ESMC {
 
                 auto NextUnwoundState = TheCanonicalizer->ApplyPermutation(NextPermState,
                                                                            InvPermAlongPath);
-                u32 Dummy;
                 TheCanonicalizer->Sort(NextUnwoundState);
 
                 ESMC_LOG_FULL(
@@ -138,40 +164,21 @@ namespace ESMC {
 
                 // Now find out which command takes us from the current
                 // unwound state to the next unwound state
-                StateVec* NextUnsortedState = nullptr;
-                bool FoundCmd = false;
-                for (auto const& Cmd : GuardedCommands) {
+                auto&& CmdNextUnsortedState =
+                    FindCommandForTransition(GuardedCommands, TheCanonicalizer,
+                                             CurUnwoundState, NextUnwoundState);
+                auto const& TransitionCmd = get<0>(CmdNextUnsortedState);
+                auto NextUnsortedState = get<1>(CmdNextUnsortedState);
 
-                    // Ignore the exception here
-                    bool Exception = false;
-                    ExpT NEPred;
-                    auto CandidateState = TryExecuteCommand(Cmd, CurUnwoundState, Exception, NEPred);
-                    if (CandidateState == nullptr) {
-                        continue;
-                    }
-                    auto SortedCandidateState = TheCanonicalizer->SortChans(CandidateState,
-                                                                            false, Dummy);
-
-                    if (SortedCandidateState->Equals(*NextUnwoundState)) {
-                        NextUnsortedState = CandidateState;
-                        FoundCmd = true;
-                        SortedCandidateState->Recycle();
-                        PathElems.push_back(TraceElemT(Cmd, NextUnsortedState));
-                        NextUnwoundState->Recycle();
-                        break;
-                    } else {
-                        SortedCandidateState->Recycle();
-                        CandidateState->Recycle();
-                    }
-                }
-                if (!FoundCmd) {
+                if (TransitionCmd == GCmdRef::NullPtr) {
                     throw InternalError((string)"Could not find a command to compute the " +
                                         "next unwound state\nAt: " + __FILE__ + ":" +
                                         to_string(__LINE__));
+                } else {
+                    NextUnwoundState->Recycle();
+                    PathElems.push_back(TraceElemT(TransitionCmd, NextUnsortedState));
                 }
 
-                // Do not recycle the unwound state
-                // it's part of the return value
                 CurUnwoundState = NextUnsortedState;
             }
 
@@ -220,44 +227,28 @@ namespace ESMC {
                                                                         InvPermAlongPath,
                                                                         ProcIdxSet);
                 TheCanonicalizer->Sort(NextUnwoundPS);
-                // find out which command takes us here
-                bool FoundCmd = false;
+
                 ProductState* NextUnsortedPS = nullptr;
 
-                for (auto const& Cmd : GuardedCommands) {
-                    // we ignore the exception here
-                    bool Exception = false;
-                    ExpT NEPred;
-                    auto CandidateSV = TryExecuteCommand(Cmd, CurUnwoundState->GetSVPtr(),
-                                                         Exception, NEPred);
-                    if (CandidateSV == nullptr) {
-                        continue;
-                    }
+                // find out which command takes us here
+                auto&& CmdNextUnsortedSV =
+                    FindCommandForTransition(GuardedCommands, TheCanonicalizer,
+                                             CurUnwoundState->GetSVPtr(),
+                                             NextUnwoundPS->GetSVPtr());
+                auto const& TransitionCmd = get<0>(CmdNextUnsortedSV);
+                auto NextUnsortedSV = get<1>(CmdNextUnsortedSV);
 
-                    u32 Dummy;
-                    auto SortedCandidateSV = TheCanonicalizer->SortChans(CandidateSV, false,
-                                                                         Dummy);
-
-                    if (SortedCandidateSV->Equals(*(NextUnwoundPS->GetSVPtr()))) {
-                        NextUnsortedPS = new ProductState(CandidateSV,
-                                                          NextUnwoundPS->GetMonitorState(),
-                                                          NextUnwoundPS->GetIndexID(), 0);
-                        FoundCmd = true;
-                        SortedCandidateSV->Recycle();
-                        PathElems.push_back(PSTraceElemT(Cmd, NextUnsortedPS));
-                        NextUnwoundPS->GetSVPtr()->Recycle();
-                        delete NextUnwoundPS;
-                        break;
-                    } else {
-                        SortedCandidateSV->Recycle();
-                        CandidateSV->Recycle();
-                    }
-                }
-
-                if (!FoundCmd) {
+                if (TransitionCmd == GCmdRef::NullPtr) {
                     throw InternalError((string)"Unable to find a command to compute next " +
                                         "unwound product state.\nAt: " + __FILE__ + ":" +
                                         to_string(__LINE__));
+                } else {
+                    NextUnsortedPS = new ProductState(NextUnsortedSV,
+                                                      NextUnwoundPS->GetMonitorState(),
+                                                      NextUnwoundPS->GetIndexID(), 0);
+                    PathElems.push_back(PSTraceElemT(TransitionCmd, NextUnsortedPS));
+                    NextUnwoundPS->GetSVPtr()->Recycle();
+                    delete NextUnwoundPS;
                 }
 
                 CurUnwoundState = NextUnsortedPS;
@@ -306,11 +297,9 @@ namespace ESMC {
                                 u32& InvPermAlongPathOut,
                                 u32& InvSortPermForRoot,
                                 FairnessChecker* FChecker,
-                                u32 OrigInstanceID,
-                                u32 PermutedInstanceID,
+                                u32 FairnessInstance,
                                 const function<bool(u32, const ProductState*)>& MatchPred,
-                                vector<PSTraceElemT>& PathElems,
-                                const unordered_set<const ProductState*>& Bounds)
+                                vector<PSTraceElemT>& PathElems)
         {
             auto ThePS = Checker->ThePS;
             auto TheCanonicalizer = Checker->TheCanonicalizer;
@@ -318,14 +307,8 @@ namespace ESMC {
             auto SortPermSet = TheCanonicalizer->GetSortPermSet();
             auto Monitor = ThePS->GetMonitor();
             auto ProcIdxSet = Monitor->GetIndexSet();
-            auto SysIdxSet = Checker->SysIdxSet;
-            auto const ClassID = SysIdxSet->GetClassID(PermutedInstanceID);
-            auto const PermutedInstance =
-                SysIdxSet->GetIndexForClassID(PermutedInstanceID, ClassID);
-            auto const OrigInstance =
-                SysIdxSet->GetIndexForClassID(OrigInstanceID, ClassID);
             auto const& GuardedCmds = Checker->GuardedCommands;
-            const u32 NumGuardedCmds = GuardedCmds.size();
+            auto TheSCCID = CanonicalRoot->GetSCCID();
 
             deque<Detail::BFSQueueEntryT> BFSQueue;
             Detail::PSPermSetT VisitedStates;
@@ -359,7 +342,7 @@ namespace ESMC {
                 for (auto Edge : Edges) {
                     auto NextPermPS = Edge->GetTarget();
 
-                    if (Bounds.find(NextPermPS) == Bounds.end()) {
+                    if (NextPermPS->GetSCCID() != TheSCCID) {
                         // Not part of the scc, ignore
                         continue;
                     }
@@ -375,92 +358,60 @@ namespace ESMC {
                         continue;
                     }
 
-
                     VisitedStates.insert(NextPair);
                     auto NextUnwoundPS = TheCanonicalizer->ApplyPermutation(NextPermPS,
                                                                             NextPermIndex,
                                                                             ProcIdxSet);
-                    u32 Dummy;
+                    u32 Unused = 0;
                     auto NextSortedSV = TheCanonicalizer->SortChans(NextUnwoundPS->GetSVPtr(),
-                                                                    false, Dummy);
+                                                                    false, Unused);
 
-                    // Find out which command takes us from the current
-                    // unwound product state to the next unwound product
-                    // state
-                    bool FoundCmd = false;
-                    for (u32 i = 0; i < NumGuardedCmds; ++i) {
-                        auto const& Cmd = GuardedCmds[i];
+                    // Find out which command takes us from the current unwound
+                    // product state to the next unwound product state
 
-                        // We ignore the exception here
-                        bool Exception = false;
-                        ExpT NEPred;
-                        auto CandidateSV = TryExecuteCommand(Cmd, CurUnsortedPS->GetSVPtr(),
-                                                             Exception, NEPred);
-                        if (CandidateSV == nullptr) {
-                            continue;
-                        }
+                    auto&& CmdNextSVSortPerm =
+                        FindCommandForTransition(GuardedCmds, TheCanonicalizer,
+                                                 CurUnsortedPS->GetSVPtr(),
+                                                 NextSortedSV, true);
+                    auto const& TransitionCmd = get<0>(CmdNextSVSortPerm);
+                    auto TransitionCmdID = TransitionCmd->GetCmdID();
+                    auto NextUnsortedSV = get<1>(CmdNextSVSortPerm);
+                    auto SortPermIdx = get<2>(CmdNextSVSortPerm);
 
-                        u32 SortPermIdx;
-                        auto SortedCandidateSV = TheCanonicalizer->SortChans(CandidateSV, true,
-                                                                             SortPermIdx);
-                        if (SortedCandidateSV->Equals(*NextSortedSV)) {
-                            FoundCmd = true;
-                            // SortedCandidateSV->Recycle();
-                            auto InvSortPermIdx =
-                                SortPermSet->GetIteratorForInv(SortPermIdx).GetIndex();
-                            // I need to apply the inverse permutation first,
-                            // followed by a sort, followd by the inverse sort
-                            // to get my true predecessor
-
-                            auto NextUnsortedPS = new ProductState(CandidateSV,
-                                                                   NextUnwoundPS->GetMonitorState(),
-                                                                   NextUnwoundPS->GetIndexID(), 0);
-
-                            SortedCandidateSV->Recycle();
-
-                            auto NextTuple = make_tuple(NextPermPS, NextPermIndex,
-                                                        InvSortPermIdx);
-                            PredMap[NextTuple] = make_pair(i, CurTuple);
-                            BFSQueue.push_back(NextTuple);
-
-                            if (FChecker != nullptr) {
-                                if (FChecker->CheckInstanceSatisfaction(OrigInstance,
-                                                                        PermutedInstance,
-                                                                        i, NextUnsortedPS)) {
-                                    ReachedTarget = true;
-                                    TargetPSPerm = NextTuple;
-                                }
-                            } else {
-                                if (MatchPred(i, NextUnsortedPS)) {
-                                    ReachedTarget = true;
-                                    TargetPSPerm = NextTuple;
-                                }
-                            }
-
-                            // delete the next unsorted ps
-                            CandidateSV->Recycle();
-                            delete NextUnsortedPS;
-                            break;
-                        } else {
-                            SortedCandidateSV->Recycle();
-                            CandidateSV->Recycle();
-                        }
-                    } // End iterating over commands
-
-                    // Delete the unwound product state, we'll recreate it
-                    // later anyway
-                    NextUnwoundPS->GetSVPtr()->Recycle();
-                    delete NextUnwoundPS;
-
-                    if (!FoundCmd) {
+                    if (TransitionCmd == GCmdRef::NullPtr) {
                         throw InternalError((string)"Unable to find a command to compute next " +
                                             "unwound product state.\nAt: " + __FILE__ + ":" +
                                             to_string(__LINE__));
                     }
 
-                    if (ReachedTarget) {
-                        break;
+                    auto InvSortPermIdx =
+                        SortPermSet->GetIteratorForInv(SortPermIdx).GetIndex();
+                    auto NextUnsortedPS = new ProductState(NextUnsortedSV,
+                                                           NextUnwoundPS->GetMonitorState(),
+                                                           NextUnwoundPS->GetIndexID(), 0);
+                    auto NextTuple = make_tuple(NextPermPS, NextPermIndex, InvSortPermIdx);
+                    PredMap[NextTuple] = make_pair(TransitionCmdID, CurTuple);
+                    BFSQueue.push_back(NextTuple);
+
+                    if (FChecker != nullptr) {
+                        auto FairnessSat =
+                            FChecker->CheckInstanceSatisfaction(FairnessInstance,
+                                                                TransitionCmdID,
+                                                                NextUnsortedPS);
+                        if (FairnessSat) {
+                            ReachedTarget = true;
+                            TargetPSPerm = NextTuple;
+                        }
+                    } else {
+                        // MatchPred must be something valid
+                        if (MatchPred(TransitionCmdID, NextUnsortedPS)) {
+                            ReachedTarget = true;
+                            TargetPSPerm = NextTuple;
+                        }
                     }
+
+                    NextUnsortedPS->GetSVPtr()->Recycle();
+                    delete NextUnsortedPS;
                 } // End iterating over edges
 
                 // Delete the current unwound product state as well
@@ -496,7 +447,8 @@ namespace ESMC {
                 auto PredPerm = get<1>(PredStatePerm);
                 auto PredSortPerm = get<2>(PredStatePerm);
 
-                auto UnsortedPredPS = TheCanonicalizer->ApplyPermutation(PredPermPS, PredPerm,
+                auto UnsortedPredPS = TheCanonicalizer->ApplyPermutation(PredPermPS,
+                                                                         PredPerm,
                                                                          ProcIdxSet);
                 TheCanonicalizer->Sort(UnsortedPredPS);
                 TheCanonicalizer->ApplySort(UnsortedPredPS, PredSortPerm);
@@ -522,26 +474,16 @@ namespace ESMC {
                                            const LTSChecker* Checker)
         {
             auto const& AllFCheckers = Checker->FairnessCheckers;
-            auto SysIdxSet = Checker->SysIdxSet;
 
             for (auto const& FCheckers : AllFCheckers) {
                 for (auto const& FChecker : FCheckers) {
                     const u32 NumInstances = FChecker->NumInstances;
-                    const u32 ClassID = FChecker->ClassID;
 
                     for (u32 Instance = 0; Instance < NumInstances; ++Instance) {
-                        auto InstanceID = SysIdxSet->GetIndexIDForClassIndex(Instance, ClassID);
-                        auto PermutedInstanceID =
-                            SysIdxSet->Permute(InstanceID, InversePermutation);
-                        auto PermutedInstance =
-                            SysIdxSet->GetIndexForClassID(PermutedInstanceID, ClassID);
-
                         for (auto const& TraceElem : PathSegment) {
                             auto CmdID = TraceElem.first->GetCmdID();
                             auto PS = TraceElem.second;
-                            if (FChecker->CheckInstanceSatisfaction(Instance,
-                                                                    PermutedInstance,
-                                                                    CmdID, PS)) {
+                            if (FChecker->CheckInstanceSatisfaction(Instance, CmdID, PS)) {
                                 FChecker->SetInstanceSatisfiedInTrace(Instance);
                             }
                         }
@@ -638,7 +580,6 @@ namespace ESMC {
             auto ThePS = Checker->ThePS;
             auto const& GuardedCmds = Checker->GuardedCommands;
             auto TheCanonicalizer = Checker->TheCanonicalizer;
-            auto SysIdxSet = Checker->SysIdxSet;
             auto PermSet = TheCanonicalizer->GetPermSet();
             auto Mgr = Checker->TheLTS->GetMgr();
 
@@ -655,8 +596,6 @@ namespace ESMC {
             auto InitState = UnwindPermPath(StemPPath, Checker, StemPath, InvPermAlongPath);
 
             auto InvPermAtEndOfStem = PermSet->GetIterator(InvPermAlongPath).GetPerm();
-            // auto PermAtEndOfStem = PermSet->GetIteratorForInv(InvPermAlongPath).GetPerm();
-
             auto StemPathBackPair = StemPath.back();
             auto StartOfLoop = StemPathBackPair.second;
 
@@ -681,15 +620,20 @@ namespace ESMC {
             delete StemPPath;
 
             auto const& AllFCheckers = Checker->FairnessCheckers;
+            // Permute all the fairness checkers by the inverse perm at end of stem
+            for (auto const& FCheckers : AllFCheckers) {
+                for (auto const& FChecker : FCheckers) {
+                    FChecker->Permute(InvPermAtEndOfStem);
+                }
+            }
+
             vector<PSTraceElemT> PathSoFar;
 
             for (auto const& FCheckers : AllFCheckers) {
                 for (auto FChecker : FCheckers) {
                     const u32 NumInstances = FChecker->NumInstances;
-                    const u32 ClassID = FChecker->ClassID;
-
                     for (u32 Instance = 0; Instance < NumInstances; ++Instance) {
-                        if (FChecker->IsTriviallySatisfied(Instance)) {
+                        if (FChecker->CheckInstanceSatisfaction(Instance)) {
                             FChecker->SetInstanceSatisfiedInTrace(Instance);
                             continue;
                         }
@@ -697,16 +641,14 @@ namespace ESMC {
                         if (FChecker->IsInstanceSatisfiedInTrace(Instance)) {
                             continue;
                         }
-                        auto InstanceID = SysIdxSet->GetIndexIDForClassIndex(Instance, ClassID);
-                        auto PermutedInstanceID =
-                            SysIdxSet->Permute(InstanceID, InvPermAtEndOfStem);
 
                         vector<PSTraceElemT> CurElems;
                         // extend this path
                         auto NewEndOfPath = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
                                                          InvSortPermAlongPath, FChecker,
-                                                         InstanceID, PermutedInstanceID,
-                                                         TrueLambda, CurElems, SCCNodes);
+                                                         Instance,
+                                                         TruePred<u32, const ProductState*>,
+                                                         CurElems);
                         if (NewEndOfPath == nullptr) {
                             ostringstream sstr;
                             sstr << "Could not connect the end of path to a state satisfying "
@@ -714,8 +656,8 @@ namespace ESMC {
                                  << "Current end of path:" << endl;
                             Checker->Printer->PrintState(CurEndOfPath, sstr);
                             sstr << endl << "Fairness requirement:" << endl;
-                            sstr << FChecker->ToString() << " on instance id: "
-                                 << InstanceID << endl;
+                            sstr << FChecker->ToString() << " on instance: "
+                                 << Instance << endl;
                             sstr << "At: " << __FUNCTION__ << ", " << __FILE__ << ":"
                                  << __LINE__ << endl;
                             throw InternalError(sstr.str());
@@ -777,11 +719,12 @@ namespace ESMC {
                 vector<PSTraceElemT> TempPath;
                 CurEndOfPath = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
                                             InvSortPermAlongPath,
-                                            nullptr, 0, 0,
+                                            nullptr, 0,
                                             [&] (u32 CmdID, const ProductState* State) -> bool
                                             {
                                                 return (!State->Equals(StartOfLoop));
-                                            }, TempPath, SCCNodes);
+                                            },
+                                            TempPath);
 
                 PathSoFar.insert(PathSoFar.end(), TempPath.begin(), TempPath.end());
                 // fall through and be a man! Do the right thing!
@@ -803,8 +746,7 @@ namespace ESMC {
                 };
 
             DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
-                         InvSortPermAlongPath, nullptr, 0, 0,
-                         FinalPred, LoopBack, SCCNodes);
+                         InvSortPermAlongPath, nullptr, 0, FinalPred, LoopBack);
             // Sort the final state and include the updates
             auto OldEndOfPathPair = LoopBack.back();
             auto OldEndOfPath = OldEndOfPathPair.second;

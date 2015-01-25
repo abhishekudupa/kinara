@@ -558,7 +558,7 @@ namespace ESMC {
             bool ShortCutEnabled = false;
             // Check if the input vector is already canonical
             if (AQS != nullptr) {
-                auto ExistingSV = AQS->Find(InputVector);
+                auto ExistingSV = AQS->Find(const_cast<StateVec*>(InputVector));
                 if (ExistingSV != nullptr) {
                     FoundExisting = true;
                     ShortCutEnabled = true;

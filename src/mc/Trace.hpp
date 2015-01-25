@@ -182,6 +182,13 @@ namespace ESMC {
             }
 
         private:
+            static inline tuple<GCmdRef, StateVec*, u32>
+            FindCommandForTransition(const vector<GCmdRef>& Commands,
+                                     Canonicalizer* TheCanonicalizer,
+                                     const StateVec* UnwoundFromState,
+                                     const StateVec* UnwoundToState,
+                                     bool RememberSortPermIdx = false);
+
             static inline const StateVec*
             UnwindPermPath(AQSPermPath* PermPath,
                            LTSChecker* Checker,
@@ -212,11 +219,9 @@ namespace ESMC {
                          u32& InvPermAlongPathOut,
                          u32& InvSortPermForRoot,
                          FairnessChecker* FChecker,
-                         u32 OrigInstanceID,
-                         u32 PermutedInstanceID,
+                         u32 FairnessInstance,
                          const function<bool(u32, const ProductState*)>& MatchPred,
-                         vector<PSTraceElemT>& PathElems,
-                         const unordered_set<const ProductState*>& Bounds);
+                         vector<PSTraceElemT>& PathElems);
 
             static inline void
             MarkFairnessesSatisfied(const vector<PSTraceElemT>& PathSegment,
