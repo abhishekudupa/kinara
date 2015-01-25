@@ -49,6 +49,37 @@ namespace ESMC {
 
         class StateFactory;
 
+        namespace Detail {
+            struct StateVecHashStructT
+            {
+                bool HashValid : 1;
+                u64 HashCode : 63;
+
+                inline StateVecHashStructT()
+                    : HashValid(false), HashCode(0)
+                {
+                    // Nothing here
+                }
+
+                inline StateVecHashStructT(u64 HashCode)
+                    : HashValid(true), HashCode(HashCode)
+                {
+                    // Nothing here
+                }
+
+                inline StateVecHashStructT(const StateVecHashStructT& Other)
+                    : HashValid(Other.HashValid), HashCode(Other.HashCode)
+                {
+                    // Nothing here
+                }
+
+                inline ~StateVecHashStructT()
+                {
+                    // Nothing here
+                }
+            };
+        } /* end namespace Detail */
+
         class StateVec
         {
             friend class StateFactory;
@@ -56,6 +87,7 @@ namespace ESMC {
         private:
             u08* StateBuffer;
             StateFactory* Factory;
+            mutable Detail::StateVecHashStructT HashFields;
 
             inline StateVec(const StateVec* Other);
 
@@ -78,13 +110,14 @@ namespace ESMC {
             u32 GetSize() const;
             bool Equals(const StateVec& Other) const;
             i32 Compare(const StateVec& Other) const;
-            u32 Hash() const;
+            u64 Hash() const;
             StateVec* Clone() const;
             u08* GetStateBuffer();
             const u08* GetStateBuffer() const;
             StateFactory* GetFactory() const;
             void Set(const StateVec& Other);
             void Recycle() const;
+            void MarkDirty() const;
         };
 
         class StateFactory

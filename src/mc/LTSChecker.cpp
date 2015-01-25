@@ -1328,7 +1328,9 @@ namespace ESMC {
                         SCCStateVec.push_back(SCCState);
                     } while (SCCState != CurState);
 
-                    if (NumStatesInSCC == 1) {
+                    bool SCCIsGood = FoundAccepting;
+
+                    if (SCCIsGood && NumStatesInSCC == 1) {
                         auto const& Edges = ThePS->GetEdges(SCCState);
                         bool SelfLoop = false;
                         for (auto const& Edge : Edges) {
@@ -1337,21 +1339,21 @@ namespace ESMC {
                                 break;
                             }
                         }
-                        if (!SelfLoop || !FoundAccepting) {
+                        if (!SelfLoop) {
                             SCCState->MarkNotInSCC();
+                            SCCIsGood = false;
                         } else {
-                            Retval.push_back(CurState);
-                            ++CurSCCID;
+                            SCCState->MarkSingular();
                         }
-                    } else if (!FoundAccepting) {
-                        // Unmark all the SCCs
+                    } else {
+                        SCCState->MarkNotSingular();
+                    }
+
+                    if (!SCCIsGood) {
                         for (auto SCCState : SCCStateVec) {
                             SCCState->MarkNotInSCC();
                         }
                     } else {
-                        // Non-singular AND accepting
-                        // Send this for further processing
-
                         ESMC_LOG_FULL("Checker.Fairness",
                                       Out_ << "Accepting SCC " << CurSCCID << ":" << endl;
                                       for (auto const& SCCState : SCCStateVec) {

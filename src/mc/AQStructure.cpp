@@ -513,6 +513,7 @@ namespace ESMC {
             Status.InSCC = -1;
             Status.OnStack = false;
             Status.Deleted = false;
+            Status.Singular = false;
             DFSNum = -1;
             LowLink = -1;
             TrackingBits.Clear();
@@ -582,6 +583,21 @@ namespace ESMC {
         bool ProductState::IsDeleted() const
         {
             return Status.Deleted;
+        }
+
+        void ProductState::MarkSingular() const
+        {
+            Status.Singular = true;
+        }
+
+        void ProductState::MarkNotSingular() const
+        {
+            Status.Singular = false;
+        }
+
+        bool ProductState::IsSingular() const
+        {
+            return Status.Singular;
         }
 
         void ProductState::MarkTracked(u32 BitNum) const

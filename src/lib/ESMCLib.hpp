@@ -52,7 +52,7 @@ namespace ESMC {
         set<string> LoggingOptions;
 
         ESMCLibOptionsT();
-        virtual ~ESMCLibOptionsT();
+        ~ESMCLibOptionsT();
 
         ESMCLibOptionsT(const ESMCLibOptionsT& Other);
         ESMCLibOptionsT& operator = (const ESMCLibOptionsT& Other);

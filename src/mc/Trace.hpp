@@ -205,9 +205,6 @@ namespace ESMC {
                            vector<PSTraceElemT>& PathElems,
                            u32& InvPermAlongPath);
 
-            static inline unordered_set<const ProductState*>
-            ExpandSCC(const ProductState* SCCRoot, LTSChecker* Checker);
-
             // returns a pair of states:
             // 1. The permuted state in the product structure corresponding
             //    to the last unwound state in the path (for subsequent calls to

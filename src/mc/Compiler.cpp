@@ -1228,16 +1228,13 @@ namespace ESMC {
                 return ExceptionValue;
             }
 
-            auto BasePtr = StateVector->GetStateBuffer();
-            auto DstPtr = BasePtr + Offset;
-
             i64 RawVal = 0;
             if (Size == 1) {
-                RawVal = *DstPtr;
+                RawVal = StateVector->ReadByte(Offset);
             } else if (Size == 2) {
-                RawVal = *((u16*)(DstPtr));
+                RawVal = StateVector->ReadShort(Offset);
             } else {
-                RawVal = *((u32*)(DstPtr));
+                RawVal = StateVector->ReadWord(Offset);
             }
 
             return RawVal + Low;
@@ -1256,9 +1253,6 @@ namespace ESMC {
                 return UpdateStatusT::EvalException;
             }
 
-            auto BasePtr = StateVector->GetStateBuffer();
-            auto DstPtr = BasePtr + Offset;
-
             if (Value < Low || Value > High) {
                 return UpdateStatusT::BoundsViolation;
             }
@@ -1266,11 +1260,11 @@ namespace ESMC {
             i64 RawVal = Value - Low;
 
             if (Size == 1) {
-                *((u08*)(DstPtr)) = (u08)RawVal;
+                StateVector->WriteByte(Offset, RawVal);
             } else if (Size == 2) {
-                *((u16*)(DstPtr)) = (u16)RawVal;
+                StateVector->WriteShort(Offset, RawVal);
             } else {
-                *((u32*)(DstPtr)) = (u32)RawVal;
+                StateVector->WriteWord(Offset, RawVal);
             }
 
             return UpdateStatusT::UpdateOK;
@@ -1319,21 +1313,19 @@ namespace ESMC {
                 throw ESMCError((string)"Evaluate() called on non-scalar type");
             }
 
-            auto BasePtr = StateVector->GetStateBuffer();
-
             auto Offset = GetOffset(StateVector);
+
             if (Offset == ExceptionValue) {
                 return ExceptionValue;
             }
-            auto DstPtr = BasePtr + Offset;
 
             i64 RawVal = 0;
             if (Size == 1) {
-                RawVal = (*DstPtr);
+                RawVal = StateVector->ReadByte(Offset);
             } else if (Size == 2) {
-                RawVal = *((u16*)(DstPtr));
+                RawVal = StateVector->ReadShort(Offset);
             } else {
-                RawVal = *((u32*)(DstPtr));
+                RawVal = StateVector->ReadWord(Offset);
             }
 
             return RawVal + Low;
@@ -1361,21 +1353,18 @@ namespace ESMC {
 
             i64 RawVal = Value - Low;
 
-            auto BasePtr = StateVector->GetStateBuffer();
             auto Offset = GetOffset(InStateVector);
-
             if (Offset == ExceptionValue) {
                 NEPred = NoExceptionPredicate;
                 return UpdateStatusT::EvalException;
             }
-            auto DstPtr = BasePtr + Offset;
 
             if (Size == 1) {
-                *((u08*)(DstPtr)) = (u08)RawVal;
+                StateVector->WriteByte(Offset, RawVal);
             } else if (Size == 2) {
-                *((u16*)(DstPtr)) = (u16)RawVal;
+                StateVector->WriteShort(Offset, RawVal);
             } else {
-                *((u32*)(DstPtr)) = (u32)RawVal;
+                StateVector->WriteWord(Offset, RawVal);
             }
 
             return UpdateStatusT::UpdateOK;

@@ -180,6 +180,8 @@ namespace ESMC {
                 ElemPermuter->Permute(InStateVector, OutStateVector, CurPerm);
             }
 
+            OutStateVector->MarkDirty();
+
             if (IsSymmArray) {
                 // Now apply my own permutation
                 // But instead of using the input state vector
@@ -400,6 +402,8 @@ namespace ESMC {
             auto WorkingVec = OutStateVector->Clone();
             u08* WorkBasePtr = WorkingVec->GetStateBuffer();
 
+            OutStateVector->MarkDirty();
+
             auto NumElems = Capacity;
 
             for (u32 i = 0; i < NumElems - 1; ++i) {
@@ -459,6 +463,7 @@ namespace ESMC {
             u08* BasePtr = OutStateVector->GetStateBuffer();
             auto WorkingVec = OutStateVector->Clone();
             u08* WorkBasePtr = WorkingVec->GetStateBuffer();
+            OutStateVector->MarkDirty();
 
             for (u32 i = 0; i < Capacity; ++i) {
                 u32 j = i + PermVecOffset;

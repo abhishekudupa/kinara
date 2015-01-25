@@ -50,14 +50,14 @@ namespace ESMC {
 
         inline StateVec::StateVec(const StateVec* Other)
             : StateBuffer(Other->Factory->GetStateBuffer(false)),
-              Factory(Other->Factory)
+              Factory(Other->Factory), HashFields(Other->HashFields)
         {
             memcpy(StateBuffer, Other->StateBuffer, Other->GetSize());
         }
 
         StateVec::StateVec(StateFactory* Factory)
             : StateBuffer(Factory->GetStateBuffer()),
-              Factory(Factory)
+              Factory(Factory), HashFields()
         {
             // Nothing here
         }
@@ -74,6 +74,7 @@ namespace ESMC {
 
         void StateVec::WriteByte(u32 Offset, u08 Value)
         {
+            MarkDirty();
             StateBuffer[Offset] = Value;
         }
 
@@ -85,6 +86,7 @@ namespace ESMC {
 
         void StateVec::WriteShort(u32 Offset, u16 Value)
         {
+            MarkDirty();
             u16* ActPointer = (u16*)(StateBuffer + Offset);
             *ActPointer = Value;
         }
@@ -97,6 +99,7 @@ namespace ESMC {
 
         void StateVec::WriteWord(u32 Offset, u32 Value)
         {
+            MarkDirty();
             u32* ActPointer = (u32*)(StateBuffer + Offset);
             *ActPointer = Value;
         }
@@ -137,10 +140,17 @@ namespace ESMC {
             Factory->TakeState(this);
         }
 
-        u32 StateVec::Hash() const
+        u64 StateVec::Hash() const
         {
-            return SpookyHash::SpookyHash::Hash32(StateBuffer, GetSize(),
-                                                  0xBEADFEED);
+            if (HashFields.HashValid) {
+                return HashFields.HashCode;
+            } else {
+                HashFields.HashValid = true;
+                HashFields.HashCode =
+                    SpookyHash::SpookyHash::Hash64(StateBuffer, GetSize(),
+                                                   0xBEADFEEDDEAFBEAD);
+                return HashFields.HashCode;
+            }
         }
 
         StateVec* StateVec::Clone() const
@@ -161,6 +171,11 @@ namespace ESMC {
         StateFactory* StateVec::GetFactory() const
         {
             return Factory;
+        }
+
+        void StateVec::MarkDirty() const
+        {
+            HashFields.HashValid = false;
         }
 
         StateFactory::StateFactory(u32 StateSize)

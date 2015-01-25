@@ -259,38 +259,6 @@ namespace ESMC {
         }
 
         // static methods for liveness traces
-        inline unordered_set<const ProductState*>
-        TraceBase::ExpandSCC(const ProductState* SCCRoot, LTSChecker* Checker)
-        {
-            auto ThePS = Checker->ThePS;
-
-            // A simple BFS to get all the scc nodes
-            unordered_set<const ProductState*> SCCNodes;
-            deque<const ProductState*> BFSQueue;
-            auto SCCID = SCCRoot->Status.InSCC;
-
-            BFSQueue.push_back(SCCRoot);
-            SCCNodes.insert(SCCRoot);
-
-            while (BFSQueue.size() > 0) {
-                auto CurNode = BFSQueue.front();
-                BFSQueue.pop_front();
-
-                auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurNode));
-
-                for (auto Edge : Edges) {
-                    auto Target = Edge->GetTarget();
-                    if (Target->IsInSCC(SCCID) &&
-                        SCCNodes.find(Target) == SCCNodes.end()) {
-                        SCCNodes.insert(Target);
-                        BFSQueue.push_back(Target);
-                    }
-                }
-            }
-
-            return SCCNodes;
-        }
-
         inline const ProductState*
         TraceBase::DoUnwoundBFS(const ProductState* CanonicalRoot,
                                 const LTSChecker* Checker,
@@ -582,15 +550,13 @@ namespace ESMC {
             auto TheCanonicalizer = Checker->TheCanonicalizer;
             auto PermSet = TheCanonicalizer->GetPermSet();
             auto Mgr = Checker->TheLTS->GetMgr();
-
-            auto&& SCCNodes = ExpandSCC(SCCRoot, Checker);
+            auto TheSCCID = SCCRoot->GetSCCID();
             u32 InvPermAlongPath = 0;
 
             // Find a path from the initial state to one of the SCC nodes
             auto StemPPath = ThePS->FindPath([&] (const ProductState* State) -> bool
                                              {
-                                                 return (SCCNodes.find(State) !=
-                                                         SCCNodes.end());
+                                                 return (State->GetSCCID() == TheSCCID);
                                              });
             vector<PSTraceElemT> StemPath;
             auto InitState = UnwindPermPath(StemPPath, Checker, StemPath, InvPermAlongPath);
@@ -696,7 +662,7 @@ namespace ESMC {
                                                   PathSoFar, LoopPermUpdates,
                                                   Checker->Printer, ThePS));
                 }
-            } if (PathSoFar.size() == 0 && SCCNodes.size() == 1) {
+            } if (PathSoFar.size() == 0 && SCCRoot->IsSingular()) {
                 // Single node SCC with self loop
                 // Find the command
                 auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurEndOfPath));

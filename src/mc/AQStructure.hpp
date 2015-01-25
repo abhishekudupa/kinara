@@ -320,10 +320,12 @@ namespace ESMC {
             bool OnStack : 1;
             bool Accepting : 1;
             bool Deleted : 1;
-            i32 InSCC : 29;
+            bool Singular : 1;
+            i32 InSCC : 28;
 
             inline ThreadedGraphStatusT()
-                : OnStack(false), Accepting(false), Deleted(false), InSCC(-1)
+                : OnStack(false), Accepting(false), Deleted(false),
+                  Singular(false), InSCC(-1)
             {
                 // Nothing here
             }
@@ -371,6 +373,10 @@ namespace ESMC {
             void MarkDeleted() const;
             void MarkNotDeleted() const;
             bool IsDeleted() const;
+
+            void MarkSingular() const;
+            void MarkNotSingular() const;
+            bool IsSingular() const;
 
             void MarkInSCC(u32 SCCID) const;
             void MarkNotInSCC() const;
