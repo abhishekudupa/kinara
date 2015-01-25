@@ -458,9 +458,10 @@ namespace ESMC {
             return Retval;
         }
 
-        ExpT TraceAnalyses::WeakestPreconditionForLiveness(Solver* TheSolver,
-                                                           StateBuchiAutomaton* Monitor,
-                                                           const LivenessViolation* Trace)
+        FastExpSetT
+        TraceAnalyses::WeakestPreconditionForLiveness(Solver* TheSolver,
+                                                      StateBuchiAutomaton* Monitor,
+                                                      const LivenessViolation* Trace)
         {
             auto TheLTS = TheSolver->TheLTS;
             auto Mgr = TheLTS->GetMgr();
@@ -468,7 +469,9 @@ namespace ESMC {
             MgrT::SubstMapT LoopValues;
             for (auto StateVariable: TheLTS->GetStateVectorVars()) {
                 for (auto Exp: GetAllScalarLeaves(StateVariable)) {
-                    LoopValues[Exp] = TheLTS->MakeVar(Exp->ToString() + "_0", Exp->GetType());
+                    auto LoweredExp = Mgr->ApplyTransform<LTS::Detail::ArrayRValueTransformer>(Exp);
+                    LoweredExp = Mgr->SimplifyFP(LoweredExp);
+                    LoopValues[LoweredExp] = TheLTS->MakeVar(Exp->ToString() + "_0", Exp->GetType());
                 }
             }
             MgrT::SubstMapT InvertLoopValues;
@@ -490,7 +493,7 @@ namespace ESMC {
             for (auto SortAssignment : LoopSortAssignments) {
                 LoopSortMap[SortAssignment->GetLHS()] = SortAssignment->GetRHS();
             }
-            InitialCondition = Mgr->TermSubstitute(LoopSortMap, InitialCondition);
+            InitialCondition = Mgr->Substitute(LoopSortMap, InitialCondition);
 
             vector<PSTraceElemT> Loop = Trace->GetLoop();
             vector<PSTraceElemT> Stem = Trace->GetStem();
@@ -503,25 +506,31 @@ namespace ESMC {
                 auto MonitorGuard = Monitor->GetGuardForTransition(PreviousMonitorState,
                                                                    ProductState->GetMonitorState(),
                                                                    ProductState->GetIndexID());
-                auto Pair = make_pair(GuardedCommand, MonitorGuard);
+                auto LoweredMonitorGuard = Mgr->ApplyTransform<LTS::Detail::ArrayRValueTransformer>(MonitorGuard);
+                LoweredMonitorGuard = Mgr->SimplifyFP(LoweredMonitorGuard);
+                auto Pair = make_pair(GuardedCommand, LoweredMonitorGuard);
                 LoopGuardedCommandsAndMonitorGuards.push_back(Pair);
                 PreviousMonitorState = ProductState->GetMonitorState();
             }
             vector<pair<LTS::GCmdRef, ExpT>> StemGuardedCommandsAndMonitorGuards;
             auto InitialState = Trace->GetInitialState();
             PreviousMonitorState = InitialState->GetMonitorState();
+
             for (auto PSTraceElement: Stem) {
                 auto GuardedCommand = PSTraceElement.first;
                 auto ProductState = PSTraceElement.second;
                 auto MonitorGuard = Monitor->GetGuardForTransition(PreviousMonitorState,
-                                                                   ProductState->GetMonitorState(),
-                                                                   ProductState->GetIndexID());
-                auto Pair = make_pair(GuardedCommand, MonitorGuard);
+                                                                                   ProductState->GetMonitorState(),
+                                                                                   ProductState->GetIndexID());
+                auto LoweredMonitorGuard = Mgr->ApplyTransform<LTS::Detail::ArrayRValueTransformer>(MonitorGuard);
+                LoweredMonitorGuard = Mgr->SimplifyFP(LoweredMonitorGuard);
+                auto Pair = make_pair(GuardedCommand, LoweredMonitorGuard);
                 StemGuardedCommandsAndMonitorGuards.push_back(Pair);
                 PreviousMonitorState = ProductState->GetMonitorState();
             }
 
             auto Phi = InitialCondition;
+
             for (auto it = LoopGuardedCommandsAndMonitorGuards.rbegin();
                  it != LoopGuardedCommandsAndMonitorGuards.rend();
                  ++it) {
@@ -536,7 +545,7 @@ namespace ESMC {
                     if (it2 != SubstMapForTransition.end()) {
                         MgrT::SubstMapT LocalSubst;
                         LocalSubst[(*it)->GetLHS()] = (*it)->GetRHS();
-                        auto NewSubst = Mgr->TermSubstitute(LocalSubst, it2->second);
+                        auto NewSubst = Mgr->Substitute(LocalSubst, it2->second);
                         SubstMapForTransition[it2->first] = NewSubst;
                     } else {
                         SubstMapForTransition[(*it)->GetLHS()] = (*it)->GetRHS();
@@ -546,18 +555,18 @@ namespace ESMC {
                 ExpT ProductGuard = TheLTS->MakeOp(LTSOps::OpAND,
                                                    Guard,
                                                    it->second);
-                Phi = Mgr->TermSubstitute(SubstMapForTransition, Phi);
+                Phi = Mgr->Substitute(SubstMapForTransition, Phi);
                 Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
-                Phi = Mgr->Simplify(Phi);
+                Phi = Mgr->SimplifyFP(Phi);
             }
-            Phi = Mgr->TermSubstitute(InvertLoopValues, Phi);
+            Phi = Mgr->Substitute(InvertLoopValues, Phi);
 
             MgrT::SubstMapT StemSortMap;
             auto StemSortAssignments = Trace->GetStemSortPermutation();
             for (auto SortAssignment : StemSortAssignments) {
                 StemSortMap[SortAssignment->GetLHS()] = SortAssignment->GetRHS();
             }
-            Phi = Mgr->TermSubstitute(StemSortMap, Phi);
+            Phi = Mgr->Substitute(StemSortMap, Phi);
 
             for (auto it = StemGuardedCommandsAndMonitorGuards.rbegin();
                  it != StemGuardedCommandsAndMonitorGuards.rend();
@@ -572,7 +581,7 @@ namespace ESMC {
                     if (it2 != SubstMapForTransition.end()) {
                         MgrT::SubstMapT LocalSubst;
                         LocalSubst[(*it)->GetLHS()] = (*it)->GetRHS();
-                        auto NewSubst = Mgr->TermSubstitute(LocalSubst, it2->second);
+                        auto NewSubst = Mgr->Substitute(LocalSubst, it2->second);
                         SubstMapForTransition[it2->first] = NewSubst;
                     } else {
                         SubstMapForTransition[(*it)->GetLHS()] = (*it)->GetRHS();
@@ -580,47 +589,35 @@ namespace ESMC {
                 }
                 ExpT Guard = GuardedCommand->GetLoweredGuard();
                 ExpT ProductGuard = TheLTS->MakeOp(LTSOps::OpAND,
-                                              Guard,
-                                              it->second);
-                Phi = Mgr->TermSubstitute(SubstMapForTransition, Phi);
+                                                   Guard,
+                                                   it->second);
+                Phi = Mgr->Substitute(SubstMapForTransition, Phi);
                 Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
-                Phi = Mgr->Simplify(Phi);
+                Phi = Mgr->SimplifyFP(Phi);
             }
 
             auto TrivialFairObjs =
                 TriviallySatisfiedFairnessObjectsInLoop(TheLTS, Trace);
 
             vector<ExpT> Conjuncts;
+
+            FastExpSetT Retval;
+
             for (auto const& InitState : InitStateGenerators) {
                 MgrT::SubstMapT InitStateSubstMap;
-                vector<ExpT> InitialStateConjuncts;
                 for (auto const& Update : InitState->GetLoweredUpdates()) {
                     auto LHS = Update->GetLHS();
                     auto RHS = Update->GetRHS();
                     InitStateSubstMap[LHS] = RHS;
                 }
-                auto Mgr = Phi->GetMgr();
-                auto NewPhi = Mgr->TermSubstitute(InitStateSubstMap, Phi);
-                NewPhi = Mgr->Simplify(NewPhi);
-                if (NewPhi == Mgr->MakeFalse()) {
-                    continue;
+                auto NewPhi = Mgr->Substitute(InitStateSubstMap, Phi);
+                NewPhi = Mgr->SimplifyFP(NewPhi);
+                if (NewPhi != TheLTS->MakeTrue()) {
+                    Retval.insert(NewPhi);
                 }
-                auto FairnessCondition =
-                    EnableFairnessObjectsInLoop(TheLTS,
-                                                Monitor,
-                                                InitStateSubstMap,
-                                                Trace,
-                                                TrivialFairObjs);
-                Conjuncts.push_back(TheLTS->MakeOp(LTSOps::OpOR, NewPhi, FairnessCondition));
             }
-
-            if (Conjuncts.size() == 0) {
-                throw ESMCError((string) "No condition found for liveness!");
-            }
-
-            return MakeConjunction(Conjuncts, TheLTS->GetMgr());
+            return Retval;
         }
-
     }
 }
 

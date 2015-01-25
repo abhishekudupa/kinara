@@ -105,6 +105,14 @@ ExpT MidUpdateUiExp;
 ExpT MidUiLValue;
 
 
+vector<ExpT> Guard1s;
+vector<ExpT> Guard2s;
+vector<ExpT> UpdateData1s;
+vector<ExpT> UpdateUp1s;
+vector<ExpT> UpdateData2s;
+vector<ExpT> UpdateUp2s;
+
+
 void DeclareMsgs(LabelledTS* TheLTS)
 {
     assert(TheLTS != nullptr);
@@ -214,6 +222,11 @@ void DeclareProc0(LabelledTS* TheLTS)
         W0Updates.insert(W0Updates.end(),{ new LTSAssignSimple(D0Exp, UpdateD0Exp),
                     new LTSAssignSimple(W0DataFieldExp, UpdateD0Exp),
                     new LTSAssignSimple(W0UpFieldExp, TheLTS->MakeTrue())});
+        auto Proc0AsInc = Proc[0]->As<IncompleteEFSM>();
+        (Proc0AsInc->GuardOpToUpdates[GuardOp]).insert(UpdateD0Exp);
+        Proc0AsInc->GuardOpToExp[GuardOp] = GuardExp;
+        Proc0AsInc->AllOpToExp[GuardOp] = GuardExp;
+        Proc0AsInc->AllOpToExp[UpdateD0Op] = UpdateD0Exp;
     } else {
         auto NotD0Exp = TheLTS->MakeOp(LTSOps::OpNOT, D0Exp);
         auto Data0EqData1 = TheLTS->MakeOp(LTSOps::OpEQ, D0Exp, D1Exp);
@@ -246,7 +259,7 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
     string ProcName = string("Proc") + to_string(i);
     auto Mgr = TheLTS->MakeTrue()->GetMgr();
 
-    bool SynthesizeProcess = true;
+    bool SynthesizeProcess = false;
 
     Proc.push_back(TheLTS->MakeGenEFSM(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
     Proc[i]->AddState("TheState");
@@ -294,7 +307,6 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
     auto Dip1Exp = TheLTS->MakeVar(string("Data") + to_string(i + 1), TheLTS->MakeBoolType());
     auto UiExp = TheLTS->MakeVar(string("Up") + to_string(i), TheLTS->MakeBoolType());
     auto Uip1Exp = TheLTS->MakeVar(string("Up") + to_string(i + 1), TheLTS->MakeBoolType());
-
 
     auto DataiEqDataim1 = TheLTS->MakeOp(LTSOps::OpEQ, DiExp, Dim1Exp);
     auto DiPayloadAccField = TheLTS->MakeVar("Data", TheLTS->MakeFieldAccessType());
@@ -364,23 +376,25 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
                                               new LTSAssignSimple(UiExp, UpdateUiExp),
                                               new LTSAssignSimple(WiDataFieldExp, UpdateDiExp),
                                               new LTSAssignSimple(WiUpFieldExp, UpdateUiExp) });
-
-        TheLTS->AddToAllOpToExp(GuardOp, GuardExp);
-        TheLTS->AddToAllOpToExp(UpdateDiOp, UpdateDiExp);
-        TheLTS->AddToAllOpToExp(UpdateUiOp, UpdateUiExp);
-        TheLTS->AddToGuardOpToExp(GuardOp, GuardExp);
-        TheLTS->AddToGuardOpToUpdates(GuardOp, UpdateDiExp);
-        TheLTS->AddToGuardOpToUpdates(GuardOp, UpdateUiExp);
-        TheLTS->AddToUpdateOpToLValue(UpdateDiOp, UpdateDiExp, DiExp);
-        TheLTS->AddToUpdateOpToLValue(UpdateUiOp, UpdateUiExp, UiExp);
+        TheLTS->AllOpToExp[GuardOp] = GuardExp;
+        TheLTS->AllOpToExp[UpdateDiOp] = UpdateDiExp;
+        TheLTS->AllOpToExp[UpdateUiOp] = UpdateUiExp;
+        TheLTS->GuardOpToExp[GuardOp] = GuardExp;
+        TheLTS->GuardOpToUpdates[GuardOp].insert(UpdateDiExp);
+        TheLTS->GuardOpToUpdates[GuardOp].insert(UpdateUiExp);
+        TheLTS->UpdateOpToUpdateLValue[UpdateDiOp] = make_pair(UpdateDiExp, DiExp);
+        TheLTS->UpdateOpToUpdateLValue[UpdateUiOp] = make_pair(UpdateUiExp, UiExp);
     } else {
+        GuardExp = Guard1s[i - 1];
+
+        W1iUpdates.clear();
+
         W1iUpdates.insert(W1iUpdates.end(),
-                          { new LTSAssignSimple(DiExp, TheLTS->MakeOp(LTSOps::OpNOT, DiExp)),
-                            new LTSAssignSimple(UiExp, TheLTS->MakeTrue()),
-                            new LTSAssignSimple(WiDataFieldExp, TheLTS->MakeOp(LTSOps::OpNOT, DiExp)),
-                            new LTSAssignSimple(WiUpFieldExp, TheLTS->MakeTrue()) });
-        auto DataiNeqDataim1 = TheLTS->MakeOp(LTSOps::OpNOT, DataiEqDataim1);
-        GuardExp = DataiNeqDataim1;
+                          { new LTSAssignSimple(DiExp, UpdateData1s[i - 1]),
+                            new LTSAssignSimple(UiExp, UpdateUp1s[i - 1]),
+                            new LTSAssignSimple(WiDataFieldExp, UpdateData1s[i - 1]),
+                            new LTSAssignSimple(WiUpFieldExp, UpdateUp1s[i - 1]) });
+
     }
     Guards.push_back(GuardExp);
     Proc[i]->AddOutputTransition("TheState", "TheState", GuardExp,
@@ -451,23 +465,23 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
                                               new LTSAssignSimple(UiExp, UpdateUiExp),
                                               new LTSAssignSimple(WiDataFieldExp, UpdateDiExp),
                                               new LTSAssignSimple(WiUpFieldExp, UpdateUiExp) });
-        TheLTS->AddToAllOpToExp(GuardOp, GuardExp);
-        TheLTS->AddToAllOpToExp(UpdateDiOp, UpdateDiExp);
-        TheLTS->AddToAllOpToExp(UpdateUiOp, UpdateUiExp);
-        TheLTS->AddToGuardOpToExp(GuardOp, GuardExp);
-        TheLTS->AddToGuardOpToUpdates(GuardOp, UpdateDiExp);
-        TheLTS->AddToGuardOpToUpdates(GuardOp, UpdateUiExp);
-        TheLTS->AddToUpdateOpToLValue(UpdateDiOp, UpdateDiExp, DiExp);
-        TheLTS->AddToUpdateOpToLValue(UpdateUiOp, UpdateUiExp, UiExp);
+        TheLTS->AllOpToExp[GuardOp] = GuardExp;
+        TheLTS->AllOpToExp[UpdateDiOp] = UpdateDiExp;
+        TheLTS->AllOpToExp[UpdateUiOp] = UpdateUiExp;
+        TheLTS->GuardOpToExp[GuardOp] = GuardExp;
+        TheLTS->GuardOpToUpdates[GuardOp].insert(UpdateDiExp);
+        TheLTS->GuardOpToUpdates[GuardOp].insert(UpdateUiExp);
+        TheLTS->UpdateOpToUpdateLValue[UpdateDiOp] = make_pair(UpdateDiExp, DiExp);
+        TheLTS->UpdateOpToUpdateLValue[UpdateUiOp] = make_pair(UpdateUiExp, UiExp);
+
     } else {
-        auto DataiEqDataip1 = TheLTS->MakeOp(LTSOps::OpEQ, DiExp, Dip1Exp);
-        auto NotUip1Exp = TheLTS->MakeOp(LTSOps::OpNOT, Uip1Exp);
-        GuardExp = TheLTS->MakeOp(LTSOps::OpAND, { DataiEqDataip1, UiExp, NotUip1Exp });
-        W2iUpdates.insert(W2iUpdates.begin(),
-                          { new LTSAssignSimple(DiExp, DiExp),
-                            new LTSAssignSimple(UiExp, TheLTS->MakeFalse()),
-                            new LTSAssignSimple(WiDataFieldExp, DiExp),
-                            new LTSAssignSimple(WiUpFieldExp, TheLTS->MakeFalse()) });
+        GuardExp = Guard2s[i - 1];
+        W2iUpdates.clear();
+        W2iUpdates.insert(W2iUpdates.end(),
+                          { new LTSAssignSimple(DiExp, UpdateData2s[i - 1]),
+                            new LTSAssignSimple(UiExp, UpdateUp2s[i - 1]),
+                            new LTSAssignSimple(WiDataFieldExp, UpdateData2s[i - 1]),
+                            new LTSAssignSimple(WiUpFieldExp, UpdateUp2s[i - 1]) });
     }
     Guards.push_back(GuardExp);
     Proc[i]->AddOutputTransition("TheState", "TheState", GuardExp,
@@ -588,6 +602,12 @@ void DeclareProcN(LabelledTS* TheLTS)
                                            new LTSAssignSimple(WiDataFieldExp, UpdateDiExp),
                                            new LTSAssignSimple(WiUpFieldExp, TheLTS->MakeFalse()),
                                            new LTSAssignSimple(WiUpFieldExp, UiExp) });
+        auto ProcNAsInc = Proc[i]->As<IncompleteEFSM>();
+        ProcNAsInc->AllOpToExp[GuardOp] = GuardExp;
+        ProcNAsInc->GuardOpToExp[GuardOp] = GuardExp;
+        ProcNAsInc->AllOpToExp[UpdateDiOp] = UpdateDiExp;
+        ProcNAsInc->GuardOpToUpdates[GuardOp].insert(UpdateDiExp);
+
     } else {
         WiUpdates.insert(WiUpdates.end(), { new LTSAssignSimple(DiExp, TheLTS->MakeOp(LTSOps::OpNOT, DiExp)),
                                             new LTSAssignSimple(UiExp, UiExp),
@@ -952,6 +972,7 @@ void DeclareAutomata(LabelledTS* TheLTS)
 
 
             InitStates.push_back(new LTSInitState({}, TheLTS->MakeTrue(), InitUpdates));
+
         }
     }
 
@@ -1038,28 +1059,28 @@ ExpT LegitimateStatesBoundConstraint(LabelledTS* TheLTS,
 {
     auto Mgr = TheLTS->MakeTrue()->GetMgr();
     vector<vector<ExpT>> DataElems;
-    vector<vector<ExpT>> UpElems;
-
     for (size_t i = 0; i < NumProcesses; ++i) {
         DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
-        if (i == 0) {
-            UpElems.push_back({TheLTS->MakeTrue()});
-        } else if (i == NumProcesses - 1) {
-            UpElems.push_back({TheLTS->MakeFalse()});
-        } else {
-            UpElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
-        }
     }
-    auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
-    auto&& UpCombinations = CrossProduct<ExpT>(UpElems.begin(), UpElems.end());
 
+    auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
     u32 StateCounter = 1;
     vector<ExpT> Indicators;
     for (auto DataVal : DataCombinations) {
+        vector<vector<ExpT>> UpElems;
+        for (size_t i = 1; i + 1 < NumProcesses; ++i) {
+            UpElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
+        }
+        auto&& UpCombinations = CrossProduct<ExpT>(UpElems.begin(), UpElems.end());
         for (auto UpVal : UpCombinations) {
+            UpVal.insert(UpVal.begin(), TheLTS->MakeTrue());
+            UpVal.push_back(TheLTS->MakeFalse());
+
             MgrT::SubstMapT Valuation;
             for (u32 i = 0; i < DataVal.size(); ++i) {
                 Valuation[TheLTS->MakeVar("Data" + to_string(i), TheLTS->MakeBoolType())] = DataVal[i];
+            }
+            for (u32 i = 0; i < UpVal.size(); ++i) {
                 Valuation[TheLTS->MakeVar("Up" + to_string(i), TheLTS->MakeBoolType())] = UpVal[i];
             }
             auto IsStateLegitimate = Mgr->Substitute(Valuation, Legitimacy);
@@ -1080,55 +1101,10 @@ ExpT LegitimateStatesBoundConstraint(LabelledTS* TheLTS,
     auto NumIndicatorsType = TheLTS->MakeRangeType(0, Indicators.size());
     ExpT NumLegitimateStatesExp = TheLTS->MakeVal(to_string(UpperBoundOfLegimateStates),
                                                   NumIndicatorsType);
-    // ExpT NumLegitimateStatesLowerBoundExp = TheLTS->MakeVal("10",
-    //                                                         NumIndicatorsType);
-    return TheLTS->MakeOp(LTSOps::OpAND,
-                          TheLTS->MakeOp(LTSOps::OpLE, IndicatorSum, NumLegitimateStatesExp));
+    return TheLTS->MakeOp(LTSOps::OpLE,
+                          IndicatorSum,
+                          NumLegitimateStatesExp);
 }
-
-
-// Create the constraint that for every guard in the system,
-// there exists a legitimate state at which the guard is enabled.
-void AddAllGuardsEnabledAtLegitimateStates(LabelledTS* TheLTS, Solver* TheSolver)
-{
-    auto Mgr = TheLTS->MakeTrue()->GetMgr();
-    vector<vector<ExpT>> DataElems;
-    vector<vector<ExpT>> UpElems;
-    for (size_t i = 0; i < NumProcesses; ++i) {
-        DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
-        if (i == 0) {
-            UpElems.push_back({TheLTS->MakeTrue()});
-        } else if (i == NumProcesses - 1) {
-            UpElems.push_back({TheLTS->MakeFalse()});
-        } else {
-            UpElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
-        }
-    }
-    auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
-    auto&& UpCombinations = CrossProduct<ExpT>(UpElems.begin(), UpElems.end());
-
-    for (ExpT Guard : Guards) {
-        vector<ExpT> Disjuncts;
-        for (auto DataVal : DataCombinations) {
-            for (auto UpVal : UpCombinations) {
-                MgrT::SubstMapT Valuation;
-                for (u32 i = 0; i < DataVal.size(); ++i) {
-                    Valuation[TheLTS->MakeVar("Data" + to_string(i), TheLTS->MakeBoolType())] = DataVal[i];
-                    Valuation[TheLTS->MakeVar("Up" + to_string(i), TheLTS->MakeBoolType())] = UpVal[i];
-                }
-                ExpT IsStateLegitimate = Mgr->Substitute(Valuation, Legitimacy);
-                ExpT GuardValue = Mgr->Substitute(Valuation, Guard);
-                ExpT EnabledAndLegitimate = TheLTS->MakeOp(LTSOps::OpAND,
-                                                           IsStateLegitimate,
-                                                           GuardValue);
-                Disjuncts.push_back(EnabledAndLegitimate);
-            }
-        }
-        ExpT Disjunction = MakeDisjunction(Disjuncts, Mgr);
-        TheSolver->MakeAssertion(Disjunction);
-    }
-}
-
 
 int main(int argc, char* argv[])
 {
@@ -1142,11 +1118,24 @@ int main(int argc, char* argv[])
     ParseOptions(argc, argv, Options);
     SolverOptionsT SolverOpts;
     OptsToSolverOpts(Options, SolverOpts);
-    NumProcesses = Options.NumberOfProcesses;
-    UseRingMonitorInSynthesis = Options.UseRingMonitorInSynthesis;
+    NumProcesses = {{NumProcesses}};
+    UseRingMonitorInSynthesis = true;
 
     cout << __LOGSTR__ << "" << "Compiled on " << __DATE__ << " at " << __TIME__ << "." << endl;
     auto TheLTS = new LabelledTS();
+
+    {{DataDefinitions}}
+
+    {{UpdateDefinitions}}
+
+    Guard1s = {{Guard1s}};
+
+    Guard2s = {{Guard2s}};
+
+    UpdateData1s = {{UpdateData1s}};
+    UpdateUp1s = {{UpdateUp1s}};
+    UpdateData2s = {{UpdateData2s}};
+    UpdateUp2s = {{UpdateUp2s}};
 
     DeclareMsgs(TheLTS);
     DeclareAutomata(TheLTS);
@@ -1156,112 +1145,55 @@ int main(int argc, char* argv[])
 
     auto Checker = new LTSChecker(TheLTS);
 
-    // auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, 2);
+    auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, 2);
 
-    // if (!Safe) {
-    //     cout << "It is not safe" << endl;
+    if (!Safe) {
+        cout << "It is not safe" << endl;
 
-    //     auto const& ErrorStates = Checker->GetAllErrorStates();
-    //     set<ExpT> BlownInvariantsCovered;
+        auto const& ErrorStates = Checker->GetAllErrorStates();
+        set<ExpT> BlownInvariantsCovered;
 
-    //     ESMC_LOG_MIN_SHORT(
-    //                        Out_ << "Building Constraints for errors...";
-    //                        );
+        ESMC_LOG_MIN_SHORT(
+                           Out_ << "Building Constraints for errors...";
+                           );
 
-    //     for (auto const& ErrorState : ErrorStates) {
-    //         auto SVPtr = ErrorState.first;
-    //         auto const& BlownInvariant = ErrorState.second;
-    //         if (BlownInvariant == Checker->LoweredDLFInvariant) {
-    //             cout << "Deadlock violation" << endl;
-    //             auto PPath = Checker->AQS->FindPath(SVPtr);
-    //             auto Mgr = TheLTS->GetMgr();
-    //             // auto AQS = Checker->AQS;
-    //             auto Trace = TraceBase::MakeDeadlockViolation(PPath, Checker);
-    //             cout << Trace->ToString() << endl;
-    //         } else {
-    //             cout << "Safety violation" << endl;
-    //             // HandleOneSafetyViolation(SVPtr, BlownInvariant);
-    //         }
-    //     }
+        for (auto const& ErrorState : ErrorStates) {
+            auto SVPtr = ErrorState.first;
+            auto const& BlownInvariant = ErrorState.second;
+            if (BlownInvariant == Checker->LoweredDLFInvariant) {
+                cout << "Deadlock violation!!" << endl;
+                auto PPath = Checker->AQS->FindPath(SVPtr);
+                auto Trace = TraceBase::MakeDeadlockViolation(PPath, Checker);
+                cout << Trace->ToString() << endl;
+            } else {
+                cout << "Safety violation!!" << endl;
+                auto PPath = Checker->AQS->FindPath(SVPtr);
+                auto Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
+                cout << Trace->ToString() << endl;
 
-    // }
+                // HandleOneSafetyViolation(SVPtr, BlownInvariant);
+            }
+        }
+    } else {
+        cout << "It is safe" << endl;
+    }
 
     DeclareLegitLivenessMonitor(TheLTS, Checker);
+    DeclareRingLivenessMonitor(TheLTS, Checker);
 
+    auto LiveTrace = Checker->CheckLiveness("Ring");
 
-    if (UseRingMonitorInSynthesis) {
-        DeclareRingLivenessMonitor(TheLTS, Checker);
+    if (LiveTrace != nullptr) {
+        cout << LiveTrace->ToString() << endl;
     }
-    // auto LiveTrace = Checker->CheckLiveness("Ring");
+    LiveTrace = Checker->CheckLiveness("InfinitelyIllegitimate");
 
-    // if (LiveTrace != nullptr) {
-    //     cout << LiveTrace->ToString() << endl;
-    // }
-
-    auto TheSolver = new Solver(Checker, SolverOpts);
-
-
-    // for (i64 Op : GuardOps) {
-    //     TheSolver->UnveilNonCompletionGuardOp(Op);
-    // }
-
-    // for (i64 Op : UpdateOps) {
-    //     TheSolver->UnveilNonCompletionOp(Op);
-    // }
-    // TheSolver->MakeAssertion(Prop3);
-
-    if (Options.LegitimateStatesBound != 0) {
-        vector<ExpT> IndicatorConstraints;
-        auto BoundConstraint = LegitimateStatesBoundConstraint(TheLTS,
-                                                               IndicatorConstraints,
-                                                               Options.LegitimateStatesBound);
-        for (ExpT IndicatorConstraint : IndicatorConstraints) {
-            TheSolver->MakeAssertion(IndicatorConstraint);
-        }
-        TheSolver->MakeAssertion(BoundConstraint);
+    if (LiveTrace != nullptr) {
+        cout << LiveTrace->ToString() << endl;
     }
 
-    AddAllGuardsEnabledAtLegitimateStates(TheLTS, TheSolver);
-
-    TheSolver->Solve();
-
-    vector<vector<ExpT>> DataElems;
-    for (size_t i = 0; i < NumProcesses; ++i) {
-        DataElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
-    }
-
-    auto Mgr = TheLTS->MakeTrue()->GetMgr();
-    u32 NumberOfLegitimateStates = 0;
-    auto&& DataCombinations = CrossProduct<ExpT>(DataElems.begin(), DataElems.end());
-    for (auto DataVal : DataCombinations) {
-        vector<vector<ExpT>> UpElems;
-        for (size_t i = 1; i + 1 < NumProcesses; ++i) {
-            UpElems.push_back({TheLTS->MakeTrue(), TheLTS->MakeFalse()});
-        }
-        auto&& UpCombinations = CrossProduct<ExpT>(UpElems.begin(), UpElems.end());
-        for (auto UpVal : UpCombinations) {
-            UpVal.insert(UpVal.begin(), TheLTS->MakeTrue());
-            UpVal.push_back(TheLTS->MakeFalse());
-
-            MgrT::SubstMapT Valuation;
-            for (u32 i = 0; i < DataVal.size(); ++i) {
-                Valuation[TheLTS->MakeVar("Data" + to_string(i), TheLTS->MakeBoolType())] = DataVal[i];
-            }
-            for (u32 i = 0; i < UpVal.size(); ++i) {
-                Valuation[TheLTS->MakeVar("Up" + to_string(i), TheLTS->MakeBoolType())] = UpVal[i];
-            }
-            auto Result = TheSolver->Evaluate(Mgr->Substitute(Valuation, Legitimacy));
-            if (Result == TheLTS->MakeTrue()) {
-                NumberOfLegitimateStates++;
-            }
-        }
-    }
-
-    cout << "# of legitimate states: " << NumberOfLegitimateStates << endl;
 
     delete Checker;
-
-    cout << __LOGSTR__ << "Return." << endl;
     return 0;
 }
 

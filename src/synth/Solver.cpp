@@ -1276,9 +1276,19 @@ namespace ESMC {
         inline void Solver::HandleLivenessViolation(const LivenessViolation* Trace,
                                                     StateBuchiAutomaton* Monitor)
         {
-            auto Predicate =
+            auto&& WPConditions =
                 TraceAnalyses::WeakestPreconditionForLiveness(this, Monitor, Trace);
-            MakeAssertion(Predicate);
+            cout << "computed weakest precondition" << endl;
+            for (auto const& Pred : WPConditions) {
+
+                ESMC_LOG_SHORT(
+                               "Solver.CEXAssertions",
+                               Out_ << "Obtained Liveness Pre:" << endl
+                                    << Pred << endl;
+                               );
+
+                MakeAssertion(Pred);
+            }
             delete Trace;
         }
 
@@ -1388,7 +1398,7 @@ namespace ESMC {
 
         inline void Solver::HandleResourceLimit()
         {
-            Stats.SolveEndTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
+            Stats.SolveEndTime = TimeValue::GetTimeValue();
             if (ResourceLimitManager::CheckMemOut()) {
                 ESMC_LOG_MIN_FULL(
                                   Out_ << "Memory limit reached. Aborting with Memout!" << endl;
@@ -1425,7 +1435,7 @@ namespace ESMC {
         void Solver::Solve()
         {
             ResetStats();
-            Stats.SolveStartTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
+            Stats.SolveStartTime = TimeValue::GetTimeValue();
             ResourceLimitManager::SetCPULimit(Options.CPULimitInSeconds);
             ResourceLimitManager::SetMemLimit((Options.MemLimitInMB == UINT64_MAX ?
                                                Options.MemLimitInMB : Options.MemLimitInMB << 20));
@@ -1453,10 +1463,10 @@ namespace ESMC {
 
                 AssertBoundsConstraint();
 
-                auto SMTStartTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
+                auto SMTStartTime = TimeValue::GetTimeValue();
                 auto TPRes = TP->CheckSatWithAssumptions(CurrentAssumptions);
                 ++Stats.NumIterations;
-                auto SMTEndTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
+                auto SMTEndTime = TimeValue::GetTimeValue();
                 auto CurQueryTime = SMTEndTime - SMTStartTime;
                 auto CurSMTTime = CurQueryTime.InMicroSeconds();
                 Stats.TotalSMTTime += CurSMTTime;
@@ -1532,7 +1542,7 @@ namespace ESMC {
                     continue;
                 } else {
                     ResourceLimitManager::QueryEnd();
-                    Stats.SolveEndTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
+                    Stats.SolveEndTime = TimeValue::GetTimeValue();
 
                     ESMC_LOG_MIN_SHORT(
                                        Out_ << "Found Correct Completion!" << endl;

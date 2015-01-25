@@ -87,7 +87,7 @@ namespace ESMC {
                                                     SafetyViolation* Trace,
                                                     const ExpT& InitialPredicate);
 
-            static ExpT
+            static FastExpSetT
             WeakestPreconditionForLiveness(Solver* TheSolver,
                                            StateBuchiAutomaton* Monitor,
                                            const LivenessViolation* Trace);

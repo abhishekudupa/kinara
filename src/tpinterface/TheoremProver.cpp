@@ -139,7 +139,7 @@ namespace ESMC {
                           Out_ << "Asserting Unrolled Expr:"
                                << UnrolledExp << endl;
                           Out_ << "Asserting Lowered Expr:" << endl
-                               << LoweredAssertion << endl;
+                               << LoweredAssertion.ToString() << endl;
                           );
 
             Z3_solver_assert(*Ctx, Solver, LoweredAssertion);

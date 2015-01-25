@@ -7,7 +7,7 @@ BASE_GEN_DIR=$(PROJECT_ROOT)/gen
 BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
 CXX?=g++
-CXXFLAGS=-std=c++11 -Wall -pedantic -pipe
+CXXFLAGS=-std=c++11 -Wall -pedantic -pipe -DESMC_ENABLE_TRACING_
 CXXFLAGS+=-I/usr/local/Cellar/google-sparsehash/2.0.2/include/sparsehash/ -I /usr/local/include
 
 ifeq "x$(CXX)" "xg++"
@@ -18,24 +18,30 @@ ifeq "x$(CXX)" "xg++-4.9"
 CXXFLAGS+=-Wno-unused-local-typedefs
 endif
 
+ifneq "x$(Z3_VERSION_TO_USE)" "x4.3.1"
+CXXFLAGS+=-DUSE_Z3_4_3_2
+endif
+
 PROJECT_MODULES= \
 	common \
 	containers \
+	decls \
 	expr \
 	hash \
+	lib \
 	main \
 	mc \
+	symexec \
 	symmetry \
-    symexec \
-    synth \
+	synth \
 	tpinterface \
 	uflts \
 	utils \
 
 PROJECT_EXECUTABLES=esmc
-esmc_SYS_LIBS=z3 boost_system
+esmc_SYS_LIBS=z3 boost_system  boost_iostreams
 esmc_DEP_LIBS=esmc
-esmc_EXT_LIBS=boost z3
+esmc_EXT_LIBS=z3 boost_system  boost_iostreams
 esmc_OBJS=main.o
 esmc_LIB_PATHS= \
 	$(PROJECT_ROOT)/lib/$(BUILD_SUFFIX) \
@@ -46,10 +52,11 @@ PROJECT_LIBS=esmc
 libesmc_OBJS= \
 	AQStructure.o \
 	Compiler.o \
-	ExprTypes.o \
+	ESMCLib.o \
 	IndexSet.o \
 	LabelledTS.o \
-    LTSAnalyses.o \
+	LogManager.o \
+	LTSAnalyses.o \
 	LTSAssign.o \
 	LTSAutomaton.o \
 	LTSChannelEFSM.o \
@@ -58,31 +65,32 @@ libesmc_OBJS= \
 	LTSEFSMBase.o \
 	LTSExtensions.o \
 	LTSFairnessSet.o \
+	LTSSemTypes.o \
 	LTSState.o \
 	LTSTermSemanticizer.o \
+	LTSTransformers.o \
 	LTSTransitions.o \
-	LTSUtils.o \
 	OmegaAutomaton.o \
 	Permutations.o \
-    Solver.o \
+	ResourceLimitManager.o \
+	Solver.o \
 	SpookyHash.o \
 	StateVec.o \
 	StateVecPrinter.o \
 	SymbolTable.o \
 	SymmCanonicalizer.o \
-	Trace.o \
-	UIDGenerator.o \
-	ZeroPage.o \
 	TheoremProver.o \
+	TimeValue.o \
 	Trace.o \
 	UIDGenerator.o \
 	Z3Objects.o \
 
 
-PROJECT_EXT_LIBS=boost z3
 
-libesmc_EXT_LIBS= boost z3
-libesmc_SYS_LIBS= boost z3
+PROJECT_EXT_LIBS=z3 boost_system boost_iostreams boost_bzip2
+
+libesmc_EXT_LIBS=z3 boost_system boost_iostreams boost_bzip2
+libesmc_SYS_LIBS=z3 boost_system boost_iostreams boost_bzip2
 
 
 include $(PROJECT_ROOT)/Makefile.mac.util

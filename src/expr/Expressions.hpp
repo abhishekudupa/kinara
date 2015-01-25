@@ -285,7 +285,7 @@ namespace ESMC {
             inline bool LE(const ExpressionBase<ExtListT, S>* Other) const;
             inline bool GE(const ExpressionBase<ExtListT, S>* Other) const;
             inline bool GT(const ExpressionBase<ExtListT, S>* Other) const;
-            virtual string ToString(u32 Verbosity = 0) const override;
+            virtual string ToString(u32 Verbosity = 0) const;
 
             // Abstract methods
         protected:

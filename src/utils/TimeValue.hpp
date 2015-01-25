@@ -44,6 +44,12 @@
 #include "../common/ESMCFwdDecls.hpp"
 #include <sys/time.h>
 
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+typedef uint8_t clockid_t;
+#endif
+
 namespace ESMC {
 
     class TimeValue : public Stringifiable
@@ -66,7 +72,7 @@ namespace ESMC {
         TimeValue operator += (const TimeValue& Other);
         virtual string ToString(u32 Verbosity = 0) const override;
         u64 InMicroSeconds() const;
-
+        static TimeValue GetTimeValue();
         static TimeValue GetTimeValue(clockid_t ClockID);
     };
 

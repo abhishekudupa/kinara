@@ -1519,6 +1519,8 @@ namespace ESMC {
             bool FixPoint = false;
             vector<const ProductState*> AllUnfairStates;
 
+            LivenessViolation* MinLivenessViolation = nullptr;
+            u32 MinSize = 0;
             do {
                 FixPoint = true;
                 ESMC_LOG_MIN_SHORT(
@@ -1563,17 +1565,27 @@ namespace ESMC {
                                            );
 
                         auto Trace = TraceBase::MakeLivenessViolation(SCCRoot, this);
-                        return Trace;
+                        auto TraceSize = Trace->GetStem().size() + Trace->GetLoop().size();
+                        if (MinLivenessViolation == nullptr) {
+                            MinLivenessViolation = Trace;
+                            MinSize = TraceSize;
+                        } else if (MinSize > TraceSize) {
+                            delete MinLivenessViolation;
+                            MinLivenessViolation = Trace;
+                            MinSize = TraceSize;
+                        }
                     }
                     ++SCCNum;
                 }
             } while (!FixPoint);
 
-            ESMC_LOG_MIN_SHORT(
-                               Out_ << "No liveness violations found!" << endl;
-                               );
+            if (MinLivenessViolation == nullptr) {
+                ESMC_LOG_MIN_SHORT(
+                                   Out_ << "No liveness violations found!" << endl;
+                                   );
+            }
 
-            return nullptr;
+            return MinLivenessViolation;
         }
 
         const vector<string>& LTSChecker::GetBuchiMonitorNames() const

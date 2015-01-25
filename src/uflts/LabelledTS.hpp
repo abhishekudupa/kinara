@@ -252,6 +252,11 @@ namespace ESMC {
             void AddInitStates(const vector<InitStateRef>& InitStates);
             void AddInvariant(const ExpT& Invariant);
 
+            void AddToAllOpToExp(i64 Op, ExpT Exp);
+            void AddToGuardOpToExp(i64 GuardOp, ExpT GuardExp);
+            void AddToGuardOpToUpdates(i64 GuardOp, ExpT UpdateExp);
+            void AddToUpdateOpToLValue(i64 UpdateOp, ExpT UpdateExp, ExpT LValue);
+
             const ExpT& GetInvariant() const;
             const ExpT& GetFinalCond() const;
 

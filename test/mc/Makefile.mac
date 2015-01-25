@@ -20,8 +20,8 @@ PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP \
 libesmc_FULL_PATH=$(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)/libesmc.so
 libesmc_MAKE_DIR=$(PROJECT_ROOT)/../../
 
-$(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_SYS_LIBS=esmc z3 boost_system))
-$(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_EXT_LIBS=boost z3 esmc))
+$(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_SYS_LIBS=esmc z3 boost_program_options))
+$(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_EXT_LIBS=boost_program_options z3 esmc))
 $(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_OBJS=$(exec).o))
 $(foreach exec, $(PROJECT_EXECUTABLES), $(eval $(exec)_LIB_PATHS=$(PROJECT_ROOT)/../../lib/$(BUILD_SUFFIX)))
 

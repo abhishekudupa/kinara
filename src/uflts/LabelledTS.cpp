@@ -1233,6 +1233,26 @@ namespace ESMC {
             InvariantExp = Mgr->Simplify(InvariantExp);
         }
 
+
+        void LabelledTS::AddToAllOpToExp(i64 Op, ExpT Exp)
+        {
+            AllOpToExp[Op] = Exp;
+        }
+
+        void LabelledTS::AddToGuardOpToExp(i64 GuardOp, ExpT GuardExp)
+        {
+            GuardOpToExp[GuardOp] = GuardExp;
+        }
+
+        void LabelledTS::AddToGuardOpToUpdates(i64 GuardOp, ExpT UpdateExp)
+        {
+            GuardOpToUpdates[GuardOp].insert(UpdateExp);
+        }
+
+        void LabelledTS::AddToUpdateOpToLValue(i64 UpdateOp, ExpT UpdateExp, ExpT LValue) {
+            UpdateOpToUpdateLValue[UpdateOp] = make_pair(UpdateExp, LValue);
+        }
+
     } /* end namespace LTS */
 } /* end namespace ESMC */
 
