@@ -210,7 +210,7 @@ namespace ESMC {
         : BitSet(Size)
     {
         if (InitialValue) {
-            memset(BitArray, Size / 8, 0xFF);
+            memset(BitArray, 0xFF, Size / 8);
             // take care of the last few bits.
             if (Size % 8 != 0) {
                 u32 Mask = 0;
@@ -356,7 +356,7 @@ namespace ESMC {
 
     inline void BitSet::Set()
     {
-        memset(BitArray, NumBits / 8, 0xFF);
+        memset(BitArray, 0xFF, NumBits / 8);
         // take care of the last few bits.
         if (NumBits % 8 != 0) {
             u32 Mask = 0;
@@ -370,7 +370,7 @@ namespace ESMC {
 
     inline void BitSet::Clear()
     {
-        memset(BitArray, (NumBits + 7) / 8, 0);
+        memset(BitArray, 0, (NumBits + 7) / 8);
     }
 
     inline void BitSet::Flip()

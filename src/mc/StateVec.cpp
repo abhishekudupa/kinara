@@ -104,16 +104,6 @@ namespace ESMC {
             *ActPointer = Value;
         }
 
-        u08& StateVec::operator [] (u32 Offset)
-        {
-            return StateBuffer[Offset];
-        }
-
-        const u08& StateVec::operator [] (u32 Offset) const
-        {
-            return StateBuffer[Offset];
-        }
-
         u32 StateVec::GetSize() const
         {
             return Factory->GetSize();
@@ -121,6 +111,9 @@ namespace ESMC {
 
         bool StateVec::Equals(const StateVec& Other) const
         {
+            if (Hash() != Other.Hash()) {
+                return false;
+            }
             return ((Factory == Other.Factory) &&
                     (memcmp(StateBuffer, Other.StateBuffer, GetSize()) == 0));
         }
@@ -132,6 +125,7 @@ namespace ESMC {
 
         void StateVec::Set(const StateVec& Other)
         {
+            MarkDirty();
             memcpy(StateBuffer, Other.StateBuffer, GetSize());
         }
 
@@ -148,7 +142,7 @@ namespace ESMC {
                 HashFields.HashValid = true;
                 HashFields.HashCode =
                     SpookyHash::SpookyHash::Hash64(StateBuffer, GetSize(),
-                                                   0xBEADFEEDDEAFBEAD);
+                                                   0xBEADFEEDDEAFBEADUL);
                 return HashFields.HashCode;
             }
         }

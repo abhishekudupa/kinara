@@ -380,6 +380,8 @@ namespace ESMC {
 
                     NextUnsortedPS->GetSVPtr()->Recycle();
                     delete NextUnsortedPS;
+                    NextUnwoundPS->GetSVPtr()->Recycle();
+                    delete NextUnwoundPS;
                 } // End iterating over edges
 
                 // Delete the current unwound product state as well
@@ -438,7 +440,6 @@ namespace ESMC {
 
         inline void
         TraceBase::MarkFairnessesSatisfied(const vector<PSTraceElemT>& PathSegment,
-                                           const vector<u08>& InversePermutation,
                                            const LTSChecker* Checker)
         {
             auto const& AllFCheckers = Checker->FairnessCheckers;
@@ -452,7 +453,15 @@ namespace ESMC {
                             auto CmdID = TraceElem.first->GetCmdID();
                             auto PS = TraceElem.second;
                             if (FChecker->CheckInstanceSatisfaction(Instance, CmdID, PS)) {
+                                ESMC_LOG_FULL("Trace.Generation",
+                                              Out_ << "Marking fairness:" << endl
+                                                   << FChecker->ToString() << endl
+                                                   << "as satisfied by segment!" << endl;
+                                              );
                                 FChecker->SetInstanceSatisfiedInTrace(Instance);
+                                // The instace is already satisfied, ignore the
+                                // rest of the trace segment.
+                                break;
                             }
                         }
                     }
@@ -550,18 +559,26 @@ namespace ESMC {
             auto TheCanonicalizer = Checker->TheCanonicalizer;
             auto PermSet = TheCanonicalizer->GetPermSet();
             auto Mgr = Checker->TheLTS->GetMgr();
-            auto TheSCCID = SCCRoot->GetSCCID();
             u32 InvPermAlongPath = 0;
 
-            // Find a path from the initial state to one of the SCC nodes
+            // Find a path from the initial state to the SCC root
+            // audupa, 01/25/2015: Changed this to be a path TO the root of the
+            // SCC rather than ANY node in the SCC to eliminate a bug in the trace
+            // generation.
             auto StemPPath = ThePS->FindPath([&] (const ProductState* State) -> bool
                                              {
-                                                 return (State->GetSCCID() == TheSCCID);
+                                                 return (State == SCCRoot);
                                              });
             vector<PSTraceElemT> StemPath;
             auto InitState = UnwindPermPath(StemPPath, Checker, StemPath, InvPermAlongPath);
 
             auto InvPermAtEndOfStem = PermSet->GetIterator(InvPermAlongPath).GetPerm();
+
+            ESMC_LOG_FULL("Trace.Generation",
+                          Out_ << "Permutation at end of stem:" << endl
+                               << Symm::PermToString(InvPermAtEndOfStem) << endl;
+                          );
+
             auto StemPathBackPair = StemPath.back();
             auto StartOfLoop = StemPathBackPair.second;
 
@@ -632,7 +649,7 @@ namespace ESMC {
                         }
 
                         FChecker->SetInstanceSatisfiedInTrace(Instance);
-                        MarkFairnessesSatisfied(CurElems, InvPermAtEndOfStem, Checker);
+                        MarkFairnessesSatisfied(CurElems, Checker);
 
                         PathSoFar.insert(PathSoFar.end(), CurElems.begin(), CurElems.end());
                     }

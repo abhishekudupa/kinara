@@ -158,10 +158,15 @@ namespace ESMC {
         inline Stringifiable() {}
         inline virtual ~Stringifiable() {}
 
-        virtual string ToString(u32 Verbosity = 0) const = 0;
+        virtual string ToString(u32 Verbosity) const = 0;
         inline operator string () const
         {
             return ToString();
+        }
+
+        inline string ToString() const
+        {
+            return ToString(0);
         }
     };
 

@@ -222,7 +222,6 @@ namespace ESMC {
 
             static inline void
             MarkFairnessesSatisfied(const vector<PSTraceElemT>& PathSegment,
-                                    const vector<u08>& InversePermutation,
                                     const LTSChecker* Checker);
 
 

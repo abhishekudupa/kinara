@@ -104,9 +104,6 @@ namespace ESMC {
             u32 ReadWord(u32 Offset) const;
             void WriteWord(u32 Offset, u32 Value);
 
-            u08& operator [] (u32 Offset);
-            const u08& operator [] (u32 Offset) const;
-
             u32 GetSize() const;
             bool Equals(const StateVec& Other) const;
             i32 Compare(const StateVec& Other) const;

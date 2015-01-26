@@ -67,6 +67,7 @@ int main()
     ESMC::Logging::LogManager::Initialize();
     ESMC::Logging::LogManager::EnableLogOption("Checker.AQSDetailed");
     ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
+    ESMC::Logging::LogManager::EnableLogOption("Trace.Generation");
     auto TheLTS = new LabelledTS();
 
     auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 2);
@@ -90,7 +91,7 @@ int main()
     auto Server = TheLTS->MakeGenEFSM("Server", vector<ExpT>(), TrueExp, LTSFairnessType::None);
 
     auto ClientIDParam = TheLTS->MakeVar("ClientID", ClientIDType);
-    auto ClientEFSM = TheLTS->MakeGenEFSM("Client", Params, TrueExp, LTSFairnessType::None);
+    auto ClientEFSM = TheLTS->MakeGenEFSM("Client", Params, TrueExp, LTSFairnessType::Strong);
 
     auto C2SChan = TheLTS->MakeChannel("C2SChan", vector<ExpT>(), TrueExp, 2, false,
                                        false, false, false, LTSFairnessType::None);
@@ -321,7 +322,7 @@ int main()
     // auto Trace = Checker->CheckLiveness("FGZero");
 
     if (Trace != nullptr) {
-        cout << Trace->ToString(1) << endl;
+        cout << Trace->ToString(0) << endl;
         // cout << TraceAnalyses::WeakestPreconditionForLiveness(TheLTS, Monitor, Trace->As<LivenessViolation>()) << endl;
         delete Trace;
     }

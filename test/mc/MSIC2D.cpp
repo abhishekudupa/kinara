@@ -64,9 +64,10 @@ const u32 NumDirs = 1;
 
 int main()
 {
-    // Logging::LogManager::Initialize();
-    Logging::LogManager::Initialize("MSILog", true, false);
-    ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
+    Logging::LogManager::Initialize();
+    // Logging::LogManager::Initialize("MSILog", false, false);
+    // ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
+    // ESMC::Logging::LogManager::EnableLogOption("Trace.Generation");
     // ESMC::Logging::LogManager::EnableLogOption("Checker.AQSDetailed");
 
     auto TheLTS = new LabelledTS();
@@ -252,7 +253,7 @@ int main()
 
     ReqChannelEFSM->AddMsgs({ CacheParam }, TrueExp, GetSMsgType,
                             { CacheParam, DirParam, AddressParam },
-                            true, LTSFairnessType::None, LossDupFairnessType::None);
+                            true, LTSFairnessType::Strong, LossDupFairnessType::None);
 
     ReqChannelEFSM->AddMsgs({ CacheParam }, TrueExp, WBMsgType,
                             { CacheParam, DirParam, AddressParam },

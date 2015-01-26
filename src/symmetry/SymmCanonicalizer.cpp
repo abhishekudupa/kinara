@@ -561,6 +561,7 @@ namespace ESMC {
             StateVec* BestStateVec = InputVector->Clone();
             bool FoundExisting = false;
             bool ShortCutEnabled = false;
+            PermID = 0;
             // Check if the input vector is already canonical
             if (AQS != nullptr) {
                 auto ExistingSV = AQS->Find(const_cast<StateVec*>(InputVector));
@@ -584,7 +585,6 @@ namespace ESMC {
             }
 
             auto WorkingStateVec = InputVector->Clone();
-            PermID = 0;
 
             auto it = PermSet->Begin();
             ++it;
@@ -626,6 +626,7 @@ namespace ESMC {
                         BestStateVec->Recycle();
                         BestStateVec = WorkingStateVec;
                         FoundExisting = true;
+                        PermID = it.GetIndex();
                         break;
                     }
                 }
