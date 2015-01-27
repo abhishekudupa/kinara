@@ -78,10 +78,6 @@ namespace ESMC {
                     (string)"Print model obtained from Z3 in each iteration in the solver."
                 },
                 {
-                    "Solver.Stats",
-                    (string)"Print stats about solve resource consumption, etc."
-                },
-                {
                     "IncompleteEFSM.Assertions",
                     (string)"Print assertions made in during processing of IncompleteEFSMs."
                 },

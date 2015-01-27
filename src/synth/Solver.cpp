@@ -1347,44 +1347,41 @@ namespace ESMC {
 
         inline void Solver::PrintStats()
         {
-            ESMC_LOG_FULL(
-                          "Solver.Stats",
-                          auto SolveTimeInMicroSecs = (Stats.SolveEndTime -
-                                                       Stats.SolveStartTime).InMicroSeconds();
+            ESMC_LOG_MIN_SHORT(
+                               auto SolveTimeInMicroSecs = (Stats.SolveEndTime -
+                                                            Stats.SolveStartTime).InMicroSeconds();
 
-                          Out_ << "Solver Stats:" << endl << endl;
-                          Out_ << "----------------------------------------------------------------"
+                               Out_ << "Solver Stats:" << endl << endl;
+                               Out_ << "----------------------------------------------------------------"
                                << endl;
-                          Out_ << "Solve Time: " << ((float)SolveTimeInMicroSecs / 1000000.0)
+                               Out_ << "Solve Time: " << ((float)SolveTimeInMicroSecs / 1000000.0)
                                << " (s)" << endl;
-                          Out_ << "Initial Asserts: " << Stats.InitialNumAssertions << endl;
-                          Out_ << "Final Asserts: " << Stats.FinalNumAssertions << endl;
-                          Out_ << "Num Iterations: " << Stats.NumIterations << endl;
-                          Out_ << "Total SMT Time: " << Stats.TotalSMTTime << " (uS)" << endl;
-                          Out_ << "Min SMT Time: " << Stats.MinSMTTime << " (uS)" << endl;
-                          Out_ << "Max SMT Time: " << Stats.MaxSMTTime << " (uS)" << endl;
-                          Out_ << "Avg SMT Time: "
+                               Out_ << "Initial Asserts: " << Stats.InitialNumAssertions << endl;
+                               Out_ << "Final Asserts: " << Stats.FinalNumAssertions << endl;
+                               Out_ << "Num Iterations: " << Stats.NumIterations << endl;
+                               Out_ << "Total SMT Time: " << Stats.TotalSMTTime << " (uS)" << endl;
+                               Out_ << "Min SMT Time: " << Stats.MinSMTTime << " (uS)" << endl;
+                               Out_ << "Max SMT Time: " << Stats.MaxSMTTime << " (uS)" << endl;
+                               Out_ << "Avg SMT Time: "
                                << ((float)Stats.TotalSMTTime / Stats.NumIterations)
                                << " (uS)" << endl;
-                          Out_ << "Final Bound: " << Bound << endl;
-                          Out_ << "----------------------------------------------------------------"
+                               Out_ << "Final Bound: " << Bound << endl;
+                               Out_ << "----------------------------------------------------------------"
                                << endl;
-                          );
+                               );
         }
 
         inline void Solver::HandleResourceLimit()
         {
             Stats.SolveEndTime = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
             if (ResourceLimitManager::CheckMemOut()) {
-                ESMC_LOG_FULL(
-                              "Solver.Stats",
-                              Out_ << "Memory limit reached. Aborting with Memout!" << endl;
-                              );
+                ESMC_LOG_MIN_FULL(
+                                  Out_ << "Memory limit reached. Aborting with Memout!" << endl;
+                                  );
             } else {
-                ESMC_LOG_FULL(
-                              "Solver.Stats",
-                              Out_ << "CPU Time limit reached. Aborting with Timeout" << endl;
-                              );
+                ESMC_LOG_MIN_FULL(
+                                  Out_ << "CPU Time limit reached. Aborting with Timeout" << endl;
+                                  );
             }
             PrintStats();
             ResourceLimitManager::QueryEnd();
