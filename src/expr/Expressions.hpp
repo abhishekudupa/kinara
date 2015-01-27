@@ -199,6 +199,7 @@ namespace ESMC {
 
             inline ExprMgr<E, S>* GetMgr() const;
             inline u64 Hash() const;
+            inline u64 Rehash() const;
             inline const TypeRef& GetType() const;
             inline void SetType(const TypeRef& Type) const;
             inline bool Equals(const ExpressionBase<E, S>* Other) const;
@@ -275,6 +276,7 @@ namespace ESMC {
 
             inline ExprMgr<ExtListT, S>* GetMgr() const;
             inline u64 Hash() const;
+            inline u64 Rehash() const;
             inline i64 GetType() const;
             inline void SetType(i64 Type) const;
             inline bool Equals(const ExpressionBase<ExtListT, S>* Other) const;
@@ -1427,6 +1429,15 @@ namespace ESMC {
         }
 
         template <typename E, template <typename> class S>
+        inline u64 ExpressionBase<E, S>::Rehash() const
+        {
+            ComputeHash();
+            HashValid = true;
+            return HashCode;
+        }
+
+
+        template <typename E, template <typename> class S>
         inline const typename ExpressionBase<E, S>::TypeRef&
         ExpressionBase<E, S>::GetType() const
         {
@@ -1527,6 +1538,14 @@ namespace ESMC {
                 ComputeHash();
                 HashValid = true;
             }
+            return HashCode;
+        }
+
+        template <template <typename> class S>
+        inline u64 ExpressionBase<ExtListT, S>::Rehash() const
+        {
+            ComputeHash();
+            HashValid = true;
             return HashCode;
         }
 

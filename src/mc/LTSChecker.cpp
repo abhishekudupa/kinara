@@ -933,10 +933,8 @@ namespace ESMC {
         inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots, u32 NumErrors,
                                       bool PrioritizeNonTentative)
         {
-            // BFSQueueT BFSQueue(PrioritizeNonTentative);
-            // BFSQueue.Push(Roots.begin(), Roots.end(), 0);
-
-            deque<StateVec*> BFSQueue(Roots.begin(), Roots.end());
+            BFSQueueT BFSQueue(PrioritizeNonTentative);
+            BFSQueue.Push(Roots.begin(), Roots.end(), 0);
 
             auto const& Invar = TheLTS->GetInvariant();
 
@@ -944,12 +942,9 @@ namespace ESMC {
                 AQS->InsertInitState(Root);
             }
 
-            // while (BFSQueue.Size() > 0) {
-            while (BFSQueue.size() > 0) {
-                // u32 CurrentTaintLevel;
-                // auto CurState = BFSQueue.Pop(CurrentTaintLevel);
-                auto CurState = BFSQueue.front();
-                BFSQueue.pop_front();
+            while (BFSQueue.Size() > 0) {
+                u32 CurrentTaintLevel;
+                auto CurState = BFSQueue.Pop(CurrentTaintLevel);
 
                 ESMC_LOG_FULL(
                               "Checker.AQSDetailed",
@@ -1055,11 +1050,10 @@ namespace ESMC {
                                 }
                             } else {
                                 // We're good to consider successors of this state
-                                // BFSQueue.Push(CanonNextState,
-                                //               (Cmd->IsTentative() ?
-                                //                CurrentTaintLevel + 1 :
-                                //                CurrentTaintLevel));
-                                BFSQueue.push_back(CanonNextState);
+                                BFSQueue.Push(CanonNextState,
+                                              (Cmd->IsTentative() ?
+                                               CurrentTaintLevel + 1 :
+                                               CurrentTaintLevel));
                             }
                         }
                     }

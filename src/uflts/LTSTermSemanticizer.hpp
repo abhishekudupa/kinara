@@ -3390,16 +3390,6 @@ namespace ESMC {
             // already
 
             // return Detail::Canonicalizer<E, LTS::LTSTermSemanticizer>::Do(Exp);
-            auto ExpAsConst = Exp->template As<ConstExpression>();
-            if (ExpAsConst != nullptr) {
-                auto const& ConstType = ExpAsConst->GetConstType();
-                auto const& ConstVal = ExpAsConst->GetConstValue();
-                if (ConstVal == "clear") {
-                    auto& ExpConstVal = const_cast<string&>(ConstVal);
-                    ExpConstVal = ConstType->GetClearValue();
-                }
-            }
-
             auto ExpAsOp = Exp->template As<OpExpression>();
             if (ExpAsOp == nullptr) {
                 return Exp;
@@ -3423,6 +3413,7 @@ namespace ESMC {
                             return Children[0];
                         }
                     }
+                    Exp->Rehash();
                     return Exp;
                 }
                 break;
