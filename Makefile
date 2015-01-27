@@ -14,7 +14,7 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/sparsehash
 
 ifeq "x$(CXX)" "xg++"
-CXXFLAGS+=-Wno-unused-local-typedefs -fopenmp
+CXXFLAGS+=-Wno-unused-local-typedefs -Wno-overflow -fopenmp
 else
 CXXFLAGS+=-Wno-gnu-folding-constant -openmp
 endif
@@ -34,21 +34,6 @@ PROJECT_MODULES= \
 	tpinterface \
 	uflts \
 	utils \
-
-
-PROJECT_EXECUTABLES=esmc
-esmc_LINK_LIBS_COMMON=z3 rt boost_system boost_iostreams boost_bzip2
-esmc_LINK_LIBS_LTO=esmc
-
-esmc_DEP_LIBS=esmc
-esmc_EXT_LIBS=boost z3
-
-esmc_LIB_PATHS= \
-	$(PROJECT_ROOT)/thirdparty/z3/install \
-	$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/lib \
-	$(PROJECT_ROOT)/lib/$(BUILD_SUFFIX)
-
-esmc_OBJS=main.o
 
 libboost_FULL_PATH=$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/install.ph
 libboost_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/boost-local/

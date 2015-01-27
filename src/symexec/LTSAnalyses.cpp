@@ -588,9 +588,9 @@ namespace ESMC {
 
                 Phi = Mgr->SimplifyFP(Phi);
 
-                ESMC_LOG_FULL(
+                ESMC_LOG_SHORT(
                               "Analyses.Detailed",
-                              Out_ << "Simplified:" << Phi->ToString() << endl;
+                              Out_ << "Simplified:" << endl << Phi->ToString() << endl;
                               );
             }
 
@@ -605,7 +605,44 @@ namespace ESMC {
                     InitStateSubstMap[LHS] = RHS;
                 }
                 auto NewPhi = Mgr->Substitute(InitStateSubstMap, Phi);
+
+                ESMC_LOG_FULL(
+                              "Analyses.Detailed",
+                              Out_ << "Substituting initial state values, initial state "
+                                   << "updates:" << endl;
+                              for (auto const& Update : InitState->GetLoweredUpdates()) {
+                                  Out_ << Update << endl;
+                              });
+
+
+                ESMC_LOG_SHORT(
+                               "Analyses.Detailed",
+                               Out_ << "After substituting initial state values:" << endl
+                               << NewPhi->ToString() << endl;
+                               );
+
+                // Check if unsat
+                Z3TPRef TP = new Z3TheoremProver();
+                auto TPRes = TP->CheckSat(NewPhi, true);
+                if (TPRes == TPResult::UNSATISFIABLE) {
+                    ESMC_LOG_FULL(
+                                  "Analyses.Detailed",
+                                  Out_ << "The predicate is unsat!" << endl;
+                                  );
+                } else if (TPRes == TPResult::UNKNOWN) {
+                    ESMC_LOG_FULL(
+                                  "Analyses.Detailed",
+                                  Out_ << "The satisfiability of predicate is unknown!" << endl;
+                                  );
+                }
+
                 NewPhi = Mgr->SimplifyFP(NewPhi);
+
+                ESMC_LOG_SHORT(
+                               "Analyses.Detailed",
+                               Out_ << "Simplified:" << endl << NewPhi->ToString() << endl;
+                               );
+
                 Retval.insert(NewPhi);
             }
             return Retval;

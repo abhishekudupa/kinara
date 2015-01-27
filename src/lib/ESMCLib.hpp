@@ -48,11 +48,11 @@ namespace ESMC {
     {
     public:
         string LogFileName;
-        bool CompressLog;
+        LogFileCompressionTechniqueT LogCompressionTechnique;
         set<string> LoggingOptions;
 
         ESMCLibOptionsT();
-        ~ESMCLibOptionsT();
+        virtual ~ESMCLibOptionsT();
 
         ESMCLibOptionsT(const ESMCLibOptionsT& Other);
         ESMCLibOptionsT& operator = (const ESMCLibOptionsT& Other);
@@ -61,8 +61,7 @@ namespace ESMC {
     class ESMCLib
     {
     private:
-        static ESMCLibOptionsT ESMCLibOptions;
-        static bool AtExitHandlerInstalled;
+        static ESMCLibOptionsT& ESMCLibOptions();
 
         ESMCLib();
         ESMCLib(const ESMCLib& Other) = delete;
@@ -73,6 +72,9 @@ namespace ESMC {
         static void Initialize(const ESMCLibOptionsT& LibOptions);
         static void Finalize();
     };
+
+    __attribute__((constructor)) extern void ESMCLibInitialize_();
+    __attribute__((destructor)) extern void ESMCLibFinalize_();
 
 } /* end namespace ESMC */
 

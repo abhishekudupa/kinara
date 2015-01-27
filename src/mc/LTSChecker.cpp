@@ -515,6 +515,12 @@ namespace ESMC {
             ZeroState = Factory->MakeState();
             NumGuardedCmds = GuardedCommands.size();
 
+            ESMC_LOG_FULL("Checker.GuardedCommands",
+                          Out_ << "Guarded Commands:" << endl;
+                          for (auto const& Cmd : GuardedCommands) {
+                              Out_ << Cmd << endl;
+                          });
+
             NumFairnessObjects = 0;
             NumFairnessSets = 0;
 

@@ -320,7 +320,6 @@ int main()
     auto TheSolver = new Solver(Checker);
 
     TheSolver->Solve();
-    TheSolver->PrintSolution();
 
     delete Checker;
     delete TheSolver;

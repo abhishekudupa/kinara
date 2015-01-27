@@ -158,7 +158,8 @@ namespace ESMC {
             {
                 u64 Retval = 0;
                 boost::hash_combine(Retval, Target);
-                boost::hash_combine(Retval, (((u64)Permutation << 32) | (u64)GCmdIndex));
+                boost::hash_combine(Retval, Permutation);
+                boost::hash_combine(Retval, GCmdIndex);
                 return Retval;
             }
         };

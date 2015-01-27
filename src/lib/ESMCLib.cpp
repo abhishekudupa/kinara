@@ -45,7 +45,8 @@
 namespace ESMC {
 
     ESMCLibOptionsT::ESMCLibOptionsT()
-        : LogFileName(""), CompressLog(false),
+        : LogFileName(""),
+          LogCompressionTechnique(LogFileCompressionTechniqueT::COMPRESS_NONE),
           LoggingOptions()
     {
         // Nothing here
@@ -57,8 +58,11 @@ namespace ESMC {
     }
 
     ESMCLibOptionsT::ESMCLibOptionsT(const ESMCLibOptionsT& Other)
+        : LogFileName(Other.LogFileName),
+          LogCompressionTechnique(Other.LogCompressionTechnique),
+          LoggingOptions(Other.LoggingOptions)
     {
-        memcpy(this, &Other, sizeof(ESMCLibOptionsT));
+        // Nothing here
     }
 
     ESMCLibOptionsT& ESMCLibOptionsT::operator = (const ESMCLibOptionsT& Other)
@@ -66,13 +70,17 @@ namespace ESMC {
         if (&Other == this) {
             return *this;
         }
-
-        memcpy(this, &Other, sizeof(ESMCLibOptionsT));
+        LogFileName = Other.LogFileName;
+        LogCompressionTechnique = Other.LogCompressionTechnique;
+        LoggingOptions = Other.LoggingOptions;
         return *this;
     }
 
-    ESMCLibOptionsT ESMCLib::ESMCLibOptions;
-    bool ESMCLib::AtExitHandlerInstalled = false;
+    ESMCLibOptionsT& ESMCLib::ESMCLibOptions()
+    {
+        static ESMCLibOptionsT ESMCLibOptions_;
+        return ESMCLibOptions_;
+    }
 
     ESMCLib::ESMCLib()
     {
@@ -81,19 +89,16 @@ namespace ESMC {
 
     void ESMCLib::Initialize()
     {
-        ESMCLibOptionsT EmptyOptions;
-        Initialize(EmptyOptions);
+        Logging::LogManager::Initialize();
     }
 
     void ESMCLib::Initialize(const ESMCLibOptionsT& LibOptions)
     {
-        ESMCLibOptions = LibOptions;
-        Logging::LogManager::Initialize(ESMCLibOptions.LogFileName, ESMCLibOptions.CompressLog);
-        Logging::LogManager::EnableLogOptions(ESMCLibOptions.LoggingOptions.begin(),
-                                              ESMCLibOptions.LoggingOptions.end());
-        if (!AtExitHandlerInstalled) {
-            atexit(ESMCLib::Finalize);
-        }
+        ESMCLibOptions() = LibOptions;
+        Logging::LogManager::Initialize(ESMCLibOptions().LogFileName,
+                                        ESMCLibOptions().LogCompressionTechnique);
+        Logging::LogManager::EnableLogOptions(ESMCLibOptions().LoggingOptions.begin(),
+                                              ESMCLibOptions().LoggingOptions.end());
     }
 
     void ESMCLib::Finalize()
@@ -101,6 +106,16 @@ namespace ESMC {
         Logging::LogManager::Finalize();
     }
 
+    // The library initializer
+    __attribute__((constructor)) void ESMCLibInitialize_()
+    {
+        ESMCLib::Initialize();
+    }
+
+    __attribute__((destructor)) void ESMCLibFinalize_()
+    {
+        ESMCLib::Finalize();
+    }
 
 } /* end namespace ESMC */
 

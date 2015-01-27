@@ -48,6 +48,7 @@ namespace po = boost::program_options;
 using ESMC::Synth::GuardBoundingMethodT;
 using ESMC::Synth::UpdateBoundingMethodT;
 using ESMC::Synth::StateUpdateBoundingMethodT;
+using ESMC::LogFileCompressionTechniqueT;
 using ESMC::u64;
 using ESMC::u32;
 
@@ -63,6 +64,11 @@ struct MSISynthOptionsT {
     u32 NumCExToProcess;
     u32 BoundLimit;
     bool ShowModel;
+    u32 NumMissingTransitions;
+    bool NoState;
+    string LogFileName;
+    vector<string> LogOptions;
+    LogFileCompressionTechniqueT LogCompressionTechnique;
 };
 
 static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Options)
@@ -73,9 +79,15 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     u64 MemLimit;
     u32 CExToProcess;
     u32 BoundLimit;
+    u32 NumMissingTransitions;
+    auto&& LogOptionsDesc = ESMC::Logging::LogManager::GetLogOptions();
+    vector<string> LogOptions;
+    string LogFileName;
+    string LogCompressionTechnique;
 
     Desc.add_options()
         ("help", "Produce this help message")
+        ("no-state", "Fix the next control state during synthesis")
         ("gbound,g", po::value<string>(&GBoundMethodStr)->default_value("none"),
          "Method for bounding guards; one of: none, vardep, nonfalse, point")
         ("ubound,u", po::value<string>(&UBoundMethodStr)->default_value("none"),
@@ -93,7 +105,16 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
         ("mem-limit,m", po::value<u64>(&MemLimit)->default_value(UINT64_MAX),
          "Memory limit in MB")
         ("gen-dl-fix", "Use general fixes for deadlocks")
-        ("show-model", "Display model used in each iteration");
+        ("show-model", "Display model used in each iteration")
+        ("num-missing-transitions", po::value<u32>(&NumMissingTransitions)->default_value(2),
+         "Number of missing transitions, can be 2, 4 or 5")
+        ("log-file", po::value<string>(&LogFileName)->default_value(""),
+         "Name of file to write logging info into, defaults to stdout")
+        ("log-compression", po::value<string>(&LogCompressionTechnique)->default_value("none"),
+         "Compression option for log file; one of: none, gzip, bzip2")
+        ("log-opts", po::value<vector<string>>(&LogOptions)->multitoken(),
+         ((string)"Logging Options to enable\n" + LogOptionsDesc).c_str());
+
     po::variables_map vm;
 
     po::store(po::command_line_parser(Argc, ArgV).options(Desc).run(), vm);
@@ -141,14 +162,38 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
         exit(1);
     }
 
+    if (NumMissingTransitions != 2 &&
+        NumMissingTransitions != 4 &&
+        NumMissingTransitions != 5) {
+        cout << "Invalid value for --num-missing-transitions" << endl;
+        cout << Desc << endl;
+        exit(1);
+    }
+
+    if (LogCompressionTechnique == "none") {
+        Options.LogCompressionTechnique = LogFileCompressionTechniqueT::COMPRESS_NONE;
+    } else if (LogCompressionTechnique == "bzip2") {
+        Options.LogCompressionTechnique = LogFileCompressionTechniqueT::COMPRESS_BZIP2;
+    } else if (LogCompressionTechnique == "gzip") {
+        Options.LogCompressionTechnique = LogFileCompressionTechniqueT::COMPRESS_GZIP;
+    } else {
+        cout << "Invalid log file compression method" << endl;
+        cout << Desc << endl;
+        exit(1);
+    }
+
     Options.UnrollQuantifiers = (vm.count("quants") > 0);
     Options.NarrowDomains = (vm.count("narrow") > 0);
     Options.GeneralFixForDL = (vm.count("gen-dl-fix") > 0);
     Options.ShowModel = (vm.count("show-model") > 0);
+    Options.NoState = (vm.count("no-state") > 0);
+    Options.LogFileName = LogFileName;
+    Options.LogOptions = LogOptions;
     Options.CPULimit = CPULimit;
     Options.MemLimit = MemLimit;
     Options.NumCExToProcess = CExToProcess;
     Options.BoundLimit = BoundLimit;
+    Options.NumMissingTransitions = NumMissingTransitions;
 
     return;
 }
@@ -166,6 +211,15 @@ static inline void OptsToSolverOpts(const MSISynthOptionsT& Opts,
     SolverOpts.NumCExToProcess = Opts.NumCExToProcess;
     SolverOpts.BoundLimit = Opts.BoundLimit;
     SolverOpts.ShowModel = Opts.ShowModel;
+}
+
+static inline void OptsToLibOpts(const MSISynthOptionsT& Opts,
+                                 ESMC::ESMCLibOptionsT& LibOpts)
+{
+    LibOpts.LogFileName = Opts.LogFileName;
+    LibOpts.LogCompressionTechnique = Opts.LogCompressionTechnique;
+    LibOpts.LoggingOptions = set<string>(Opts.LogOptions.begin(),
+                                         Opts.LogOptions.end());
 }
 
 //

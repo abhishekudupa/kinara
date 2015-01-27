@@ -1207,21 +1207,15 @@ namespace ESMC {
                 UnreachableExp = Mgr->ApplyTransform<ArrayRValueTransformer>(UnreachableExp);
 
                 Disjuncts.push_back(UnreachableExp);
-
-                if (Disjuncts.size() == 1) {
-                    GoodExp = Disjuncts[0];
-                } else {
-                    GoodExp = Mgr->MakeExpr(LTSOps::OpOR, Disjuncts);
-                }
+                GoodExp = MakeDisjunction(Disjuncts, Mgr);
+                GoodExp = Mgr->SimplifyFP(GoodExp);
             } else {
                 GoodExp = Checker->LoweredDLFInvariant;
             }
 
-            GoodExp = Mgr->SimplifyFP(GoodExp);
-
             ESMC_LOG_FULL(
                           "Solver.CEXAssertions",
-                          Out_ << "Computing Weakest Pre of: " << GoodExp << endl;
+                          Out_ << "Computing Weakest Pre of: " << endl << GoodExp << endl;
                           );
 
             auto&& WPConditions =

@@ -42,7 +42,7 @@ FLEX=flex
 
 default: debug
 
-all: fulllto eoptlto eopt debug
+all: eoptlto eopt debug
 
 opt:
 	@echo "Building opt flavor..."
@@ -158,14 +158,13 @@ ifeq "x$(VERBOSE_BUILD)" "x"
 	$(LD) $(CXXFLAGS) $(OPTFLAGS) $(addprefix $(OBJ_DIR)/, $($(1)_OBJS)) -o $(BIN_DIR)/$(1) \
         $(foreach path, $($(1)_LIB_PATHS), -Wl,-rpath $(path)) \
 		$(foreach path, $($(1)_LIB_PATHS), -L $(path)) \
-		$(foreach lib, $($(1)_LINK_LIBS_LTO), -Wl,-Bstatic -l$(lib) -Wl,-Bdynamic) \
 		$(foreach lib, $($(1)_LINK_LIBS_COMMON), -Wl,-Bdynamic -l$(lib))
 else
 	$(LD) $(CXXFLAGS) $(OPTFLAGS) $(addprefix $(OBJ_DIR)/, $($(1)_OBJS)) -o $(BIN_DIR)/$(1) \
         $(foreach path, $($(1)_LIB_PATHS), -Wl,-rpath $(path)) \
 		$(foreach path, $($(1)_LIB_PATHS), -L $(path)) \
-		$(foreach lib, $($(1)_LINK_LIBS_LTO), -Wl,-Bstatic -l$(lib) -Wl,-Bdynamic) \
-		$(foreach lib, $($(1)_LINK_LIBS_COMMON), -Wl,-Bdynamic -l$(lib))
+		$(foreach lib, $($(1)_LINK_LIBS_COMMON), -Wl,-Bdynamic -l$(lib)) \
+		$(foreach lib, $($(1)_LINK_LIBS_LTO), -Wl,-Bstatic -l$(lib) -Wl,-Bdynamic)
 endif
 endif
 endef

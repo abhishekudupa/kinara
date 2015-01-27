@@ -52,6 +52,11 @@ namespace ESMC {
     template <typename T> class SmartPtr;
     template <typename T> class CSmartPtr;
 
+    // Compression technique for logging
+    enum class LogFileCompressionTechniqueT {
+        COMPRESS_NONE, COMPRESS_BZIP2, COMPRESS_GZIP
+    };
+
     // Expression managers
     // and semanticizers
     namespace Exprs {

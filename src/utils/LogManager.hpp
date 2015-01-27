@@ -44,6 +44,7 @@
 #include <vector>
 
 #include "../common/ESMCFwdDecls.hpp"
+#include "../lib/ESMCLib.hpp"
 
 namespace ESMC {
     namespace Logging {
@@ -51,23 +52,20 @@ namespace ESMC {
         class LogManager
         {
         private:
-            static unordered_set<string> EnabledLogOptions;
-            static ostream* LogStream;
-            static bool IsInitialized;
+            // Accessors for static member variables
+            static unordered_set<string>& EnabledLogOptions();
+            static ostream*& LogStream();
             static const map<string, string> LogOptionDescriptions;
-            static bool NoLoggingEnabled;
+            static bool& NoLoggingEnabled();
 
             LogManager();
-
-            static inline void AssertInitialized();
-
-        public:
             LogManager(const LogManager& Other) = delete;
             LogManager(LogManager&& Other) = delete;
 
+        public:
             static void Initialize(const string& LogStreamName = "",
-                                   bool CompressedStream = false,
-                                   bool AppendMode = false);
+                                   LogFileCompressionTechniqueT LogCompressionTechnique =
+                                   LogFileCompressionTechniqueT::COMPRESS_NONE);
             static void Finalize();
 
             static ostream& GetLogStream();

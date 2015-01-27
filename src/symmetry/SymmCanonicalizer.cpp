@@ -558,7 +558,7 @@ namespace ESMC {
                                               u32& PermID,
                                               const AQStructure* AQS) const
         {
-            StateVec* BestStateVec = InputVector->Clone();
+            auto BestStateVec = InputVector->Clone();
             bool FoundExisting = false;
             bool ShortCutEnabled = false;
             PermID = 0;
@@ -568,20 +568,22 @@ namespace ESMC {
                 if (ExistingSV != nullptr) {
                     FoundExisting = true;
                     ShortCutEnabled = true;
+                } else {
+                    // Okay, that didn't work, let's see if we can get away with just
+                    // sorting the damn thing
+                    for (auto Sorter : Sorters) {
+                        Sorter->Sort(BestStateVec, false);
+                    }
+                    ExistingSV = AQS->Find(BestStateVec);
+                    if (ExistingSV != nullptr) {
+                        FoundExisting = true;
+                        ShortCutEnabled = true;
+                    } else {
+                        // Nothing worked, proceed onto the main
+                        // canonicalization loop!
+                        BestStateVec->Set(*InputVector);
+                    }
                 }
-                // Okay, that didn't work, let's see if we can get away with just
-                // sorting the damn thing
-                for (auto Sorter : Sorters) {
-                    Sorter->Sort(BestStateVec, false);
-                }
-                ExistingSV = AQS->Find(BestStateVec);
-                if (ExistingSV != nullptr) {
-                    FoundExisting = true;
-                    ShortCutEnabled = true;
-                }
-                // Nothing worked, proceed onto the main
-                // canonicalization loop!
-                BestStateVec->Set(*InputVector);
             }
 
             auto WorkingStateVec = InputVector->Clone();

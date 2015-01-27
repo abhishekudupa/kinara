@@ -3452,8 +3452,8 @@ namespace ESMC {
 
             ESMC_LOG_FULL(
                           "Simplifier.PerIteration",
-                          Out_ << "Simplied:" << endl << Exp << endl
-                               << "To:" << SimpExp << endl;
+                          Out_ << "Simplified:" << endl << Exp << endl
+                               << "To:" << endl << SimpExp << endl;
                           );
             return SimpExp;
         }
