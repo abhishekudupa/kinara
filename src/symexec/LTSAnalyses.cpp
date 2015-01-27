@@ -621,21 +621,6 @@ namespace ESMC {
                                << NewPhi->ToString() << endl;
                                );
 
-                // Check if unsat
-                Z3TPRef TP = new Z3TheoremProver();
-                auto TPRes = TP->CheckSat(NewPhi, true);
-                if (TPRes == TPResult::UNSATISFIABLE) {
-                    ESMC_LOG_FULL(
-                                  "Analyses.Detailed",
-                                  Out_ << "The predicate is unsat!" << endl;
-                                  );
-                } else if (TPRes == TPResult::UNKNOWN) {
-                    ESMC_LOG_FULL(
-                                  "Analyses.Detailed",
-                                  Out_ << "The satisfiability of predicate is unknown!" << endl;
-                                  );
-                }
-
                 NewPhi = Mgr->SimplifyFP(NewPhi);
 
                 ESMC_LOG_SHORT(

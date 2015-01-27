@@ -483,7 +483,7 @@ namespace ESMC {
         u64 ProductState::Hash() const
         {
             u64 Retval = 0;
-            boost::hash_combine(Retval, SVPtr);
+            boost::hash_combine(Retval, SVPtr->Hash());
             boost::hash_combine(Retval, ((u64)MonitorState << 32 | (u64)IndexID));
             return Retval;
         }

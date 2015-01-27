@@ -134,6 +134,153 @@ namespace ESMC {
                 LastFired = NewLastFired;
             }
 
+            // TaintTrackingBFSQueueEntryT implementation
+            TaintTrackingBFSQueueEntryT::TaintTrackingBFSQueueEntryT()
+                : State(nullptr), TaintLevel(0)
+            {
+                // Nothing here
+            }
+
+            TaintTrackingBFSQueueEntryT::TaintTrackingBFSQueueEntryT(const
+                                                                     TaintTrackingBFSQueueEntryT&
+                                                                     Other)
+                : State(Other.State), TaintLevel(Other.TaintLevel)
+            {
+                // Nothing here
+            }
+
+            TaintTrackingBFSQueueEntryT::TaintTrackingBFSQueueEntryT(StateVec* State,
+                                                                     u32 TaintLevel)
+                : State(State), TaintLevel(TaintLevel)
+            {
+                // Nothing here
+            }
+
+            TaintTrackingBFSQueueEntryT::~TaintTrackingBFSQueueEntryT()
+            {
+                // Nothing here
+            }
+
+            TaintTrackingBFSQueueEntryT&
+            TaintTrackingBFSQueueEntryT::operator = (const TaintTrackingBFSQueueEntryT& Other)
+            {
+                if (&Other == this) {
+                    return *this;
+                }
+                State = Other.State;
+                TaintLevel = Other.TaintLevel;
+                return *this;
+            }
+
+            inline i32
+            TaintTrackingBFSQueueEntryT::Compare(const TaintTrackingBFSQueueEntryT &Other) const
+            {
+                auto Diff = TaintLevel - Other.TaintLevel;
+                if (Diff != 0) {
+                    return Diff;
+                }
+                return ((ptrdiff_t)State - (ptrdiff_t)Other.State);
+            }
+
+            bool
+            TaintTrackingBFSQueueEntryT::operator == (const TaintTrackingBFSQueueEntryT& Other) const
+            {
+                return (Compare(Other) == 0);
+            }
+
+            bool
+            TaintTrackingBFSQueueEntryT::operator != (const TaintTrackingBFSQueueEntryT& Other) const
+            {
+                return (Compare(Other) != 0);
+            }
+
+            bool
+            TaintTrackingBFSQueueEntryT::operator < (const TaintTrackingBFSQueueEntryT& Other) const
+            {
+                return (Compare(Other) < 0);
+            }
+
+            bool
+            TaintTrackingBFSQueueEntryT::operator > (const TaintTrackingBFSQueueEntryT& Other) const
+            {
+                return (Compare(Other) > 0);
+            }
+
+            bool
+            TaintTrackingBFSQueueEntryT::operator <= (const TaintTrackingBFSQueueEntryT& Other) const
+            {
+                return (Compare(Other) <= 0);
+            }
+
+            bool
+            TaintTrackingBFSQueueEntryT::operator >= (const TaintTrackingBFSQueueEntryT& Other) const
+            {
+                return (Compare(Other) >= 0);
+            }
+
+            StateVec*
+            TaintTrackingBFSQueueEntryT::GetState() const
+            {
+                return State;
+            }
+
+            u32 TaintTrackingBFSQueueEntryT::GetTaintLevel() const
+            {
+                return TaintLevel;
+            }
+
+            // BFSQueueT implementation
+            BFSQueueT::BFSQueueT(bool UsePrioQueue)
+                : BFSDeque(UsePrioQueue ? nullptr : new deque<StateVec*>()),
+                  BFSPrioQueue(UsePrioQueue ? new BFSPrioQueueT() : nullptr)
+            {
+                // Nothing here
+            }
+
+            BFSQueueT::~BFSQueueT()
+            {
+                if (BFSDeque != nullptr) {
+                    delete BFSDeque;
+                }
+                if (BFSPrioQueue != nullptr) {
+                    delete BFSPrioQueue;
+                }
+            }
+
+            void BFSQueueT::Push(StateVec* State, u32 TaintLevel)
+            {
+                if (BFSDeque != nullptr) {
+                    BFSDeque->push_back(State);
+                } else {
+                    BFSPrioQueue->emplace(State, TaintLevel);
+                }
+            }
+
+            StateVec* BFSQueueT::Pop(u32& TaintLevel)
+            {
+                if (BFSDeque != nullptr) {
+                    auto Retval = BFSDeque->front();
+                    BFSDeque->pop_front();
+                    TaintLevel = 0;
+                    return Retval;
+                } else {
+                    auto const& TopElem = BFSPrioQueue->top();
+                    auto Retval = TopElem.GetState();
+                    TaintLevel = TopElem.GetTaintLevel();
+                    BFSPrioQueue->pop();
+                    return Retval;
+                }
+            }
+
+            u32 BFSQueueT::Size() const
+            {
+                if (BFSDeque != nullptr) {
+                    return BFSDeque->size();
+                } else {
+                    return BFSPrioQueue->size();
+                }
+            }
+
             // Fairness Checker implementation
             FairnessChecker::FairnessChecker(const LTSFairSetRef& FairSet,
                                              SystemIndexSet* SysIdxSet,
@@ -783,19 +930,26 @@ namespace ESMC {
             }
         }
 
-        inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots, u32 NumErrors)
+        inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots, u32 NumErrors,
+                                      bool PrioritizeNonTentative)
         {
+            // BFSQueueT BFSQueue(PrioritizeNonTentative);
+            // BFSQueue.Push(Roots.begin(), Roots.end(), 0);
+
             deque<StateVec*> BFSQueue(Roots.begin(), Roots.end());
+
             auto const& Invar = TheLTS->GetInvariant();
 
-            for (auto State : BFSQueue) {
-                AQS->InsertInitState(State);
+            for (auto const& Root : Roots) {
+                AQS->InsertInitState(Root);
             }
 
-            i64 IterCount = 0;
+            // while (BFSQueue.Size() > 0) {
             while (BFSQueue.size() > 0) {
-                ++IterCount;
+                // u32 CurrentTaintLevel;
+                // auto CurState = BFSQueue.Pop(CurrentTaintLevel);
                 auto CurState = BFSQueue.front();
+                BFSQueue.pop_front();
 
                 ESMC_LOG_FULL(
                               "Checker.AQSDetailed",
@@ -806,8 +960,6 @@ namespace ESMC {
                               Out_ << "--------------------------------------------------------"
                                    << endl;
                               );
-
-                BFSQueue.pop_front();
 
                 bool Deadlocked = true;
 
@@ -883,7 +1035,6 @@ namespace ESMC {
 
                             AQS->Insert(CanonNextState);
                             AQS->AddEdge(CurState, CanonNextState, PermID, i);
-                            BFSQueue.push_back(CanonNextState);
 
                             // New state, check for errors;
                             auto Interp = Invar->ExtensionData.Interp;
@@ -894,8 +1045,6 @@ namespace ESMC {
                                                       NumErrors)) {
                                     return;
                                 }
-                                // Remove it from the queue
-                                BFSQueue.pop_back();
                             } else if (InvarRes == 0) {
                                 // Again, remember this state, but continue
                                 // on with the AQS construction
@@ -904,7 +1053,13 @@ namespace ESMC {
                                                       NumErrors)) {
                                     return;
                                 }
-                                BFSQueue.pop_back();
+                            } else {
+                                // We're good to consider successors of this state
+                                // BFSQueue.Push(CanonNextState,
+                                //               (Cmd->IsTentative() ?
+                                //                CurrentTaintLevel + 1 :
+                                //                CurrentTaintLevel));
+                                BFSQueue.push_back(CanonNextState);
                             }
                         }
                     }
@@ -919,9 +1074,16 @@ namespace ESMC {
         }
 
         bool LTSChecker::BuildAQS(AQSConstructionMethod Method,
+                                  bool PrioritizeNonTentative,
                                   u32 NumErrors)
         {
             vector<TraceBase*> Retval;
+
+            if (Method != AQSConstructionMethod::BreadthFirst &&
+                PrioritizeNonTentative) {
+                throw ESMCError((string)"Non tentative edges can be prioritized only " +
+                                "if construction method is breadth-first");
+            }
 
             if (AQS != nullptr) {
                 return (ErrorStates.size() == 0);
@@ -990,7 +1152,7 @@ namespace ESMC {
                     }
                 }
             } else {
-                DoBFS(InitStates, NumErrors);
+                DoBFS(InitStates, NumErrors, PrioritizeNonTentative);
             }
 
             ESMC_LOG_MIN_SHORT(

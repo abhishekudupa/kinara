@@ -144,7 +144,7 @@ namespace ESMC {
 #define ESMC_LOG_MIN_FULL(CODE_) \
     if (!ESMC::Logging::LogManager::IsLoggingDisabled()) {\
         ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
-        Out_ << "------------- [" << TAG << "], at " << __FUNCTION__ << ", "\
+        Out_ << "------------- [ESMC.Minimal], at " << __FUNCTION__ << ", "\
              << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
         CODE_ \
         Out_ << "-----------------------------------------------------------" \

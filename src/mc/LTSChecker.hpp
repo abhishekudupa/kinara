@@ -41,6 +41,8 @@
 #define ESMC_LTS_CHECKER_HPP_
 
 #include <boost/functional/hash.hpp>
+#include <deque>
+#include <boost/heap/fibonacci_heap.hpp>
 
 #include "../common/ESMCFwdDecls.hpp"
 #include "../uflts/LTSDecls.hpp"
@@ -53,6 +55,10 @@ namespace ESMC {
 
         using namespace ESMC::LTS;
         using ESMC::Symm::Canonicalizer;
+
+        enum class BFSPrioritizationMethodT {
+            None, Bucketed, PrioQueue
+        };
 
         namespace Detail {
 
@@ -79,6 +85,77 @@ namespace ESMC {
 
                 void SetLastFired(i64 NewLastFired);
             };
+
+            // A BFS queue entry that tracks taints
+            class TaintTrackingBFSQueueEntryT
+            {
+            private:
+                StateVec* State;
+                u32 TaintLevel;
+
+                inline i32 Compare(const TaintTrackingBFSQueueEntryT& Other) const;
+
+            public:
+                TaintTrackingBFSQueueEntryT();
+                TaintTrackingBFSQueueEntryT(StateVec* State, u32 TaintLevel);
+                TaintTrackingBFSQueueEntryT(const TaintTrackingBFSQueueEntryT& Other);
+                ~TaintTrackingBFSQueueEntryT();
+
+                TaintTrackingBFSQueueEntryT&
+                operator = (const TaintTrackingBFSQueueEntryT& Other);
+
+                bool operator == (const TaintTrackingBFSQueueEntryT& Other) const;
+                bool operator != (const TaintTrackingBFSQueueEntryT& Other) const;
+                // True if my taint is less than that of the other
+                bool operator < (const TaintTrackingBFSQueueEntryT& Other) const;
+                bool operator <= (const TaintTrackingBFSQueueEntryT& Other) const;
+                // true if my taint is greater than that of the other
+                bool operator > (const TaintTrackingBFSQueueEntryT& Other) const;
+                bool operator >= (const TaintTrackingBFSQueueEntryT& Other) const;
+
+                StateVec* GetState() const;
+                u32 GetTaintLevel() const;
+            };
+
+            class PrioUntaintedComparator
+            {
+            public:
+                inline bool operator () (const TaintTrackingBFSQueueEntryT& Entry1,
+                                         const TaintTrackingBFSQueueEntryT& Entry2) const
+                {
+                    return (Entry1 > Entry2);
+                }
+            };
+
+            // A configurable BFS queue that can use a prio queue
+            // or a normal deque. Used to prioritize searches along
+            // minimally tainted paths
+            class BFSQueueT
+            {
+            private:
+                deque<StateVec*>* BFSDeque;
+                typedef boost::heap::compare<PrioUntaintedComparator> BFSPrioQueueComparatorT;
+                typedef boost::heap::fibonacci_heap<TaintTrackingBFSQueueEntryT,
+                                                    BFSPrioQueueComparatorT> BFSPrioQueueT;
+                BFSPrioQueueT* BFSPrioQueue;
+
+            public:
+                BFSQueueT(bool UsePrioQueue = false);
+                ~BFSQueueT();
+                void Push(StateVec* State, u32 TaintLevel = 0);
+                StateVec* Pop(u32& TaintLevel);
+                u32 Size() const;
+
+                template <typename ForwardIterator>
+                inline void Push(const ForwardIterator& Begin,
+                                 const ForwardIterator& End, u32 TaintLevel)
+                {
+                    for (auto it = Begin; it != End; ++it) {
+                        Push(*it, TaintLevel);
+                    }
+                }
+            };
+
 
             class PStatePEdgePairHasher
             {
@@ -247,7 +324,9 @@ namespace ESMC {
                                          u32 MaxErrors);
 
             inline void DoDFS(StateVec* Root, u32 NumErrors);
-            inline void DoBFS(const vector<StateVec*>& Roots, u32 NumErrors);
+
+            inline void DoBFS(const vector<StateVec*>& Roots, u32 NumErrors,
+                              bool PrioritizeNonTentative = false);
 
             inline void ConstructProduct(StateBuchiAutomaton* Monitor);
             inline vector<const ProductState*>
@@ -272,7 +351,9 @@ namespace ESMC {
             // false otherwise
             bool BuildAQS(AQSConstructionMethod Method =
                           AQSConstructionMethod::BreadthFirst,
+                          bool PrioritizeNonTentative = false,
                           u32 NumErrors = UINT32_MAX);
+
 
             void ClearAQS();
 

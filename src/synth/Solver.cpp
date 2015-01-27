@@ -1239,7 +1239,8 @@ namespace ESMC {
             set<ExpT> BlownInvariantsCovered;
 
             ESMC_LOG_MIN_SHORT(
-                               Out_ << "Building Constraints for errors...";
+                               Out_ << "Building Constraints for "
+                                    << ErrorStates.size() << " error(s)...";
                                );
 
             for (auto const& ErrorState : ErrorStates) {
@@ -1491,7 +1492,8 @@ namespace ESMC {
                 } else {
                     CExBound = Options.NumCExToProcess;
                 }
-                auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, CExBound);
+                auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst,
+                                              Options.PrioritizeNonTentative, CExBound);
 
                 if (!Safe) {
                     HandleSafetyViolations();

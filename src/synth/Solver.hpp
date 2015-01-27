@@ -83,6 +83,7 @@ namespace ESMC {
             u32 BoundLimit;
             bool GeneralFixForDL;
             bool ShowModel;
+            bool PrioritizeNonTentative;
 
             inline SolverOptionsT()
                 : GBoundMethod(GuardBoundingMethodT::NoBounding),
@@ -90,7 +91,8 @@ namespace ESMC {
                   SBoundMethod(StateUpdateBoundingMethodT::NoBounding),
                   UnrollQuantifiers(false), CPULimitInSeconds(UINT64_MAX),
                   MemLimitInMB(UINT64_MAX), NumCExToProcess(8),
-                  BoundLimit(256), GeneralFixForDL(false), ShowModel(false)
+                  BoundLimit(256), GeneralFixForDL(false), ShowModel(false),
+                  PrioritizeNonTentative(false)
             {
                 // Nothing here
             }
@@ -106,7 +108,8 @@ namespace ESMC {
                                   UINT32_MAX : Other.NumCExToProcess),
                   BoundLimit(Other.BoundLimit == 0 ? 256 : Other.BoundLimit),
                   GeneralFixForDL(Other.GeneralFixForDL),
-                  ShowModel(Other.ShowModel)
+                  ShowModel(Other.ShowModel),
+                  PrioritizeNonTentative(Other.PrioritizeNonTentative)
             {
                 // Nothing here
             }
@@ -128,6 +131,7 @@ namespace ESMC {
                 BoundLimit = Other.BoundLimit == 0 ? 256 : Other.BoundLimit;
                 GeneralFixForDL = Other.GeneralFixForDL;
                 ShowModel = Other.ShowModel;
+                PrioritizeNonTentative = Other.PrioritizeNonTentative;
                 return *this;
             }
         };

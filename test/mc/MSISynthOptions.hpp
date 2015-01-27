@@ -59,6 +59,7 @@ struct MSISynthOptionsT {
     bool UnrollQuantifiers;
     bool NarrowDomains;
     bool GeneralFixForDL;
+    bool PrioritizeNonTentative;
     u64 CPULimit;
     u64 MemLimit;
     u32 NumCExToProcess;
@@ -105,6 +106,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
         ("mem-limit,m", po::value<u64>(&MemLimit)->default_value(UINT64_MAX),
          "Memory limit in MB")
         ("gen-dl-fix", "Use general fixes for deadlocks")
+        ("prioritize-non-tentative",
+         "Prioritize the most non-tentative paths first during model checking")
         ("show-model", "Display model used in each iteration")
         ("num-missing-transitions", po::value<u32>(&NumMissingTransitions)->default_value(2),
          "Number of missing transitions, can be 2, 4 or 5")
@@ -185,6 +188,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     Options.UnrollQuantifiers = (vm.count("quants") > 0);
     Options.NarrowDomains = (vm.count("narrow") > 0);
     Options.GeneralFixForDL = (vm.count("gen-dl-fix") > 0);
+    Options.PrioritizeNonTentative = (vm.count("prioritize-non-tentative") > 0);
     Options.ShowModel = (vm.count("show-model") > 0);
     Options.NoState = (vm.count("no-state") > 0);
     Options.LogFileName = LogFileName;
@@ -211,6 +215,7 @@ static inline void OptsToSolverOpts(const MSISynthOptionsT& Opts,
     SolverOpts.NumCExToProcess = Opts.NumCExToProcess;
     SolverOpts.BoundLimit = Opts.BoundLimit;
     SolverOpts.ShowModel = Opts.ShowModel;
+    SolverOpts.PrioritizeNonTentative = Opts.PrioritizeNonTentative;
 }
 
 static inline void OptsToLibOpts(const MSISynthOptionsT& Opts,
