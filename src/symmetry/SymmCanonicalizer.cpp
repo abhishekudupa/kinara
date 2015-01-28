@@ -559,15 +559,14 @@ namespace ESMC {
                                               const AQStructure* AQS) const
         {
             auto BestStateVec = InputVector->Clone();
-            bool FoundExisting = false;
-            bool ShortCutEnabled = false;
             PermID = 0;
+            bool FoundExisting = false;
+
             // Check if the input vector is already canonical
             if (AQS != nullptr) {
-                auto ExistingSV = AQS->Find(const_cast<StateVec*>(InputVector));
+                auto ExistingSV = AQS->Find(BestStateVec);
                 if (ExistingSV != nullptr) {
                     FoundExisting = true;
-                    ShortCutEnabled = true;
                 } else {
                     // Okay, that didn't work, let's see if we can get away with just
                     // sorting the damn thing
@@ -577,7 +576,6 @@ namespace ESMC {
                     ExistingSV = AQS->Find(BestStateVec);
                     if (ExistingSV != nullptr) {
                         FoundExisting = true;
-                        ShortCutEnabled = true;
                     } else {
                         // Nothing worked, proceed onto the main
                         // canonicalization loop!
@@ -586,15 +584,18 @@ namespace ESMC {
                 }
             }
 
-            auto WorkingStateVec = InputVector->Clone();
+            StateVec* WorkingStateVec = nullptr;
 
-            auto it = PermSet->Begin();
-            ++it;
-            for ((void(0)); it != PermSet->End() && !ShortCutEnabled; ++it) {
+            if (!FoundExisting) {
+                WorkingStateVec = InputVector->Clone();
+            }
+
+            for (auto it = PermSet->Begin(); it != PermSet->End() && !FoundExisting; ++it) {
                 WorkingStateVec->Set(*InputVector);
 
                 ESMC_LOG_FULL(
                               "Canonicalizer.Detailed",
+                              Out_ << "Applying permutation with index " << it.GetIndex() << endl;
                               Out_ << "Canonicalizer: Working state before any "
                                    << "permutations are applied:" << endl;
                               Out_ << "-----------------------------------------" << endl;
@@ -602,19 +603,21 @@ namespace ESMC {
                               Out_ << "-----------------------------------------" << endl;
                               );
 
-                for (auto Permuter : Permuters) {
-                    Permuter->Permute(InputVector, WorkingStateVec, it);
+                if (it.GetIndex() != 0) {
+                    for (auto Permuter : Permuters) {
+                        Permuter->Permute(InputVector, WorkingStateVec, it);
 
-                    ESMC_LOG_SHORT(
-                                   "Canonicalizer.Detailed",
-                                   Out_ << "Canonicalizer: After applying permuter "
-                                        << "with offset " << Permuter->GetOffset()
-                                        << " and permutation " + PermToString(it.GetPerm())
-                                        << endl;
-                                   Out_ << "-----------------------------------------" << endl;
-                                   Printer->PrintState(WorkingStateVec, Out_);
-                                   Out_ << "-----------------------------------------" << endl;
-                                   );
+                        ESMC_LOG_SHORT(
+                                       "Canonicalizer.Detailed",
+                                       Out_ << "Canonicalizer: After applying permuter "
+                                            << "with offset " << Permuter->GetOffset()
+                                            << " and permutation " + PermToString(it.GetPerm())
+                                            << endl;
+                                       Out_ << "-----------------------------------------" << endl;
+                                       Printer->PrintState(WorkingStateVec, Out_);
+                                       Out_ << "-----------------------------------------" << endl;
+                                       );
+                    }
                 }
 
                 for (auto Sorter : Sorters) {
@@ -627,6 +630,7 @@ namespace ESMC {
                     if (ExistingSV != nullptr) {
                         BestStateVec->Recycle();
                         BestStateVec = WorkingStateVec;
+                        WorkingStateVec = nullptr;
                         FoundExisting = true;
                         PermID = it.GetIndex();
                         break;
@@ -649,24 +653,24 @@ namespace ESMC {
             }
 
             ESMC_LOG_FULL
-                ("Canonicalizer.Detailed",
-                 if (InputVector->Equals(*BestStateVec)) {
-                     Out_ << "Canonicalizer: Original and Canonical states are the same!" << endl;
-                 } else {
-                     Out_ << "Canonicalizer: Original State:" << endl;
-                     Out_ << "-----------------------------------------" << endl;
-                     Printer->PrintState(InputVector, Out_);
-                     Out_ << "-----------------------------------------" << endl;
-                     Out_ << "Canonicalizer: Canonicalized State:" << endl;
-                     Out_ << "-----------------------------------------" << endl;
+                ("Canonicalizer.Best",
+                 Out_ << "Canonicalizer: Original State:" << endl;
+                 Out_ << "-----------------------------------------" << endl;
+                 Printer->PrintState(InputVector, Out_);
+                 Out_ << "-----------------------------------------" << endl;
+                 Out_ << "Canonicalizer: Canonicalized State:" << endl;
+                 Out_ << "-----------------------------------------" << endl;
+                 if (!InputVector->Equals(*BestStateVec)) {
                      Printer->PrintState(BestStateVec, Out_);
-                     Out_ << "-----------------------------------------" << endl;
-                 });
+                 } else {
+                     Out_ << "Same as original state" << endl;
+                 }
+                 Out_ << "-----------------------------------------" << endl;
+                 );
 
-            if (!FoundExisting) {
+            if (WorkingStateVec != nullptr) {
                 WorkingStateVec->Recycle();
             }
-
             return BestStateVec;
         }
 

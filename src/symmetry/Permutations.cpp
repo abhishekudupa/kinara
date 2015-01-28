@@ -287,8 +287,8 @@ namespace ESMC {
         PermutationSet::iterator PermutationSet::iterator::operator -- (int Dummy)
         {
             auto Retval = *this;
-            if (Index < PermSet->Size) {
-                ++Index;
+            if (Index > 0) {
+                --Index;
             }
             return Retval;
         }

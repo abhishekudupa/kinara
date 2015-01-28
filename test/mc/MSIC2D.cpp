@@ -65,6 +65,7 @@ const u32 NumDirs = 1;
 int main()
 {
     Logging::LogManager::Initialize();
+    Logging::LogManager::EnableLogOption("Canonicalizer.Best");
     // Logging::LogManager::Initialize("MSILog", false, false);
     // ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
     // ESMC::Logging::LogManager::EnableLogOption("Trace.Generation");

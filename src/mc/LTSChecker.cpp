@@ -134,105 +134,15 @@ namespace ESMC {
                 LastFired = NewLastFired;
             }
 
-            // TaintTrackingBFSQueueEntryT implementation
-            TaintTrackingBFSQueueEntryT::TaintTrackingBFSQueueEntryT()
-                : State(nullptr), TaintLevel(0)
-            {
-                // Nothing here
-            }
-
-            TaintTrackingBFSQueueEntryT::TaintTrackingBFSQueueEntryT(const
-                                                                     TaintTrackingBFSQueueEntryT&
-                                                                     Other)
-                : State(Other.State), TaintLevel(Other.TaintLevel)
-            {
-                // Nothing here
-            }
-
-            TaintTrackingBFSQueueEntryT::TaintTrackingBFSQueueEntryT(StateVec* State,
-                                                                     u32 TaintLevel)
-                : State(State), TaintLevel(TaintLevel)
-            {
-                // Nothing here
-            }
-
-            TaintTrackingBFSQueueEntryT::~TaintTrackingBFSQueueEntryT()
-            {
-                // Nothing here
-            }
-
-            TaintTrackingBFSQueueEntryT&
-            TaintTrackingBFSQueueEntryT::operator = (const TaintTrackingBFSQueueEntryT& Other)
-            {
-                if (&Other == this) {
-                    return *this;
-                }
-                State = Other.State;
-                TaintLevel = Other.TaintLevel;
-                return *this;
-            }
-
-            inline i32
-            TaintTrackingBFSQueueEntryT::Compare(const TaintTrackingBFSQueueEntryT &Other) const
-            {
-                auto Diff = TaintLevel - Other.TaintLevel;
-                if (Diff != 0) {
-                    return Diff;
-                }
-                return ((ptrdiff_t)State - (ptrdiff_t)Other.State);
-            }
-
-            bool
-            TaintTrackingBFSQueueEntryT::operator == (const TaintTrackingBFSQueueEntryT& Other) const
-            {
-                return (Compare(Other) == 0);
-            }
-
-            bool
-            TaintTrackingBFSQueueEntryT::operator != (const TaintTrackingBFSQueueEntryT& Other) const
-            {
-                return (Compare(Other) != 0);
-            }
-
-            bool
-            TaintTrackingBFSQueueEntryT::operator < (const TaintTrackingBFSQueueEntryT& Other) const
-            {
-                return (Compare(Other) < 0);
-            }
-
-            bool
-            TaintTrackingBFSQueueEntryT::operator > (const TaintTrackingBFSQueueEntryT& Other) const
-            {
-                return (Compare(Other) > 0);
-            }
-
-            bool
-            TaintTrackingBFSQueueEntryT::operator <= (const TaintTrackingBFSQueueEntryT& Other) const
-            {
-                return (Compare(Other) <= 0);
-            }
-
-            bool
-            TaintTrackingBFSQueueEntryT::operator >= (const TaintTrackingBFSQueueEntryT& Other) const
-            {
-                return (Compare(Other) >= 0);
-            }
-
-            StateVec*
-            TaintTrackingBFSQueueEntryT::GetState() const
-            {
-                return State;
-            }
-
-            u32 TaintTrackingBFSQueueEntryT::GetTaintLevel() const
-            {
-                return TaintLevel;
-            }
-
             // BFSQueueT implementation
+            const u32 BFSQueueT::MaxNumBuckets = 32;
+
             BFSQueueT::BFSQueueT(bool UsePrioQueue)
                 : BFSDeque(UsePrioQueue ? nullptr : new deque<StateVec*>()),
-                  BFSPrioQueue(UsePrioQueue ? new BFSPrioQueueT() : nullptr)
+                  PrioQueues(UsePrioQueue ?
+                             new vector<deque<StateVec*>*>(MaxNumBuckets, nullptr) :
+                             nullptr),
+                  NumElems(0)
             {
                 // Nothing here
             }
@@ -242,8 +152,13 @@ namespace ESMC {
                 if (BFSDeque != nullptr) {
                     delete BFSDeque;
                 }
-                if (BFSPrioQueue != nullptr) {
-                    delete BFSPrioQueue;
+                if (PrioQueues != nullptr) {
+                    for (auto const& Queue : *PrioQueues) {
+                        if (Queue != nullptr) {
+                            delete Queue;
+                        }
+                    }
+                    delete PrioQueues;
                 }
             }
 
@@ -252,33 +167,39 @@ namespace ESMC {
                 if (BFSDeque != nullptr) {
                     BFSDeque->push_back(State);
                 } else {
-                    BFSPrioQueue->emplace(State, TaintLevel);
+                    auto PrioIndex = min(MaxNumBuckets - 1, TaintLevel);
+                    if ((*PrioQueues)[PrioIndex] == nullptr) {
+                        (*PrioQueues)[PrioIndex] = new deque<StateVec*>();
+                    }
+                    (*PrioQueues)[PrioIndex]->push_back(State);
                 }
+                ++NumElems;
             }
 
             StateVec* BFSQueueT::Pop(u32& TaintLevel)
             {
+                StateVec* Retval = nullptr;
                 if (BFSDeque != nullptr) {
-                    auto Retval = BFSDeque->front();
+                    Retval = BFSDeque->front();
                     BFSDeque->pop_front();
                     TaintLevel = 0;
-                    return Retval;
                 } else {
-                    auto const& TopElem = BFSPrioQueue->top();
-                    auto Retval = TopElem.GetState();
-                    TaintLevel = TopElem.GetTaintLevel();
-                    BFSPrioQueue->pop();
-                    return Retval;
+                    for (u32 i = 0; i < MaxNumBuckets; ++i) {
+                        if ((*PrioQueues)[i] != nullptr && (*PrioQueues)[i]->size() > 0) {
+                            Retval = (*PrioQueues)[i]->front();
+                            (*PrioQueues)[i]->pop_front();
+                            TaintLevel = i;
+                            break;
+                        }
+                    }
                 }
+                --NumElems;
+                return Retval;
             }
 
             u32 BFSQueueT::Size() const
             {
-                if (BFSDeque != nullptr) {
-                    return BFSDeque->size();
-                } else {
-                    return BFSPrioQueue->size();
-                }
+                return NumElems;
             }
 
             // Fairness Checker implementation
@@ -974,90 +895,93 @@ namespace ESMC {
                         }
                         // Already an error. Don't try any more commands
                         break;
+                    } else if (NextState == nullptr) {
+                        continue;
                     }
 
-                    if (NextState != nullptr) {
-                        u32 PermID = 0;
-                        Deadlocked = false;
+                    // valid next state
+
+                    u32 PermID = 0;
+                    Deadlocked = false;
+
+                    ESMC_LOG_SHORT(
+                                   "Checker.AQSDetailed",
+                                   Out_ << "Got Next State (Uncanonicalized), by firing "
+                                   << "guarded command:" << endl << Cmd->ToString() << endl;
+                                   Out_ << "--------------------------------------------------------"
+                                   << endl;
+                                   Printer->PrintState(NextState, Out_);
+                                   Out_ << "--------------------------------------------------------"
+                                   << endl;
+                                   );
+
+                    auto CanonNextState = TheCanonicalizer->Canonicalize(NextState, PermID, AQS);
+
+                    ESMC_LOG_SHORT(
+                                   "Checker.AQSDetailed",
+                                   Out_ << "Canonicalized Next State with Permutation ID "
+                                   << PermID << ":" << endl;
+                                   Out_ << "--------------------------------------------------------"
+                                   << endl;
+                                   if (CanonNextState->Equals(*NextState)) {
+                                       Out_ << "Canonicalized state is the same as "
+                                            << "uncanonicalized state!" << endl;
+                                   } else {
+                                       Printer->PrintState(CanonNextState, Out_);
+                                   }
+                                   Out_ << "--------------------------------------------------------"
+                                   << endl;
+                                   );
+
+                    NextState->Recycle();
+
+                    auto ExistingState = AQS->Find(CanonNextState);
+                    if (ExistingState != nullptr) {
+                        AQS->AddEdge(CurState, ExistingState, PermID, i);
+                        CanonNextState->Recycle();
+                        ESMC_LOG_SHORT(
+                                       "Checker.AQSDetailed",
+                                       Out_ << "Successor has been previously encountered."
+                                       << endl;
+                                       );
+                    } else {
 
                         ESMC_LOG_SHORT(
                                        "Checker.AQSDetailed",
-                                       Out_ << "Got Next State (Uncanonicalized), by firing "
-                                            << "guarded command:" << endl << Cmd->ToString() << endl;
-                                       Out_ << "--------------------------------------------------------"
-                                            << endl;
-                                       Printer->PrintState(NextState, Out_);
-                                       Out_ << "--------------------------------------------------------"
-                                            << endl;
+                                       Out_ << "Enqueueing new successor onto BFS queue."
+                                       << endl;
                                        );
 
-                        auto CanonNextState = TheCanonicalizer->Canonicalize(NextState, PermID, AQS);
+                        AQS->Insert(CanonNextState);
+                        AQS->AddEdge(CurState, CanonNextState, PermID, i);
 
-                        ESMC_LOG_SHORT(
-                                       "Checker.AQSDetailed",
-                                       Out_ << "Canonicalized Next State with Permutation ID "
-                                            << PermID << ":" << endl;
-                                       Out_ << "--------------------------------------------------------"
-                                            << endl;
-                                       if (CanonNextState->Equals(*NextState)) {
-                                           Out_ << "Canonicalized state is the same as "
-                                                << "uncanonicalized state!" << endl;
-                                       } else {
-                                           Printer->PrintState(CanonNextState, Out_);
-                                       }
-                                       Out_ << "--------------------------------------------------------"
-                                            << endl;
-                                       );
-
-                        NextState->Recycle();
-
-                        auto ExistingState = AQS->Find(CanonNextState);
-                        if (ExistingState != nullptr) {
-                            AQS->AddEdge(CurState, ExistingState, PermID, i);
-                            CanonNextState->Recycle();
-                            ESMC_LOG_SHORT(
-                                           "Checker.AQSDetailed",
-                                           Out_ << "Successor has been previously encountered."
-                                                << endl;
-                                           );
-                        } else {
-
-                            ESMC_LOG_SHORT(
-                                           "Checker.AQSDetailed",
-                                           Out_ << "Enqueueing new successor onto BFS queue."
-                                                << endl;
-                                           );
-
-                            AQS->Insert(CanonNextState);
-                            AQS->AddEdge(CurState, CanonNextState, PermID, i);
-
-                            // New state, check for errors;
-                            auto Interp = Invar->ExtensionData.Interp;
-                            auto InvarRes = Interp->Evaluate(CanonNextState);
-                            if (InvarRes == ExceptionValue) {
-                                if (!RecordErrorState(CanonNextState,
-                                                      LoweredInvariant,
-                                                      NumErrors)) {
-                                    return;
-                                }
-                            } else if (InvarRes == 0) {
-                                // Again, remember this state, but continue
-                                // on with the AQS construction
-                                if (!RecordErrorState(CanonNextState,
-                                                      LoweredInvariant,
-                                                      NumErrors)) {
-                                    return;
-                                }
-                            } else {
-                                // We're good to consider successors of this state
-                                BFSQueue.Push(CanonNextState,
-                                              (Cmd->IsTentative() ?
-                                               CurrentTaintLevel + 1 :
-                                               CurrentTaintLevel));
+                        // New state, check for errors;
+                        auto Interp = Invar->ExtensionData.Interp;
+                        auto InvarRes = Interp->Evaluate(CanonNextState);
+                        if (InvarRes == ExceptionValue) {
+                            if (!RecordErrorState(CanonNextState,
+                                                  LoweredInvariant,
+                                                  NumErrors)) {
+                                return;
                             }
+                        } else if (InvarRes == 0) {
+                            // Again, remember this state, but continue
+                            // on with the AQS construction
+                            if (!RecordErrorState(CanonNextState,
+                                                  LoweredInvariant,
+                                                  NumErrors)) {
+                                return;
+                            }
+                        } else {
+                            // We're good to consider successors of this state
+                            BFSQueue.Push(CanonNextState,
+                                          (Cmd->IsTentative() ?
+                                           CurrentTaintLevel + 1 :
+                                           CurrentTaintLevel));
                         }
-                    }
-                }
+                    } // end if (ExistingState != nullptr), else
+
+                } // end iterating over commands
 
                 if (Deadlocked) {
                     if (!RecordErrorState(CurState, LoweredDLFInvariant, NumErrors)) {

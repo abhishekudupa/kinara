@@ -59,20 +59,23 @@ using namespace LTS;
 using namespace Exprs;
 using namespace MC;
 
+const u32 NumClients = 5;
+const u32 NumValues = 2;
+
 int main()
 {
     auto TheLTS = new LabelledTS();
     Logging::LogManager::Initialize();
     Logging::LogManager::EnableLogOption("Checker.AQSDetailed");
 
-    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", 2);
+    auto ClientIDType = TheLTS->MakeSymmType("ClientIDType", NumClients);
     auto ParamExp = TheLTS->MakeVar("ClientID", ClientIDType);
     vector<ExpT> Params = { ParamExp };
     auto TrueExp = TheLTS->MakeTrue();
 
     // Add the message types
     vector<pair<string, TypeRef>> MsgFields;
-    auto RangeType = TheLTS->MakeRangeType(0, 1);
+    auto RangeType = TheLTS->MakeRangeType(0, NumValues-1);
     MsgFields.push_back(make_pair("Data", RangeType));
 
     auto DataMsgType = TheLTS->MakeMsgTypes(Params, TrueExp, "DataMsg", MsgFields, true);
@@ -87,7 +90,7 @@ int main()
     auto ClientIDParam = TheLTS->MakeVar("ClientID", ClientIDType);
     auto ClientEFSM = TheLTS->MakeGenEFSM("Client", Params, TrueExp, LTSFairnessType::Strong);
 
-    auto C2SChan = TheLTS->MakeChannel("C2SChan", vector<ExpT>(), TrueExp, 2, false,
+    auto C2SChan = TheLTS->MakeChannel("C2SChan", vector<ExpT>(), TrueExp, NumClients, false,
                                        false, false, false, LTSFairnessType::Strong);
     auto S2CChan = TheLTS->MakeChannel("S2CChan", Params, TrueExp, 1, false, true,
                                        false, false, LTSFairnessType::Strong);
@@ -157,7 +160,7 @@ int main()
     auto CountExp = TheLTS->MakeVar("Count", RangeType);
     auto ZeroExp = TheLTS->MakeVal("0", RangeType);
     auto OneExp = TheLTS->MakeVal("1", RangeType);
-    auto MaxExp = TheLTS->MakeVal("1", RangeType);
+    auto MaxExp = TheLTS->MakeVal(to_string(NumValues-1), RangeType);
     auto CountIncExp = TheLTS->MakeOp(LTSOps::OpITE,
                                       TheLTS->MakeOp(LTSOps::OpEQ, CountExp, MaxExp),
                                       ZeroExp,

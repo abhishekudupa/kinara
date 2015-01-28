@@ -86,47 +86,6 @@ namespace ESMC {
                 void SetLastFired(i64 NewLastFired);
             };
 
-            // A BFS queue entry that tracks taints
-            class TaintTrackingBFSQueueEntryT
-            {
-            private:
-                StateVec* State;
-                u32 TaintLevel;
-
-                inline i32 Compare(const TaintTrackingBFSQueueEntryT& Other) const;
-
-            public:
-                TaintTrackingBFSQueueEntryT();
-                TaintTrackingBFSQueueEntryT(StateVec* State, u32 TaintLevel);
-                TaintTrackingBFSQueueEntryT(const TaintTrackingBFSQueueEntryT& Other);
-                ~TaintTrackingBFSQueueEntryT();
-
-                TaintTrackingBFSQueueEntryT&
-                operator = (const TaintTrackingBFSQueueEntryT& Other);
-
-                bool operator == (const TaintTrackingBFSQueueEntryT& Other) const;
-                bool operator != (const TaintTrackingBFSQueueEntryT& Other) const;
-                // True if my taint is less than that of the other
-                bool operator < (const TaintTrackingBFSQueueEntryT& Other) const;
-                bool operator <= (const TaintTrackingBFSQueueEntryT& Other) const;
-                // true if my taint is greater than that of the other
-                bool operator > (const TaintTrackingBFSQueueEntryT& Other) const;
-                bool operator >= (const TaintTrackingBFSQueueEntryT& Other) const;
-
-                StateVec* GetState() const;
-                u32 GetTaintLevel() const;
-            };
-
-            class PrioUntaintedComparator
-            {
-            public:
-                inline bool operator () (const TaintTrackingBFSQueueEntryT& Entry1,
-                                         const TaintTrackingBFSQueueEntryT& Entry2) const
-                {
-                    return (Entry1 > Entry2);
-                }
-            };
-
             // A configurable BFS queue that can use a prio queue
             // or a normal deque. Used to prioritize searches along
             // minimally tainted paths
@@ -134,10 +93,9 @@ namespace ESMC {
             {
             private:
                 deque<StateVec*>* BFSDeque;
-                typedef boost::heap::compare<PrioUntaintedComparator> BFSPrioQueueComparatorT;
-                typedef boost::heap::fibonacci_heap<TaintTrackingBFSQueueEntryT,
-                                                    BFSPrioQueueComparatorT> BFSPrioQueueT;
-                BFSPrioQueueT* BFSPrioQueue;
+                vector<deque<StateVec*>*>* PrioQueues;
+                static const u32 MaxNumBuckets;
+                u32 NumElems;
 
             public:
                 BFSQueueT(bool UsePrioQueue = false);

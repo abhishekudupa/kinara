@@ -125,6 +125,10 @@ namespace ESMC {
                     (string)"Print detailed information about canonicalization steps."
                 },
                 {
+                    "Canonicalizer.Best",
+                    (string)"Print info about canonicalized state for each state."
+                },
+                {
                     "ESMC.Minimal",
                     (string)"Bare minimal trace output from model checker and solver, " +
                     "serving only to indicate progress. Disabling this will cause NOTHING " +
