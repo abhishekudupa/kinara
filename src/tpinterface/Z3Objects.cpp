@@ -55,6 +55,9 @@ namespace ESMC {
 
         Z3CtxWrapper::Z3CtxWrapper()
         {
+            auto Cfg = Z3_mk_config();
+
+#ifdef USE_Z3_4_3_2
             u32 SMTSeed;
             u32 SATSeed;
 
@@ -68,6 +71,9 @@ namespace ESMC {
             Z3_global_param_set("model_evaluator.completion", "true");
             Z3_global_param_set("smt.random_seed", to_string(SMTSeed).c_str());
             Z3_global_param_set("sat.random_seed", to_string(SATSeed).c_str());
+#else
+            Z3_set_param_value(Cfg, "MODEL_COMPLETION", "TRUE");
+#endif /* USE_Z3_4_3_2 */
 
             ESMC_LOG_FULL(
                           "TheoremProver.RandomSeed",
@@ -75,7 +81,6 @@ namespace ESMC {
                           Out_ << "Z3 SAT Random Seed: " << SATSeed << endl;
                           );
 
-            auto Cfg = Z3_mk_config();
             Ctx = Z3_mk_context_rc(Cfg);
             Z3_del_config(Cfg);
         }

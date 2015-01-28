@@ -6,12 +6,18 @@ BASE_BIN_DIR=$(PROJECT_ROOT)/bin
 BASE_GEN_DIR=$(PROJECT_ROOT)/gen
 BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
+Z3_VERSION_TO_USE?=4.3.1
+
 CXX?=g++
 
 CXXFLAGS+=-std=c++11 -Wall -pedantic -pipe
-CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/z3/src/api
+CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/z3-$(Z3_VERSION_TO_USE)/src/api
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/sparsehash
+
+ifneq "x$(Z3_VERSION_TO_USE)" "x4.3.1"
+CXXFLAGS+=-D_USE_Z3_4_3_2
+endif
 
 ifeq "x$(CXX)" "xg++"
 CXXFLAGS+=-Wno-unused-local-typedefs -Wno-overflow -fopenmp
@@ -37,8 +43,8 @@ PROJECT_MODULES= \
 
 libboost_FULL_PATH=$(PROJECT_ROOT)/thirdparty/boost-local/boost_install/install.ph
 libboost_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/boost-local/
-libz3_FULL_PATH=$(PROJECT_ROOT)/thirdparty/z3/install/libz3.so
-libz3_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/z3/
+libz3_FULL_PATH=$(PROJECT_ROOT)/thirdparty/z3-$(Z3_VERSION_TO_USE)/install/libz3.so
+libz3_MAKE_DIR=$(PROJECT_ROOT)/thirdparty/z3-$(Z3_VERSION_TO_USE)/
 
 PROJECT_LIBS=esmc
 
