@@ -232,6 +232,11 @@ namespace ESMC {
             friend class TraceBase;
             friend class Synth::Solver;
 
+        public:
+            typedef unordered_map<const StateVec*, ExpT,
+                                  Detail::StateVecPtrHasher,
+                                  Detail::StateVecPtrEquals> ErrorStateSetT;
+
         private:
             LabelledTS* TheLTS;
             StateFactory* Factory;
@@ -263,7 +268,7 @@ namespace ESMC {
 
             // The set of all error states, mapping to the
             // invariant expression that was blown
-            unordered_map<const StateVec*, ExpT> ErrorStates;
+            ErrorStateSetT ErrorStates;
 
             // A set of commands that need to be tested
             // these are all the commands that are "fully"
@@ -326,7 +331,7 @@ namespace ESMC {
             AQStructure* GetAQS() const;
             ProductStructure* GetPS() const;
 
-            const unordered_map<const StateVec*, ExpT>& GetAllErrorStates() const;
+            const ErrorStateSetT& GetAllErrorStates() const;
             TraceBase* MakeTraceToError(const StateVec* ErrorState);
             const vector<string>& GetBuchiMonitorNames() const;
         };

@@ -1089,7 +1089,7 @@ namespace ESMC {
             return true;
         }
 
-        const unordered_map<const StateVec*, ExpT>& LTSChecker::GetAllErrorStates() const
+        const LTSChecker::ErrorStateSetT& LTSChecker::GetAllErrorStates() const
         {
             return ErrorStates;
         }
