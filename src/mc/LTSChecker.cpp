@@ -561,10 +561,11 @@ namespace ESMC {
                                                  const ExpT& BlownInvariant,
                                                  u32 MaxErrors)
         {
-            if (ErrorStates.find(ErrorState) != ErrorStates.end()) {
+            if (ErrorStateSet.find(ErrorState) != ErrorStateSet.end()) {
                 return true;
             } else {
-                ErrorStates[ErrorState] = BlownInvariant;
+                ErrorStateSet[ErrorState] = BlownInvariant;
+                ErrorStates.push_back(make_pair(ErrorState, BlownInvariant));
                 return (ErrorStates.size() < MaxErrors);
             }
         }
@@ -1089,7 +1090,7 @@ namespace ESMC {
             return true;
         }
 
-        const LTSChecker::ErrorStateSetT& LTSChecker::GetAllErrorStates() const
+        const LTSChecker::ErrorStateVecT& LTSChecker::GetAllErrorStates() const
         {
             return ErrorStates;
         }
@@ -1106,8 +1107,8 @@ namespace ESMC {
 
         TraceBase* LTSChecker::MakeTraceToError(const StateVec* ErrorState)
         {
-            auto it = ErrorStates.find(ErrorState);
-            if (it == ErrorStates.end()) {
+            auto it = ErrorStateSet.find(ErrorState);
+            if (it == ErrorStateSet.end()) {
                 throw ESMCError((string)"Argument to LTSChecker::MakeTraceToError() is " +
                                 "not marked as an error state by the checker");
             }
@@ -1131,6 +1132,7 @@ namespace ESMC {
                 Factory = new StateFactory(TheLTS->StateVectorSize);
                 ZeroState = Factory->MakeState();
                 ErrorStates.clear();
+                ErrorStateSet.clear();
             }
             if (ThePS != nullptr) {
                 delete ThePS;
