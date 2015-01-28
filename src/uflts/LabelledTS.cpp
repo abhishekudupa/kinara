@@ -394,7 +394,18 @@ namespace ESMC {
             GuardedCommands = ElimMsgFromCommands(GuardedCommands);
 
             // Sort the guarded commands so that the tentative ones are at the end
-            sort(GuardedCommands.begin(), GuardedCommands.end(), StringifiablePtrCompare<0>());
+            sort(GuardedCommands.begin(), GuardedCommands.end(),
+                 [&] (const GCmdRef& Cmd1, const GCmdRef& Cmd2) -> bool
+                 {
+                     if (Cmd1->IsTentative() && !Cmd2->IsTentative()) {
+                         return false;
+                     } else if (Cmd2->IsTentative() && !Cmd1->IsTentative()) {
+                         return true;
+                     } else {
+                         StringifiablePtrCompare<0> Cmp;
+                         return (Cmp(Cmd1, Cmd2) < 0);
+                     }
+                 });
             // Reset command IDs as well
             for (u32 i = 0; i < GuardedCommands.size(); ++i) {
                 GuardedCommands[i]->SetCmdID(i);
