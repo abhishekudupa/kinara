@@ -129,13 +129,17 @@ namespace ESMC {
             auto LoweredAssertion = Mgr->LowerExpr(UnrolledExp, LTSCtx);
 
             ESMC_LOG_FULL(
-                          "TheoremProver.Unrolled",
+                          "TheoremProver.Assertions",
                           Out_ << "Asserting Expr:" << endl
-                          << Assertion << endl;
+                               << Assertion << endl;
+                          );
+
+            ESMC_LOG_FULL(
+                          "TheoremProver.Unrolled",
                           Out_ << "Asserting Unrolled Expr:"
-                          << UnrolledExp << endl;
+                               << UnrolledExp << endl;
                           Out_ << "Asserting Lowered Expr:" << endl
-                          << LoweredAssertion << endl;
+                               << LoweredAssertion << endl;
                           );
 
             Z3_solver_assert(*Ctx, Solver, LoweredAssertion);
@@ -144,7 +148,7 @@ namespace ESMC {
             for (auto const& AssumptionSet : Assumptions) {
                 for (auto const& Assumption : AssumptionSet) {
                     ESMC_LOG_FULL(
-                                  "TheoremProver.Unrolled",
+                                  "TheoremProver.Assertions",
                                   Out_ << "Asserting Assumption:" << endl
                                        << Assumption << endl;
                                   );
@@ -164,7 +168,7 @@ namespace ESMC {
         void Z3TheoremProver::Assert(const Z3Expr& Assertion)
         {
             ESMC_LOG_FULL(
-                          "TheoremProver.Unrolled",
+                          "TheoremProver.Assertions",
                           Out_ << "Asserting pre-lowered assertion:" << endl
                                << Assertion << endl;
                           );
