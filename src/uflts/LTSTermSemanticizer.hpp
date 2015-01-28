@@ -3222,6 +3222,7 @@ namespace ESMC {
             typedef Exprs::Expr<E, ESMC::LTS::LTSTermSemanticizer> ExpT;
             typedef Z3Expr LExpT;
             typedef TypeRef TypeT;
+            typedef TypePtrCompare TypeComparatorT;
             static const TypeT InvalidType;
 
             LTSTermSemanticizer(MgrType* Mgr);

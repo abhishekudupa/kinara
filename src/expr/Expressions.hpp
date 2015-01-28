@@ -1710,6 +1710,7 @@ namespace ESMC {
         inline i32 ConstExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
         {
             auto OtherAsConst = Other->template As<ESMC::Exprs::ConstExpression>();
+            typename S<E>::TypeComparatorT Comp;
             // All other exp types > ConstExpression
             if (OtherAsConst == nullptr) {
                 return -1;
@@ -1718,9 +1719,9 @@ namespace ESMC {
                 return -1;
             } else if (ConstValue > OtherAsConst->ConstValue) {
                 return 1;
-            } else if (ConstType->LT(*(OtherAsConst->ConstType))) {
+            } else if (Comp(ConstType, OtherAsConst->ConstType)) {
                 return -1;
-            } else if (OtherAsConst->ConstType->LT(*ConstType)) {
+            } else if (Comp(OtherAsConst->ConstType, ConstType)) {
                 return 1;
             } else {
                 return 0;
@@ -1777,6 +1778,7 @@ namespace ESMC {
         {
             auto OtherAsVar = Other->template As<ESMC::Exprs::VarExpression>();
             auto OtherAsConst = Other->template As<ConstExpression>();
+            typename S<E>::TypeComparatorT Comp;
             // ConstExpression < VarExpression
             if (OtherAsConst != nullptr) {
                 return 1;
@@ -1790,9 +1792,9 @@ namespace ESMC {
                 return -1;
             } else if (VarName > OtherAsVar->VarName) {
                 return 1;
-            } else if (VarType->LT(*OtherAsVar->VarType)) {
+            } else if (Comp(VarType, OtherAsVar->VarType)) {
                 return -1;
-            } else if (OtherAsVar->VarType->LT(*VarType)) {
+            } else if (Comp(OtherAsVar->VarType, VarType)) {
                 return 1;
             } else {
                 return 0;
@@ -1852,6 +1854,7 @@ namespace ESMC {
                 (Other->template As<VarExpression>() != nullptr)) {
                 return 1;
             }
+            typename S<E>::TypeComparatorT Comp;
             auto OtherAsBound = Other->template As<ESMC::Exprs::BoundVarExpression>();
             // VarExpression < BoundVarExpression
             if (OtherAsBound == nullptr) {
@@ -1861,9 +1864,9 @@ namespace ESMC {
                     return -1;
                 } else if (VarIdx > OtherAsBound->VarIdx) {
                     return 1;
-                } else if (VarType->LT(*OtherAsBound->VarType)) {
+                } else if (Comp(VarType, OtherAsBound->VarType)) {
                     return -1;
-                } else if (OtherAsBound->VarType->LT(*VarType)) {
+                } else if (Comp(OtherAsBound->VarType, VarType)) {
                     return 1;
                 } else {
                     return 0;
@@ -1923,7 +1926,9 @@ namespace ESMC {
                 (Other->template As<BoundVarExpression>() != nullptr)) {
                 return 1;
             }
+
             auto OtherAsOp = Other->template As<ESMC::Exprs::OpExpression>();
+
             if (OtherAsOp == nullptr) {
                 return -1;
             }
@@ -2025,6 +2030,8 @@ namespace ESMC {
         QuantifiedExpressionBase<E, S>::CompareInternal(const QuantifiedExpressionBase<E, S>*
                                                         Other) const
         {
+            typename S<E>::TypeComparatorT Comp;
+
             if (QVarTypes.size() < Other->QVarTypes.size()) {
                 return -1;
             } else if (QVarTypes.size() > Other->QVarTypes.size()) {
@@ -2032,10 +2039,12 @@ namespace ESMC {
             } else {
                 for (u32 i = 0; i < QVarTypes.size(); ++i) {
 
-                    auto Res =
-                        (QVarTypes[i]->LT(*(Other->QVarTypes[i])) ? -1
-                         : (Other->QVarTypes[i]->LT(*(QVarTypes[i])) ? 1 : 0));
-
+                    i32 Res = 0;
+                    if (Comp(QVarTypes[i], Other->QVarTypes[i])) {
+                        Res = -1;
+                    } else if (Comp(Other->QVarTypes[i], QVarTypes[i])) {
+                        Res = 1;
+                    }
                     if (Res != 0) {
                         return Res;
                     }
