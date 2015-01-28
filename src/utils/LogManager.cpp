@@ -91,6 +91,10 @@ namespace ESMC {
                     (string)"Print random seed used by the theorem prover (if any)."
                 },
                 {
+                    "TheoremProver.Assertions",
+                    (string)"Print assertions as they are asserted into the theorem prover."
+                },
+                {
                     "Simplifier.PerIteration",
                     "Print progress in each iteration of simplifier."
                 },
