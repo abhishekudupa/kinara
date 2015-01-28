@@ -150,7 +150,7 @@ namespace ESMC {
         Out_ << "-----------------------------------------------------------" \
              << "--------------------" << endl;                         \
         Out_.flush(); \
-        if (Out_ != &cout) { \
+        if (&Out_ != &cout) { \
             ostream& Out_ = cout; \
             Out_ << "------------- [ESMC.Minimal], at " << __FUNCTION__ << ", "\
                  << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
@@ -167,7 +167,7 @@ namespace ESMC {
         ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
         CODE_ \
         Out_.flush(); \
-        if (Out_ != &cout) { \
+        if (&Out_ != &cout) { \
             ostream& Out_ = cout; \
             CODE_             \
             Out_.flush();     \
