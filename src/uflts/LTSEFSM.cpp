@@ -191,9 +191,9 @@ namespace ESMC {
             AllVariables[VarName] = VarType;
         }
 
-        set<ExpT> IncompleteEFSM::GetDomainTerms(const map<string, TypeRef>& DomainVars)
+        WellOrderedExpSetT IncompleteEFSM::GetDomainTerms(const map<string, TypeRef>& DomainVars)
         {
-            set<ExpT> Retval;
+            WellOrderedExpSetT Retval;
             for (auto const& Var : DomainVars) {
                 auto VarExp = TheLTS->MakeVar(Var.first, Var.second);
                 ExpandExpression(VarExp, Retval);
@@ -202,10 +202,10 @@ namespace ESMC {
             return Retval;
         }
 
-        inline void IncompleteEFSM::FilterTerms(set<ExpT>& DomainTerms,
+        inline void IncompleteEFSM::FilterTerms(WellOrderedExpSetT& DomainTerms,
                                                 const TypeRef& RangeType)
         {
-            vector<set<ExpT>::iterator> ToRemove;
+            vector<WellOrderedExpSetT::iterator> ToRemove;
 
             for (auto it1 = DomainTerms.begin(); it1 != DomainTerms.end(); ++it1) {
                 auto Type = (*it1)->GetType();
@@ -342,7 +342,7 @@ namespace ESMC {
                                 return (ExpType->Is<SymmetricType>());
                             });
 
-            set<TypeRef> SymmTypeSet;
+            WellOrderedTypeSetT SymmTypeSet;
             for_each(SymmTerms.begin(), SymmTerms.end(),
                      [&] (const ExpT& Term) -> void
                      {
@@ -375,11 +375,11 @@ namespace ESMC {
         }
 
         inline void
-        IncompleteEFSM::MergeEquivalences(const set<ExpT>& NewEquivalences,
-                                          set<set<ExpT>>& EquivalenceSets)
+        IncompleteEFSM::MergeEquivalences(const WellOrderedExpSetT& NewEquivalences,
+                                          set<WellOrderedExpSetT>& EquivalenceSets)
         {
-            vector<set<set<ExpT>>::const_iterator> ToMerge;
-            set<ExpT> MergedSet(NewEquivalences.begin(), NewEquivalences.end());
+            vector<set<WellOrderedExpSetT>::const_iterator> ToMerge;
+            WellOrderedExpSetT MergedSet(NewEquivalences.begin(), NewEquivalences.end());
 
             for (auto const& Exp : NewEquivalences) {
                 for (auto it = EquivalenceSets.begin();
@@ -404,16 +404,16 @@ namespace ESMC {
             EquivalenceSets.insert(MergedSet);
         }
 
-        inline set<set<ExpT>>
+        inline set<WellOrderedExpSetT>
         IncompleteEFSM::FindEquivalences(const ExpT& Exp,
                                          const vector<TypeRef>& SymmTypes,
                                          const vector<ExpT>& SymmArgs,
                                          const vector<ExpT>& NonSymmArgs)
         {
-            map<TypeRef, u32> TypeOffsets;
+            WellOrderedTypeMapT<u32> TypeOffsets;
             vector<u32> DomainSizes;
             auto const IsRangeSymmetric = Exp->GetType()->Is<SymmetricType>();
-            set<set<ExpT>> Retval;
+            set<WellOrderedExpSetT> Retval;
             const u32 NumSymmArgs = SymmArgs.size();
             auto Mgr = TheLTS->GetMgr();
 
@@ -462,7 +462,7 @@ namespace ESMC {
                                                          SymmArgs[i]->GetType());
                 }
 
-                set<ExpT> CurEquivalences;
+                WellOrderedExpSetT CurEquivalences;
 
                 if (!IsRangeSymmetric) {
                     auto SubstExp = Mgr->TermSubstitute(SubstMap, Exp);
@@ -566,7 +566,7 @@ namespace ESMC {
             return Retval;
         }
 
-        inline ExpT IncompleteEFSM::MakeGuard(const set<ExpT>& DomainTerms,
+        inline ExpT IncompleteEFSM::MakeGuard(const WellOrderedExpSetT& DomainTerms,
                                               const ExpT& CoveredPred,
                                               const string& NameSuffix)
         {
@@ -606,12 +606,12 @@ namespace ESMC {
             return GuardExp;
         }
 
-        inline set<set<ExpT>>
-        IncompleteEFSM::GetArrayLValueGroups(const set<ExpT>& LValues)
+        inline set<WellOrderedExpSetT>
+        IncompleteEFSM::GetArrayLValueGroups(const WellOrderedExpSetT& LValues)
         {
             auto Mgr = TheLTS->GetMgr();
             // get the symmetric types
-            set<TypeRef> SymmTypeSet;
+            WellOrderedTypeSetT SymmTypeSet;
             for (auto const& LValueTerm : LValues) {
                 auto&& CurSymmTypes = GetSymmTypesInExpr(LValueTerm);
                 SymmTypeSet.insert(CurSymmTypes.begin(), CurSymmTypes.end());
@@ -621,7 +621,7 @@ namespace ESMC {
 
             u32 RunningOffset = 0;
             vector<u32> DomainSizes;
-            map<TypeRef, u32> TypeOffsets;
+            WellOrderedTypeMapT<u32> TypeOffsets;
 
             for (auto const& SymmType : SymmTypes) {
                 auto const CurSize = SymmType->GetCardinalityNoUndef();
@@ -636,15 +636,15 @@ namespace ESMC {
             // for each uncovered term, get all the other lvalues
             // which can be obtained by permuting and put them in
             // the same group
-            set<set<ExpT>> Retval;
-            set<ExpT> CoveredTerms;
+            set<WellOrderedExpSetT> Retval;
+            WellOrderedExpSetT CoveredTerms;
 
             for (auto const& LValue : LValues) {
                 if (CoveredTerms.find(LValue) != CoveredTerms.end()) {
                     continue;
                 }
 
-                set<ExpT> CurSet;
+                WellOrderedExpSetT CurSet;
                 CurSet.insert(LValue);
                 for (u32 i = 0; i < NumPerms; ++i) {
                     auto const& CurPerm = PermSet.GetIterator(i).GetPerm();
@@ -664,14 +664,14 @@ namespace ESMC {
         }
 
         inline vector<ExpT>
-        IncompleteEFSM::GetSymmetryConstraints(const set<ExpT>& UpdateGroup,
-                                               const map<ExpT, ExpT>& UpdateMap)
+        IncompleteEFSM::GetSymmetryConstraints(const WellOrderedExpSetT& UpdateGroup,
+                                               const WellOrderedExpMapT<ExpT>& UpdateMap)
         {
             // Get all the symmetric types (again)
             auto Mgr = TheLTS->GetMgr();
             vector<ExpT> Retval;
 
-            set<TypeRef> SymmTypeSet;
+            WellOrderedTypeSetT SymmTypeSet;
             for (auto const& UpdateTerm : UpdateMap) {
                 auto&& CurSymmTypes1 = GetSymmTypesInExpr(UpdateTerm.first);
                 SymmTypeSet.insert(CurSymmTypes1.begin(), CurSymmTypes1.end());
@@ -733,7 +733,7 @@ namespace ESMC {
 
             const string TempVarName = (string)"__temp_var__";
 
-            set<set<ExpT>> AllEquivalences;
+            set<WellOrderedExpSetT> AllEquivalences;
 
             for (auto const& CPTuple : LHSCP) {
                 MgrT::SubstMapT PostSubstMap;
@@ -759,9 +759,9 @@ namespace ESMC {
                 auto&& CurEquivalences = FindEquivalences(Antecedent, SymmTypes,
                                                           SymmArgs, NonSymmArgs);
                 // Subst out the LHS terms
-                set<set<ExpT>> SubstEquivalences;
+                set<WellOrderedExpSetT> SubstEquivalences;
                 for (auto const& Equivalence : CurEquivalences) {
-                    set<ExpT> SubstEquivalence;
+                    WellOrderedExpSetT SubstEquivalence;
                     for (auto const& Exp : Equivalence) {
                         auto SubstExp = Mgr->TermSubstitute(PostSubstMap, Exp);
                         SubstEquivalence.insert(SubstExp);
@@ -798,15 +798,15 @@ namespace ESMC {
             return Retval;
         }
 
-        inline set<ExpT>
+        inline WellOrderedExpSetT
         IncompleteEFSM::GetDomainTermsForUpdate(const ExpT& LValueTerm,
-                                                const set<ExpT>& DomainTerms,
+                                                const WellOrderedExpSetT& DomainTerms,
                                                 const SymmMsgDeclRef& MsgDecl)
         {
             auto BaseLVal = GetBaseLValue(LValueTerm);
             auto BaseLValAsVar = BaseLVal->As<VarExpression>();
             auto const& LValVarName = BaseLValAsVar->GetVarName();
-            set<ExpT> Retval;
+            WellOrderedExpSetT Retval;
 
             if (LValVarName == "OutMsg") {
                 auto LValAsOp = LValueTerm->As<OpExpression>();
@@ -884,7 +884,7 @@ namespace ESMC {
         inline vector<LTSAssignRef>
         IncompleteEFSM::MakeUpdates(i64 GuardOp,
                                     const string& InitStateName,
-                                    const set<ExpT>& DomainTerms,
+                                    const WellOrderedExpSetT& DomainTerms,
                                     const string& NameSuffix,
                                     const SymmMsgDeclRef& MsgDecl)
         {
@@ -898,8 +898,8 @@ namespace ESMC {
 
             auto&& LValueTerms = GetDomainTerms(LValues);
             auto&& ArrayLValueGroups = GetArrayLValueGroups(LValueTerms);
-            map<ExpT, set<ExpT>> GroupedLValues;
-            map<ExpT, ExpT> GroupedLValueToUpdateExp;
+            WellOrderedExpMapT<WellOrderedExpSetT> GroupedLValues;
+            WellOrderedExpMapT<ExpT> GroupedLValueToUpdateExp;
 
             if (ArrayLValueGroups.size() > 0) {
 
@@ -957,7 +957,7 @@ namespace ESMC {
                 GuardOpToUpdates[GuardOp].insert(UpdateExp);
                 AllOpToExp[UpdateOp] = UpdateExp;
 
-
+                vector<ExpT> SymmConstraints;
                 if (GroupedLValues.find(LValue) == GroupedLValues.end()) {
                     auto&& SymmConstraints = GetSymmetryConstraints(UpdateExp);
                     GuardOpToUpdateSymmetryConstraints[GuardOp].insert(SymmConstraints.begin(),

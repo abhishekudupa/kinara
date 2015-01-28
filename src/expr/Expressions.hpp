@@ -550,10 +550,6 @@ namespace ESMC {
             typedef Expr<E, S> ExpT;
             typedef ExprI<E, S> IExpT;
 
-            // typedef unordered_map<ExpT, ExpT,
-            //                       ExpressionPtrHasher,
-            //                       ExpressionPtrEquals> SubstMapT;
-
             typedef unordered_map<ExpT, ExpT, ExpressionPtrHasher> SubstMapT;
 
             typedef RefCache<ExpressionBase<E, S>, ExpressionPtrHasher,
@@ -1722,9 +1718,9 @@ namespace ESMC {
                 return -1;
             } else if (ConstValue > OtherAsConst->ConstValue) {
                 return 1;
-            } else if (ConstType < OtherAsConst->ConstType) {
+            } else if (ConstType->LT(*(OtherAsConst->ConstType))) {
                 return -1;
-            } else if (ConstType > OtherAsConst->ConstType) {
+            } else if (OtherAsConst->ConstType->LT(*ConstType)) {
                 return 1;
             } else {
                 return 0;
@@ -1794,9 +1790,9 @@ namespace ESMC {
                 return -1;
             } else if (VarName > OtherAsVar->VarName) {
                 return 1;
-            } else if (VarType < OtherAsVar->VarType) {
+            } else if (VarType->LT(*OtherAsVar->VarType)) {
                 return -1;
-            } else if (VarType > OtherAsVar->VarType) {
+            } else if (OtherAsVar->VarType->LT(*VarType)) {
                 return 1;
             } else {
                 return 0;
@@ -1865,9 +1861,9 @@ namespace ESMC {
                     return -1;
                 } else if (VarIdx > OtherAsBound->VarIdx) {
                     return 1;
-                } else if (VarType < OtherAsBound->VarType) {
+                } else if (VarType->LT(*OtherAsBound->VarType)) {
                     return -1;
-                } else if (VarType > OtherAsBound->VarType) {
+                } else if (OtherAsBound->VarType->LT(*VarType)) {
                     return 1;
                 } else {
                     return 0;
@@ -2035,7 +2031,11 @@ namespace ESMC {
                 return 1;
             } else {
                 for (u32 i = 0; i < QVarTypes.size(); ++i) {
-                    auto Res = (QVarTypes[i] < Other->QVarTypes[i] ? -1 : 1);
+
+                    auto Res =
+                        (QVarTypes[i]->LT(*(Other->QVarTypes[i])) ? -1
+                         : (Other->QVarTypes[i]->LT(*(QVarTypes[i])) ? 1 : 0));
+
                     if (Res != 0) {
                         return Res;
                     }
@@ -2159,7 +2159,7 @@ namespace ESMC {
             }
             auto OtherAsForall = Other->template As<ESMC::Exprs::AQuantifiedExpression>();
             // In case we decide to add more expression types
-            if (OtherAsForall != nullptr) {
+            if (OtherAsForall == nullptr) {
                 return -1;
             }
 

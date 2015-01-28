@@ -148,7 +148,7 @@ namespace ESMC {
             }
 
             ExpressionPermuter::ExpressionPermuter(MgrT* Mgr, const vector<u08>& PermVec,
-                                                   const map<TypeRef, u32>& TypeOffsets)
+                                                   const WellOrderedTypeMapT<u32>& TypeOffsets)
                 : VisitorBaseT("ExpressionPermuter"),
                   Mgr(Mgr), PermVec(PermVec), TypeOffsets(TypeOffsets)
             {
@@ -248,7 +248,7 @@ namespace ESMC {
 
             ExpT ExpressionPermuter::Do(MgrT* Mgr, const ExpT& Exp,
                                         const vector<u08>& PermVec,
-                                        const map<TypeRef, u32>& TypeOffsets)
+                                        const WellOrderedTypeMapT<u32>& TypeOffsets)
             {
                 ExpressionPermuter ThePermuter(Mgr, PermVec, TypeOffsets);
                 Exp->Accept(&ThePermuter);
@@ -340,7 +340,7 @@ namespace ESMC {
 
 
             // UFIndexExpGatherer implementation
-            UFIndexExpGatherer::UFIndexExpGatherer(set<pair<ExpT, TypeRef>>& UFIndexExps)
+            UFIndexExpGatherer::UFIndexExpGatherer(vector<pair<ExpT, TypeRef>>& UFIndexExps)
                 : VisitorBaseT("UFIndexExpGatherer"),
                   UFIndexExps(UFIndexExps)
             {
@@ -363,7 +363,11 @@ namespace ESMC {
                     if (SynthOps.size() > 0) {
                         auto ArrType = Children[0]->GetType()->As<ArrayType>();
                         auto const& IndexType = ArrType->GetIndexType();
-                        UFIndexExps.insert(make_pair(Children[1], IndexType));
+                        auto&& CurPair = make_pair(Children[1], IndexType);
+                        if (UFIndexExpSet.find(CurPair) == UFIndexExpSet.end()) {
+                            UFIndexExpSet.insert(CurPair);
+                            UFIndexExps.push_back(CurPair);
+                        }
                     }
                 }
             }
@@ -378,7 +382,7 @@ namespace ESMC {
                 Exp->GetQExpression()->Accept(this);
             }
 
-            void UFIndexExpGatherer::Do(const ExpT& Exp, set<pair<ExpT, TypeRef>>& UFIndexExps)
+            void UFIndexExpGatherer::Do(const ExpT& Exp, vector<pair<ExpT, TypeRef>>& UFIndexExps)
             {
                 UFIndexExpGatherer TheGatherer(UFIndexExps);
                 Exp->Accept(&TheGatherer);
@@ -399,15 +403,12 @@ namespace ESMC {
 
             inline vector<pair<ExpT, ExpT> >
             ConstraintPurifier::MakeITEBranches(const ExpT& Exp,
-                                                const set<pair<ExpT, TypeRef>>& UFIndexExps)
+                                                const vector<pair<ExpT, TypeRef>>& UFIndexExps)
             {
-                vector<pair<ExpT, TypeRef>> UFIndexExpVec(UFIndexExps.begin(),
-                                                          UFIndexExps.end());
-                const u32 NumUFExps = UFIndexExpVec.size();
-
+                const u32 NumUFExps = UFIndexExps.size();
                 vector<vector<string>> ValueVectors;
 
-                for (auto const& IndexExpType : UFIndexExpVec) {
+                for (auto const& IndexExpType : UFIndexExps) {
                     auto const& ExpType = IndexExpType.second;
                     ValueVectors.push_back(ExpType->GetElementsNoUndef());
                 }
@@ -424,7 +425,7 @@ namespace ESMC {
                     MgrT::SubstMapT SubstMap;
 
                     for (u32 j = 0; j < NumUFExps; ++j) {
-                        auto const& CurUFIndexExp = UFIndexExpVec[j];
+                        auto const& CurUFIndexExp = UFIndexExps[j];
                         auto const& CurIndexExp = CurUFIndexExp.first;
                         auto const& CurIndexType = CurUFIndexExp.second;
 
@@ -490,7 +491,7 @@ namespace ESMC {
                     }
                     ExpStack.push(Mgr->MakeExpr(OpCode, NewChildren));
                 } else {
-                    set<pair<ExpT, TypeRef>> UFIndexExps;
+                    vector<pair<ExpT, TypeRef>> UFIndexExps;
                     UFIndexExpGatherer::Do(Exp, UFIndexExps);
 
                     auto&& ITEBranches = MakeITEBranches(Exp, UFIndexExps);

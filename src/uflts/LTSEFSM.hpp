@@ -90,11 +90,11 @@ namespace ESMC {
             unordered_map<i64, pair<ExpT, ExpT>> UpdateOpToUpdateLValue;
 
             unordered_map<i64, ExpT> GuardOpToExp;
-            unordered_map<i64, set<ExpT>> GuardSymmetryConstraints;
-            unordered_map<i64, set<ExpT>> GuardMutualExclusiveSets;
-            unordered_map<i64, set<ExpT>> GuardOpToUpdates;
-            unordered_map<i64, set<ExpT>> GuardOpToUpdateSymmetryConstraints;
-            unordered_map<string, set<ExpT>> AddedTransitionsByState;
+            unordered_map<i64, WellOrderedExpSetT> GuardSymmetryConstraints;
+            unordered_map<i64, WellOrderedExpSetT> GuardMutualExclusiveSets;
+            unordered_map<i64, WellOrderedExpSetT> GuardOpToUpdates;
+            unordered_map<i64, WellOrderedExpSetT> GuardOpToUpdateSymmetryConstraints;
+            unordered_map<string, WellOrderedExpSetT> AddedTransitionsByState;
             unordered_map<i64, ExpT> StateUpdateOpToExp;
             unordered_map<i64, ExpT> AllOpToExp;
 
@@ -111,29 +111,32 @@ namespace ESMC {
             UIDGenerator GuardUFUIDGen;
             UIDGenerator UpdateUFUIDGen;
 
-            inline void FilterTerms(set<ExpT>& DomainTerms, const TypeRef& RangeType);
-            set<ExpT> GetDomainTerms(const map<string, TypeRef>& DomainVars);
+            inline void FilterTerms(WellOrderedExpSetT& DomainTerms, const TypeRef& RangeType);
+            WellOrderedExpSetT GetDomainTerms(const map<string, TypeRef>& DomainVars);
 
-            inline set<set<ExpT>> GetArrayLValueGroups(const set<ExpT>& LValues);
+            inline set<WellOrderedExpSetT>
+            GetArrayLValueGroups(const WellOrderedExpSetT& LValues);
 
             inline vector<TypeRef> GetSymmTypesInExpr(const ExpT& Exp);
             inline void PartitionDomain(const vector<ExpT>& Args,
                                         vector<ExpT>& SymmArgs,
                                         vector<ExpT>& NonSymmArgs);
 
-            inline void MergeEquivalences(const set<ExpT>& NewEquivalences,
-                                          set<set<ExpT>>& EquivalenceSets);
+            inline void MergeEquivalences(const WellOrderedExpSetT& NewEquivalences,
+                                          set<WellOrderedExpSetT>& EquivalenceSets);
 
-            inline set<set<ExpT>> FindEquivalences(const ExpT& Exp,
-                                                   const vector<TypeRef>& SymmTypes,
-                                                   const vector<ExpT>& SymmArgs,
-                                                   const vector<ExpT>& NonSymmArgs);
+            inline set<WellOrderedExpSetT>
+            FindEquivalences(const ExpT& Exp,
+                             const vector<TypeRef>& SymmTypes,
+                             const vector<ExpT>& SymmArgs,
+                             const vector<ExpT>& NonSymmArgs);
 
             inline vector<ExpT> GetSymmetryConstraints(const ExpT& Exp);
 
             // Make symmetry constraints for a group
-            inline vector<ExpT> GetSymmetryConstraints(const set<ExpT>& UpdateGroup,
-                                                       const map<ExpT, ExpT>& UpdateMap);
+            inline vector<ExpT>
+            GetSymmetryConstraints(const WellOrderedExpSetT& UpdateGroup,
+                                   const WellOrderedExpMapT<ExpT>& UpdateMap);
 
             inline ExpT FindDisjunction(const vector<LTSSymbTransRef>& Transitions,
                                         const Z3TPRef& TP,
@@ -152,19 +155,21 @@ namespace ESMC {
                                                  const ExpT& CoveredPredicate,
                                                  const Z3TPRef& TP);
 
-            inline ExpT MakeGuard(const set<ExpT>& DomainTerms,
+            inline ExpT MakeGuard(const WellOrderedExpSetT& DomainTerms,
                                   const ExpT& CoveredPredicate,
                                   const string& NameSuffix);
 
-            inline set<ExpT> GetDomainTermsForUpdate(const ExpT& LValueTerm,
-                                                     const set<ExpT>& DomainTerms,
-                                                     const SymmMsgDeclRef& MsgDecl);
+            inline WellOrderedExpSetT
+            GetDomainTermsForUpdate(const ExpT& LValueTerm,
+                                    const WellOrderedExpSetT& DomainTerms,
+                                    const SymmMsgDeclRef& MsgDecl);
 
-            inline vector<LTSAssignRef> MakeUpdates(i64 GuardOp,
-                                                    const string& InitStateName,
-                                                    const set<ExpT>& DomainTerms,
-                                                    const string& NameSuffix,
-                                                    const SymmMsgDeclRef& MsgDecl);
+            inline vector<LTSAssignRef>
+            MakeUpdates(i64 GuardOp,
+                        const string& InitStateName,
+                        const WellOrderedExpSetT& DomainTerms,
+                        const string& NameSuffix,
+                        const SymmMsgDeclRef& MsgDecl);
 
             inline void CompleteOneInputTransition(const string& InitStateName,
                                                    const SymmMsgDeclRef& MsgDecl,

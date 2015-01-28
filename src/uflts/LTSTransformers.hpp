@@ -118,12 +118,12 @@ namespace ESMC {
             private:
                 MgrT* Mgr;
                 const vector<u08>& PermVec;
-                map<TypeRef, u32> TypeOffsets;
+                WellOrderedTypeMapT<u32> TypeOffsets;
                 stack<ExpT> ExpStack;
 
             public:
                 ExpressionPermuter(MgrT* Mgr, const vector<u08>& PermVec,
-                                   const map<TypeRef, u32>& TypeOffsets);
+                                   const WellOrderedTypeMapT<u32>& TypeOffsets);
                 virtual ~ExpressionPermuter();
 
                 virtual void VisitVarExpression(const VarExpT* Exp) override;
@@ -135,7 +135,7 @@ namespace ESMC {
 
                 static ExpT Do(MgrT* Mgr, const ExpT& Exp,
                                const vector<u08>& PermVec,
-                               const map<TypeRef, u32>& TypeOffsets);
+                               const WellOrderedTypeMapT<u32>& TypeOffsets);
 
             };
 
@@ -164,16 +164,17 @@ namespace ESMC {
             class UFIndexExpGatherer : public VisitorBaseT
             {
             private:
-                set<pair<ExpT, TypeRef>>& UFIndexExps;
+                set<pair<ExpT, TypeRef>> UFIndexExpSet;
+                vector<pair<ExpT, TypeRef>>& UFIndexExps;
 
             public:
-                UFIndexExpGatherer(set<pair<ExpT, TypeRef>>& UFIndexExps);
+                UFIndexExpGatherer(vector<pair<ExpT, TypeRef>>& UFIndexExps);
                 virtual ~UFIndexExpGatherer();
 
                 virtual void VisitOpExpression(const OpExpT* Exp) override;
                 virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
                 virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
-                static void Do(const ExpT& Exp, set<pair<ExpT, TypeRef>>& UFIndexExps);
+                static void Do(const ExpT& Exp, vector<pair<ExpT, TypeRef>>& UFIndexExps);
             };
 
             class ConstraintPurifier : public VisitorBaseT
@@ -188,7 +189,7 @@ namespace ESMC {
 
                 inline vector<pair<ExpT, ExpT>>
                     MakeITEBranches(const ExpT& Exp,
-                                    const set<pair<ExpT, TypeRef>>& UFIndexExps);
+                                    const vector<pair<ExpT, TypeRef>>& UFIndexExps);
 
                 virtual void VisitVarExpression(const VarExpT* Exp) override;
                 virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;

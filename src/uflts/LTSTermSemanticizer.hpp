@@ -147,7 +147,7 @@ namespace ESMC {
         class LTSLoweredContext : public RefCountable
         {
         public:
-            typedef unordered_set<Z3Expr, Z3ExprHasher> AssumptionSetT;
+            typedef set<Z3Expr, StringifiableObjCompare<0>> AssumptionSetT;
 
         private:
             mutable unordered_map<TypeRef, Z3Sort, TypePtrHasher> LTSTypeToSort;
@@ -3263,7 +3263,9 @@ namespace ESMC {
         {
             // Nothing here
             BoolType = TypeCache.template Get<BooleanType>();
+            (void)BoolType->GetOrSetTypeID();
             IntType = TypeCache.template Get<IntegerType>();
+            (void)IntType->GetOrSetTypeID();
         }
 
         template <typename E>

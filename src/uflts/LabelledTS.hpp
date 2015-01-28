@@ -78,26 +78,23 @@ namespace ESMC {
             map<string, TypeRef> SymmTypes;
             map<string, TypeRef> MsgTypes;
             map<string, TypeRef> ParametricMsgTypes;
-            map<TypeRef, TypeRef> TypeToPrimed;
+            WellOrderedTypeMapT<TypeRef> TypeToPrimed;
             TypeRef UnifiedMsgType;
             map<string, EFSMBase*> AllEFSMs;
             map<string, EFSMBase*> ActualEFSMs;
             map<string, ChannelEFSM*> ChannelEFSMs;
-            set<TypeRef> UsedSymmTypes;
-            map<TypeRef, u32> SymmTypeOffsets;
+            WellOrderedTypeSetT UsedSymmTypes;
+            WellOrderedTypeMapT<u32> SymmTypeOffsets;
 
-            map<TypeRef, vector<TypeRef>> ParamTypeInsts;
-            map<TypeRef, vector<ExpT>> PInstToParams;
-            map<TypeRef, TypeRef> PInstToParamType;
+            WellOrderedTypeMapT<vector<TypeRef>> ParamTypeInsts;
+            WellOrderedTypeMapT<vector<ExpT>> PInstToParams;
+            WellOrderedTypeMapT<TypeRef> PInstToParamType;
             // MsgID -> Permutation -> MsgID
             vector<vector<u32>> MsgCanonMap;
             // MsgID -> TypeName
             vector<string> MsgTypeMap;
 
             vector<ExpT> StateVectorVars;
-            // Map from automaton name to the set of valid parameter
-            // instantiations
-            map<string, set<vector<ExpT>>> ValidAutomata;
 
             // Channel buffers that need to be sorted
             // on every transition
@@ -136,10 +133,10 @@ namespace ESMC {
             unordered_map<i64, pair<ExpT, ExpT>> UpdateOpToUpdateLValue;
 
             unordered_map<i64, ExpT> GuardOpToExp;
-            unordered_map<i64, set<ExpT>> GuardSymmetryConstraints;
-            unordered_map<i64, set<ExpT>> GuardMutualExclusiveSets;
-            unordered_map<i64, set<ExpT>> GuardOpToUpdates;
-            unordered_map<i64, set<ExpT>> GuardOpToUpdateSymmetryConstraints;
+            unordered_map<i64, WellOrderedExpSetT> GuardSymmetryConstraints;
+            unordered_map<i64, WellOrderedExpSetT> GuardMutualExclusiveSets;
+            unordered_map<i64, WellOrderedExpSetT> GuardOpToUpdates;
+            unordered_map<i64, WellOrderedExpSetT> GuardOpToUpdateSymmetryConstraints;
             unordered_map<i64, ExpT> StateUpdateOpToExp;
             unordered_map<i64, ExpT> AllOpToExp;
 
@@ -163,8 +160,8 @@ namespace ESMC {
             const vector<ISGenRef>& GetInitStateGenerators() const;
             const vector<GCmdRef>& GetGuardedCmds() const;
             const vector<ExpT>& GetStateVectorVars() const;
-            const set<TypeRef>& GetUsedSymmTypes() const;
-            const map<TypeRef, u32>& GetSymmTypeOffsets() const;
+            const WellOrderedTypeSetT& GetUsedSymmTypes() const;
+            const WellOrderedTypeMapT<u32>& GetSymmTypeOffsets() const;
             u32 GetStateVectorSize() const;
 
             // methods for creating expressions

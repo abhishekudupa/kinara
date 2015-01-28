@@ -218,6 +218,57 @@ namespace ESMC {
             }
         };
 
+        class TypePtrHasher
+        {
+        public:
+            // inline u64 operator () (const TypeBase* Type) const
+            // {
+            //     return Type->Hash();
+            // }
+
+            inline u64 operator () (const TypeRef& Type) const
+            {
+                return Type->Hash();
+            }
+        };
+
+        class TypePtrEquals
+        {
+        public:
+            // inline bool operator () (const TypeBase* Type1,
+            //                          const TypeBase* Type2) const
+            // {
+            //     return Type1->Equals(*Type2);
+            // }
+
+            inline bool operator () (const TypeRef& Type1,
+                                     const TypeRef& Type2) const
+            {
+                return Type1->Equals(*Type2);
+            }
+        };
+
+        class TypePtrCompare
+        {
+        public:
+            // inline bool operator () (const TypeBase* Type1,
+            //                          const TypeBase* Type2) const
+            // {
+            //     return Type1->LT(*Type2);
+            // }
+
+            inline bool operator () (const TypeRef& Type1,
+                                     const TypeRef& Type2) const
+            {
+                return Type1->LT(*Type2);
+            }
+        };
+
+        // Some typedefs lifted from LTSDecls.hpp to avoid circular #includes
+        typedef set<TypeRef, TypePtrCompare> WellOrderedTypeSetT;
+        template <typename ValType>
+        using WellOrderedTypeMapT = map<TypeRef, ValType, TypePtrCompare>;
+
         // An abstract base for all scalar types
         class ScalarType : public TypeBase
         {
@@ -542,8 +593,8 @@ namespace ESMC {
         class UnionType : public RecordType
         {
         private:
-            set<TypeRef> MemberTypes;
-            map<TypeRef, u32> MemberTypeToID;
+            WellOrderedTypeSetT MemberTypes;
+            WellOrderedTypeMapT<u32> MemberTypeToID;
             map<u32, TypeRef> IDToMemberType;
             map<u32, map<string, string>> MemberFieldToField;
             map<u32, map<string, string>> FieldToMemberField;
@@ -556,12 +607,12 @@ namespace ESMC {
 
         public:
             UnionType(const string& Name,
-                      const set<TypeRef>& MemberTypes,
+                      const WellOrderedTypeSetT& MemberTypes,
                       const TypeRef& TypeIDFieldType);
             virtual ~UnionType();
 
-            const set<TypeRef>& GetMemberTypes() const;
-            const map<TypeRef, u32>& GetMemberTypeToID() const;
+            const WellOrderedTypeSetT& GetMemberTypes() const;
+            const WellOrderedTypeMapT<u32>& GetMemberTypeToID() const;
             const map<u32, TypeRef>& GetIDToMemberType() const;
             const map<u32, map<string, string>>& GetMemberFieldToField() const;
             const map<u32, map<string, string>>& GetFieldToMemberField() const;
@@ -578,51 +629,6 @@ namespace ESMC {
             string GetClearValue() const override;
         };
 
-        class TypePtrHasher
-        {
-        public:
-            // inline u64 operator () (const TypeBase* Type) const
-            // {
-            //     return Type->Hash();
-            // }
-
-            inline u64 operator () (const TypeRef& Type) const
-            {
-                return Type->Hash();
-            }
-        };
-
-        class TypePtrEquals
-        {
-        public:
-            // inline bool operator () (const TypeBase* Type1,
-            //                          const TypeBase* Type2) const
-            // {
-            //     return Type1->Equals(*Type2);
-            // }
-
-            inline bool operator () (const TypeRef& Type1,
-                                     const TypeRef& Type2) const
-            {
-                return Type1->Equals(*Type2);
-            }
-        };
-
-        class TypePtrCompare
-        {
-        public:
-            // inline bool operator () (const TypeBase* Type1,
-            //                          const TypeBase* Type2) const
-            // {
-            //     return Type1->LT(*Type2);
-            // }
-
-            inline bool operator () (const TypeRef& Type1,
-                                     const TypeRef& Type2) const
-            {
-                return Type1->LT(*Type2);
-            }
-        };
 
         // A helper routine to check if types are assignment compatible
         static inline bool CheckAsgnCompat(const TypeRef& LHS,

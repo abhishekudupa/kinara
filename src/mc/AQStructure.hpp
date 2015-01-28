@@ -265,12 +265,12 @@ namespace ESMC {
             LabelledTS* GetLTS() const;
 
             // Path finding methods
-            AQSPermPath* FindPath(const set<const StateVec*>& Origins,
+            AQSPermPath* FindPath(const vector<const StateVec*>& Origins,
                                   const StateVec* Target) const;
-            AQSPermPath* FindPath(const set<const StateVec*>& Origins,
+            AQSPermPath* FindPath(const vector<const StateVec*>& Origins,
                                   const function<bool(const StateVec*)>& TargetPred) const;
             // On edges
-            AQSPermPath* FindPath(const set<const StateVec*>& Origins,
+            AQSPermPath* FindPath(const vector<const StateVec*>& Origins,
                                   const function<const StateVec*(const StateVec*,
                                                                  const AQSEdge*)>&
                                   TargetEdgePred) const;
@@ -283,17 +283,17 @@ namespace ESMC {
                                   TargetEdgePred) const;
 
             // Shortest paths with cost functions
-            AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
+            AQSPermPath* FindShortestPath(const vector<const StateVec*>& Origins,
                                           const StateVec* Target,
                                           const function<u64(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
 
-            AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
+            AQSPermPath* FindShortestPath(const vector<const StateVec*>& Origins,
                                           const function<bool(const StateVec*)>& TargetPred,
                                           const function<u64(const StateVec*, const AQSEdge*)>&
                                           CostFunction) const;
 
-            AQSPermPath* FindShortestPath(const set<const StateVec*>& Origins,
+            AQSPermPath* FindShortestPath(const vector<const StateVec*>& Origins,
                                           const function<const StateVec*(const StateVec*,
                                                                          const AQSEdge*)>&
                                           TargetEdgePred,
@@ -501,11 +501,11 @@ namespace ESMC {
             void ApplyToAllStates(const function<void(const ProductState*)>& Func) const;
 
             // Paths and shortest paths
-            PSPermPath* FindPath(const set<const ProductState*>& Origins,
+            PSPermPath* FindPath(const vector<const ProductState*>& Origins,
                                  const ProductState* Target) const;
-            PSPermPath* FindPath(const set<const ProductState*>& Origins,
+            PSPermPath* FindPath(const vector<const ProductState*>& Origins,
                                  const function<bool(const ProductState*)>& TargetPred) const;
-            PSPermPath* FindPath(const set<const ProductState*>& Origins,
+            PSPermPath* FindPath(const vector<const ProductState*>& Origins,
                                  const function<const ProductState*(const ProductState*,
                                                                     const ProductEdge*)>&
                                  TargetEdgePred) const;
@@ -517,17 +517,17 @@ namespace ESMC {
                                  TargetEdgePred) const;
 
             // Actual shortest paths with cost functions
-            PSPermPath* FindShortestPath(const set<const ProductState*>& Origins,
+            PSPermPath* FindShortestPath(const vector<const ProductState*>& Origins,
                                          const ProductState* Target,
                                          const function<u64(const ProductState*,
                                                             const ProductEdge*)>&
                                          CostFunction) const;
-            PSPermPath* FindShortestPath(const set<const ProductState*>& Origins,
+            PSPermPath* FindShortestPath(const vector<const ProductState*>& Origins,
                                          const function<bool(const ProductState*)>& TargetPred,
                                          const function<u64(const ProductState*,
                                                             const ProductEdge*)>&
                                          CostFunction) const;
-            PSPermPath* FindShortestPath(const set<const ProductState*>& Origins,
+            PSPermPath* FindShortestPath(const vector<const ProductState*>& Origins,
                                          const function<const ProductState*(const ProductState*,
                                                                             const ProductEdge*)>&
                                          TargetEdgePred,

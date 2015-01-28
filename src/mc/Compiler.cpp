@@ -581,7 +581,7 @@ namespace ESMC {
                 auto it = AllFalsePreds.find(MyOpCode);
                 if (it != AllFalsePreds.end()) {
                     // check if my all false pred is true
-                    Z3TPRef TP = Model.GetTPPtr();
+                    const Z3TPRef& TP = Model.GetTPPtr();
                     auto Res = TP->Evaluate(it->second);
                     auto ResAsConst = Res->As<Exprs::ConstExpression>();
                     if (ResAsConst == nullptr) {

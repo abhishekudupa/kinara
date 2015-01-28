@@ -305,7 +305,8 @@ namespace ESMC {
             }
         }
 
-        static inline void ExpandExpression(const ExpT& Exp, set<ExpT>& Expansions)
+        static inline void ExpandExpression(const ExpT& Exp,
+                                            WellOrderedExpSetT& Expansions)
         {
             auto VarType = Exp->GetType();
             auto Mgr = Exp->GetMgr();
@@ -354,7 +355,7 @@ namespace ESMC {
 
         static inline vector<ExpT> GetScalarTerms(const ExpT& Exp)
         {
-            set<ExpT> ExpandedTerms;
+            WellOrderedExpSetT ExpandedTerms;
             ExpandExpression(Exp, ExpandedTerms);
             return vector<ExpT>(ExpandedTerms.begin(), ExpandedTerms.end());
         }

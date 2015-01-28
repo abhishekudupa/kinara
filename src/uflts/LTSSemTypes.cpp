@@ -1424,7 +1424,7 @@ namespace ESMC {
         }
 
         UnionType::UnionType(const string& Name,
-                             const set<TypeRef>& MemberTypes,
+                             const WellOrderedTypeSetT& MemberTypes,
                              const TypeRef& TypeIDFieldType)
             : RecordType(), MemberTypes(MemberTypes),
               TypeIDFieldType(TypeIDFieldType)
@@ -1451,14 +1451,14 @@ namespace ESMC {
             u32 NumTypesSeen = 1;
             // Find the maximum number of occurences of each type
             // in each member type
-            map<TypeRef, u32> MaxOccCount;
+            WellOrderedTypeMapT<u32> MaxOccCount;
 
             for (auto const& MemberType : MemberTypes) {
                 auto MemberTypeAsRec = MemberType->As<RecordType>();
                 if (MemberTypeAsRec == nullptr) {
                     throw ESMCError((string)"Only record types can be members of Message types");
                 }
-                map<TypeRef, u32> CurOccCount;
+                WellOrderedTypeMapT<u32> CurOccCount;
                 auto const& MemberVec = MemberTypeAsRec->GetMemberVec();
 
                 for (auto const& Member : MemberVec) {
@@ -1525,12 +1525,12 @@ namespace ESMC {
             // Nothing here
         }
 
-        const set<TypeRef>& UnionType::GetMemberTypes() const
+        const WellOrderedTypeSetT& UnionType::GetMemberTypes() const
         {
             return MemberTypes;
         }
 
-        const map<TypeRef, u32>& UnionType::GetMemberTypeToID() const
+        const WellOrderedTypeMapT<u32>& UnionType::GetMemberTypeToID() const
         {
             return MemberTypeToID;
         }

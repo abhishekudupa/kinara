@@ -279,7 +279,7 @@ namespace ESMC {
         class LTSTransitionOutput : public LTSTransitionIOBase
         {
         private:
-            set<LTSFairObjRef> FairnessObjsSatisfied;
+            FairObjSetT FairnessObjsSatisfied;
 
         public:
             LTSTransitionOutput(EFSMBase* TheEFSM,
@@ -289,11 +289,11 @@ namespace ESMC {
                                 const vector<LTSAssignRef>& Updates,
                                 const string& MessageName,
                                 const TypeRef& MessageType,
-                                const set<LTSFairObjRef>& FairnessObjsSatisfied,
+                                const FairObjSetT& FairnessObjsSatisfied,
                                 const LTSSymbTransRef& SymbolicTransition);
             virtual ~LTSTransitionOutput();
 
-            const set<LTSFairObjRef>& GetFairnessObjsSatisfied() const;
+            const FairObjSetT& GetFairnessObjsSatisfied() const;
 
             virtual string ToString(u32 Verbosity = 0) const override;
         };
@@ -301,7 +301,7 @@ namespace ESMC {
         class LTSTransitionInternal : public LTSTransitionBase
         {
         private:
-            set<LTSFairObjRef> FairnessObjsSatisfied;
+            FairObjSetT FairnessObjsSatisfied;
 
         public:
             LTSTransitionInternal(EFSMBase* TheEFSM,
@@ -309,11 +309,11 @@ namespace ESMC {
                                   const LTSState& InitState,
                                   const ExpT& Guard,
                                   const vector<LTSAssignRef>& Updates,
-                                  const set<LTSFairObjRef>& FairnessObjsSatisfied,
+                                  const FairObjSetT& FairnessObjsSatisfied,
                                   const LTSSymbTransRef& SymbolicTransition);
             virtual ~LTSTransitionInternal();
 
-            const set<LTSFairObjRef>& GetFairnessObjsSatisfied() const;
+            const FairObjSetT& GetFairnessObjsSatisfied() const;
             virtual string ToString(u32 Verbosity = 0) const override;
         };
 

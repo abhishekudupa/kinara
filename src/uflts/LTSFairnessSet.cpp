@@ -118,11 +118,6 @@ namespace ESMC {
             return FairnessSet->GetNumInstances();
         }
 
-        const map<vector<ExpT>, LTSFairObjRef>& LTSFairnessObject::GetSiblings() const
-        {
-            return FairnessSet->GetAllFairnessObjs();
-        }
-
         FairSetFairnessType LTSFairnessObject::GetFairnessType() const
         {
             return FairnessSet->GetFairnessType();
@@ -201,11 +196,6 @@ namespace ESMC {
         u32 LTSFairnessSet::GetClassID() const
         {
             return ClassID;
-        }
-
-        const map<vector<ExpT>, LTSFairObjRef>& LTSFairnessSet::GetAllFairnessObjs() const
-        {
-            return FairnessObjects;
         }
 
         const LTSFairObjRef& LTSFairnessSet::GetFairnessObj(const vector<ExpT>& Instance) const

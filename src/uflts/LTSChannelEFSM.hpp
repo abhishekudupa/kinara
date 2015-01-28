@@ -80,14 +80,14 @@ namespace ESMC {
             inline void MakeInputTransition(u32 InstanceID,
                                             const MgrT::SubstMapT& SubstMap,
                                             const TypeRef& MessageType,
-                                            const set<LTSFairObjRef>& FairnessObjsSatisfied);
+                                            const FairObjSetT& FairnessObjsSatisfied);
 
             inline void MakeOutputTransition(u32 InstanceID,
                                              const MgrT::SubstMapT& SubstMap,
                                              const TypeRef& MessageType,
-                                             const set<LTSFairObjRef>&
+                                             const FairObjSetT&
                                              FairnessObjsSatisfiedByNonDupOutputs,
-                                             const set<LTSFairObjRef>&
+                                             const FairObjSetT&
                                              FairnessObjsSatisfiedByDupOutputs);
 
         public:

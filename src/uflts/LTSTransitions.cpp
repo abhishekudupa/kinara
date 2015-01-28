@@ -191,7 +191,7 @@ namespace ESMC {
                                                  const vector<LTSAssignRef>& Updates,
                                                  const string& MessageName,
                                                  const TypeRef& MessageType,
-                                                 const set<LTSFairObjRef>& FairnessObjsSatisfied,
+                                                 const FairObjSetT& FairnessObjsSatisfied,
                                                  const LTSSymbTransRef& SymbolicTransition)
             : LTSTransitionIOBase(TheEFSM, ParamInst, InitState, Guard, Updates,
                                   MessageName, MessageType, SymbolicTransition),
@@ -205,7 +205,7 @@ namespace ESMC {
             // Nothing here
         }
 
-        const set<LTSFairObjRef>& LTSTransitionOutput::GetFairnessObjsSatisfied() const
+        const FairObjSetT& LTSTransitionOutput::GetFairnessObjsSatisfied() const
         {
             return FairnessObjsSatisfied;
         }
@@ -233,7 +233,7 @@ namespace ESMC {
                                                      const LTSState& InitState,
                                                      const ExpT& Guard,
                                                      const vector<LTSAssignRef>& Updates,
-                                                     const set<LTSFairObjRef>& FairnessObjsSatisfied,
+                                                     const FairObjSetT& FairnessObjsSatisfied,
                                                      const LTSSymbTransRef& SymbolicTransition)
             : LTSTransitionBase(TheEFSM, ParamInst, InitState, Guard, Updates, SymbolicTransition),
               FairnessObjsSatisfied(FairnessObjsSatisfied)
@@ -246,7 +246,7 @@ namespace ESMC {
             // Nothing here
         }
 
-        const set<LTSFairObjRef>& LTSTransitionInternal::GetFairnessObjsSatisfied() const
+        const FairObjSetT& LTSTransitionInternal::GetFairnessObjsSatisfied() const
         {
             return FairnessObjsSatisfied;
         }

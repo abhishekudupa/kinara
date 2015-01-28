@@ -62,7 +62,7 @@ namespace ESMC {
         using namespace Synth;
         using namespace TP;
 
-        vector<ExpT> TraceAnalyses::GetAllScalarLeaves(ExpT InitialExp) {
+        vector<ExpT> TraceAnalyses::GetAllScalarLeaves(const ExpT& InitialExp) {
             vector<ExpT> Retval;
             vector<ExpT> ExpressionsToCheck = {InitialExp};
             while (ExpressionsToCheck.size() > 0) {
@@ -96,33 +96,9 @@ namespace ESMC {
             return Retval;
         }
 
-        vector<GCmdRef> TraceAnalyses::GuardedCommandsFromTrace(TraceBase* Trace)
+        FairObjSetT TraceAnalyses::GetLTSFairnessObjects(LTS::LabelledTS* TheLTS)
         {
-            vector<LTS::GCmdRef> GuardedCommands;
-            if (Trace->Is<SafetyViolation>()) {
-                auto TraceAsSafetyViolation = Trace->As<SafetyViolation>();
-                auto TraceElements = TraceAsSafetyViolation->GetTraceElems();
-                transform(TraceElements.begin(), TraceElements.end(), GuardedCommands.begin(),
-                          [&](TraceElemT& Element){return Element.first;});
-            } else if (Trace->Is<LivenessViolation>()) {
-                auto TraceAsLivenessViolation = Trace->As<LivenessViolation>();
-                auto TraceStemElements = TraceAsLivenessViolation->GetStem();
-                auto TraceLoopElements = TraceAsLivenessViolation->GetLoop();
-                transform(TraceStemElements.begin(),
-                          TraceStemElements.end(),
-                          back_inserter(GuardedCommands),
-                          [&](PSTraceElemT& Element){return Element.first;});
-                transform(TraceLoopElements.begin(),
-                          TraceLoopElements.end(),
-                          back_inserter(GuardedCommands),
-                          [&](PSTraceElemT& Element){return Element.first;});
-            }
-            return GuardedCommands;
-        }
-
-        set<LTSFairObjRef> TraceAnalyses::GetLTSFairnessObjects(LTS::LabelledTS* TheLTS)
-        {
-            set<LTSFairObjRef> Retval;
+            FairObjSetT Retval;
 
             // method 1
             // auto AllEFSMs = TheLTS->GetEFSMs([&] (const EFSMBase *) {return true;});
@@ -150,7 +126,7 @@ namespace ESMC {
             //     auto InternalTransition = Transition->SAs<LTSTransitionInternal>();
             //     auto const& ParamInst = InternalTransition->GetParamInst();
             //     auto const& StrFairnesses = InternalTransition->GetCompOfFairnessSets();
-            //     set<LTSFairObjRef> ActualFairnesses;
+            //     FairObjSetT ActualFairnesses;
             //     for (auto const& StrFairness : StrFairnesses) {
             //         auto const& ActFairness =
             //             AllFairnesses->GetFairnessObj(StrFairness, ParamInst);
@@ -167,105 +143,11 @@ namespace ESMC {
             return Retval;
         }
 
-        const StateVec* TraceAnalyses::GetLastState(SafetyViolation* Trace)
-        {
-            return Trace->GetTraceElems().back().second;
-        }
-
-        bool TraceAnalyses::HasUF(ExpT Exp) {
-            auto HasUF = [&] (const ExpBaseT* Exp) -> bool
-                {
-                    auto ExpAsOpExp = Exp->As<OpExpression>();
-                    if (ExpAsOpExp != nullptr) {
-                        auto Code = ExpAsOpExp->GetOpCode();
-                        return (Code >= LTSOps::UFOffset);
-                    }
-                    return false;
-                };
-            return Exp->GetMgr()->Gather(Exp, HasUF).size() > 0;
-        }
-
-        vector<LTS::GCmdRef>
-        TraceAnalyses::TentativeGuardedCommandsInLTS(LTS::LabelledTS* TheLTS)
-        {
-            vector<LTS::GCmdRef> Retval;
-            for (auto GuardedCommand : TheLTS->GetGuardedCmds()) {
-                auto Guard = GuardedCommand->GetGuard();
-                auto HasUF = [&] (const ExpBaseT* Exp) -> bool
-                    {
-                        auto ExpAsOpExp = Exp->As<OpExpression>();
-                        if (ExpAsOpExp != nullptr) {
-                            auto Code = ExpAsOpExp->GetOpCode();
-                            return (Code >= LTSOps::UFOffset);
-                        }
-                        return false;
-                    };
-                auto UFFunctionsinGuard = Guard->GetMgr()->Gather(Guard, HasUF);
-                if (UFFunctionsinGuard.size() > 0) {
-                    Retval.push_back(GuardedCommand);
-                }
-            }
-            return  Retval;
-        }
-
-        map<vector<ExpT>, ExpT>
-        TraceAnalyses::ModelResults(LabelledTS* TheLTS, ExpT UFExp, Z3TPRef TP)
-        {
-            map<vector<ExpT>, ExpT> Retval;
-            vector<vector<ExpT>> Inputs;
-            auto UFExpAsOp = UFExp->As<OpExpression>();
-            auto Children = UFExpAsOp->GetChildren();
-            for (auto Child : Children) {
-                vector<ExpT> ChildrenInputs;
-                for (auto Element : Child->GetType()->GetElements()) {
-                    auto ExpValue = TheLTS->MakeVal(Element, Child->GetType());
-                    ChildrenInputs.push_back(ExpValue);
-                }
-                Inputs.push_back(ChildrenInputs);
-            }
-            auto Product = CrossProduct<ExpT>(Inputs.begin(), Inputs.end());
-            for (auto Combo : Product) {
-                auto NewExp = TheLTS->MakeOp(UFExpAsOp->GetOpCode(), Combo);
-                Retval[Combo] = TP->Evaluate(NewExp);
-            }
-            return Retval;
-        }
-
-        ExpT
-        TraceAnalyses::ConditionToResolveDeadlock(LabelledTS* TheLTS,
-                                                  DeadlockViolation* DeadlockTrace)
-        {
-            vector<GCmdRef> PotentialCommands;
-            auto LastState = GetLastState(DeadlockTrace);
-            for (auto GuardedCommand : TheLTS->GetGuardedCmds()) {
-                if (IsGuardedCommandEnabled(TheLTS, LastState, GuardedCommand)) {
-                    PotentialCommands.push_back(GuardedCommand);
-                }
-            }
-            auto GetGuard = [&](GCmdRef GCmd){return GCmd->GetGuard();};
-            vector<ExpT> PotentialGuards;
-            transform(PotentialCommands.begin(), PotentialCommands.end(),
-                      back_inserter(PotentialGuards), GetGuard);
-            auto Disjunct = [&](ExpT One, ExpT Two)
-                {
-                    if (One == TheLTS->MakeFalse()) {
-                        return Two;
-                    } else {
-                        return TheLTS->MakeOp(LTSOps::OpOR, One, Two);
-                    }
-                };
-            auto GuardCondition = accumulate(PotentialGuards.begin(), PotentialGuards.end(),
-                                             TheLTS->MakeFalse(), Disjunct);
-            auto StateCondition = AutomataStatesCondition(TheLTS, LastState);
-            return TheLTS->MakeOp(LTSOps::OpOR, GuardCondition,
-                                  TheLTS->MakeOp(LTSOps::OpNOT, StateCondition));
-        }
-
-        set<LTSFairObjRef>
+        FairObjSetT
         TraceAnalyses::GetLoopFairnessObjects(LabelledTS* TheLTS,
                                               const LivenessViolation* LivenessViolation)
         {
-            set<LTSFairObjRef> Retval;
+            FairObjSetT Retval;
             for (auto TraceElement: LivenessViolation->GetLoop()) {
                 auto GuardedCommand = TraceElement.first;
                 auto const& FairObjects = GuardedCommand->GetFairnessObjsSatisfied();
@@ -276,7 +158,7 @@ namespace ESMC {
             return Retval;
         }
 
-        set<LTSFairObjRef>
+        FairObjSetT
         TraceAnalyses::TriviallySatisfiedFairnessObjectsInLoop(LabelledTS* TheLTS,
                                                                const LivenessViolation*
                                                                LivenessViolation)
@@ -290,12 +172,13 @@ namespace ESMC {
             return Retval;
         }
 
-        ExpT TraceAnalyses::WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
-                                                           StateBuchiAutomaton* Monitor,
-                                                           MgrT::SubstMapT InitialStateSubstMap,
-                                                           const LivenessViolation* Trace,
-                                                           ExpT InitialCondition,
-                                                           int StartIndexInLoop)
+        ExpT
+        TraceAnalyses::WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
+                                                      StateBuchiAutomaton* Monitor,
+                                                      const MgrT::SubstMapT& InitialStateSubstMap,
+                                                      const LivenessViolation* Trace,
+                                                      const ExpT& InitialCondition,
+                                                      int StartIndexInLoop)
         {
             auto Mgr = InitialCondition->GetMgr();
             vector<PSTraceElemT> Loop = Trace->GetLoop();
@@ -398,9 +281,9 @@ namespace ESMC {
         ExpT
         TraceAnalyses::EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
                                                    StateBuchiAutomaton* Monitor,
-                                                   MgrT::SubstMapT InitialStateSubstMap,
+                                                   const MgrT::SubstMapT& InitialStateSubstMap,
                                                    const LivenessViolation* LivenessViolation,
-                                                   set<LTSFairObjRef> FairnessObjects)
+                                                   const FairObjSetT& FairnessObjects)
         {
             vector<ExpT> EnableConditions;
             auto Loop = LivenessViolation->GetLoop();
@@ -436,49 +319,6 @@ namespace ESMC {
             return MakeDisjunction(EnableConditions, TheLTS->GetMgr());
         }
 
-        map<pair<EFSMBase*, vector<ExpT> >, string>
-        TraceAnalyses::GuardedCommandInitialStates(GCmdRef GuardedCommand)
-        {
-            map<pair<EFSMBase*, vector<ExpT>>, string> Retval;
-            auto ProductTransition = GuardedCommand->GetProductTransition();
-            vector<LTSState> ProductStates;
-            for (auto Transition: GuardedCommand->GetProductTransition()) {
-                vector<ExpT> ParamInst(Transition->GetParamInst());
-                auto EFSMParamInst = make_pair(Transition->GetEFSM(),
-                                               ParamInst);
-                Retval[EFSMParamInst] = Transition->GetInitState().GetName();
-            }
-            return Retval;
-        }
-
-        map<pair<EFSMBase*, vector<ExpT> >, string>
-        TraceAnalyses::AutomataStatesFromStateVector(LabelledTS* TheLTS, const StateVec* StateVector)
-        {
-            map<pair<EFSMBase*, vector<ExpT>>, string> Retval;
-            auto AllEFSMs = TheLTS->GetEFSMs([&] (const EFSMBase *) {return true;});
-            for (auto EFSM: AllEFSMs) {
-                auto FAType = TheLTS->MakeFieldAccessType();
-                auto EFSMType = TheLTS->GetEFSMType(EFSM->GetName());
-                for (auto ParamInst: EFSM->GetParamInsts()) {
-                    auto EFSMStateVar = TheLTS->MakeVar(EFSM->GetName(), EFSMType);
-                    ExpT EFSMDotState;
-                    for (auto Param: ParamInst) {
-                        EFSMStateVar = TheLTS->MakeOp(LTSOps::OpIndex,
-                                                      EFSMStateVar,
-                                                      Param);
-                    }
-                    EFSMDotState = TheLTS->MakeOp(LTSOps::OpField, EFSMStateVar,
-                                                  TheLTS->MakeVar("state", FAType));
-                    auto Interpreter = EFSMDotState->ExtensionData.Interp;
-                    i64 StateValue = Interpreter->Evaluate(StateVector);
-                    auto EFSMDotStateAsEnum = EFSMDotState->GetType()->As<EnumType>();
-                    auto EFSMParamInst = make_pair(EFSM, ParamInst);
-                    Retval[EFSMParamInst] = EFSMDotStateAsEnum->ValToConst(StateValue);
-                }
-            }
-            return Retval;
-        }
-
         ExpT
         TraceAnalyses::AutomataStatesCondition(LabelledTS* TheLTS, const StateVec* StateVector)
         {
@@ -510,24 +350,7 @@ namespace ESMC {
             return Retval;
         }
 
-        bool TraceAnalyses::IsGuardedCommandEnabled(LabelledTS* TheLTS,
-                                                    const StateVec* StateVector,
-                                                    GCmdRef GuardedCommand) {
-            auto AutomataStates = AutomataStatesFromStateVector(TheLTS, StateVector);
-            auto GuardedCommandStates = GuardedCommandInitialStates(GuardedCommand);
-            bool enabled = true;
-            for (auto EFSMParamInstState : GuardedCommandStates) {
-                auto EFSMParamInst = EFSMParamInstState.first;
-                auto AutomatonState = AutomataStates[EFSMParamInst];
-                if (AutomatonState != EFSMParamInstState.second) {
-                    enabled = false;
-                    break;
-                }
-            }
-            return enabled;
-        }
-
-        FastExpSetT
+        vector<ExpT>
         TraceAnalyses::WeakestPrecondition(Solver* TheSolver,
                                            SafetyViolation* Trace,
                                            const ExpT& InitialPredicate)
@@ -594,7 +417,7 @@ namespace ESMC {
                               );
             }
 
-            FastExpSetT Retval;
+            vector<ExpT> Retval;
             auto InitStateGenerators = TheLTS->GetInitStateGenerators();
 
             for (auto const& InitState : InitStateGenerators) {
@@ -628,7 +451,9 @@ namespace ESMC {
                                Out_ << "Simplified:" << endl << NewPhi->ToString() << endl;
                                );
 
-                Retval.insert(NewPhi);
+                if (NewPhi != Mgr->MakeTrue()) {
+                    Retval.push_back(NewPhi);
+                }
             }
             return Retval;
         }

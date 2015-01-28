@@ -164,7 +164,7 @@ namespace ESMC {
                                            const string& MessageName,
                                            const TypeRef& MessageType,
                                            const TypeRef& ActMType,
-                                           const set<LTSFairObjRef>& FairnessObjsSatisfied,
+                                           const FairObjSetT& FairnessObjsSatisfied,
                                            const LTSSymbTransRef& SymbTrans);
 
             void AddInternalTransForInstance(u32 InstanceID,
@@ -172,7 +172,7 @@ namespace ESMC {
                                              const string& InitState,
                                              const ExpT& Guard,
                                              const vector<LTSAssignRef>& Updates,
-                                             const set<LTSFairObjRef>& FairnessObjsSatisfied,
+                                             const FairObjSetT& FairnessObjsSatisfied,
                                              const LTSSymbTransRef& SymbTrans);
 
         public:

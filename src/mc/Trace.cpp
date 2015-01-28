@@ -171,9 +171,16 @@ namespace ESMC {
                 auto NextUnsortedState = get<1>(CmdNextUnsortedState);
 
                 if (TransitionCmd == GCmdRef::NullPtr) {
-                    throw InternalError((string)"Could not find a command to compute the " +
-                                        "next unwound state\nAt: " + __FILE__ + ":" +
-                                        to_string(__LINE__));
+                    ostringstream sstr;
+                    auto Printer = Checker->Printer;
+                    sstr << "Could not find a command to compute the next unwound state!"
+                         << endl << "Current unwound state:" << endl;
+                    Printer->PrintState(CurUnwoundState, sstr);
+                    sstr << endl << "Next Unwound state:" << endl;
+                    Printer->PrintState(NextUnwoundState, sstr);
+                    sstr << endl;
+                    sstr << "At: " << __FUNCTION__ << ", " << __FILE__ << ":" << __LINE__ << endl;
+                    throw InternalError(sstr.str());
                 } else {
                     NextUnwoundState->Recycle();
                     PathElems.push_back(TraceElemT(TransitionCmd, NextUnsortedState));

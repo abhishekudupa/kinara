@@ -304,7 +304,6 @@ namespace ESMC {
             inline bool CheckSCCFairness(const ProductState* SCCRoot,
                                          vector<const ProductState*>& UnfairStates);
 
-            inline unordered_set<const ProductState*> ExpandSCC(const ProductState* SCCRoot);
 
         public:
             LTSChecker(LabelledTS* TheLTS);

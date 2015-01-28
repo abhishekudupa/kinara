@@ -459,12 +459,12 @@ namespace ESMC {
             return FinalCondExp;
         }
 
-        const set<TypeRef>& LabelledTS::GetUsedSymmTypes() const
+        const WellOrderedTypeSetT& LabelledTS::GetUsedSymmTypes() const
         {
             return UsedSymmTypes;
         }
 
-        const map<TypeRef, u32>& LabelledTS::GetSymmTypeOffsets() const
+        const WellOrderedTypeMapT<u32>& LabelledTS::GetSymmTypeOffsets() const
         {
             return SymmTypeOffsets;
         }
@@ -590,10 +590,6 @@ namespace ESMC {
                 CurStateVar->ExtensionData.Offset = StateVectorSize;
                 StateVectorVars.push_back(CurStateVar);
                 StateVectorSize += StateVarType->GetByteSize();
-                ValidAutomata[EFSM->Name] =
-                    set<vector<ExpT>>(EFSM->ParamInsts.begin(),
-                                      EFSM->ParamInsts.end());
-
                 SymTab.Bind(Name, new VarDecl(Name, StateVarType));
 
 
@@ -676,15 +672,15 @@ namespace ESMC {
             MsgsFrozen = true;
 
             // create the union type
-            set<TypeRef> UnionMembers;
+            WellOrderedTypeSetT UnionMembers;
             for (auto const& MsgType : MsgTypes) {
                 UnionMembers.insert(MsgType.second);
             }
 
             auto TypeIDFieldType = Mgr->MakeType<RangeType>(0, 65000);
             UnifiedMsgType = Mgr->MakeType<UnionType>("UnifiedMsgType",
-                                                          UnionMembers,
-                                                          TypeIDFieldType);
+                                                      UnionMembers,
+                                                      TypeIDFieldType);
         }
 
         const vector<ISGenRef>&
@@ -749,7 +745,7 @@ namespace ESMC {
         }
 
         TypeRef LabelledTS::MakeEnumType(const string& Name,
-                                             const set<string>& Members)
+                                         const set<string>& Members)
         {
             AssertNotFrozen();
             CheckTypeName(Name);

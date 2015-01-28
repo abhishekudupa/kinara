@@ -112,8 +112,28 @@ namespace ESMC {
         typedef Exprs::QuantifiedExpressionBase<LTSExtensionT, LTSTermSemanticizer> QExpT;
         typedef Exprs::EQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> EQExpT;
         typedef Exprs::AQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> AQExpT;
+
         typedef unordered_set<ExpT, Exprs::ExpressionPtrHasher> FastExpSetT;
         typedef unordered_map<ExpT, ExpT, Exprs::ExpressionPtrHasher> FastExpMapT;
+
+        typedef set<ExpT, Exprs::ExpressionPtrCompare> WellOrderedExpSetT;
+        template <typename ValType>
+        using WellOrderedExpMapT = map<ExpT, ValType, Exprs::ExpressionPtrCompare>;
+
+        typedef set<TypeRef, TypePtrCompare> WellOrderedTypeSetT;
+        template <typename ValType>
+        using WellOrderedTypeMapT = map<TypeRef, ValType, TypePtrCompare>;
+
+        typedef set<LTSFairObjRef, StringifiablePtrCompare<0>> FairObjSetT;
+        typedef unordered_set<LTSFairObjRef, StringifiablePtrHasher<0>,
+                              StringifiablePtrEquals<0>> FairObjUnorderedSetT;
+
+        template <typename ValType>
+        using FairObjMapT = map<LTSFairObjRef, StringifiablePtrCompare<0>, ValType>;
+
+        template <typename ValType>
+        using FairObjUnorderedMapT = unordered_map<LTSFairObjRef, StringifiablePtrHasher<0>,
+                                                   StringifiablePtrEquals<0>, ValType>;
 
     } /* end namespace LTS */
 } /* end namespace ESMC */

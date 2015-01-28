@@ -149,7 +149,8 @@ namespace ESMC {
                 FinalAssertion = Assertion;
             }
 
-            if (AssertedConstraints.find(FinalAssertion) != AssertedConstraints.end()) {
+            if (AssertedConstraintSet.find(FinalAssertion) !=
+                AssertedConstraintSet.end()) {
                 if (FinalAssertion != TheLTS->MakeTrue()) {
                     ESMC_LOG_FULL(
                                   "Solver.Duplicates",
@@ -160,7 +161,8 @@ namespace ESMC {
                 return;
             }
 
-            AssertedConstraints.insert(FinalAssertion);
+            AssertedConstraintSet.insert(FinalAssertion);
+            AssertedConstraints.push_back(FinalAssertion);
             ESMC_LOG_FULL(
                           "Solver.Duplicates",
                           Out_ << "Asserting (non-duplicate): "
@@ -180,7 +182,8 @@ namespace ESMC {
         {
             auto Mgr = TheLTS->GetMgr();
 
-            set<ExpT> Args;
+            vector<ExpT> Args;
+            FastExpSetT ArgSet;
             vector<ExpT> ArgsMine;
             if (GuardExp1->Is<OpExpression>() &&
                 LTSReservedOps.find(GuardExp1->SAs<OpExpression>()->GetOpCode()) ==
@@ -194,9 +197,21 @@ namespace ESMC {
                 ArgsOther = GetOpArgs(GuardExp2);
             }
 
-            Args.insert(ArgsMine.begin(), ArgsMine.end());
-            Args.insert(ArgsOther.begin(), ArgsOther.end());
+            // All this hoopla to make things deterministic and
+            // not dependent on the particular pointer values used
+            for (auto const& Arg : ArgsMine) {
+                if (ArgSet.find(Arg) == ArgSet.end()) {
+                    ArgSet.insert(Arg);
+                    Args.push_back(Arg);
+                }
+            }
 
+            for (auto const& Arg : ArgsOther) {
+                if (ArgSet.find(Arg) == ArgSet.end()) {
+                    ArgSet.insert(Arg);
+                    Args.push_back(Arg);
+                }
+            }
             vector<ExpT> QVars(Args.begin(), Args.end());
             vector<TypeRef> QVarTypes;
 
@@ -578,6 +593,7 @@ namespace ESMC {
             auto TotalArgDepCostVar = Mgr->MakeVar(PerArgCostVarNamePrefix, TotalArgDepCostType);
             auto SumExp = MakeSum(PerArgCosts, Mgr, TotalArgDepCostType);
             auto Constraint = Mgr->MakeExpr(LTSOps::OpEQ, TotalArgDepCostVar, SumExp);
+            CheckedAssert(Constraint);
             return TotalArgDepCostVar;
         }
 
@@ -604,7 +620,7 @@ namespace ESMC {
             auto ConstraintGen = Mgr->MakeExpr(LTSOps::OpIFF, NegAFPred, CostEQArgDep);
             CheckedAssert(Constraint0);
             CheckedAssert(ConstraintGen);
-            GuardFuncCosts.insert(CostVar);
+            GuardFuncCosts.push_back(CostVar);
             AllFalsePreds[Op] = AFPred;
             return;
         }
@@ -636,7 +652,7 @@ namespace ESMC {
             CheckedAssert(Constraint0);
             CheckedAssert(Constraint1);
             CheckedAssert(Constraint2);
-            GuardFuncCosts.insert(CostVar);
+            GuardFuncCosts.push_back(CostVar);
             AllFalsePreds[Op] = AFPred;
             return;
         }
@@ -698,7 +714,7 @@ namespace ESMC {
             CheckedAssert(Constraint0);
             CheckedAssert(Constraint1);
             CheckedAssert(ConstraintN);
-            GuardFuncCosts.insert(CostVar);
+            GuardFuncCosts.push_back(CostVar);
             AllFalsePreds[Op] = AFPred;
             return;
         }
@@ -822,7 +838,7 @@ namespace ESMC {
             CheckedAssert(Constraint0);
             CheckedAssert(Constraint1);
             CheckedAssert(ConstraintN);
-            UpdateFuncCosts.insert(CostVar);
+            UpdateFuncCosts.push_back(CostVar);
             return;
         }
 
@@ -872,7 +888,7 @@ namespace ESMC {
             CheckedAssert(Constraint0);
             CheckedAssert(Constraint1);
             CheckedAssert(Constraint2);
-            UpdateFuncCosts.insert(CostVar);
+            UpdateFuncCosts.push_back(CostVar);
             return;
         }
 
@@ -952,7 +968,7 @@ namespace ESMC {
             CheckedAssert(Constraint0);
             CheckedAssert(Constraint1);
             CheckedAssert(ConstraintN);
-            UpdateFuncCosts.insert(CostVar);
+            UpdateFuncCosts.push_back(CostVar);
             return;
         }
 
@@ -998,7 +1014,7 @@ namespace ESMC {
                 auto CostVar = Mgr->MakeVar(CostVarName, CostVarType);
                 auto Constraint = Mgr->MakeExpr(LTSOps::OpEQ, CostVar, ArgDepCost);
                 CheckedAssert(Constraint);
-                UpdateFuncCosts.insert(CostVar);
+                UpdateFuncCosts.push_back(CostVar);
             }
         }
 
@@ -1030,7 +1046,7 @@ namespace ESMC {
                 auto ConstraintN = Mgr->MakeExpr(LTSOps::OpIFF, NegConstantPred, CostEQN);
                 CheckedAssert(Constraint0);
                 CheckedAssert(ConstraintN);
-                UpdateFuncCosts.insert(CostVar);
+                UpdateFuncCosts.push_back(CostVar);
                 return;
             }
         }
@@ -1236,7 +1252,6 @@ namespace ESMC {
         inline void Solver::HandleSafetyViolations()
         {
             auto const& ErrorStates = Checker->GetAllErrorStates();
-            set<ExpT> BlownInvariantsCovered;
 
             ESMC_LOG_MIN_SHORT(
                                Out_ << "Building Constraints for "
@@ -1306,7 +1321,6 @@ namespace ESMC {
             }
 
             auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundsVariable);
-
 
             TP->Assert(EQExp, Options.UnrollQuantifiers);
             for (auto const& Assertion : AssertedConstraints) {

@@ -51,6 +51,7 @@
 #include <string>
 #include <inttypes.h>
 #include <exception>
+#include <functional>
 
 #ifndef BOOST_SYSTEM_NO_DEPRECATED
 #define BOOST_SYSTEM_NO_DEPRECATED 1
@@ -175,6 +176,81 @@ namespace ESMC {
         Out << Obj.ToString();
         return Out;
     }
+
+    // Utility classes for hashing and comparing stringifiable objects
+
+    template <u32 VERBOSITY = 0>
+    class StringifiablePtrHasher
+    {
+    public:
+        template <typename T>
+        inline u64 operator () (const T& ObjPtr) const
+        {
+            std::hash<string> StringHasher;
+            return StringHasher(ObjPtr->ToString(VERBOSITY));
+        }
+    };
+
+    template <u32 VERBOSITY = 0>
+    class StringifiableObjHasher
+    {
+    public:
+        template <typename U>
+        inline u64 operator () (const U& Obj) const
+        {
+            std::hash<string> StringHasher;
+            return StringHasher(Obj.ToString(VERBOSITY));
+        }
+    };
+
+    template <u32 VERBOSITY = 0>
+    class StringifiablePtrCompare
+    {
+    public:
+        template <typename T>
+        inline i64 operator () (const T& ObjPtr1, const T& ObjPtr2) const
+        {
+            auto&& Str1 = ObjPtr1->ToString(VERBOSITY);
+            auto&& Str2 = ObjPtr2->ToString(VERBOSITY);
+            return (Str1 < Str2);
+        }
+    };
+
+    template <u32 VERBOSITY = 0>
+    class StringifiableObjCompare
+    {
+    public:
+        template <typename T>
+        inline i64 operator () (const T& Obj1, const T& Obj2) const
+        {
+            auto&& Str1 = Obj1.ToString(VERBOSITY);
+            auto&& Str2 = Obj2.ToString(VERBOSITY);
+            return (Str1 < Str2);
+        }
+    };
+
+    template <u32 VERBOSITY = 0>
+    class StringifiablePtrEquals
+    {
+    public:
+        template <typename T>
+        inline bool operator () (const T& ObjPtr1, const T& ObjPtr2) const
+        {
+            return (ObjPtr1->ToString(VERBOSITY) == ObjPtr2->ToString(VERBOSITY));
+        }
+    };
+
+    template <u32 VERBOSITY = 0>
+    class StringifiableObjEquals
+    {
+    public:
+        template <typename T>
+        inline bool operator () (const T& Obj1, const T& Obj2) const
+        {
+            return (Obj1.ToString(VERBOSITY) == Obj2.ToString(VERBOSITY));
+        }
+    };
+
 
 } /* end namespace ESMC */
 

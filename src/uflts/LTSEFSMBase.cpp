@@ -1064,7 +1064,7 @@ namespace ESMC {
                                                  const string& MessageName,
                                                  const TypeRef& MessageType,
                                                  const TypeRef& ActMType,
-                                                 const set<LTSFairObjRef>& FairnessObjsSatisfied,
+                                                 const FairObjSetT& FairnessObjsSatisfied,
                                                  const LTSSymbTransRef& SymbTrans)
         {
             AssertStatesFrozen();
@@ -1207,7 +1207,7 @@ namespace ESMC {
                 auto ActMType = InstantiateMessageType(MessageParams, SubstMap, MessageType);
                 CheckMsgType(ActMType);
                 AssertOutput(ParamInsts[i], ActMType);
-                set<LTSFairObjRef> FairnessObjsSatisfied;
+                FairObjSetT FairnessObjsSatisfied;
                 for (auto const& FairnessSetName : AddToFairnessSets) {
                     auto const& FairnessObj = Fairnesses->GetFairnessObj(FairnessSetName,
                                                                          ParamInsts[i]);
@@ -1331,7 +1331,7 @@ namespace ESMC {
                     CheckMsgType(ActMType);
                     AssertOutput(ParamInsts[i], ActMType);
 
-                    set<LTSFairObjRef> FairnessObjsSatisfied;
+                    FairObjSetT FairnessObjsSatisfied;
                     auto FinalParamInst = ParamInst;
                     FinalParamInst.insert(FinalParamInst.end(), TransParamInst.begin(),
                                           TransParamInst.end());
@@ -1366,7 +1366,7 @@ namespace ESMC {
                                                    const string& InitState,
                                                    const ExpT& Guard,
                                                    const vector<LTSAssignRef>& Updates,
-                                                   const set<LTSFairObjRef>& FairnessObjsSatisfied,
+                                                   const FairObjSetT& FairnessObjsSatisfied,
                                                    const LTSSymbTransRef& SymbTrans)
         {
             AssertStatesFrozen();
@@ -1458,7 +1458,7 @@ namespace ESMC {
                 auto const& ParamInst = ParamInsts[i];
                 auto const& SubstMap = ParamSubsts[i];
 
-                set<LTSFairObjRef> FairnessObjsSatisfied;
+                FairObjSetT FairnessObjsSatisfied;
                 for (auto const& FairnessSetName : AddToFairnessSets) {
                     auto const& FairnessObj = Fairnesses->GetFairnessObj(FairnessSetName,
                                                                          ParamInst);
@@ -1543,7 +1543,7 @@ namespace ESMC {
                         LocalSubstMap[TransParams[j]] = TransParamInst[j];
                     }
 
-                    set<LTSFairObjRef> FairnessObjsSatisfied;
+                    FairObjSetT FairnessObjsSatisfied;
                     auto FinalParamInst = ParamInst;
                     FinalParamInst.insert(FinalParamInst.end(), TransParamInst.begin(),
                                           TransParamInst.end());

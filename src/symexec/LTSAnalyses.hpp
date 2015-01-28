@@ -51,119 +51,46 @@ namespace ESMC {
         using namespace MC;
         using namespace Synth;
 
-        class SubstitutorForWP : VisitorBaseT
-        {
-        private:
-            MgrT* Mgr;
-            MgrT::SubstMapT Subst;
-            const vector<LTSAssignRef>& Updates;
-            vector<ExpT> SubstStack;
-
-        public:
-            SubstitutorForWP(MgrT* Mgr, const MgrT::SubstMapT& Subst,
-                             const vector<LTSAssignRef>& Updates);
-            virtual ~SubstitutorForWP();
-
-            virtual void VisitVarExpression(const VarExpT* Exp) override;
-            virtual void VisitConstExpression(const ConstExpT* Exp) override;
-            inline virtual void VisitBoundVarExpression(const BoundVarExpT* Exp)
-                override;
-            virtual void VisitOpExpression(const OpExpT* Exp) override;
-            virtual void VisitEQuantifiedExpression(const EQExpT* Exp)
-                override;
-            virtual void VisitAQuantifiedExpression(const AQExpT* Exp)
-                override;
-
-            static bool AreExpressionsUnifiable(ExpT e1, ExpT e2, vector<ExpT>& Conditions);
-
-            static ExpT Do(MgrT* Mgr,
-                           const ExpT& Exp,
-                           const MgrT::SubstMapT& SubstMap,
-                           const vector<LTSAssignRef>& Updates);
-        };
-
         class TraceAnalyses
         {
         public:
-            static vector<ExpT> GetAllScalarLeaves(ExpT InitialExp);
-            static set<LTSFairObjRef> GetLTSFairnessObjects(LabelledTS* TheLTS);
+            static vector<ExpT> GetAllScalarLeaves(const ExpT& InitialExp);
+            static FairObjSetT GetLTSFairnessObjects(LabelledTS* TheLTS);
 
-            static const StateVec* GetLastState(SafetyViolation* Trace);
-            static set<LTSFairObjRef>
+            static FairObjSetT
             GetLoopFairnessObjects(LabelledTS* TheLTS,
                                    const LivenessViolation* LivenessViolation);
 
-            static set<LTSFairObjRef>
+            static FairObjSetT
             TriviallySatisfiedFairnessObjectsInLoop(LabelledTS* TheLTS,
                                                     const LivenessViolation* LivenessViolation);
 
             static ExpT
             WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
                                            StateBuchiAutomaton* Monitor,
-                                           MgrT::SubstMapT InitialStateSubstMap,
+                                           const MgrT::SubstMapT& InitialStateSubstMap,
                                            const LivenessViolation* Trace,
-                                           ExpT InitialCondition,
+                                           const ExpT& InitialCondition,
                                            int StartIndexInLoop);
 
             static ExpT
             EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
                                         StateBuchiAutomaton* Monitor,
-                                        MgrT::SubstMapT InitialStateSubstMap,
+                                        const MgrT::SubstMapT& InitialStateSubstMap,
                                         const LivenessViolation* LivenessViolation,
-                                        set<LTSFairObjRef> FairnessObjects);
-
-            static vector<GCmdRef> TentativeGuardedCommandsInLTS(LabelledTS* TheLTS);
-
-            static map<vector<ExpT>, ExpT> ModelResults(LabelledTS* TheLTS, ExpT UFExp, Z3TPRef TP);
-
-            static ExpT
-            ConditionToResolveDeadlock(LabelledTS* TheLTS,
-                                       DeadlockViolation* DeadlockTrace);
-
-            static bool HasUF(ExpT Exp);
-
-            // static MgrT::SubstMapT
-            // TransitionSubstitutionsGivenTransMsg(const vector<LTSAssignRef>& Updates,
-            //                                      MgrT::SubstMapT SubstMapForTransMsg);
-
-            static vector<GCmdRef> GuardedCommandsFromTrace(TraceBase* Trace);
-
-            // static MgrT::SubstMapT
-            // GetSubstitutionsForTransMsg(const vector<LTSAssignRef>& updates);
-
-            static bool IsGuardedCommandEnabled(LabelledTS* TheLTS,
-                                                const StateVec* StateVector,
-                                                GCmdRef GuardedCommand);
-
-            static map<pair<EFSMBase*, vector<ExpT> >, string>
-
-            AutomataStatesFromStateVector(LabelledTS* TheLTS,
-                                          const StateVec* StateVector);
+                                        const FairObjSetT& FairnessObjects);
 
             static ExpT
             AutomataStatesCondition(LabelledTS* TheLTS, const StateVec* StateVector);
 
-            static FastExpSetT WeakestPrecondition(Solver* TheSolver,
-                                                   SafetyViolation* Trace,
-                                                   const ExpT& InitialPredicate);
+            static vector<ExpT> WeakestPrecondition(Solver* TheSolver,
+                                                    SafetyViolation* Trace,
+                                                    const ExpT& InitialPredicate);
 
             static ExpT
             WeakestPreconditionForLiveness(Solver* TheSolver,
                                            StateBuchiAutomaton* Monitor,
                                            const LivenessViolation* Trace);
-
-            // static ExpT
-            // SymbolicExecution(ExpT Phi,
-            //                   TraceBase* Trace,
-            //                   vector<MgrT::SubstMapT>& symbolic_states);
-
-            // static vector<ExpT>
-            // SymbolicExecution(LabelledTS* TheLTS,
-            //                   TraceBase* Trace,
-            //                   vector<vector<MgrT::SubstMapT>>& symbolic_states);
-
-            static map<pair<EFSMBase*, vector<ExpT>>, string>
-            GuardedCommandInitialStates(GCmdRef GuardedCommand);
         };
     } /* end namespace Analyses */
 } /* end namespace ESMC */

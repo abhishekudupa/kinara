@@ -82,7 +82,6 @@ namespace ESMC {
             u32 NumCExToProcess;
             u32 BoundLimit;
             bool GeneralFixForDL;
-            bool ShowModel;
             bool PrioritizeNonTentative;
 
             inline SolverOptionsT()
@@ -91,7 +90,7 @@ namespace ESMC {
                   SBoundMethod(StateUpdateBoundingMethodT::NoBounding),
                   UnrollQuantifiers(false), CPULimitInSeconds(UINT64_MAX),
                   MemLimitInMB(UINT64_MAX), NumCExToProcess(8),
-                  BoundLimit(256), GeneralFixForDL(false), ShowModel(false),
+                  BoundLimit(256), GeneralFixForDL(false),
                   PrioritizeNonTentative(false)
             {
                 // Nothing here
@@ -108,7 +107,6 @@ namespace ESMC {
                                   UINT32_MAX : Other.NumCExToProcess),
                   BoundLimit(Other.BoundLimit == 0 ? 256 : Other.BoundLimit),
                   GeneralFixForDL(Other.GeneralFixForDL),
-                  ShowModel(Other.ShowModel),
                   PrioritizeNonTentative(Other.PrioritizeNonTentative)
             {
                 // Nothing here
@@ -130,7 +128,6 @@ namespace ESMC {
                     Other.NumCExToProcess == 0 ? UINT32_MAX : Other.NumCExToProcess;
                 BoundLimit = Other.BoundLimit == 0 ? 256 : Other.BoundLimit;
                 GeneralFixForDL = Other.GeneralFixForDL;
-                ShowModel = Other.ShowModel;
                 PrioritizeNonTentative = Other.PrioritizeNonTentative;
                 return *this;
             }
@@ -172,17 +169,6 @@ namespace ESMC {
                 }
             };
 
-            class UnorderedExpSetHasher
-            {
-            public:
-                inline u64 operator () (const ExpT& Exp) const
-                {
-                    u64 Retval = 0;
-                    boost::hash_combine(Retval, Exp.GetPtr_());
-                    return Retval;
-                }
-            };
-
         } /* end namespace Detail */
 
 
@@ -215,7 +201,8 @@ namespace ESMC {
 
             SolverOptionsT Options;
             // The set of assertions already asserted
-            unordered_set<ExpT, Detail::UnorderedExpSetHasher> AssertedConstraints;
+            FastExpSetT AssertedConstraintSet;
+            vector<ExpT> AssertedConstraints;
             // Barring the cost bounds assertions, which are in the
             // assumptions queue here:
             deque<Z3Expr> CurrentAssumptions;
@@ -236,8 +223,8 @@ namespace ESMC {
             unordered_set<i64> InterpretedOps;
 
 
-            set<ExpT> GuardFuncCosts;
-            set<ExpT> UpdateFuncCosts;
+            vector<ExpT> GuardFuncCosts;
+            vector<ExpT> UpdateFuncCosts;
             // AllFalse preds for guards
             // used for updating the models in the compiler/interpreter
             unordered_map<i64, ExpT> AllFalsePreds;

@@ -138,7 +138,7 @@ namespace ESMC {
         ChannelEFSM::MakeInputTransition(u32 InstanceID,
                                          const MgrT::SubstMapT& SubstMap,
                                          const TypeRef& MessageType,
-                                         const set<LTSFairObjRef>& FairnessObjsSatisfied)
+                                         const FairObjSetT& FairnessObjsSatisfied)
         {
             auto Mgr = TheLTS->GetMgr();
             auto const& UMType = TheLTS->GetUnifiedMType()->As<UnionType>();
@@ -277,7 +277,7 @@ namespace ESMC {
                                                               "LossDecideState",
                                                               TrueExp,
                                                               LossUpdates,
-                                                              set<LTSFairObjRef>(),
+                                                              FairObjSetT(),
                                                               LTSSymbTransRef::NullPtr);
                         First = false;
                     }
@@ -297,9 +297,9 @@ namespace ESMC {
         ChannelEFSM::MakeOutputTransition(u32 InstanceID,
                                           const MgrT::SubstMapT& SubstMap,
                                           const TypeRef& MessageType,
-                                          const set<LTSFairObjRef>&
+                                          const FairObjSetT&
                                           FairnessObjsSatisfiedByNonDupOutputs,
-                                          const set<LTSFairObjRef>&
+                                          const FairObjSetT&
                                           FairnessObjsSatisfiedByDupOutputs)
         {
             auto Mgr = TheLTS->GetMgr();
@@ -475,9 +475,9 @@ namespace ESMC {
                 auto const& SubstMap = ParamSubsts[i];
                 auto&& SubstParams = SubstAll(Params, SubstMap, Mgr);
 
-                set<LTSFairObjRef> NonDupFairObjs;
-                set<LTSFairObjRef> InputFairObjs;
-                set<LTSFairObjRef> DupFairObjs;
+                FairObjSetT NonDupFairObjs;
+                FairObjSetT InputFairObjs;
+                FairObjSetT DupFairObjs;
 
                 for (auto const& FairnessSetName : InputFairnessSets) {
                     auto const& FairObj = Fairnesses->GetFairnessObj(FairnessSetName,
@@ -614,9 +614,9 @@ namespace ESMC {
                     auto PMType = TheLTS->GetPrimedType(MType);
 
                     // Get the fairness sets
-                    set<LTSFairObjRef> InputFairObjs;
-                    set<LTSFairObjRef> DupFairObjs;
-                    set<LTSFairObjRef> NonDupFairObjs;
+                    FairObjSetT InputFairObjs;
+                    FairObjSetT DupFairObjs;
+                    FairObjSetT NonDupFairObjs;
 
                     for (auto const& FairnessSetName : InputFairnessSets) {
                         auto FinalParams = ParamInst;

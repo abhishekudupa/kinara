@@ -81,7 +81,6 @@ namespace ESMC {
             const ExpT& GetFairnessSetConstraint() const;
             const vector<vector<ExpT>>& GetSiblingInstances() const;
             u32 GetFairnessSetNumInstances() const;
-            const map<vector<ExpT>, LTSFairObjRef>& GetSiblings() const;
             FairSetFairnessType GetFairnessType() const;
             const LTSProcessFairnessGroup* GetFairnessGroup() const;
             EFSMBase* GetEFSM() const;
@@ -119,7 +118,6 @@ namespace ESMC {
             const vector<vector<ExpT>>& GetAllInstances() const;
             u32 GetNumInstances() const;
             u32 GetClassID() const;
-            const map<vector<ExpT>, LTSFairObjRef>& GetAllFairnessObjs() const;
             const LTSFairObjRef& GetFairnessObj(const vector<ExpT>& Instance) const;
             const LTSFairObjRef& GetFairnessObj(u32 InstanceNumber) const;
             FairSetFairnessType GetFairnessType() const;
