@@ -20,7 +20,7 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/sparsehash
 
 PROJECT_EXECUTABLES?=PingPongChan Flip FlipSimple PingPongChanBug ABP \
-	ABP_generated MSI Fischer LeaderElection Dijkstra4 \
+	ABP_generated MSI Fischer Dijkstra4 \
 	MSIC2D PingPongChanSimpleBug PingPongChanSynth MSIC2DSynth ElevatorIncomplete Dijkstra4Synth ElevatorIncomplete2 \
 #	WeakestPreconditionTest
 #	WeakestPreconditionArrayTest
