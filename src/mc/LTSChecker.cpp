@@ -184,7 +184,24 @@ namespace ESMC {
                     BFSDeque->pop_front();
                     TaintLevel = 0;
                 } else {
-                    for (u32 i = 0; i < MaxNumBuckets; ++i) {
+                    // look for a node with taint level one first
+                    if ((*PrioQueues)[1] != nullptr && (*PrioQueues)[1]->size() > 0) {
+                        TaintLevel = 1;
+                        Retval = (*PrioQueues)[1]->front();
+                        (*PrioQueues)[1]->pop_front();
+                        --NumElems;
+                        return Retval;
+                    }
+                    // No? Okay, let's try to get a node with taint level 0
+                    if ((*PrioQueues)[0] != nullptr && (*PrioQueues)[0]->size() > 0) {
+                        TaintLevel = 0;
+                        Retval = (*PrioQueues)[0]->front();
+                        (*PrioQueues)[0]->pop_front();
+                        --NumElems;
+                        return Retval;
+                    }
+                    // No? Okay, traverse down the rest of the buckets
+                    for (u32 i = 2; i < MaxNumBuckets; ++i) {
                         if ((*PrioQueues)[i] != nullptr && (*PrioQueues)[i]->size() > 0) {
                             Retval = (*PrioQueues)[i]->front();
                             (*PrioQueues)[i]->pop_front();

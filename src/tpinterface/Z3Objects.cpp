@@ -72,7 +72,7 @@ namespace ESMC {
             Z3_global_param_set("smt.random_seed", to_string(SMTSeed).c_str());
             Z3_global_param_set("sat.random_seed", to_string(SATSeed).c_str());
 #else
-            Z3_set_param_value(Cfg, "MODEL_COMPLETION", "TRUE");
+            Z3_set_param_value(Cfg, "MODEL_COMPLETION", "true");
 #endif /* USE_Z3_4_3_2 */
 
             ESMC_LOG_FULL(

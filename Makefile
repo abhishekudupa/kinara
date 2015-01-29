@@ -6,7 +6,7 @@ BASE_BIN_DIR=$(PROJECT_ROOT)/bin
 BASE_GEN_DIR=$(PROJECT_ROOT)/gen
 BASE_SRC_DIR=$(PROJECT_ROOT)/src
 
-Z3_VERSION_TO_USE?=4.3.1
+Z3_VERSION_TO_USE?=4.3.2
 
 CXX?=g++
 
@@ -16,7 +16,7 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/boost-local/boost_install/include
 CXXFLAGS+=-I $(PROJECT_ROOT)/thirdparty/sparsehash
 
 ifneq "x$(Z3_VERSION_TO_USE)" "x4.3.1"
-CXXFLAGS+=-D_USE_Z3_4_3_2
+CXXFLAGS+=-DUSE_Z3_4_3_2
 endif
 
 ifeq "x$(CXX)" "xg++"
