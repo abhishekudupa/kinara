@@ -44,7 +44,7 @@
 #include "../common/ESMCFwdDecls.hpp"
 #include <sys/time.h>
 
-#ifdef __MACH__
+#ifdef __APPLE__
 #include <mach/clock.h>
 #include <mach/mach.h>
 typedef uint8_t clockid_t;

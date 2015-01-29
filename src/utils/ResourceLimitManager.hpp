@@ -66,7 +66,7 @@ namespace ESMC {
         static struct sigaction OldAction;
         static bool TimerHandlerInstalled;
         static bool TimerCreated;
-#ifdef __MACH__
+#ifdef __APPLE__
         // timer_t not defined on mac
         // setitimer does not take a timer_t argument, so skip it.
 #else

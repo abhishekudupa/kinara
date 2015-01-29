@@ -48,7 +48,7 @@
 
 // Z3 seems to use some RT signals. We play it safe and use the
 // signal from the high end
-#ifdef __MACH__
+#ifdef __APPLE__
 #define TIMER_SIG_NUM SIGVTALRM
 #else
 #define TIMER_SIG_NUM (SIGRTMAX - 1)
@@ -66,7 +66,7 @@ namespace ESMC {
     u64 ResourceLimitManager::TimerInterval = ResourceLimitManager::TimerIntervalDefault;
     bool ResourceLimitManager::TimerHandlerInstalled = false;
     bool ResourceLimitManager::TimerCreated = false;
-#ifndef __MACH__
+#ifndef __APPLE__
     timer_t ResourceLimitManager::TimerID = (timer_t)0;
 #endif
     struct sigaction ResourceLimitManager::OldAction;
@@ -123,7 +123,7 @@ namespace ESMC {
         OldAction.sa_sigaction = nullptr;
         sigemptyset(&OldAction.sa_mask);
         OldAction.sa_flags = 0;
-#ifdef __MACH__
+#ifdef __APPLE__
         // sigaction does not have a sa_restorer field on osx.
 #else
         OldAction.sa_restorer = nullptr;
@@ -134,23 +134,19 @@ namespace ESMC {
         NewAction.sa_sigaction = ResourceLimitManager::TimerHandler;
         sigemptyset(&NewAction.sa_mask);
         NewAction.sa_flags = SA_SIGINFO;
-#ifdef __MACH__
+#ifdef __APPLE__
         // sigaction does not have a sa_restorer field on osx.
 #else
         NewAction.sa_restorer = nullptr;
 #endif
         // Register the new handler
-#ifdef __MACH__
-        sigaction(SIGVTALRM, &NewAction, &OldAction);
-#else
         sigaction(TIMER_SIG_NUM, &NewAction, &OldAction);
-#endif
         TimerHandlerInstalled = true;
 
         if (TimerCreated) {
             return;
         }
-#ifndef __MACH__
+#ifndef __APPLE__
         struct sigevent SigEvent;
         SigEvent.sigev_notify = SIGEV_SIGNAL;
         SigEvent.sigev_signo = TIMER_SIG_NUM;
@@ -167,7 +163,7 @@ namespace ESMC {
         }
 
         if (TimerCreated) {
-#ifdef __MACH__
+#ifdef __APPLE__
             // In the absense of a timer_delete,
             // I believe the best we can do here
             // is to call setittimer with a 0 valued timer.
@@ -226,7 +222,7 @@ namespace ESMC {
         if (MemLimit != UINT64_MAX ||
             CPULimit != UINT64_MAX) {
             RegisterTimerHandler();
-#ifdef __MACH__
+#ifdef __APPLE__
             struct itimerval FreqSpec;
             FreqSpec.it_value.tv_sec = 0;
             FreqSpec.it_value.tv_usec = 1000 * TimerInterval;
@@ -239,7 +235,7 @@ namespace ESMC {
             FreqSpec.it_interval.tv_sec = 0;
             FreqSpec.it_interval.tv_nsec = TimerInterval;
 #endif
-#ifdef __MACH__
+#ifdef __APPLE__
             setitimer(ITIMER_VIRTUAL, &FreqSpec, NULL);
 #else
             timer_settime(TimerID, 0, &FreqSpec, NULL);
@@ -253,7 +249,7 @@ namespace ESMC {
     {
         if (TimerCreated) {
             // Just reset the timer
-#ifdef __MACH__
+#ifdef __APPLE__
             struct itimerval FreqSpec;
             FreqSpec.it_interval.tv_sec = 0;
             FreqSpec.it_interval.tv_usec = 0;
@@ -266,7 +262,7 @@ namespace ESMC {
             FreqSpec.it_value.tv_sec = 0;
             FreqSpec.it_value.tv_nsec = 0;
 #endif
-#ifdef __MACH__
+#ifdef __APPLE__
             setitimer(ITIMER_VIRTUAL, &FreqSpec, NULL);
 #else
             timer_settime(TimerID, 0, &FreqSpec, NULL);

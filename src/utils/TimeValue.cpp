@@ -133,7 +133,7 @@ namespace ESMC {
     TimeValue TimeValue::GetTimeValue(clockid_t ClockID)
     {
         struct timespec tv;
-#ifndef __MACH__
+#ifndef __APPLE__
         clock_gettime(ClockID, &tv);
 #endif
         return TimeValue(tv);
@@ -141,7 +141,7 @@ namespace ESMC {
 
     TimeValue TimeValue::GetTimeValue()
     {
-#ifdef __MACH__
+#ifdef __APPLE__
         struct timespec tv;
         clock_serv_t cclock;
         mach_timespec_t mts;

@@ -1573,6 +1573,8 @@ namespace ESMC {
                             delete MinLivenessViolation;
                             MinLivenessViolation = Trace;
                             MinSize = TraceSize;
+                        } else {
+                            delete Trace;
                         }
                     }
                     ++SCCNum;
