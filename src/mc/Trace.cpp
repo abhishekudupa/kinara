@@ -284,7 +284,6 @@ namespace ESMC {
             auto ProcIdxSet = Monitor->GetIndexSet();
             auto const& GuardedCmds = Checker->GuardedCommands;
             auto TheSCCID = CanonicalRoot->GetSCCID();
-            auto const InSingularSCC = CanonicalRoot->IsSingular();
 
             deque<Detail::BFSQueueEntryT> BFSQueue;
             Detail::PSPermSetT VisitedStates;
@@ -298,7 +297,8 @@ namespace ESMC {
 
             bool ReachedTarget = false;
             Detail::BFSQueueEntryT TargetPSPerm;
-            bool RevisitingState = false;
+            bool PathEndsAtOrigin = false;
+            pair<u32, BFSQueueEntryT> OriginPredecessor;
 
             while (BFSQueue.size() > 0 && !ReachedTarget) {
                 auto CurTuple = BFSQueue.front();
@@ -318,6 +318,7 @@ namespace ESMC {
 
                 for (auto Edge : Edges) {
                     auto NextPermPS = Edge->GetTarget();
+                    bool RevisitingOrigin = false;
 
                     if (NextPermPS->GetSCCID() != TheSCCID) {
                         // Not part of the scc, ignore
@@ -331,8 +332,8 @@ namespace ESMC {
                     auto NextPair = make_pair(NextPermPS, NextPermIndex);
 
                     if (VisitedStates.find(NextPair) != VisitedStates.end()) {
-                        if (InSingularSCC) {
-                            RevisitingState = true;
+                        if (NextPair == OriginPair) {
+                            RevisitingOrigin = true;
                         } else {
                             continue;
                         }
@@ -370,10 +371,10 @@ namespace ESMC {
                                                            NextUnwoundPS->GetMonitorState(),
                                                            NextUnwoundPS->GetIndexID(), 0);
                     auto NextTuple = make_tuple(NextPermPS, NextPermIndex, InvSortPermIdx);
-                    PredMap[NextTuple] = make_pair(TransitionCmdID, CurTuple);
 
-                    if (!RevisitingState) {
+                    if (!RevisitingOrigin) {
                         BFSQueue.push_back(NextTuple);
+                        PredMap[NextTuple] = make_pair(TransitionCmdID, CurTuple);
                     }
 
                     if (FChecker != nullptr) {
@@ -384,12 +385,20 @@ namespace ESMC {
                         if (FairnessSat) {
                             ReachedTarget = true;
                             TargetPSPerm = NextTuple;
+                            if (RevisitingOrigin) {
+                                OriginPredecessor = make_pair(TransitionCmdID, CurTuple);
+                                PathEndsAtOrigin = true;
+                            }
                         }
                     } else {
                         // MatchPred must be something valid
                         if (MatchPred(TransitionCmdID, NextUnsortedPS)) {
                             ReachedTarget = true;
                             TargetPSPerm = NextTuple;
+                            if (RevisitingOrigin) {
+                                OriginPredecessor = make_pair(TransitionCmdID, CurTuple);
+                                PathEndsAtOrigin = true;
+                            }
                         }
                     }
 
@@ -410,12 +419,12 @@ namespace ESMC {
 
             // We now need to assemble a path from the predecessors
             auto CurTuple = TargetPSPerm;
-            auto it = PredMap.find(CurTuple);
             auto CurPermPS = get<0>(CurTuple);
             auto CurPerm = get<1>(CurTuple);
             auto CurSortPerm = get<2>(CurTuple);
 
-            auto CurUnsortedPS = TheCanonicalizer->ApplyPermutation(CurPermPS, CurPerm, ProcIdxSet);
+            auto CurUnsortedPS =
+                TheCanonicalizer->ApplyPermutation(CurPermPS, CurPerm, ProcIdxSet);
             TheCanonicalizer->Sort(CurUnsortedPS);
             TheCanonicalizer->ApplySort(CurUnsortedPS, CurSortPerm);
 
@@ -423,8 +432,28 @@ namespace ESMC {
             InvSortPermForRoot = CurSortPerm;
 
             vector<PSTraceElemT> RTraceElems;
-            bool SelfLoop = false;
-            while (it != PredMap.end() && !SelfLoop) {
+            UnwoundPredMapT::const_iterator it;
+            if (PathEndsAtOrigin) {
+                auto PredStatePerm = OriginPredecessor.second;
+                auto CmdID = OriginPredecessor.first;
+                auto PredPermPS = get<0>(PredStatePerm);
+                auto PredPerm = get<1>(PredStatePerm);
+                auto PredSortPerm = get<2>(PredStatePerm);
+
+                auto UnsortedPredPS = TheCanonicalizer->ApplyPermutation(PredPermPS,
+                                                                         PredPerm,
+                                                                         ProcIdxSet);
+                TheCanonicalizer->Sort(UnsortedPredPS);
+                TheCanonicalizer->ApplySort(UnsortedPredPS, PredSortPerm);
+
+                RTraceElems.push_back(PSTraceElemT(GuardedCmds[CmdID], CurUnsortedPS)),
+                it = PredMap.find(PredStatePerm);
+                CurUnsortedPS = UnsortedPredPS;
+            } else {
+                it = PredMap.find(CurTuple);
+            }
+
+            while (it != PredMap.end()) {
                 // Unwind the pred state
                 auto UnwoundEdge = it->second;
                 auto PredStatePerm = UnwoundEdge.second;
@@ -438,10 +467,6 @@ namespace ESMC {
                                                                          ProcIdxSet);
                 TheCanonicalizer->Sort(UnsortedPredPS);
                 TheCanonicalizer->ApplySort(UnsortedPredPS, PredSortPerm);
-
-                if (UnsortedPredPS->Equals(CurUnsortedPS)) {
-                    SelfLoop = true;
-                }
 
                 RTraceElems.push_back(PSTraceElemT(GuardedCmds[CmdID], CurUnsortedPS)),
                 it = PredMap.find(PredStatePerm);

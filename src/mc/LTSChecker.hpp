@@ -47,6 +47,7 @@
 #include "../common/ESMCFwdDecls.hpp"
 #include "../uflts/LTSDecls.hpp"
 #include "../utils/BitSet.hpp"
+#include "../hash/SpookyHash.hpp"
 
 #include "AQStructure.hpp"
 
@@ -224,6 +225,17 @@ namespace ESMC {
                 // end of methods to help in trace generation
             };
 
+            class UIntVecHasher
+            {
+            public:
+                template <typename UIntType>
+                inline u64 operator () (const vector<UIntType>& Vec) const
+                {
+                    return SpookyHash::SpookyHash::Hash64(Vec.Data, sizeof(UIntType) * Vec.size(),
+                                                          0xDEADBEEFFEEB1EAD);
+                }
+            };
+
         } /* end namespace Detail */
 
         class LTSChecker
@@ -271,6 +283,13 @@ namespace ESMC {
             // invariant expression that was blown
             ErrorStateSetT ErrorStateSet;
             ErrorStateVecT ErrorStates;
+
+            // Fingerprint to command set
+            unordered_map<u64, vector<u32>> FingerPrintToCommandSet;
+            // Coverage so far for each tentative command
+            vector<pair<u32, double>> CommandCoverage;
+            // Command to fingerprints that add to its coverage
+            unordered_map<u32, vector<u64>> CommandToFingerprintsCoveringIt;
 
             // A set of commands that need to be tested
             // these are all the commands that are "fully"

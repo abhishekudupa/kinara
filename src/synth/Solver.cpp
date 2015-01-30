@@ -1097,6 +1097,7 @@ namespace ESMC {
                 MakeCostConstraintsForOp(NewUpdateOp);
                 MakeRangeConstraintsForOp(NewUpdateOp);
             }
+
             UpdateCommands();
         }
 
