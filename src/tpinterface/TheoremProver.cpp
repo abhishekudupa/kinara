@@ -84,17 +84,21 @@ namespace ESMC {
         Z3TheoremProver::Z3TheoremProver(u32 IncSolverTimeout)
             : Ctx(new Z3CtxWrapper()), TheModel(Z3Model::NullModel),
               Solver(Ctx), FlashSolver(Ctx),
-              LastSolveResult(TPResult::UNKNOWN)
+              LastSolveResult(TPResult::UNKNOWN),
+              IncSolverTimeout(IncSolverTimeout)
         {
             AssumptionVec = new Z3_ast[MaxNumAssumptions];
+            SetIncSolverTimeout();
+        }
 
+        inline void Z3TheoremProver::SetIncSolverTimeout()
+        {
             if (IncSolverTimeout != UINT32_MAX) {
                 Z3_params SolverParams = Z3_mk_params(*Ctx);
                 Z3_params_inc_ref(*Ctx, SolverParams);
                 auto Solver2TimeOutSym =
                     Z3_mk_string_symbol(*Ctx, "combined_solver.solver2_timeout");
-                // switch to the non-incremental solver after 15000 ms
-                Z3_params_set_uint(*Ctx, SolverParams, Solver2TimeOutSym, 15000);
+                Z3_params_set_uint(*Ctx, SolverParams, Solver2TimeOutSym, IncSolverTimeout);
                 Z3_solver_set_params(*Ctx, Solver, SolverParams);
                 Z3_params_dec_ref(*Ctx, SolverParams);
             }
@@ -128,7 +132,9 @@ namespace ESMC {
             Z3_solver_pop(*Ctx, Solver, NumScopes);
         }
 
-        void Z3TheoremProver::Assert(const ExpT& Assertion, bool UnrollQuantifiers)
+        void Z3TheoremProver::Assert(const ExpT& Assertion,
+                                     bool Immutable,
+                                     bool UnrollQuantifiers)
         {
             auto Mgr = Assertion->GetMgr();
             LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
@@ -156,6 +162,10 @@ namespace ESMC {
                           );
 
             Z3_solver_assert(*Ctx, Solver, LoweredAssertion);
+            if (Immutable) {
+                ImmutableAssertions.push_back(LoweredAssertion);
+            }
+
             auto const& Assumptions = LTSCtx->GetAllAssumptions();
             assert(Assumptions.size() == 1);
             for (auto const& AssumptionSet : Assumptions) {
@@ -167,18 +177,23 @@ namespace ESMC {
                                   );
 
                     Z3_solver_assert(*Ctx, Solver, Assumption);
+                    if (Immutable) {
+                        ImmutableAssertions.push_back(Assumption);
+                    }
                 }
             }
         }
 
-        void Z3TheoremProver::Assert(const vector<ExpT>& Assertions, bool UnrollQuantifiers)
+        void Z3TheoremProver::Assert(const vector<ExpT>& Assertions,
+                                     bool Immutable,
+                                     bool UnrollQuantifiers)
         {
             for (auto const& Assertion : Assertions) {
-                Assert(Assertion, UnrollQuantifiers);
+                Assert(Assertion, Immutable, UnrollQuantifiers);
             }
         }
 
-        void Z3TheoremProver::Assert(const Z3Expr& Assertion)
+        void Z3TheoremProver::Assert(const Z3Expr& Assertion, bool Immutable)
         {
             ESMC_LOG_FULL(
                           "TheoremProver.Assertions",
@@ -187,6 +202,9 @@ namespace ESMC {
                           );
 
             Z3_solver_assert(*Ctx, Solver, Assertion);
+            if (Immutable) {
+                ImmutableAssertions.push_back(Assertion);
+            }
         }
 
         TPResult Z3TheoremProver::CheckSat()
@@ -383,6 +401,66 @@ namespace ESMC {
             LastSolveWasFlash = false;
             TheModel = Z3Model::NullModel;
             return LastSolveResult;
+        }
+
+        void Z3TheoremProver::Reset(u32 NewIncSolverTimeout)
+        {
+            auto OldAssertions = Z3_solver_get_assertions(*Ctx, Solver);
+            Z3_ast_vector_inc_ref(*Ctx, OldAssertions);
+
+            Z3Ctx NewCtx = new Z3CtxWrapper();
+            Z3Solver NewSolver(NewCtx);
+            auto NewAssertions = Z3_ast_vector_translate(*Ctx, OldAssertions, *NewCtx);
+            Z3_ast_vector_inc_ref(*NewCtx, NewAssertions);
+            Z3_ast_vector_dec_ref(*Ctx, OldAssertions);
+
+            auto const NumAssertions = Z3_ast_vector_size(*NewCtx, NewAssertions);
+            for (u32 i = 0; i < NumAssertions; ++i) {
+                Z3_solver_assert(*NewCtx, NewSolver,
+                                 Z3_ast_vector_get(*NewCtx, NewAssertions, i));
+            }
+
+            Z3_ast_vector_dec_ref(*NewCtx, NewAssertions);
+
+            Ctx = NewCtx;
+            Solver = NewSolver;
+            FlashSolver = Z3Solver(NewCtx);
+            LastSolveResult = TPResult::UNKNOWN;
+
+            if (NewIncSolverTimeout != 0) {
+                IncSolverTimeout = NewIncSolverTimeout;
+            }
+            SetIncSolverTimeout();
+        }
+
+        void Z3TheoremProver::ResetToImmutable(u32 NewIncSolverTimeout)
+        {
+            Z3Ctx NewCtx = new Z3CtxWrapper();
+            Z3Solver NewSolver(NewCtx);
+
+            const u32 NumImmutableAssertions = ImmutableAssertions.size();
+            vector<Z3Expr> NewImmutableAssertions(NumImmutableAssertions, Z3Expr::NullExpr);
+
+            for (u32 i = 0; i < NumImmutableAssertions; ++i) {
+                auto const& Assertion = ImmutableAssertions[i];
+                Z3Expr NewAssertion(NewCtx, Z3_translate(*Ctx, Assertion, *NewCtx));
+                NewImmutableAssertions[i] = NewAssertion;
+            }
+
+            for (auto const& Assertion : NewImmutableAssertions) {
+                Z3_solver_assert(*NewCtx, NewSolver, Assertion);
+            }
+
+            ImmutableAssertions = NewImmutableAssertions;
+            Ctx = NewCtx;
+            Solver = NewSolver;
+            FlashSolver = Z3Solver(NewCtx);
+            LastSolveResult = TPResult::UNKNOWN;
+
+            if (NewIncSolverTimeout != 0) {
+                IncSolverTimeout = NewIncSolverTimeout;
+            }
+            SetIncSolverTimeout();
         }
 
         void Z3TheoremProver::Interrupt()

@@ -169,7 +169,7 @@ namespace ESMC {
                                << Assertion->ToString() << endl;
                           );
 
-            TP->Assert(FinalAssertion, Options.UnrollQuantifiers);
+            TP->Assert(FinalAssertion, true, Options.UnrollQuantifiers);
         }
 
         Solver::~Solver()
@@ -1292,6 +1292,22 @@ namespace ESMC {
             delete Trace;
         }
 
+        inline void Solver::HandleTPReset()
+        {
+            // The theorem prover object has been reset,
+            // and has a new context, we need to
+            // translate the assumptions into the new context
+            auto OldCtx = Ctx;
+            auto NewCtx = TP->GetCtx();
+            deque<Z3Expr> NewAssumptions;
+            for (auto const& Assumption : CurrentAssumptions) {
+                Z3Expr NewAssumption(NewCtx, Z3_translate(*OldCtx, Assumption, *NewCtx));
+                NewAssumptions.push_back(NewAssumption);
+            }
+            Ctx = NewCtx;
+            CurrentAssumptions = NewAssumptions;
+        }
+
         inline void Solver::AssertBoundsConstraint(u32 CurrentBound)
         {
             if (!UnveiledNewOps) {
@@ -1312,17 +1328,13 @@ namespace ESMC {
                 Summands.push_back(FuncCost);
             }
 
+            auto OldCtx = Ctx;
+
             if (Summands.size() == 0) {
                 // No bounding, nothing changes, leave everything
                 // alone and return.
                 return;
             } else {
-                // Something changes, so
-                // we need to toss out the entire stack of assertions
-                // and reassert them
-                TP = new Z3TheoremProver(Options.IncSolverTimeout);
-                TP->Push();
-                Ctx = TP->GetCtx();
                 if (Summands.size() == 1) {
                     SumExp = Summands[0];
                 } else {
@@ -1332,28 +1344,10 @@ namespace ESMC {
 
             auto EQExp = Mgr->MakeExpr(LTSOps::OpEQ, SumExp, BoundsVariable);
 
-            TP->Assert(EQExp, Options.UnrollQuantifiers);
-            for (auto const& Assertion : AssertedConstraints) {
-                TP->Assert(Assertion, Options.UnrollQuantifiers);
-            }
+            TP->ResetToImmutable();
+            TP->Assert(EQExp, false, Options.UnrollQuantifiers);
 
-            // Redo the assumptions in the new theorem prover
-            CurrentAssumptions.clear();
-
-            // initialize the bounds assertions
-            // if needed
-            if (Options.UBoundMethod != UpdateBoundingMethodT::NoBounding ||
-                Options.GBoundMethod != GuardBoundingMethodT::NoBounding ||
-                (Options.SBoundMethod != StateUpdateBoundingMethodT::NoBounding &&
-                 Options.SBoundMethod != StateUpdateBoundingMethodT::AllSame)) {
-                for (u32 i = CurrentBound; i <= Options.BoundLimit; ++i) {
-                    auto CurProp = Mgr->MakeVar("__assumption_prop_var_" + to_string(i),
-                                                Mgr->MakeType<BooleanType>());
-                    LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
-                    auto LoweredProp = Mgr->LowerExpr(CurProp, LTSCtx);
-                    CurrentAssumptions.push_back(LoweredProp);
-                }
-            }
+            HandleTPReset();
 
             return;
         }
@@ -1498,13 +1492,14 @@ namespace ESMC {
                         CurrentAssumptions.pop_front();
                     }
 
-                    // audupa: testing, reset z3 on bounds bump
+                    // Reset z3 on bounds bump
                     if (DoneOneMCIteration) {
-                        UnveiledNewOps = true;
+                        TP->Reset();
+                        HandleTPReset();
                         DoneOneMCIteration = false;
                     };
-                    // audupa: end of testing
                     continue;
+
                 } else if (TPRes == TPResult::UNKNOWN &&
                            !ResourceLimitManager::CheckMemOut() &&
                            !ResourceLimitManager::CheckTimeOut()) {

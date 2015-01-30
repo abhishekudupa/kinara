@@ -86,8 +86,12 @@ namespace ESMC {
             bool LastSolveWasFlash;
             Z3_ast* AssumptionVec;
             TPResult LastSolveResult;
+            u32 IncSolverTimeout;
+            vector<Z3Expr> ImmutableAssertions;
 
             static const u32 MaxNumAssumptions;
+
+            inline void SetIncSolverTimeout();
 
         public:
             Z3TheoremProver(u32 IncSolverTimeout = UINT32_MAX);
@@ -98,14 +102,26 @@ namespace ESMC {
             void Push();
             void Pop(u32 NumScopes = 1);
 
-            void Assert(const ExpT& Assertion, bool UnrollQuantifiers = false);
-            void Assert(const vector<ExpT>& Assertions, bool UnrollQuantifiers = false);
-            void Assert(const Z3Expr& Assertion);
+            void Assert(const ExpT& Assertion, bool Immutable, bool UnrollQuantifiers);
+            void Assert(const vector<ExpT>& Assertions, bool Immutable,
+                        bool UnrollQuantifiers);
+            void Assert(const Z3Expr& Assertion, bool Immutable);
+
+            // Creates a new context and solver, translates
+            // all assertions from the current solver into the
+            // new context/solver, reasserts the translated constraints
+            // into the new solver and returns
+            // Used to clear all learned lemmas
+            void Reset(u32 NewIncSolverTimeout = 0);
+
+            // Same as reset, but retains only the assertions
+            // marked immutable during the call to Assert
+            void ResetToImmutable(u32 NewIncSolverTimeout = 0);
 
             TPResult CheckSat();
             TPResult CheckSatWithAssumptions(const vector<Z3Expr>& Assumptions);
             TPResult CheckSatWithAssumptions(const deque<Z3Expr>& Assumptions);
-            TPResult CheckSat(const ExpT& Assertion, bool UnrollQuantifiers = false);
+            TPResult CheckSat(const ExpT& Assertion, bool UnrollQuantifiers);
 
             void Interrupt();
 

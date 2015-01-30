@@ -285,6 +285,7 @@ namespace ESMC {
             inline void MakeCostConstraintsForGuard(i64 Op, const ExpT& Exp);
             inline void MakeCostConstraintsForOp(i64 Op);
             inline void MakeRangeConstraintsForOp(i64 UpdateOp);
+            inline void HandleTPReset();
 
         public:
             Solver(LTSChecker* Checker, const SolverOptionsT& Options = SolverOptionsT());
