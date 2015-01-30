@@ -172,6 +172,8 @@ int main()
                                             TheLTS->MakeVar("FlagData", FAType));
     Updates.push_back(new LTSAssignSimple(SetFlagOutDotData, TrueExp));
 
+    // ProcessEFSM->AddFairnessSet("FlagFairnessL1",
+    //                             FairSetFairnessType::Strong);
     ProcessEFSM->AddOutputTransition("L1", "L2", TrueExp,
                                      Updates, "OutMsg", SetFlagType,
                                      {PidParam, PidParam});
@@ -180,7 +182,7 @@ int main()
     // setting my own turn variable
     Updates.push_back(new LTSAssignSimple(TurnExp, PidParam1));
     ProcessEFSM->AddFairnessSet("TurnFairness", FairSetFairnessType::Strong,
-                                {PidParam1}, TrueExp);
+                                {PidParam1}, PidParamNEQPidParam1);
     ProcessEFSM->AddOutputTransitions({PidParam1}, PidParamNEQPidParam1,
                                       "L2", "L3", TrueExp,
                                       Updates, "OutMsg",
