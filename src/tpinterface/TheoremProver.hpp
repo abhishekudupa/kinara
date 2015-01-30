@@ -90,7 +90,7 @@ namespace ESMC {
             static const u32 MaxNumAssumptions;
 
         public:
-            Z3TheoremProver();
+            Z3TheoremProver(u32 IncSolverTimeout = UINT32_MAX);
             Z3TheoremProver(const Z3Ctx& Ctx);
             virtual ~Z3TheoremProver();
 

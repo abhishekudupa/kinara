@@ -133,6 +133,10 @@ namespace ESMC {
                     (string)"Print info about canonicalized state for each state."
                 },
                 {
+                    "Z3.PerIterationStats",
+                    (string)"Print statistics from Z3 after each solve."
+                },
+                {
                     "ESMC.Minimal",
                     (string)"Bare minimal trace output from model checker and solver, " +
                     "serving only to indicate progress. Disabling this will cause NOTHING " +

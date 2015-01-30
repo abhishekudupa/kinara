@@ -37,8 +37,10 @@
 
 // Code:
 
-#include "TheoremProver.hpp"
 #include "../uflts/LTSDecls.hpp"
+#include "../utils/TimeValue.hpp"
+
+#include "TheoremProver.hpp"
 
 namespace ESMC {
     namespace TP {
@@ -79,12 +81,23 @@ namespace ESMC {
         const u32 Z3TheoremProver::MaxNumAssumptions = (1 << 20);
 
         // Z3TheoremProver implementation
-        Z3TheoremProver::Z3TheoremProver()
+        Z3TheoremProver::Z3TheoremProver(u32 IncSolverTimeout)
             : Ctx(new Z3CtxWrapper()), TheModel(Z3Model::NullModel),
               Solver(Ctx), FlashSolver(Ctx),
               LastSolveResult(TPResult::UNKNOWN)
         {
             AssumptionVec = new Z3_ast[MaxNumAssumptions];
+
+            if (IncSolverTimeout != UINT32_MAX) {
+                Z3_params SolverParams = Z3_mk_params(*Ctx);
+                Z3_params_inc_ref(*Ctx, SolverParams);
+                auto Solver2TimeOutSym =
+                    Z3_mk_string_symbol(*Ctx, "combined_solver.solver2_timeout");
+                // switch to the non-incremental solver after 15000 ms
+                Z3_params_set_uint(*Ctx, SolverParams, Solver2TimeOutSym, 15000);
+                Z3_solver_set_params(*Ctx, Solver, SolverParams);
+                Z3_params_dec_ref(*Ctx, SolverParams);
+            }
         }
 
         Z3TheoremProver::Z3TheoremProver(const Z3Ctx& Ctx)
@@ -256,12 +269,41 @@ namespace ESMC {
                                     << " assertions on stack... ";
                                );
 
+#if !defined __APPLE__
+            TimeValue Start = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
+#endif
             auto Res = Z3_solver_check_assumptions(*Ctx, Solver,
                                                    NumAssumptions,
                                                    AssumptionVec);
+#if !defined __APPLE__
+            TimeValue End = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
+#endif
             ESMC_LOG_MIN_SHORT(
                                Out_ << "Done!" << endl;
                                );
+
+#if !defined __APPLE__
+            ESMC_LOG_FULL(
+                          "Z3.PerIterationStats",
+                          Out_ << "Z3 solve time: "
+                               << (float)((End - Start).InMicroSeconds()) / 1000000
+                               << " seconds" << endl;
+                          Z3_stats StatsObj = Z3_solver_get_statistics(*Ctx, Solver);
+                          Z3_stats_inc_ref(*Ctx, StatsObj);
+                          string StatsStr(Z3_stats_to_string(*Ctx, StatsObj));
+                          Z3_stats_dec_ref(*Ctx, StatsObj);
+                          Out_ << StatsStr << endl;
+                          );
+#else
+            ESMC_LOG_FULL(
+                          "Z3.PerIterationStats",
+                          Z3_stats StatsObj = Z3_solver_get_statistics(*Ctx, Solver);
+                          Z3_stats_inc_ref(*Ctx, StatsObj);
+                          string StatsStr(Z3_stats_to_string(*Ctx, StatsObj));
+                          Z3_stats_dec_ref(*Ctx, StatsObj);
+                          Out_ << StatsStr << endl;
+                          );
+#endif
 
             if (Res == Z3_L_TRUE) {
                 LastSolveResult = TPResult::SATISFIABLE;
@@ -293,12 +335,42 @@ namespace ESMC {
                                     << " assertions on stack... " << endl;
                                );
 
+#if !defined __APPLE__
+            TimeValue Start = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
+#endif
             auto Res = Z3_solver_check_assumptions(*Ctx, Solver,
                                                    NumAssumptions,
                                                    AssumptionVec);
+#if !defined __APPLE__
+            TimeValue End = TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
+#endif
             ESMC_LOG_MIN_SHORT(
                                Out_ << "Done!" << endl;
                                );
+
+#if !defined __APPLE__
+            ESMC_LOG_FULL(
+                          "Z3.PerIterationStats",
+                          Out_ << "Z3 solve time: "
+                               << (float)((End - Start).InMicroSeconds()) / 1000000
+                               << " seconds" << endl;
+                          Z3_stats StatsObj = Z3_solver_get_statistics(*Ctx, Solver);
+                          Z3_stats_inc_ref(*Ctx, StatsObj);
+                          string StatsStr(Z3_stats_to_string(*Ctx, StatsObj));
+                          Z3_stats_dec_ref(*Ctx, StatsObj);
+                          Out_ << StatsStr << endl;
+                          );
+#else
+            ESMC_LOG_FULL(
+                          "Z3.PerIterationStats",
+                          Z3_stats StatsObj = Z3_solver_get_statistics(*Ctx, Solver);
+                          Z3_stats_inc_ref(*Ctx, StatsObj);
+                          string StatsStr(Z3_stats_to_string(*Ctx, StatsObj));
+                          Z3_stats_dec_ref(*Ctx, StatsObj);
+                          Out_ << StatsStr << endl;
+                          );
+#endif
+
 
             if (Res == Z3_L_TRUE) {
                 LastSolveResult = TPResult::SATISFIABLE;

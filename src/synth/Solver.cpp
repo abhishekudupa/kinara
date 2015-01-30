@@ -69,7 +69,7 @@ namespace ESMC {
 
         Solver::Solver(LTSChecker* Checker, const SolverOptionsT& Options)
             : Options(Options),
-              TP(new Z3TheoremProver()),
+              TP(new Z3TheoremProver(Options.IncSolverTimeout)),
               TheLTS(Checker->TheLTS),
               Compiler(Checker->Compiler),
               Checker(Checker),
@@ -1292,7 +1292,7 @@ namespace ESMC {
             delete Trace;
         }
 
-        inline void Solver::AssertBoundsConstraint()
+        inline void Solver::AssertBoundsConstraint(u32 CurrentBound)
         {
             if (!UnveiledNewOps) {
                 return;
@@ -1320,7 +1320,7 @@ namespace ESMC {
                 // Something changes, so
                 // we need to toss out the entire stack of assertions
                 // and reassert them
-                TP = new Z3TheoremProver();
+                TP = new Z3TheoremProver(Options.IncSolverTimeout);
                 TP->Push();
                 Ctx = TP->GetCtx();
                 if (Summands.size() == 1) {
@@ -1346,7 +1346,7 @@ namespace ESMC {
                 Options.GBoundMethod != GuardBoundingMethodT::NoBounding ||
                 (Options.SBoundMethod != StateUpdateBoundingMethodT::NoBounding &&
                  Options.SBoundMethod != StateUpdateBoundingMethodT::AllSame)) {
-                for (u32 i = 0; i < Options.BoundLimit; ++i) {
+                for (u32 i = CurrentBound; i <= Options.BoundLimit; ++i) {
                     auto CurProp = Mgr->MakeVar("__assumption_prop_var_" + to_string(i),
                                                 Mgr->MakeType<BooleanType>());
                     LTS::LTSLCRef LTSCtx = new LTS::LTSLoweredContext(Ctx);
@@ -1372,13 +1372,18 @@ namespace ESMC {
 
         inline void Solver::PrintStats()
         {
+            string Z3Stats;
+            auto StatsObj = Z3_solver_get_statistics(*Ctx, TP->GetSolver());
+            Z3_stats_inc_ref(*Ctx, StatsObj);
+            Z3Stats = Z3_stats_to_string(*Ctx, StatsObj);
+            Z3_stats_dec_ref(*Ctx, StatsObj);
+
             ESMC_LOG_MIN_SHORT(
                                auto SolveTimeInMicroSecs = (Stats.SolveEndTime -
                                                             Stats.SolveStartTime).InMicroSeconds();
 
                                Out_ << "Solver Stats:" << endl << endl;
-                               Out_ << "----------------------------------------------------------------"
-                               << endl;
+                               Out_ << "----------------------------------------------------------------" << endl;
                                Out_ << "Solve Time: " << ((float)SolveTimeInMicroSecs / 1000000.0)
                                << " (s)" << endl;
                                Out_ << "Initial Asserts: " << Stats.InitialNumAssertions << endl;
@@ -1391,8 +1396,12 @@ namespace ESMC {
                                << ((float)Stats.TotalSMTTime / Stats.NumIterations)
                                << " (uS)" << endl;
                                Out_ << "Final Bound: " << Bound << endl;
-                               Out_ << "----------------------------------------------------------------"
-                               << endl;
+                               Out_ << "----------------------------------------------------------------" << endl;
+                               Out_ << "Z3 Solver Stats:" << endl << endl;
+                               Out_ << "----------------------------------------------------------------" << endl;
+                               Out_ << Z3Stats << endl;
+                               Out_ << "----------------------------------------------------------------" << endl;
+
                                );
         }
 
@@ -1447,6 +1456,7 @@ namespace ESMC {
 
             bool FirstIteration = true;
             bool InitialConstraintsCounted = false;
+            bool DoneOneMCIteration = false;
             while (Bound <= Options.BoundLimit) {
 
                 if (ResourceLimitManager::CheckMemOut() ||
@@ -1461,7 +1471,7 @@ namespace ESMC {
 
                 Stats.FinalNumAssertions = TP->GetNumAssertions();
 
-                AssertBoundsConstraint();
+                AssertBoundsConstraint(Bound);
 
                 auto SMTStartTime = TimeValue::GetTimeValue();
                 auto TPRes = TP->CheckSatWithAssumptions(CurrentAssumptions);
@@ -1487,6 +1497,13 @@ namespace ESMC {
                     if (CurrentAssumptions.size() > 0) {
                         CurrentAssumptions.pop_front();
                     }
+
+                    // audupa: testing, reset z3 on bounds bump
+                    if (DoneOneMCIteration) {
+                        UnveiledNewOps = true;
+                        DoneOneMCIteration = false;
+                    };
+                    // audupa: end of testing
                     continue;
                 } else if (TPRes == TPResult::UNKNOWN &&
                            !ResourceLimitManager::CheckMemOut() &&
@@ -1518,6 +1535,7 @@ namespace ESMC {
                 }
                 auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst,
                                               Options.PrioritizeNonTentative, CExBound);
+                DoneOneMCIteration = true;
 
                 if (!Safe) {
                     HandleSafetyViolations();

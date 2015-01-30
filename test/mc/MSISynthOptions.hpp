@@ -65,6 +65,7 @@ struct MSISynthOptionsT {
     u32 NumCExToProcess;
     u32 BoundLimit;
     u32 NumMissingTransitions;
+    u32 IncSolverTimeout;
     bool NoState;
     string LogFileName;
     vector<string> LogOptions;
@@ -84,6 +85,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     vector<string> LogOptions;
     string LogFileName;
     string LogCompressionTechnique;
+    u32 IncSolverTimeout;
 
     Desc.add_options()
         ("help", "Produce this help message")
@@ -109,6 +111,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
          "Prioritize the most non-tentative paths first during model checking")
         ("num-missing-transitions", po::value<u32>(&NumMissingTransitions)->default_value(2),
          "Number of missing transitions, can be 2, 4 or 5")
+        ("inc-solver-timeout", po::value<u32>(&IncSolverTimeout)->default_value(UINT32_MAX),
+         "Timeout (in seconds) for switching the SMT solver into non-incremental mode")
         ("log-file", po::value<string>(&LogFileName)->default_value(""),
          "Name of file to write logging info into, defaults to stdout")
         ("log-compression", po::value<string>(&LogCompressionTechnique)->default_value("none"),
@@ -195,6 +199,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     Options.NumCExToProcess = CExToProcess;
     Options.BoundLimit = BoundLimit;
     Options.NumMissingTransitions = NumMissingTransitions;
+    Options.IncSolverTimeout =
+        (IncSolverTimeout == UINT32_MAX ? IncSolverTimeout : IncSolverTimeout * 1000);
 
     return;
 }
@@ -212,6 +218,7 @@ static inline void OptsToSolverOpts(const MSISynthOptionsT& Opts,
     SolverOpts.NumCExToProcess = Opts.NumCExToProcess;
     SolverOpts.BoundLimit = Opts.BoundLimit;
     SolverOpts.PrioritizeNonTentative = Opts.PrioritizeNonTentative;
+    SolverOpts.IncSolverTimeout = Opts.IncSolverTimeout;
 }
 
 static inline void OptsToLibOpts(const MSISynthOptionsT& Opts,

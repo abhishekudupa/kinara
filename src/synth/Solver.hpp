@@ -83,6 +83,7 @@ namespace ESMC {
             u32 BoundLimit;
             bool GeneralFixForDL;
             bool PrioritizeNonTentative;
+            u32 IncSolverTimeout;
 
             inline SolverOptionsT()
                 : GBoundMethod(GuardBoundingMethodT::NoBounding),
@@ -91,7 +92,7 @@ namespace ESMC {
                   UnrollQuantifiers(false), CPULimitInSeconds(UINT64_MAX),
                   MemLimitInMB(UINT64_MAX), NumCExToProcess(8),
                   BoundLimit(256), GeneralFixForDL(false),
-                  PrioritizeNonTentative(false)
+                  PrioritizeNonTentative(false), IncSolverTimeout(UINT32_MAX)
             {
                 // Nothing here
             }
@@ -107,7 +108,8 @@ namespace ESMC {
                                   UINT32_MAX : Other.NumCExToProcess),
                   BoundLimit(Other.BoundLimit == 0 ? 256 : Other.BoundLimit),
                   GeneralFixForDL(Other.GeneralFixForDL),
-                  PrioritizeNonTentative(Other.PrioritizeNonTentative)
+                  PrioritizeNonTentative(Other.PrioritizeNonTentative),
+                  IncSolverTimeout(Other.IncSolverTimeout)
             {
                 // Nothing here
             }
@@ -129,6 +131,7 @@ namespace ESMC {
                 BoundLimit = Other.BoundLimit == 0 ? 256 : Other.BoundLimit;
                 GeneralFixForDL = Other.GeneralFixForDL;
                 PrioritizeNonTentative = Other.PrioritizeNonTentative;
+                IncSolverTimeout = Other.IncSolverTimeout;
                 return *this;
             }
         };
@@ -235,7 +238,7 @@ namespace ESMC {
             inline void CheckedAssert(const ExpT& Assertion);
             inline void CreateMutualExclusionConstraint(const ExpT& GuardExp1,
                                                         const ExpT& GuardExp2);
-            inline void AssertBoundsConstraint();
+            inline void AssertBoundsConstraint(u32 CurrentBound);
             inline void HandleSafetyViolations();
             inline void HandleOneSafetyViolation(const StateVec* ErrorState,
                                                  const ExpT& BlownInvariant);
