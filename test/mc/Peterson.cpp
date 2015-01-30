@@ -171,6 +171,7 @@ int main()
     auto SetFlagOutDotData = TheLTS->MakeOp(LTSOps::OpField, SetFlagOutMsgVar,
                                             TheLTS->MakeVar("FlagData", FAType));
     Updates.push_back(new LTSAssignSimple(SetFlagOutDotData, TrueExp));
+
     ProcessEFSM->AddOutputTransition("L1", "L2", TrueExp,
                                      Updates, "OutMsg", SetFlagType,
                                      {PidParam, PidParam});
@@ -178,13 +179,13 @@ int main()
 
     // setting my own turn variable
     Updates.push_back(new LTSAssignSimple(TurnExp, PidParam1));
-    // ProcessEFSM->AddFairnessSet("TurnFairness", FairSetFairnessType::Strong,
-    //                             {PidParam1}, TrueExp);
+    ProcessEFSM->AddFairnessSet("TurnFairness", FairSetFairnessType::Strong,
+                                {PidParam1}, TrueExp);
     ProcessEFSM->AddOutputTransitions({PidParam1}, PidParamNEQPidParam1,
                                       "L2", "L3", TrueExp,
                                       Updates, "OutMsg",
-                                      SetTurnType, {PidParam});
-                                      // EmptyStringSet, {"TurnFairness"});
+                                      SetTurnType, {PidParam},
+                                      EmptyStringSet, {"TurnFairness"});
     Updates.clear();
     auto FlagIndexParam1Exp = TheLTS->MakeOp(LTSOps::OpIndex, FlagArrayExp, PidParam1);
 
@@ -204,9 +205,12 @@ int main()
     Updates.push_back(new LTSAssignSimple(FlagIndexPidParamExp, FalseExp));
     // setting the payload
     Updates.push_back(new LTSAssignSimple(SetFlagOutDotData, FalseExp));
+    ProcessEFSM->AddFairnessSet("FlagFairnessCritical",
+                                FairSetFairnessType::Strong);
     ProcessEFSM->AddOutputTransition("Critical", "L1", TrueExp,
                                      Updates, "OutMsg", SetFlagType,
-                                     {PidParam, PidParam});
+                                     {PidParam, PidParam},
+                                     {"FlagFairnessCritical"});
     Updates.clear();
 
 
@@ -219,10 +223,10 @@ int main()
     AlphaEFSM->FreezeVars();
     AlphaEFSM->AddOutputMsg(AlphaType, {PidParam});
 
-    // AlphaEFSM->AddFairnessSet("AlphaFairness", FairSetFairnessType::Strong);
+    AlphaEFSM->AddFairnessSet("AlphaFairness", FairSetFairnessType::Strong);
     AlphaEFSM->AddOutputTransition("A0", "A0", TrueExp,
-                                   {}, "OutMsg", AlphaType, {PidParam});
-                                   // {"AlphaFairness"});
+                                   {}, "OutMsg", AlphaType, {PidParam},
+                                   {"AlphaFairness"});
 
     TheLTS->FreezeAutomata();
 
