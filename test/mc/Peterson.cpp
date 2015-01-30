@@ -178,13 +178,13 @@ int main()
 
     // setting my own turn variable
     Updates.push_back(new LTSAssignSimple(TurnExp, PidParam1));
-    ProcessEFSM->AddFairnessSet("TurnFairness", FairSetFairnessType::Strong,
-                                {PidParam1}, TrueExp);
+    // ProcessEFSM->AddFairnessSet("TurnFairness", FairSetFairnessType::Strong,
+    //                             {PidParam1}, TrueExp);
     ProcessEFSM->AddOutputTransitions({PidParam1}, PidParamNEQPidParam1,
                                       "L2", "L3", TrueExp,
                                       Updates, "OutMsg",
-                                      SetTurnType, {PidParam},
-                                      EmptyStringSet, {"TurnFairness"});
+                                      SetTurnType, {PidParam});
+                                      // EmptyStringSet, {"TurnFairness"});
     Updates.clear();
     auto FlagIndexParam1Exp = TheLTS->MakeOp(LTSOps::OpIndex, FlagArrayExp, PidParam1);
 
@@ -219,10 +219,10 @@ int main()
     AlphaEFSM->FreezeVars();
     AlphaEFSM->AddOutputMsg(AlphaType, {PidParam});
 
-    AlphaEFSM->AddFairnessSet("AlphaFairness", FairSetFairnessType::Strong);
+    // AlphaEFSM->AddFairnessSet("AlphaFairness", FairSetFairnessType::Strong);
     AlphaEFSM->AddOutputTransition("A0", "A0", TrueExp,
-                                   {}, "OutMsg", AlphaType, {PidParam},
-                                   {"AlphaFairness"});
+                                   {}, "OutMsg", AlphaType, {PidParam});
+                                   // {"AlphaFairness"});
 
     TheLTS->FreezeAutomata();
 
@@ -374,7 +374,7 @@ int main()
         auto const& ErrorStates = Checker->GetAllErrorStates();
         for (auto const& ErrorState : ErrorStates) {
             auto Trace = Checker->MakeTraceToError(ErrorState.first);
-            cout << Trace->ToString() << endl;
+            cout << Trace->ToString(1) << endl;
             delete Trace;
         }
 
@@ -386,7 +386,7 @@ int main()
     auto LiveTrace = Checker->CheckLiveness("GFCritical");
 
     if (LiveTrace != nullptr) {
-        cout << LiveTrace->ToString() << endl << endl;
+        cout << LiveTrace->ToString(1) << endl << endl;
         delete LiveTrace;
     }
 }
