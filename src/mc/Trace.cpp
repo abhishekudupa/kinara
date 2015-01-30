@@ -575,7 +575,6 @@ namespace ESMC {
                                                             LTSChecker* Checker)
         {
             auto ThePS = Checker->ThePS;
-            auto const& GuardedCmds = Checker->GuardedCommands;
             auto TheCanonicalizer = Checker->TheCanonicalizer;
             auto PermSet = TheCanonicalizer->GetPermSet();
             auto Mgr = Checker->TheLTS->GetMgr();
@@ -702,21 +701,15 @@ namespace ESMC {
             } if (PathSoFar.size() == 0 && SCCRoot->IsSingular()) {
                 // Single node SCC with self loop
                 // Find the command
-                auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurEndOfPath));
 
-                for (auto const& Edge : Edges) {
-                    if (Edge->GetTarget()->Equals(CurEndOfPath)) {
-                        PSTraceElemT CurElem(GuardedCmds[Edge->GetGCmdIndex()],
-                                             new ProductState(Edge->GetTarget()->GetSVPtr()->Clone(),
-                                                              Edge->GetTarget()->GetMonitorState(),
-                                                              Edge->GetTarget()->GetIndexID(), 1));
-                        PathSoFar.push_back(CurElem);
-                        return new LivenessViolation(InitState, StemPath, StemPermUpdates,
-                                                     PathSoFar, {}, Checker->Printer, ThePS);
-                    }
-                }
-                throw InternalError((string)"Could not complete cycle in single node SCC.\n" +
-                                    "At: " + __FILE__ + ":" + to_string(__LINE__));
+                vector<PSTraceElemT> TempPath;
+                CurEndOfPath = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
+                                            InvSortPermAlongPath, nullptr, 0,
+                                            [&] (u32 CmdID, const ProductState* State) -> bool
+                                            {
+                                                return State->Equals(StartOfLoop);
+                                            }, TempPath);
+                PathSoFar.insert(PathSoFar.end(), TempPath.begin(), TempPath.end());
             } else if (PathSoFar.size() == 0) {
                 // Transition to some other state first and then call
                 // do unwound bfs
@@ -736,6 +729,29 @@ namespace ESMC {
 
             // That handles all the special cases!
             // Now connect this path back to the original state
+            // if necessary
+            auto LastStateOnPath = PathSoFar.back().second;
+            u32 LoopSortPerm;
+            auto SortedLastStateSV = TheCanonicalizer->SortChans(LastStateOnPath->GetSVPtr(),
+                                                                 true, LoopSortPerm);
+            if (SortedLastStateSV->Equals(*(StartOfLoop->GetSVPtr()))) {
+                auto&& LoopPermUpdates =
+                    TheCanonicalizer->GetChanUpdatesForPermutation(LoopSortPerm);
+                auto SortedLastStateOnPath = new ProductState(SortedLastStateSV,
+                                                              LastStateOnPath->GetMonitorState(),
+                                                              LastStateOnPath->GetIndexID(), 0);
+                auto OldEndOfPathPair = PathSoFar.back();
+                PathSoFar.pop_back();
+
+                PathSoFar.push_back(PSTraceElemT(OldEndOfPathPair.first, SortedLastStateOnPath));
+                OldEndOfPathPair.second->GetSVPtr()->Recycle();
+                delete OldEndOfPathPair.second;
+                return new LivenessViolation(InitState, StemPath, StemPermUpdates, PathSoFar,
+                                             LoopPermUpdates, Checker->Printer, ThePS);
+            }
+            SortedLastStateSV->Recycle();
+
+            // We do need to make a path back to the beginning of the loop
             vector<PSTraceElemT> LoopBack;
             auto FinalPred =
                 [&] (u32 CmdID, const ProductState* State) -> bool
