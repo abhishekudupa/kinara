@@ -77,9 +77,6 @@ namespace ESMC {
               GuardedCommands(TheLTS->GetGuardedCmds()),
               UnveiledNewOps(false)
         {
-            // push a scope onto the theorem prover and assert
-            // true
-            TP->Push();
             Ctx = TP->GetCtx();
 
             // Populate the set of fixed commands and create the cost function

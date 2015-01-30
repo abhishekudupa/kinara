@@ -284,6 +284,7 @@ namespace ESMC {
             auto ProcIdxSet = Monitor->GetIndexSet();
             auto const& GuardedCmds = Checker->GuardedCommands;
             auto TheSCCID = CanonicalRoot->GetSCCID();
+            auto const InSingularSCC = CanonicalRoot->IsSingular();
 
             deque<Detail::BFSQueueEntryT> BFSQueue;
             Detail::PSPermSetT VisitedStates;
@@ -297,6 +298,7 @@ namespace ESMC {
 
             bool ReachedTarget = false;
             Detail::BFSQueueEntryT TargetPSPerm;
+            bool RevisitingState = false;
 
             while (BFSQueue.size() > 0 && !ReachedTarget) {
                 auto CurTuple = BFSQueue.front();
@@ -329,8 +331,11 @@ namespace ESMC {
                     auto NextPair = make_pair(NextPermPS, NextPermIndex);
 
                     if (VisitedStates.find(NextPair) != VisitedStates.end()) {
-                        // Already visited
-                        continue;
+                        if (InSingularSCC) {
+                            RevisitingState = true;
+                        } else {
+                            continue;
+                        }
                     }
 
                     VisitedStates.insert(NextPair);
@@ -366,7 +371,10 @@ namespace ESMC {
                                                            NextUnwoundPS->GetIndexID(), 0);
                     auto NextTuple = make_tuple(NextPermPS, NextPermIndex, InvSortPermIdx);
                     PredMap[NextTuple] = make_pair(TransitionCmdID, CurTuple);
-                    BFSQueue.push_back(NextTuple);
+
+                    if (!RevisitingState) {
+                        BFSQueue.push_back(NextTuple);
+                    }
 
                     if (FChecker != nullptr) {
                         auto FairnessSat =
@@ -415,7 +423,8 @@ namespace ESMC {
             InvSortPermForRoot = CurSortPerm;
 
             vector<PSTraceElemT> RTraceElems;
-            while (it != PredMap.end()) {
+            bool SelfLoop = false;
+            while (it != PredMap.end() && !SelfLoop) {
                 // Unwind the pred state
                 auto UnwoundEdge = it->second;
                 auto PredStatePerm = UnwoundEdge.second;
@@ -429,6 +438,10 @@ namespace ESMC {
                                                                          ProcIdxSet);
                 TheCanonicalizer->Sort(UnsortedPredPS);
                 TheCanonicalizer->ApplySort(UnsortedPredPS, PredSortPerm);
+
+                if (UnsortedPredPS->Equals(CurUnsortedPS)) {
+                    SelfLoop = true;
+                }
 
                 RTraceElems.push_back(PSTraceElemT(GuardedCmds[CmdID], CurUnsortedPS)),
                 it = PredMap.find(PredStatePerm);
@@ -690,6 +703,7 @@ namespace ESMC {
                 // Single node SCC with self loop
                 // Find the command
                 auto const& Edges = ThePS->GetEdges(const_cast<ProductState*>(CurEndOfPath));
+
                 for (auto const& Edge : Edges) {
                     if (Edge->GetTarget()->Equals(CurEndOfPath)) {
                         PSTraceElemT CurElem(GuardedCmds[Edge->GetGCmdIndex()],
