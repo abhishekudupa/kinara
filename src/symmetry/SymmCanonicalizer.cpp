@@ -55,738 +55,738 @@
 #include "SymmCanonicalizer.hpp"
 
 namespace ESMC {
-    namespace Symm {
+namespace Symm {
 
-        using ESMC::LTS::ExpT;
-        using ESMC::MC::StateVecPrinter;
+using ESMC::LTS::ExpT;
+using ESMC::MC::StateVecPrinter;
 
-        using ESMC::MC::StateVec;
-        using ESMC::LTS::ArrayType;
-        using ESMC::LTS::RecordType;
-        using ESMC::LTS::SymmetricType;
-        using ESMC::LTS::UnionType;
-        using ESMC::LTS::LTSExtensionT;
-        using ESMC::LTS::LTSTypeExtensionT;
-        using ESMC::MC::ProductState;
-        using ESMC::MC::ProcessIndexSet;
+using ESMC::MC::StateVec;
+using ESMC::LTS::ArrayType;
+using ESMC::LTS::RecordType;
+using ESMC::LTS::SymmetricType;
+using ESMC::LTS::UnionType;
+using ESMC::LTS::LTSExtensionT;
+using ESMC::LTS::LTSTypeExtensionT;
+using ESMC::MC::ProductState;
+using ESMC::MC::ProcessIndexSet;
 
-        // Use explicit permutations upto this size
-        const u32 MaxExplicitSize = 1024;
+// Use explicit permutations upto this size
+const u32 MaxExplicitSize = 1024;
 
-        PermuterBase::PermuterBase(u32 Offset, u32 TypeOffset, u32 PermSize)
-            : Offset(Offset), TypeOffset(TypeOffset), PermSize(PermSize)
-        {
-            // Nothing here
+PermuterBase::PermuterBase(u32 Offset, u32 TypeOffset, u32 PermSize)
+    : Offset(Offset), TypeOffset(TypeOffset), PermSize(PermSize)
+{
+    // Nothing here
+}
+
+PermuterBase::~PermuterBase()
+{
+    // Nothing here
+}
+
+u32 PermuterBase::GetOffset() const
+{
+    return Offset;
+}
+
+u32 PermuterBase::GetTypeOffset() const
+{
+    return TypeOffset;
+}
+
+u32 PermuterBase::GetPermSize() const
+{
+    return PermSize;
+}
+
+PermuterBase* PermuterBase::MakePermuter(u32 Offset, const TypeRef &Type,
+                                         const LabelledTS* TheLTS)
+{
+    auto TypeAsArr = Type->As<ArrayType>();
+    if (TypeAsArr != nullptr) {
+        return new ArrayPermuter(Offset, Type, TheLTS);
+    }
+    auto TypeAsRec = Type->As<RecordType>();
+    if (TypeAsRec != nullptr) {
+        return new RecordPermuter(Offset, Type, TheLTS);
+    }
+    auto TypeAsSym = Type->As<SymmetricType>();
+    if (TypeAsSym != nullptr) {
+        return new SymmTypePermuter(Offset, Type, TheLTS);
+    }
+    // This does not need any permutation
+    return new NoOpPermuter();
+}
+
+ArrayPermuter::ArrayPermuter(u32 Offset, const TypeRef& ArrType,
+                             const LabelledTS* TheLTS)
+    : PermuterBase(Offset, 0, 0)
+{
+    auto TypeAsArr = ArrType->As<ArrayType>();
+    auto const& IndexType = TypeAsArr->GetIndexType();
+    auto const& ValueType = TypeAsArr->GetValueType();
+    NumElems = IndexType->GetCardinalityNoUndef();
+    ElemSize = ValueType->GetByteSize();
+    ElemSize = Align(ElemSize, ElemSize);
+
+    if (!IndexType->Is<SymmetricType>()) {
+        PermSize = 0;
+        TypeOffset = 0;
+        IsSymmArray = false;
+    } else {
+        IsSymmArray = true;
+        PermSize = IndexType->GetCardinalityNoUndef();
+        auto TypeExt = IndexType->GetExtension<LTSTypeExtensionT>();
+        TypeOffset = TypeExt->TypeOffset;
+    }
+
+    for (u32 i = 0; i < NumElems; ++i) {
+        u32 CurOffset = Offset + (i * ElemSize);
+        auto SubPermuter =
+            PermuterBase::MakePermuter(CurOffset, ValueType, TheLTS);
+        ElemPermuters.push_back(SubPermuter);
+    }
+}
+
+ArrayPermuter::~ArrayPermuter()
+{
+    for (auto const& ElemPermuter : ElemPermuters) {
+        delete ElemPermuter;
+    }
+}
+
+u32 ArrayPermuter::GetElemSize() const
+{
+    return ElemSize;
+}
+
+u32 ArrayPermuter::GetNumElems() const
+{
+    return NumElems;
+}
+
+const vector<PermuterBase*>& ArrayPermuter::GetElemPermuters() const
+{
+    return ElemPermuters;
+}
+
+void ArrayPermuter::Permute(const StateVec* InStateVector,
+                            StateVec* OutStateVector,
+                            const PermutationSet::iterator& CurPerm)
+{
+    auto const& Permutation = CurPerm.GetPerm();
+    // Apply the permutation on the elements first
+    for (auto ElemPermuter : ElemPermuters) {
+        ElemPermuter->Permute(InStateVector, OutStateVector, CurPerm);
+    }
+
+    OutStateVector->MarkDirty();
+
+    if (IsSymmArray) {
+        // Now apply my own permutation
+        // But instead of using the input state vector
+        // use a clone of the output state vector computed
+        // so far, this way, we retain the permutations
+        // performed by the sub permuters
+
+        // Rule: Given a permutation <p1, p2, ... pn>, we
+        // interpret this is as a map:
+        // Arr[0] |-> Arr[p1]
+        // Arr[1] |-> Arr[p2]
+        // ...
+        // Arr[n] |-> Arr[pn]
+        auto NewOutStateVector = OutStateVector->Clone();
+
+        for (u32 i = 0; i < PermSize; ++i) {
+            u32 j = i + TypeOffset;
+            const u08* SrcBasePtr = NewOutStateVector->GetStateBuffer();
+            u08* DstBasePtr = OutStateVector->GetStateBuffer();
+
+            u32 CurPutPos = Permutation[j];
+            const u08* SrcPtr = (SrcBasePtr + Offset + (ElemSize * i));
+            u08* DstPtr = (DstBasePtr + Offset + (ElemSize * CurPutPos));
+            memcpy(DstPtr, SrcPtr, ElemSize);
         }
+        NewOutStateVector->Recycle();
+    }
+}
 
-        PermuterBase::~PermuterBase()
-        {
-            // Nothing here
+RecordPermuter::RecordPermuter(u32 Offset, const TypeRef& RecType,
+                               const LabelledTS* TheLTS)
+    : PermuterBase(Offset, 0, 0)
+{
+    auto UMType = TheLTS->GetUnifiedMType()->As<UnionType>();
+    bool IsUMType = (RecType == TheLTS->GetUnifiedMType());
+    auto TypeAsRec = RecType->As<RecordType>();
+    auto const& MemberVec = TypeAsRec->GetMemberVec();
+
+    for (auto const& Member : MemberVec) {
+        auto const& FieldType = Member.second;
+        auto const& FieldName = Member.first;
+        auto FieldOffset = Offset + TypeAsRec->GetFieldOffset(Member.first);
+
+        if (IsUMType && FieldName == UMType->GetTypeIDFieldName()) {
+            ElemPermuters.push_back(new MTypePermuter(FieldOffset, FieldType, TheLTS));
+        } else {
+            ElemPermuters.push_back(PermuterBase::MakePermuter(FieldOffset, FieldType,
+                                                               TheLTS));
         }
+    }
 
-        u32 PermuterBase::GetOffset() const
-        {
-            return Offset;
-        }
+    TypeOffset = 0;
+    PermSize = 0;
+}
 
-        u32 PermuterBase::GetTypeOffset() const
-        {
-            return TypeOffset;
-        }
+RecordPermuter::~RecordPermuter()
+{
+    for (auto ElemPermuter : ElemPermuters) {
+        delete ElemPermuter;
+    }
+}
 
-        u32 PermuterBase::GetPermSize() const
-        {
-            return PermSize;
-        }
+void RecordPermuter::Permute(const StateVec* InStateVector,
+                             StateVec* OutStateVector,
+                             const PermutationSet::iterator& CurPerm)
+{
+    // Just apply the permutation to all the members
+    for (auto ElemPermuter : ElemPermuters) {
+        ElemPermuter->Permute(InStateVector, OutStateVector, CurPerm);
+    }
+}
 
-        PermuterBase* PermuterBase::MakePermuter(u32 Offset, const TypeRef &Type,
-                                                 const LabelledTS* TheLTS)
-        {
-            auto TypeAsArr = Type->As<ArrayType>();
-            if (TypeAsArr != nullptr) {
-                return new ArrayPermuter(Offset, Type, TheLTS);
+const vector<PermuterBase*>& RecordPermuter::GetElemPermuters() const
+{
+    return ElemPermuters;
+}
+
+MTypePermuter::MTypePermuter(u32 Offset, const TypeRef& Type,
+                             const LabelledTS* TheLTS)
+    : PermuterBase(Offset, 0, 0),
+      MsgCanonMap(TheLTS->GetMsgCanonMap()),
+      TypeSize(Type->GetByteSize())
+{
+    // Nothing here
+}
+
+MTypePermuter::~MTypePermuter()
+{
+    // Nothing here
+}
+
+void MTypePermuter::Permute(const StateVec* InStateVector,
+                            StateVec* OutStateVector,
+                            const PermutationSet::iterator& CurPerm)
+{
+    auto PermIdx = CurPerm.GetIndex();
+    u32 ActVal;
+    if (TypeSize == 1) {
+        ActVal = InStateVector->ReadByte(Offset);
+    } else if (TypeSize == 2) {
+        ActVal = InStateVector->ReadShort(Offset);
+    } else {
+        ActVal = InStateVector->ReadWord(Offset);
+    }
+
+    u32 PermVal = MsgCanonMap[ActVal][PermIdx];
+
+    if (TypeSize == 1) {
+        OutStateVector->WriteByte(Offset, (u08)PermVal);
+    } else if (TypeSize == 2) {
+        OutStateVector->WriteShort(Offset, (u16)PermVal);
+    } else {
+        OutStateVector->WriteWord(Offset, PermVal);
+    }
+}
+
+SymmTypePermuter::SymmTypePermuter(u32 Offset, const TypeRef& SymmType,
+                                   const LabelledTS* TheLTS)
+    : PermuterBase(Offset, 0, 0)
+{
+    auto TypeExt = SymmType->GetExtension<LTSTypeExtensionT>();
+    TypeOffset = TypeExt->TypeOffset;
+    PermSize = SymmType->As<SymmetricType>()->GetCardinalityNoUndef();
+}
+
+SymmTypePermuter::~SymmTypePermuter()
+{
+    // Nothing here
+}
+
+void SymmTypePermuter::Permute(const StateVec* InStateVector,
+                               StateVec* OutStateVector,
+                               const PermutationSet::iterator& CurPerm)
+{
+    auto const& Permutation = CurPerm.GetPerm();
+    u32 ActVal;
+    if (PermSize <= 255) {
+        ActVal = InStateVector->ReadByte(Offset);
+    } else if (PermSize <= 65535) {
+        ActVal = InStateVector->ReadShort(Offset);
+    } else {
+        ActVal = InStateVector->ReadWord(Offset);
+    }
+    if (ActVal == 0) {
+        // Undefined, leave it alone
+        return;
+    } else {
+        ActVal -= 1;
+    }
+
+    // Add back the offset
+    u32 PermVal = Permutation[TypeOffset + ActVal] + 1;
+    if (PermSize <= 255) {
+        OutStateVector->WriteByte(Offset, (u08)PermVal);
+    } else if (PermSize <= 65535) {
+        OutStateVector->WriteShort(Offset, (u16)PermVal);
+    } else {
+        OutStateVector->WriteWord(Offset, PermVal);
+    }
+}
+
+NoOpPermuter::NoOpPermuter()
+    : PermuterBase(0, 0, 0)
+{
+    // Nothing here
+}
+
+NoOpPermuter::~NoOpPermuter()
+{
+    // Nothing here
+}
+
+void NoOpPermuter::Permute(const StateVec* InStateVector,
+                           StateVec* OutStateVector,
+                           const PermutationSet::iterator& CurPerm)
+{
+    // Nothing here
+}
+
+ChanBufferSorter::ChanBufferSorter(u32 Offset, const TypeRef& ChanBufferType,
+                                   u32 Capacity, u32 PermVecOffset,
+                                   ChannelEFSM* ChanEFSM, u32 InstanceID)
+    : Offset(Offset), Capacity(Capacity), PermVecOffset(PermVecOffset),
+      ChanEFSM(ChanEFSM), InstanceID(InstanceID)
+{
+    auto TypeAsArray = ChanBufferType->As<ArrayType>();
+    if (TypeAsArray == nullptr) {
+        throw InternalError((string)"Expected Channel buffer type to be an " +
+                            "array.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
+    }
+    auto IndexType = TypeAsArray->GetIndexType();
+    auto ValueType = TypeAsArray->GetValueType();
+    ElemSize = ValueType->GetByteSize();
+    ElemSize = Align(ElemSize, ElemSize);
+
+    for (u32 i = 0; i < Capacity; ++i) {
+        LastPermutation.push_back(i);
+    }
+    IdentityPermutation = LastPermutation;
+    ScratchPermutation = LastPermutation;
+}
+
+ChanBufferSorter::~ChanBufferSorter()
+{
+    // Nothing here
+}
+
+void ChanBufferSorter::Sort(StateVec* OutStateVector,
+                            bool RememberPerm)
+{
+    if (RememberPerm) {
+        LastPermutation = IdentityPermutation;
+    }
+
+    // O(n^2) sorting, I know, but we don't expect these
+    // channels to have more than 10 or so elements
+    u08* BasePtr = OutStateVector->GetStateBuffer();
+    auto WorkingVec = OutStateVector->Clone();
+    u08* WorkBasePtr = WorkingVec->GetStateBuffer();
+
+    OutStateVector->MarkDirty();
+
+    auto NumElems = Capacity;
+
+    for (u32 i = 0; i < NumElems - 1; ++i) {
+        u32 MinIndex = i;
+        u32 MinOffset = Offset + (ElemSize * MinIndex);
+
+        for (u32 j = i + 1; j < NumElems; ++j) {
+            u32 JOffset = Offset + (ElemSize * j);
+            auto CmpRes = memcmp(BasePtr + MinOffset, BasePtr + JOffset, ElemSize);
+            if (CmpRes > 0) {
+                MinIndex = j;
+                MinOffset = JOffset;
             }
-            auto TypeAsRec = Type->As<RecordType>();
-            if (TypeAsRec != nullptr) {
-                return new RecordPermuter(Offset, Type, TheLTS);
-            }
-            auto TypeAsSym = Type->As<SymmetricType>();
-            if (TypeAsSym != nullptr) {
-                return new SymmTypePermuter(Offset, Type, TheLTS);
-            }
-            // This does not need any permutation
-            return new NoOpPermuter();
         }
+        if (MinIndex != i) {
+            u32 IOffset = Offset + (ElemSize * i);
+            memcpy(WorkBasePtr + IOffset, BasePtr + IOffset, ElemSize);
+            memcpy(BasePtr + IOffset, BasePtr + MinOffset, ElemSize);
+            memcpy(BasePtr + MinOffset, WorkBasePtr + IOffset, ElemSize);
 
-        ArrayPermuter::ArrayPermuter(u32 Offset, const TypeRef& ArrType,
-                                     const LabelledTS* TheLTS)
-            : PermuterBase(Offset, 0, 0)
-        {
-            auto TypeAsArr = ArrType->As<ArrayType>();
-            auto const& IndexType = TypeAsArr->GetIndexType();
-            auto const& ValueType = TypeAsArr->GetValueType();
-            NumElems = IndexType->GetCardinalityNoUndef();
-            ElemSize = ValueType->GetByteSize();
-            ElemSize = Align(ElemSize, ElemSize);
-
-            if (!IndexType->Is<SymmetricType>()) {
-                PermSize = 0;
-                TypeOffset = 0;
-                IsSymmArray = false;
-            } else {
-                IsSymmArray = true;
-                PermSize = IndexType->GetCardinalityNoUndef();
-                auto TypeExt = IndexType->GetExtension<LTSTypeExtensionT>();
-                TypeOffset = TypeExt->TypeOffset;
-            }
-
-            for (u32 i = 0; i < NumElems; ++i) {
-                u32 CurOffset = Offset + (i * ElemSize);
-                auto SubPermuter =
-                    PermuterBase::MakePermuter(CurOffset, ValueType, TheLTS);
-                ElemPermuters.push_back(SubPermuter);
-            }
-        }
-
-        ArrayPermuter::~ArrayPermuter()
-        {
-            for (auto const& ElemPermuter : ElemPermuters) {
-                delete ElemPermuter;
-            }
-        }
-
-        u32 ArrayPermuter::GetElemSize() const
-        {
-            return ElemSize;
-        }
-
-        u32 ArrayPermuter::GetNumElems() const
-        {
-            return NumElems;
-        }
-
-        const vector<PermuterBase*>& ArrayPermuter::GetElemPermuters() const
-        {
-            return ElemPermuters;
-        }
-
-        void ArrayPermuter::Permute(const StateVec* InStateVector,
-                                    StateVec* OutStateVector,
-                                    const PermutationSet::iterator& CurPerm)
-        {
-            auto const& Permutation = CurPerm.GetPerm();
-            // Apply the permutation on the elements first
-            for (auto ElemPermuter : ElemPermuters) {
-                ElemPermuter->Permute(InStateVector, OutStateVector, CurPerm);
-            }
-
-            OutStateVector->MarkDirty();
-
-            if (IsSymmArray) {
-                // Now apply my own permutation
-                // But instead of using the input state vector
-                // use a clone of the output state vector computed
-                // so far, this way, we retain the permutations
-                // performed by the sub permuters
-
-                // Rule: Given a permutation <p1, p2, ... pn>, we
-                // interpret this is as a map:
-                // Arr[0] |-> Arr[p1]
-                // Arr[1] |-> Arr[p2]
-                // ...
-                // Arr[n] |-> Arr[pn]
-                auto NewOutStateVector = OutStateVector->Clone();
-
-                for (u32 i = 0; i < PermSize; ++i) {
-                    u32 j = i + TypeOffset;
-                    const u08* SrcBasePtr = NewOutStateVector->GetStateBuffer();
-                    u08* DstBasePtr = OutStateVector->GetStateBuffer();
-
-                    u32 CurPutPos = Permutation[j];
-                    const u08* SrcPtr = (SrcBasePtr + Offset + (ElemSize * i));
-                    u08* DstPtr = (DstBasePtr + Offset + (ElemSize * CurPutPos));
-                    memcpy(DstPtr, SrcPtr, ElemSize);
-                }
-                NewOutStateVector->Recycle();
-            }
-        }
-
-        RecordPermuter::RecordPermuter(u32 Offset, const TypeRef& RecType,
-                                       const LabelledTS* TheLTS)
-            : PermuterBase(Offset, 0, 0)
-        {
-            auto UMType = TheLTS->GetUnifiedMType()->As<UnionType>();
-            bool IsUMType = (RecType == TheLTS->GetUnifiedMType());
-            auto TypeAsRec = RecType->As<RecordType>();
-            auto const& MemberVec = TypeAsRec->GetMemberVec();
-
-            for (auto const& Member : MemberVec) {
-                auto const& FieldType = Member.second;
-                auto const& FieldName = Member.first;
-                auto FieldOffset = Offset + TypeAsRec->GetFieldOffset(Member.first);
-
-                if (IsUMType && FieldName == UMType->GetTypeIDFieldName()) {
-                    ElemPermuters.push_back(new MTypePermuter(FieldOffset, FieldType, TheLTS));
-                } else {
-                    ElemPermuters.push_back(PermuterBase::MakePermuter(FieldOffset, FieldType,
-                                                                       TheLTS));
-                }
-            }
-
-            TypeOffset = 0;
-            PermSize = 0;
-        }
-
-        RecordPermuter::~RecordPermuter()
-        {
-            for (auto ElemPermuter : ElemPermuters) {
-                delete ElemPermuter;
-            }
-        }
-
-        void RecordPermuter::Permute(const StateVec* InStateVector,
-                                     StateVec* OutStateVector,
-                                     const PermutationSet::iterator& CurPerm)
-        {
-            // Just apply the permutation to all the members
-            for (auto ElemPermuter : ElemPermuters) {
-                ElemPermuter->Permute(InStateVector, OutStateVector, CurPerm);
-            }
-        }
-
-        const vector<PermuterBase*>& RecordPermuter::GetElemPermuters() const
-        {
-            return ElemPermuters;
-        }
-
-        MTypePermuter::MTypePermuter(u32 Offset, const TypeRef& Type,
-                                     const LabelledTS* TheLTS)
-            : PermuterBase(Offset, 0, 0),
-              MsgCanonMap(TheLTS->GetMsgCanonMap()),
-              TypeSize(Type->GetByteSize())
-        {
-            // Nothing here
-        }
-
-        MTypePermuter::~MTypePermuter()
-        {
-            // Nothing here
-        }
-
-        void MTypePermuter::Permute(const StateVec* InStateVector,
-                                    StateVec* OutStateVector,
-                                    const PermutationSet::iterator& CurPerm)
-        {
-            auto PermIdx = CurPerm.GetIndex();
-            u32 ActVal;
-            if (TypeSize == 1) {
-                ActVal = InStateVector->ReadByte(Offset);
-            } else if (TypeSize == 2) {
-                ActVal = InStateVector->ReadShort(Offset);
-            } else {
-                ActVal = InStateVector->ReadWord(Offset);
-            }
-
-            u32 PermVal = MsgCanonMap[ActVal][PermIdx];
-
-            if (TypeSize == 1) {
-                OutStateVector->WriteByte(Offset, (u08)PermVal);
-            } else if (TypeSize == 2) {
-                OutStateVector->WriteShort(Offset, (u16)PermVal);
-            } else {
-                OutStateVector->WriteWord(Offset, PermVal);
-            }
-        }
-
-        SymmTypePermuter::SymmTypePermuter(u32 Offset, const TypeRef& SymmType,
-                                           const LabelledTS* TheLTS)
-            : PermuterBase(Offset, 0, 0)
-        {
-            auto TypeExt = SymmType->GetExtension<LTSTypeExtensionT>();
-            TypeOffset = TypeExt->TypeOffset;
-            PermSize = SymmType->As<SymmetricType>()->GetCardinalityNoUndef();
-        }
-
-        SymmTypePermuter::~SymmTypePermuter()
-        {
-            // Nothing here
-        }
-
-        void SymmTypePermuter::Permute(const StateVec* InStateVector,
-                                     StateVec* OutStateVector,
-                                     const PermutationSet::iterator& CurPerm)
-        {
-            auto const& Permutation = CurPerm.GetPerm();
-            u32 ActVal;
-            if (PermSize <= 255) {
-                ActVal = InStateVector->ReadByte(Offset);
-            } else if (PermSize <= 65535) {
-                ActVal = InStateVector->ReadShort(Offset);
-            } else {
-                ActVal = InStateVector->ReadWord(Offset);
-            }
-            if (ActVal == 0) {
-                // Undefined, leave it alone
-                return;
-            } else {
-                ActVal -= 1;
-            }
-
-            // Add back the offset
-            u32 PermVal = Permutation[TypeOffset + ActVal] + 1;
-            if (PermSize <= 255) {
-                OutStateVector->WriteByte(Offset, (u08)PermVal);
-            } else if (PermSize <= 65535) {
-                OutStateVector->WriteShort(Offset, (u16)PermVal);
-            } else {
-                OutStateVector->WriteWord(Offset, PermVal);
-            }
-        }
-
-        NoOpPermuter::NoOpPermuter()
-            : PermuterBase(0, 0, 0)
-        {
-            // Nothing here
-        }
-
-        NoOpPermuter::~NoOpPermuter()
-        {
-            // Nothing here
-        }
-
-        void NoOpPermuter::Permute(const StateVec* InStateVector,
-                                   StateVec* OutStateVector,
-                                   const PermutationSet::iterator& CurPerm)
-        {
-            // Nothing here
-        }
-
-        ChanBufferSorter::ChanBufferSorter(u32 Offset, const TypeRef& ChanBufferType,
-                                           u32 Capacity, u32 PermVecOffset,
-                                           ChannelEFSM* ChanEFSM, u32 InstanceID)
-            : Offset(Offset), Capacity(Capacity), PermVecOffset(PermVecOffset),
-              ChanEFSM(ChanEFSM), InstanceID(InstanceID)
-        {
-            auto TypeAsArray = ChanBufferType->As<ArrayType>();
-            if (TypeAsArray == nullptr) {
-                throw InternalError((string)"Expected Channel buffer type to be an " +
-                                    "array.\nAt: " + __FILE__ + ":" + to_string(__LINE__));
-            }
-            auto IndexType = TypeAsArray->GetIndexType();
-            auto ValueType = TypeAsArray->GetValueType();
-            ElemSize = ValueType->GetByteSize();
-            ElemSize = Align(ElemSize, ElemSize);
-
-            for (u32 i = 0; i < Capacity; ++i) {
-                LastPermutation.push_back(i);
-            }
-            IdentityPermutation = LastPermutation;
-            ScratchPermutation = LastPermutation;
-        }
-
-        ChanBufferSorter::~ChanBufferSorter()
-        {
-            // Nothing here
-        }
-
-        void ChanBufferSorter::Sort(StateVec* OutStateVector,
-                                    bool RememberPerm)
-        {
             if (RememberPerm) {
-                LastPermutation = IdentityPermutation;
+                swap(LastPermutation[i], LastPermutation[MinIndex]);
             }
-
-            // O(n^2) sorting, I know, but we don't expect these
-            // channels to have more than 10 or so elements
-            u08* BasePtr = OutStateVector->GetStateBuffer();
-            auto WorkingVec = OutStateVector->Clone();
-            u08* WorkBasePtr = WorkingVec->GetStateBuffer();
-
-            OutStateVector->MarkDirty();
-
-            auto NumElems = Capacity;
-
-            for (u32 i = 0; i < NumElems - 1; ++i) {
-                u32 MinIndex = i;
-                u32 MinOffset = Offset + (ElemSize * MinIndex);
-
-                for (u32 j = i + 1; j < NumElems; ++j) {
-                    u32 JOffset = Offset + (ElemSize * j);
-                    auto CmpRes = memcmp(BasePtr + MinOffset, BasePtr + JOffset, ElemSize);
-                    if (CmpRes > 0) {
-                        MinIndex = j;
-                        MinOffset = JOffset;
-                    }
-                }
-                if (MinIndex != i) {
-                    u32 IOffset = Offset + (ElemSize * i);
-                    memcpy(WorkBasePtr + IOffset, BasePtr + IOffset, ElemSize);
-                    memcpy(BasePtr + IOffset, BasePtr + MinOffset, ElemSize);
-                    memcpy(BasePtr + MinOffset, WorkBasePtr + IOffset, ElemSize);
-
-                    if (RememberPerm) {
-                        swap(LastPermutation[i], LastPermutation[MinIndex]);
-                    }
-                }
-            }
-
-            // Fixup the permutation to mean what we want it to mean
-            if (RememberPerm) {
-                swap(ScratchPermutation, LastPermutation);
-                for (u32 i = 0; i < Capacity; ++i) {
-                    LastPermutation[ScratchPermutation[i]] = i;
-                }
-            }
-
-            WorkingVec->Recycle();
-            return;
         }
+    }
 
-        const vector<u08>& ChanBufferSorter::GetLastPermutation() const
-        {
-            return LastPermutation;
+    // Fixup the permutation to mean what we want it to mean
+    if (RememberPerm) {
+        swap(ScratchPermutation, LastPermutation);
+        for (u32 i = 0; i < Capacity; ++i) {
+            LastPermutation[ScratchPermutation[i]] = i;
         }
+    }
 
-        u32 ChanBufferSorter::GetCapacity() const
-        {
-            return Capacity;
-        }
+    WorkingVec->Recycle();
+    return;
+}
 
-        u32 ChanBufferSorter::GetPermVecOffset() const
-        {
-            return PermVecOffset;
-        }
+const vector<u08>& ChanBufferSorter::GetLastPermutation() const
+{
+    return LastPermutation;
+}
 
-        void ChanBufferSorter::ApplyPermutation(StateVec* OutStateVector,
-                                                const vector<u08>& PermVec)
-        {
-            u08* BasePtr = OutStateVector->GetStateBuffer();
-            auto WorkingVec = OutStateVector->Clone();
-            u08* WorkBasePtr = WorkingVec->GetStateBuffer();
-            OutStateVector->MarkDirty();
+u32 ChanBufferSorter::GetCapacity() const
+{
+    return Capacity;
+}
 
-            for (u32 i = 0; i < Capacity; ++i) {
-                u32 j = i + PermVecOffset;
-                u32 CurPutPos = PermVec[j];
-                const u08* SrcPtr = (WorkBasePtr + Offset + (ElemSize * i));
-                u08* DstPtr = (BasePtr + Offset + (ElemSize * CurPutPos));
-                memcpy(DstPtr, SrcPtr, ElemSize);
-            }
+u32 ChanBufferSorter::GetPermVecOffset() const
+{
+    return PermVecOffset;
+}
 
-            WorkingVec->Recycle();
-            return;
-        }
+void ChanBufferSorter::ApplyPermutation(StateVec* OutStateVector,
+                                        const vector<u08>& PermVec)
+{
+    u08* BasePtr = OutStateVector->GetStateBuffer();
+    auto WorkingVec = OutStateVector->Clone();
+    u08* WorkBasePtr = WorkingVec->GetStateBuffer();
+    OutStateVector->MarkDirty();
 
-        vector<LTSAssignRef>
-        ChanBufferSorter::GetUpdatesForPermutation(const vector<u08>& PermVec) const
-        {
-            vector<u08> SubPermVec(Capacity);
-            for (u32 i = 0; i < Capacity; ++i) {
-                SubPermVec[i] = PermVec[PermVecOffset + i];
-            }
-            return ChanEFSM->GetUpdatesForPermutation(SubPermVec, InstanceID);
-        }
+    for (u32 i = 0; i < Capacity; ++i) {
+        u32 j = i + PermVecOffset;
+        u32 CurPutPos = PermVec[j];
+        const u08* SrcPtr = (WorkBasePtr + Offset + (ElemSize * i));
+        u08* DstPtr = (BasePtr + Offset + (ElemSize * CurPutPos));
+        memcpy(DstPtr, SrcPtr, ElemSize);
+    }
 
-        Canonicalizer::Canonicalizer(const LabelledTS* TheLTS,
-                                     StateVecPrinter* Printer)
-            : Printer(Printer)
-        {
-            auto const& StateVectorVars = TheLTS->GetStateVectorVars();
+    WorkingVec->Recycle();
+    return;
+}
 
-            u32 Offset = 0;
-            for (auto const& StateVectorVar : StateVectorVars) {
-                auto CurPermuter = PermuterBase::MakePermuter(Offset,
-                                                              StateVectorVar->GetType(),
-                                                              TheLTS);
-                Permuters.push_back(CurPermuter);
-                Offset += StateVectorVar->GetType()->GetByteSize();
-            }
+vector<LTSAssignRef>
+ChanBufferSorter::GetUpdatesForPermutation(const vector<u08>& PermVec) const
+{
+    vector<u08> SubPermVec(Capacity);
+    for (u32 i = 0; i < Capacity; ++i) {
+        SubPermVec[i] = PermVec[PermVecOffset + i];
+    }
+    return ChanEFSM->GetUpdatesForPermutation(SubPermVec, InstanceID);
+}
 
-            // Assumption: All expressions have been
-            // compiled and therefore have offsets attached
-            auto const& ChansToSort = TheLTS->GetChanBuffersToSort();
-            vector<u32> ChanTypeSizes;
-            i64 PermutationSize = 1;
-            for (auto const& ChanBufferExp : ChansToSort) {
-                auto Capacity = get<0>(ChanBufferExp)->GetCapacity();
-                ChanTypeSizes.push_back(Capacity);
-                PermutationSize *= Factorial(Capacity);
-            }
-            SortPermSet = new PermutationSet(ChanTypeSizes, (PermutationSize > MaxExplicitSize));
+Canonicalizer::Canonicalizer(const LabelledTS* TheLTS,
+                             StateVecPrinter* Printer)
+    : Printer(Printer)
+{
+    auto const& StateVectorVars = TheLTS->GetStateVectorVars();
 
-            u32 RunningOffset = 0;
-            for (auto const& ChanBufferExp : ChansToSort) {
-                auto const& ChanVar = get<1>(ChanBufferExp);
-                auto const& CountExp = get<0>(ChanBufferExp)->GetCapacity();
-                u32 Offset = ChanVar->ExtensionData.Offset;
-                Sorters.push_back(new ChanBufferSorter(Offset, ChanVar->GetType(),
-                                                       CountExp, RunningOffset,
-                                                       get<0>(ChanBufferExp),
-                                                       get<2>(ChanBufferExp)));
-                RunningOffset += CountExp;
-            }
-            LastSortPermutation = vector<u08>(RunningOffset, 0);
+    u32 Offset = 0;
+    for (auto const& StateVectorVar : StateVectorVars) {
+        auto CurPermuter = PermuterBase::MakePermuter(Offset,
+                                                      StateVectorVar->GetType(),
+                                                      TheLTS);
+        Permuters.push_back(CurPermuter);
+        Offset += StateVectorVar->GetType()->GetByteSize();
+    }
 
-            // Create the permutation set
-            auto const& SymmTypes = TheLTS->GetUsedSymmTypes();
-            // We can be assured that the symmtypes are in the order
-            // of their computed type offsets
-            vector<u32> TypeSizes(SymmTypes.size());
-            PermutationSize = 1;
-            for (auto const& SymmType : SymmTypes) {
-                u32 CurTypeSize = SymmType->As<SymmetricType>()->GetCardinalityNoUndef();
-                TypeSizes[SymmType->GetExtension<LTSTypeExtensionT>()->TypeID] = CurTypeSize;
+    // Assumption: All expressions have been
+    // compiled and therefore have offsets attached
+    auto const& ChansToSort = TheLTS->GetChanBuffersToSort();
+    vector<u32> ChanTypeSizes;
+    i64 PermutationSize = 1;
+    for (auto const& ChanBufferExp : ChansToSort) {
+        auto Capacity = get<0>(ChanBufferExp)->GetCapacity();
+        ChanTypeSizes.push_back(Capacity);
+        PermutationSize *= Factorial(Capacity);
+    }
+    SortPermSet = new PermutationSet(ChanTypeSizes, (PermutationSize > MaxExplicitSize));
 
-                PermutationSize *= Factorial(CurTypeSize);
-            }
-            PermSet = new PermutationSet(TypeSizes, (PermutationSize > MaxExplicitSize));
-        }
+    u32 RunningOffset = 0;
+    for (auto const& ChanBufferExp : ChansToSort) {
+        auto const& ChanVar = get<1>(ChanBufferExp);
+        auto const& CountExp = get<0>(ChanBufferExp)->GetCapacity();
+        u32 Offset = ChanVar->ExtensionData.Offset;
+        Sorters.push_back(new ChanBufferSorter(Offset, ChanVar->GetType(),
+                                               CountExp, RunningOffset,
+                                               get<0>(ChanBufferExp),
+                                               get<2>(ChanBufferExp)));
+        RunningOffset += CountExp;
+    }
+    LastSortPermutation = vector<u08>(RunningOffset, 0);
 
-        Canonicalizer::~Canonicalizer()
-        {
-            for (auto Permuter : Permuters) {
-                delete Permuter;
-            }
+    // Create the permutation set
+    auto const& SymmTypes = TheLTS->GetUsedSymmTypes();
+    // We can be assured that the symmtypes are in the order
+    // of their computed type offsets
+    vector<u32> TypeSizes(SymmTypes.size());
+    PermutationSize = 1;
+    for (auto const& SymmType : SymmTypes) {
+        u32 CurTypeSize = SymmType->As<SymmetricType>()->GetCardinalityNoUndef();
+        TypeSizes[SymmType->GetExtension<LTSTypeExtensionT>()->TypeID] = CurTypeSize;
+
+        PermutationSize *= Factorial(CurTypeSize);
+    }
+    PermSet = new PermutationSet(TypeSizes, (PermutationSize > MaxExplicitSize));
+}
+
+Canonicalizer::~Canonicalizer()
+{
+    for (auto Permuter : Permuters) {
+        delete Permuter;
+    }
+    for (auto Sorter : Sorters) {
+        delete Sorter;
+    }
+    delete PermSet;
+    delete SortPermSet;
+}
+
+StateVec* Canonicalizer::Canonicalize(const StateVec* InputVector,
+                                      u32& PermID,
+                                      const AQStructure* AQS) const
+{
+    auto BestStateVec = InputVector->Clone();
+    PermID = 0;
+    bool FoundExisting = false;
+
+    // Check if the input vector is already canonical
+    if (AQS != nullptr) {
+        auto ExistingSV = AQS->Find(BestStateVec);
+        if (ExistingSV != nullptr) {
+            FoundExisting = true;
+        } else {
+            // Okay, that didn't work, let's see if we can get away with just
+            // sorting the damn thing
             for (auto Sorter : Sorters) {
-                delete Sorter;
+                Sorter->Sort(BestStateVec, false);
             }
-            delete PermSet;
-            delete SortPermSet;
+            ExistingSV = AQS->Find(BestStateVec);
+            if (ExistingSV != nullptr) {
+                FoundExisting = true;
+            } else {
+                // Nothing worked, proceed onto the main
+                // canonicalization loop!
+                BestStateVec->Set(*InputVector);
+            }
         }
+    }
 
-        StateVec* Canonicalizer::Canonicalize(const StateVec* InputVector,
-                                              u32& PermID,
-                                              const AQStructure* AQS) const
-        {
-            auto BestStateVec = InputVector->Clone();
-            PermID = 0;
-            bool FoundExisting = false;
+    StateVec* WorkingStateVec = nullptr;
 
-            // Check if the input vector is already canonical
-            if (AQS != nullptr) {
-                auto ExistingSV = AQS->Find(BestStateVec);
-                if (ExistingSV != nullptr) {
-                    FoundExisting = true;
-                } else {
-                    // Okay, that didn't work, let's see if we can get away with just
-                    // sorting the damn thing
-                    for (auto Sorter : Sorters) {
-                        Sorter->Sort(BestStateVec, false);
-                    }
-                    ExistingSV = AQS->Find(BestStateVec);
-                    if (ExistingSV != nullptr) {
-                        FoundExisting = true;
-                    } else {
-                        // Nothing worked, proceed onto the main
-                        // canonicalization loop!
-                        BestStateVec->Set(*InputVector);
-                    }
-                }
-            }
+    if (!FoundExisting) {
+        WorkingStateVec = InputVector->Clone();
+    }
 
-            StateVec* WorkingStateVec = nullptr;
+    for (auto it = PermSet->Begin(); it != PermSet->End() && !FoundExisting; ++it) {
+        WorkingStateVec->Set(*InputVector);
 
-            if (!FoundExisting) {
-                WorkingStateVec = InputVector->Clone();
-            }
+        ESMC_LOG_FULL(
+                      "Canonicalizer.Detailed",
+                      Out_ << "Applying permutation with index " << it.GetIndex() << endl;
+                      Out_ << "Canonicalizer: Working state before any "
+                      << "permutations are applied:" << endl;
+                      Out_ << "-----------------------------------------" << endl;
+                      Printer->PrintState(WorkingStateVec, Out_);
+                      Out_ << "-----------------------------------------" << endl;
+                      );
 
-            for (auto it = PermSet->Begin(); it != PermSet->End() && !FoundExisting; ++it) {
-                WorkingStateVec->Set(*InputVector);
-
-                ESMC_LOG_FULL(
-                              "Canonicalizer.Detailed",
-                              Out_ << "Applying permutation with index " << it.GetIndex() << endl;
-                              Out_ << "Canonicalizer: Working state before any "
-                                   << "permutations are applied:" << endl;
-                              Out_ << "-----------------------------------------" << endl;
-                              Printer->PrintState(WorkingStateVec, Out_);
-                              Out_ << "-----------------------------------------" << endl;
-                              );
-
-                if (it.GetIndex() != 0) {
-                    for (auto Permuter : Permuters) {
-                        Permuter->Permute(InputVector, WorkingStateVec, it);
-
-                        ESMC_LOG_SHORT(
-                                       "Canonicalizer.Detailed",
-                                       Out_ << "Canonicalizer: After applying permuter "
-                                            << "with offset " << Permuter->GetOffset()
-                                            << " and permutation " + PermToString(it.GetPerm())
-                                            << endl;
-                                       Out_ << "-----------------------------------------" << endl;
-                                       Printer->PrintState(WorkingStateVec, Out_);
-                                       Out_ << "-----------------------------------------" << endl;
-                                       );
-                    }
-                }
-
-                for (auto Sorter : Sorters) {
-                    Sorter->Sort(WorkingStateVec, false);
-                }
-
-                // Check if the working state is in the AQS already
-                if (AQS != nullptr) {
-                    auto ExistingSV = AQS->Find(WorkingStateVec);
-                    if (ExistingSV != nullptr) {
-                        BestStateVec->Recycle();
-                        BestStateVec = WorkingStateVec;
-                        WorkingStateVec = nullptr;
-                        FoundExisting = true;
-                        PermID = it.GetIndex();
-                        break;
-                    }
-                }
-
-                if (BestStateVec->Compare(*WorkingStateVec) > 0) {
-                    BestStateVec->Set(*WorkingStateVec);
-                    PermID = it.GetIndex();
-                }
+        if (it.GetIndex() != 0) {
+            for (auto Permuter : Permuters) {
+                Permuter->Permute(InputVector, WorkingStateVec, it);
 
                 ESMC_LOG_SHORT(
                                "Canonicalizer.Detailed",
-                               Out_ << "Canonicalizer: Current Best State:" << endl;
+                               Out_ << "Canonicalizer: After applying permuter "
+                               << "with offset " << Permuter->GetOffset()
+                               << " and permutation " + PermToString(it.GetPerm())
+                               << endl;
                                Out_ << "-----------------------------------------" << endl;
-                               Printer->PrintState(BestStateVec, Out_);
+                               Printer->PrintState(WorkingStateVec, Out_);
                                Out_ << "-----------------------------------------" << endl;
                                );
-
-            }
-
-            ESMC_LOG_FULL
-                ("Canonicalizer.Best",
-                 Out_ << "Canonicalizer: Original State:" << endl;
-                 Out_ << "-----------------------------------------" << endl;
-                 Printer->PrintState(InputVector, Out_);
-                 Out_ << "-----------------------------------------" << endl;
-                 Out_ << "Canonicalizer: Canonicalized State:" << endl;
-                 Out_ << "-----------------------------------------" << endl;
-                 if (!InputVector->Equals(*BestStateVec)) {
-                     Printer->PrintState(BestStateVec, Out_);
-                 } else {
-                     Out_ << "Same as original state" << endl;
-                 }
-                 Out_ << "-----------------------------------------" << endl;
-                 );
-
-            if (WorkingStateVec != nullptr) {
-                WorkingStateVec->Recycle();
-            }
-            return BestStateVec;
-        }
-
-        StateVec* Canonicalizer::ApplyPermutation(const StateVec* InputVector, u32 PermID) const
-        {
-            auto Retval = InputVector->Clone();
-            auto Perm = PermSet->GetIterator(PermID);
-            for (auto Permuter : Permuters) {
-                Permuter->Permute(InputVector, Retval, Perm);
-            }
-            return Retval;
-        }
-
-        ProductState* Canonicalizer::ApplyPermutation(const ProductState *InputPS,
-                                                      u32 PermID,
-                                                      const ProcessIndexSet* ProcIdxSet) const
-        {
-            auto InputSV = InputPS->GetSVPtr();
-            auto InputTracked = InputPS->GetIndexID();
-
-            auto PermSV = ApplyPermutation(InputSV, PermID);
-            auto ThePermIt = PermSet->GetIterator(PermID);
-            auto const& ThePerm = ThePermIt.GetPerm();
-            auto PermTracked = ProcIdxSet->Permute(InputTracked, ThePerm);
-            return new ProductState(PermSV, InputPS->GetMonitorState(),
-                                    PermTracked, 0);
-        }
-
-        void Canonicalizer::ApplySort(StateVec* InputVector, u32 SortPermID) const
-        {
-            auto const& Perm = SortPermSet->GetIterator(SortPermID).GetPerm();
-            for (auto const& Sorter : Sorters) {
-                Sorter->ApplyPermutation(InputVector, Perm);
             }
         }
 
-        void Canonicalizer::ApplySort(ProductState* InputPS, u32 SortPermID) const
-        {
-            ApplySort(const_cast<StateVec*>(InputPS->GetSVPtr()), SortPermID);
+        for (auto Sorter : Sorters) {
+            Sorter->Sort(WorkingStateVec, false);
         }
 
-        void Canonicalizer::Sort(StateVec* InputVector) const
-        {
-            for (auto const& Sorter : Sorters) {
-                Sorter->Sort(InputVector, false);
+        // Check if the working state is in the AQS already
+        if (AQS != nullptr) {
+            auto ExistingSV = AQS->Find(WorkingStateVec);
+            if (ExistingSV != nullptr) {
+                BestStateVec->Recycle();
+                BestStateVec = WorkingStateVec;
+                WorkingStateVec = nullptr;
+                FoundExisting = true;
+                PermID = it.GetIndex();
+                break;
             }
         }
 
-        void Canonicalizer::Sort(ProductState* InputPS) const
-        {
-            Sort(const_cast<StateVec*>(InputPS->GetSVPtr()));
+        if (BestStateVec->Compare(*WorkingStateVec) > 0) {
+            BestStateVec->Set(*WorkingStateVec);
+            PermID = it.GetIndex();
         }
 
-        StateVec* Canonicalizer::SortChans(const StateVec* InputVector,
-                                           bool RememberPerm, u32& PermID) const
-        {
-            auto Retval = InputVector->Clone();
-            u32 PermOffset = 0;
-            for (auto Sorter : Sorters) {
-                Sorter->Sort(Retval, RememberPerm);
-                if (RememberPerm) {
-                    const u32 CurPermSize = Sorter->GetCapacity();
-                    auto const& CurPerm = Sorter->GetLastPermutation();
-                    for (u32 i = 0; i < CurPermSize; ++i) {
-                        LastSortPermutation[PermOffset + i] = CurPerm[i];
-                    }
-                    PermOffset += Sorter->GetCapacity();
-                }
+        ESMC_LOG_SHORT(
+                       "Canonicalizer.Detailed",
+                       Out_ << "Canonicalizer: Current Best State:" << endl;
+                       Out_ << "-----------------------------------------" << endl;
+                       Printer->PrintState(BestStateVec, Out_);
+                       Out_ << "-----------------------------------------" << endl;
+                       );
+
+    }
+
+    ESMC_LOG_FULL
+        ("Canonicalizer.Best",
+         Out_ << "Canonicalizer: Original State:" << endl;
+         Out_ << "-----------------------------------------" << endl;
+         Printer->PrintState(InputVector, Out_);
+         Out_ << "-----------------------------------------" << endl;
+         Out_ << "Canonicalizer: Canonicalized State:" << endl;
+         Out_ << "-----------------------------------------" << endl;
+         if (!InputVector->Equals(*BestStateVec)) {
+             Printer->PrintState(BestStateVec, Out_);
+         } else {
+             Out_ << "Same as original state" << endl;
+         }
+         Out_ << "-----------------------------------------" << endl;
+         );
+
+    if (WorkingStateVec != nullptr) {
+        WorkingStateVec->Recycle();
+    }
+    return BestStateVec;
+}
+
+StateVec* Canonicalizer::ApplyPermutation(const StateVec* InputVector, u32 PermID) const
+{
+    auto Retval = InputVector->Clone();
+    auto Perm = PermSet->GetIterator(PermID);
+    for (auto Permuter : Permuters) {
+        Permuter->Permute(InputVector, Retval, Perm);
+    }
+    return Retval;
+}
+
+ProductState* Canonicalizer::ApplyPermutation(const ProductState *InputPS,
+                                              u32 PermID,
+                                              const ProcessIndexSet* ProcIdxSet) const
+{
+    auto InputSV = InputPS->GetSVPtr();
+    auto InputTracked = InputPS->GetIndexID();
+
+    auto PermSV = ApplyPermutation(InputSV, PermID);
+    auto ThePermIt = PermSet->GetIterator(PermID);
+    auto const& ThePerm = ThePermIt.GetPerm();
+    auto PermTracked = ProcIdxSet->Permute(InputTracked, ThePerm);
+    return new ProductState(PermSV, InputPS->GetMonitorState(),
+                            PermTracked, 0);
+}
+
+void Canonicalizer::ApplySort(StateVec* InputVector, u32 SortPermID) const
+{
+    auto const& Perm = SortPermSet->GetIterator(SortPermID).GetPerm();
+    for (auto const& Sorter : Sorters) {
+        Sorter->ApplyPermutation(InputVector, Perm);
+    }
+}
+
+void Canonicalizer::ApplySort(ProductState* InputPS, u32 SortPermID) const
+{
+    ApplySort(const_cast<StateVec*>(InputPS->GetSVPtr()), SortPermID);
+}
+
+void Canonicalizer::Sort(StateVec* InputVector) const
+{
+    for (auto const& Sorter : Sorters) {
+        Sorter->Sort(InputVector, false);
+    }
+}
+
+void Canonicalizer::Sort(ProductState* InputPS) const
+{
+    Sort(const_cast<StateVec*>(InputPS->GetSVPtr()));
+}
+
+StateVec* Canonicalizer::SortChans(const StateVec* InputVector,
+                                   bool RememberPerm, u32& PermID) const
+{
+    auto Retval = InputVector->Clone();
+    u32 PermOffset = 0;
+    for (auto Sorter : Sorters) {
+        Sorter->Sort(Retval, RememberPerm);
+        if (RememberPerm) {
+            const u32 CurPermSize = Sorter->GetCapacity();
+            auto const& CurPerm = Sorter->GetLastPermutation();
+            for (u32 i = 0; i < CurPermSize; ++i) {
+                LastSortPermutation[PermOffset + i] = CurPerm[i];
             }
-
-            if (RememberPerm) {
-                PermID = SortPermSet->GetIndexForPerm(LastSortPermutation);
-            }
-            return Retval;
+            PermOffset += Sorter->GetCapacity();
         }
+    }
 
-        PermutationSet* Canonicalizer::GetPermSet() const
-        {
-            return PermSet;
-        }
+    if (RememberPerm) {
+        PermID = SortPermSet->GetIndexForPerm(LastSortPermutation);
+    }
+    return Retval;
+}
 
-        PermutationSet* Canonicalizer::GetSortPermSet() const
-        {
-            return SortPermSet;
-        }
+PermutationSet* Canonicalizer::GetPermSet() const
+{
+    return PermSet;
+}
 
-        // Check if SV1 and SV2 are equivalent modulo some permutation
-        bool Canonicalizer::StatesEquivalent(const StateVec* SV1, const StateVec* SV2) const
-        {
-            u32 DummyPerm = 0;
-            auto CanonSV1 = Canonicalize(SV1, DummyPerm);
-            auto CanonSV2 = Canonicalize(SV2, DummyPerm);
-            auto Retval = CanonSV1->Equals(*CanonSV2);
-            CanonSV1->Recycle();
-            CanonSV2->Recycle();
-            return Retval;
-        }
+PermutationSet* Canonicalizer::GetSortPermSet() const
+{
+    return SortPermSet;
+}
 
-        StateVecPrinter* Canonicalizer::GetPrinter() const
-        {
-            return Printer;
-        }
+// Check if SV1 and SV2 are equivalent modulo some permutation
+bool Canonicalizer::StatesEquivalent(const StateVec* SV1, const StateVec* SV2) const
+{
+    u32 DummyPerm = 0;
+    auto CanonSV1 = Canonicalize(SV1, DummyPerm);
+    auto CanonSV2 = Canonicalize(SV2, DummyPerm);
+    auto Retval = CanonSV1->Equals(*CanonSV2);
+    CanonSV1->Recycle();
+    CanonSV2->Recycle();
+    return Retval;
+}
 
-        vector<LTSAssignRef> Canonicalizer::GetChanUpdatesForPermutation(u32 PermIdx) const
-        {
-            vector<LTSAssignRef> Retval;
-            auto const& Permutation = SortPermSet->GetIterator(PermIdx).GetPerm();
-            for (auto const& Sorter : Sorters) {
-                auto&& CurUpdates = Sorter->GetUpdatesForPermutation(Permutation);
-                Retval.insert(Retval.end(), CurUpdates.begin(), CurUpdates.end());
-            }
+StateVecPrinter* Canonicalizer::GetPrinter() const
+{
+    return Printer;
+}
 
-            return Retval;
-        }
+vector<LTSAssignRef> Canonicalizer::GetChanUpdatesForPermutation(u32 PermIdx) const
+{
+    vector<LTSAssignRef> Retval;
+    auto const& Permutation = SortPermSet->GetIterator(PermIdx).GetPerm();
+    for (auto const& Sorter : Sorters) {
+        auto&& CurUpdates = Sorter->GetUpdatesForPermutation(Permutation);
+        Retval.insert(Retval.end(), CurUpdates.begin(), CurUpdates.end());
+    }
 
-    } /* end namespace Symm */
+    return Retval;
+}
+
+} /* end namespace Symm */
 } /* end namespace ESMC */
 
 //

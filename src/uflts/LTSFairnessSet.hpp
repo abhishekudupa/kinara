@@ -49,114 +49,114 @@
 #include "LTSDecls.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        class LTSFairnessObject : public RefCountable, public Stringifiable
-        {
-        private:
-            string Name;
-            vector<ExpT> InstanceParams;
-            u32 InstanceID;
-            u32 InstanceNumber;
-            LTSFairnessSet* FairnessSet;
+class LTSFairnessObject : public RefCountable, public Stringifiable
+{
+private:
+    string Name;
+    vector<ExpT> InstanceParams;
+    u32 InstanceID;
+    u32 InstanceNumber;
+    LTSFairnessSet* FairnessSet;
 
-            static UIDGenerator InstanceUIDGenerator;
+    static UIDGenerator InstanceUIDGenerator;
 
-        public:
-            LTSFairnessObject(const string& BaseName,
-                              const vector<ExpT>& InstanceParams,
-                              LTSFairnessSet* FairnessSet,
-                              u32 InstanceNumber);
-            virtual ~LTSFairnessObject();
+public:
+    LTSFairnessObject(const string& BaseName,
+                      const vector<ExpT>& InstanceParams,
+                      LTSFairnessSet* FairnessSet,
+                      u32 InstanceNumber);
+    virtual ~LTSFairnessObject();
 
-            const string& GetName() const;
-            const vector<ExpT>& GetInstanceParams() const;
-            u32 GetInstanceID() const;
-            u32 GetInstanceNumber() const;
-            LTSFairnessSet* GetFairnessSet() const;
+    const string& GetName() const;
+    const vector<ExpT>& GetInstanceParams() const;
+    u32 GetInstanceID() const;
+    u32 GetInstanceNumber() const;
+    LTSFairnessSet* GetFairnessSet() const;
 
-            // Dispatch to FairnessSet
-            const string& GetBaseName() const;
-            const vector<ExpT>& GetFairnessSetParams() const;
-            const ExpT& GetFairnessSetConstraint() const;
-            const vector<vector<ExpT>>& GetSiblingInstances() const;
-            u32 GetFairnessSetNumInstances() const;
-            FairSetFairnessType GetFairnessType() const;
-            const LTSProcessFairnessGroup* GetFairnessGroup() const;
-            EFSMBase* GetEFSM() const;
+    // Dispatch to FairnessSet
+    const string& GetBaseName() const;
+    const vector<ExpT>& GetFairnessSetParams() const;
+    const ExpT& GetFairnessSetConstraint() const;
+    const vector<vector<ExpT>>& GetSiblingInstances() const;
+    u32 GetFairnessSetNumInstances() const;
+    FairSetFairnessType GetFairnessType() const;
+    const LTSProcessFairnessGroup* GetFairnessGroup() const;
+    EFSMBase* GetEFSM() const;
 
-            virtual string ToString(u32 Verbosity = 0) const override;
-        };
+    virtual string ToString(u32 Verbosity = 0) const override;
+};
 
-        class LTSFairnessSet : public RefCountable, public Stringifiable
-        {
-        private:
-            string Name;
-            vector<ExpT> Parameters;
-            ExpT Constraint;
-            vector<vector<ExpT>> AllInstances;
-            u32 NumInstances;
-            map<vector<ExpT>, LTSFairObjRef> FairnessObjects;
-            u32 ClassID;
-            FairSetFairnessType FairnessType;
-            const LTSProcessFairnessGroup* FairnessGroup;
-            u32 InstanceIDLow;
-            u32 InstanceIDHigh;
+class LTSFairnessSet : public RefCountable, public Stringifiable
+{
+private:
+    string Name;
+    vector<ExpT> Parameters;
+    ExpT Constraint;
+    vector<vector<ExpT>> AllInstances;
+    u32 NumInstances;
+    map<vector<ExpT>, LTSFairObjRef> FairnessObjects;
+    u32 ClassID;
+    FairSetFairnessType FairnessType;
+    const LTSProcessFairnessGroup* FairnessGroup;
+    u32 InstanceIDLow;
+    u32 InstanceIDHigh;
 
-            static UIDGenerator ClassUIDGenerator;
+    static UIDGenerator ClassUIDGenerator;
 
-        public:
-            LTSFairnessSet(const string& Name, const vector<ExpT>& Parameters,
-                           const ExpT& Constraint,
-                           FairSetFairnessType FairnessType,
-                           const LTSProcessFairnessGroup* FairnessGroup);
-            virtual ~LTSFairnessSet();
+public:
+    LTSFairnessSet(const string& Name, const vector<ExpT>& Parameters,
+                   const ExpT& Constraint,
+                   FairSetFairnessType FairnessType,
+                   const LTSProcessFairnessGroup* FairnessGroup);
+    virtual ~LTSFairnessSet();
 
-            const string& GetName() const;
-            const vector<ExpT>& GetParameters() const;
-            const ExpT& GetConstraint() const;
-            const vector<vector<ExpT>>& GetAllInstances() const;
-            u32 GetNumInstances() const;
-            u32 GetClassID() const;
-            const LTSFairObjRef& GetFairnessObj(const vector<ExpT>& Instance) const;
-            const LTSFairObjRef& GetFairnessObj(u32 InstanceNumber) const;
-            FairSetFairnessType GetFairnessType() const;
-            const LTSProcessFairnessGroup* GetFairnessGroup() const;
+    const string& GetName() const;
+    const vector<ExpT>& GetParameters() const;
+    const ExpT& GetConstraint() const;
+    const vector<vector<ExpT>>& GetAllInstances() const;
+    u32 GetNumInstances() const;
+    u32 GetClassID() const;
+    const LTSFairObjRef& GetFairnessObj(const vector<ExpT>& Instance) const;
+    const LTSFairObjRef& GetFairnessObj(u32 InstanceNumber) const;
+    FairSetFairnessType GetFairnessType() const;
+    const LTSProcessFairnessGroup* GetFairnessGroup() const;
 
-            u32 GetInstanceIDLow() const;
-            u32 GetInstanceIDHigh() const;
+    u32 GetInstanceIDLow() const;
+    u32 GetInstanceIDHigh() const;
 
-            virtual string ToString(u32 Verbosity = 0) const override;
+    virtual string ToString(u32 Verbosity = 0) const override;
 
-            // Dispatch to fairness group
-            EFSMBase* GetEFSM() const;
-        };
+    // Dispatch to fairness group
+    EFSMBase* GetEFSM() const;
+};
 
-        class LTSProcessFairnessGroup : public RefCountable, public Stringifiable
-        {
-        private:
-            EFSMBase* TheEFSM;
-            mutable map<string, LTSFairSetRef> FairnessSets;
+class LTSProcessFairnessGroup : public RefCountable, public Stringifiable
+{
+private:
+    EFSMBase* TheEFSM;
+    mutable map<string, LTSFairSetRef> FairnessSets;
 
-        public:
-            LTSProcessFairnessGroup(EFSMBase* TheEFSM);
-            virtual ~LTSProcessFairnessGroup();
-            void AddFairnessSet(const string& Name,
-                                FairSetFairnessType FairnessType,
-                                const vector<ExpT>& Params,
-                                const ExpT& Constraint) const;
-            EFSMBase* GetEFSM() const;
-            const map<string, LTSFairSetRef>& GetAllFairnessSets() const;
-            const LTSFairSetRef& GetFairnessSet(const string& Name) const;
-            const LTSFairObjRef& GetFairnessObj(const string& FairnessSetName,
-                                                const vector<ExpT>& Instance) const;
-            const LTSFairObjRef& GetFairnessObj(const string& FairnessSetName,
-                                                u32 InstanceNumber) const;
+public:
+    LTSProcessFairnessGroup(EFSMBase* TheEFSM);
+    virtual ~LTSProcessFairnessGroup();
+    void AddFairnessSet(const string& Name,
+                        FairSetFairnessType FairnessType,
+                        const vector<ExpT>& Params,
+                        const ExpT& Constraint) const;
+    EFSMBase* GetEFSM() const;
+    const map<string, LTSFairSetRef>& GetAllFairnessSets() const;
+    const LTSFairSetRef& GetFairnessSet(const string& Name) const;
+    const LTSFairObjRef& GetFairnessObj(const string& FairnessSetName,
+                                        const vector<ExpT>& Instance) const;
+    const LTSFairObjRef& GetFairnessObj(const string& FairnessSetName,
+                                        u32 InstanceNumber) const;
 
-            virtual string ToString(u32 Verbosity = 0) const override;
-        };
+    virtual string ToString(u32 Verbosity = 0) const override;
+};
 
-    } /* end namespace LTS */
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LTS_FAIRNESS_SET_HPP_ */

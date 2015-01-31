@@ -48,59 +48,59 @@
 
 namespace ESMC {
 
-    template <typename E>
-    static inline void
-    CrossProdInt(vector<vector<E>>& Result,
-                 vector<E>& Scratch,
-                 typename vector<vector<E>>::const_iterator Me,
-                 typename vector<vector<E>>::const_iterator End)
-    {
-        if (Me == End) {
-            Result.push_back(Scratch);
-            return;
-        }
-
-        const vector<E>& MyVec = *Me;
-        for (auto it = MyVec.begin(); it != MyVec.end(); ++it) {
-            Scratch.push_back(*it);
-            CrossProdInt(Result, Scratch, Me + 1, End);
-            Scratch.pop_back();
-        }
+template <typename E>
+static inline void
+CrossProdInt(vector<vector<E>>& Result,
+             vector<E>& Scratch,
+             typename vector<vector<E>>::const_iterator Me,
+             typename vector<vector<E>>::const_iterator End)
+{
+    if (Me == End) {
+        Result.push_back(Scratch);
+        return;
     }
 
-    template <typename E>
-    static inline vector<vector<E>>
-    CrossProduct(typename vector<vector<E>>::const_iterator Begin,
-                 typename vector<vector<E>>::const_iterator End)
-    {
-        vector<vector<E>> Result;
-        vector<E> Scratch;
-        CrossProdInt(Result, Scratch, Begin, End);
-        return Result;
+    const vector<E>& MyVec = *Me;
+    for (auto it = MyVec.begin(); it != MyVec.end(); ++it) {
+        Scratch.push_back(*it);
+        CrossProdInt(Result, Scratch, Me + 1, End);
+        Scratch.pop_back();
     }
+}
 
-    template <typename T, class ForwardIterator>
-    static inline vector<T> Filter(const ForwardIterator& First,
-                                   const ForwardIterator& Last,
-                                   const function<bool(const T&)>& Pred)
-    {
-        vector<T> Retval;
-        for (auto it = First; it != Last; ++it) {
-            if (Pred(*it)) {
-                Retval.push_back(*it);
-            }
-        }
-        return Retval;
-    }
+template <typename E>
+static inline vector<vector<E>>
+CrossProduct(typename vector<vector<E>>::const_iterator Begin,
+             typename vector<vector<E>>::const_iterator End)
+{
+    vector<vector<E>> Result;
+    vector<E> Scratch;
+    CrossProdInt(Result, Scratch, Begin, End);
+    return Result;
+}
 
-    static inline u64 Factorial(u32 Num)
-    {
-        u64 Retval = 1;
-        for (u32 i = 1; i <= Num; ++i) {
-            Retval *= i;
+template <typename T, class ForwardIterator>
+static inline vector<T> Filter(const ForwardIterator& First,
+                               const ForwardIterator& Last,
+                               const function<bool(const T&)>& Pred)
+{
+    vector<T> Retval;
+    for (auto it = First; it != Last; ++it) {
+        if (Pred(*it)) {
+            Retval.push_back(*it);
         }
-        return Retval;
     }
+    return Retval;
+}
+
+static inline u64 Factorial(u32 Num)
+{
+    u64 Retval = 1;
+    for (u32 i = 1; i <= Num; ++i) {
+        Retval *= i;
+    }
+    return Retval;
+}
 
 } /* end namespace */
 

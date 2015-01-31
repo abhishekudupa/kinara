@@ -51,57 +51,57 @@
 
 namespace ESMC {
 
-    class ResourceLimitManager
-    {
-    public:
-        // constants
-        static const u64 MemLimitDefault;
-        static const u64 CPULimitDefault;
-        static const u64 TimerIntervalDefault;
+class ResourceLimitManager
+{
+public:
+    // constants
+    static const u64 MemLimitDefault;
+    static const u64 CPULimitDefault;
+    static const u64 TimerIntervalDefault;
 
-    private:
-        static u64 MemLimit;
-        static u64 CPULimit;
-        static u64 TimerInterval;
-        static struct sigaction OldAction;
-        static bool TimerHandlerInstalled;
-        static bool TimerCreated;
+private:
+    static u64 MemLimit;
+    static u64 CPULimit;
+    static u64 TimerInterval;
+    static struct sigaction OldAction;
+    static bool TimerHandlerInstalled;
+    static bool TimerCreated;
 #ifdef __APPLE__
-        // timer_t not defined on mac
-        // setitimer does not take a timer_t argument, so skip it.
+    // timer_t not defined on mac
+    // setitimer does not take a timer_t argument, so skip it.
 #else
-        static timer_t TimerID;
+    static timer_t TimerID;
 #endif
-        static bool TimeOut;
-        static bool MemOut;
+    static bool TimeOut;
+    static bool MemOut;
 
-        static vector<function<void(bool)>> OnLimitHandlers;
+    static vector<function<void(bool)>> OnLimitHandlers;
 
-        // Hide all constructors
-        ResourceLimitManager();
-        ResourceLimitManager(const ResourceLimitManager& Other);
+    // Hide all constructors
+    ResourceLimitManager();
+    ResourceLimitManager(const ResourceLimitManager& Other);
 
-        // A private timer handler
-        static void TimerHandler(int, siginfo_t*, void*);
-        static void RegisterTimerHandler();
-        static void UnregisterTimerHandler();
+    // A private timer handler
+    static void TimerHandler(int, siginfo_t*, void*);
+    static void RegisterTimerHandler();
+    static void UnregisterTimerHandler();
 
-    public:
-        static void SetMemLimit(u64 MemLimit);
-        static u64 GetMemLimit();
-        static void SetCPULimit(u64 TimeLimit);
-        static u64 GetCPULimit();
-        static void SetTimerInterval(u64 TimerIntervalNS);
-        static u64 GetTimerFrequency();
-        static void QueryStart();
-        static void QueryEnd();
-        static bool CheckTimeOut();
-        static bool CheckMemOut();
-        static void AddOnLimitHandler(const function<void(bool)>& Handler);
-        static void ClearOnLimitHandlers();
+public:
+    static void SetMemLimit(u64 MemLimit);
+    static u64 GetMemLimit();
+    static void SetCPULimit(u64 TimeLimit);
+    static u64 GetCPULimit();
+    static void SetTimerInterval(u64 TimerIntervalNS);
+    static u64 GetTimerFrequency();
+    static void QueryStart();
+    static void QueryEnd();
+    static bool CheckTimeOut();
+    static bool CheckMemOut();
+    static void AddOnLimitHandler(const function<void(bool)>& Handler);
+    static void ClearOnLimitHandlers();
 
-        static void GetUsage(double& TotalTime, double& PeakMem);
-    };
+    static void GetUsage(double& TotalTime, double& PeakMem);
+};
 
 } /* End namespace ESMC */
 

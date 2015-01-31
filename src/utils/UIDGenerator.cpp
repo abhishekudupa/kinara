@@ -41,36 +41,36 @@
 
 namespace ESMC {
 
-    UIDGenerator::UIDGenerator(i64 Seed)
-        : NextUID(Seed), InitSeed(Seed)
-    {
-        // Nothing here
-    }
+UIDGenerator::UIDGenerator(i64 Seed)
+    : NextUID(Seed), InitSeed(Seed)
+{
+    // Nothing here
+}
 
-    UIDGenerator::~UIDGenerator()
-    {
-        // Nothing here
-    }
+UIDGenerator::~UIDGenerator()
+{
+    // Nothing here
+}
 
-    i64 UIDGenerator::GetUID()
-    {
-        return NextUID++;
-    }
+i64 UIDGenerator::GetUID()
+{
+    return NextUID++;
+}
 
-    i64 UIDGenerator::LastUID() const
-    {
-        return (NextUID - 1);
-    }
+i64 UIDGenerator::LastUID() const
+{
+    return (NextUID - 1);
+}
 
-    void UIDGenerator::Reset()
-    {
-        NextUID = InitSeed;
-    }
+void UIDGenerator::Reset()
+{
+    NextUID = InitSeed;
+}
 
-    string UIDGenerator::GetStrUID()
-    {
-        return (to_string(NextUID++));
-    }
+string UIDGenerator::GetStrUID()
+{
+    return (to_string(NextUID++));
+}
 
 } /* end namespace */
 

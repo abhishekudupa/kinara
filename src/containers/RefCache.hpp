@@ -46,112 +46,112 @@
 
 namespace ESMC {
 
-    // Set NUMWEAKREFS to a negative value for a permanent store,
-    // i.e., GC will never kick in
-    template <typename OBJTYPE, typename HASHERTYPE, typename EQTYPE,
-              template <typename> class REFTYPE = SmartPtr, i64 NUMWEAKREFS=0>
-    class RefCache
+// Set NUMWEAKREFS to a negative value for a permanent store,
+// i.e., GC will never kick in
+template <typename OBJTYPE, typename HASHERTYPE, typename EQTYPE,
+          template <typename> class REFTYPE = SmartPtr, i64 NUMWEAKREFS=0>
+class RefCache
+{
+private:
+    typedef REFTYPE<OBJTYPE> PtrType;
+    typedef unordered_set<PtrType, HASHERTYPE, EQTYPE> SetType;
+
+    SetType Cache;
+    u32 NextGC;
+    float GCGrowthFactor;
+
+    inline void AutoGC()
     {
-    private:
-        typedef REFTYPE<OBJTYPE> PtrType;
-        typedef unordered_set<PtrType, HASHERTYPE, EQTYPE> SetType;
-
-        SetType Cache;
-        u32 NextGC;
-        float GCGrowthFactor;
-
-        inline void AutoGC()
-        {
-            if (NUMWEAKREFS < 0) {
-                return;
-            }
-            if (Cache.size() >= NextGC) {
-                GC();
-                NextGC = (u32)((float)Cache.size() * GCGrowthFactor);
-            }
+        if (NUMWEAKREFS < 0) {
+            return;
         }
-
-    public:
-        inline RefCache(u32 InitialCapacity = 1024, float GrowthFactor = 1.5f)
-            : NextGC(InitialCapacity), GCGrowthFactor(GrowthFactor)
-        {
-            // Nothing here
+        if (Cache.size() >= NextGC) {
+            GC();
+            NextGC = (u32)((float)Cache.size() * GCGrowthFactor);
         }
+    }
 
-        inline ~RefCache()
-        {
-            Cache.clear();
-        }
+public:
+    inline RefCache(u32 InitialCapacity = 1024, float GrowthFactor = 1.5f)
+        : NextGC(InitialCapacity), GCGrowthFactor(GrowthFactor)
+    {
+        // Nothing here
+    }
 
-        template <typename T, typename... ArgTypes>
-        inline PtrType Get(ArgTypes&&... Args)
-        {
-            PtrType NewExp = new T(forward<ArgTypes>(Args)...);
-            return Get(NewExp);
-        }
+    inline ~RefCache()
+    {
+        Cache.clear();
+    }
 
-        inline PtrType Get(const PtrType& Obj)
-        {
-            AutoGC();
-            auto it = Cache.find(Obj);
-            if (it == Cache.end()) {
-                Cache.insert(Obj);
-                return Obj;
-            } else {
-                return (*it);
-            }
-        }
+    template <typename T, typename... ArgTypes>
+    inline PtrType Get(ArgTypes&&... Args)
+    {
+        PtrType NewExp = new T(forward<ArgTypes>(Args)...);
+        return Get(NewExp);
+    }
 
-        inline PtrType Find(const PtrType& Obj)
-        {
-            auto it = Cache.find(Obj);
-            if (it == Cache.end()) {
-                return PtrType::NullPtr;
-            } else {
-                return (*it);
-            }
-        }
-
-        // assumes the value is not already
-        // in the cache
-        inline PtrType Put(const PtrType& Obj)
-        {
+    inline PtrType Get(const PtrType& Obj)
+    {
+        AutoGC();
+        auto it = Cache.find(Obj);
+        if (it == Cache.end()) {
             Cache.insert(Obj);
             return Obj;
+        } else {
+            return (*it);
         }
+    }
 
-        template <typename T, typename... ArgTypes>
-        inline PtrType Put(ArgTypes&&... Args)
-        {
-            PtrType NewObj = new T(forward<ArgTypes>(Args)...);
-            Cache.insert(NewObj);
-            return NewObj;
+    inline PtrType Find(const PtrType& Obj)
+    {
+        auto it = Cache.find(Obj);
+        if (it == Cache.end()) {
+            return PtrType::NullPtr;
+        } else {
+            return (*it);
         }
+    }
 
-        inline void GC()
-        {
-            if (NUMWEAKREFS < 0) {
-                return;
+    // assumes the value is not already
+    // in the cache
+    inline PtrType Put(const PtrType& Obj)
+    {
+        Cache.insert(Obj);
+        return Obj;
+    }
+
+    template <typename T, typename... ArgTypes>
+    inline PtrType Put(ArgTypes&&... Args)
+    {
+        PtrType NewObj = new T(forward<ArgTypes>(Args)...);
+        Cache.insert(NewObj);
+        return NewObj;
+    }
+
+    inline void GC()
+    {
+        if (NUMWEAKREFS < 0) {
+            return;
+        }
+        vector<typename SetType::iterator> ToDelete;
+        do {
+            for(auto& Obj : ToDelete) {
+                Cache.erase(Obj);
             }
-            vector<typename SetType::iterator> ToDelete;
-            do {
-                for(auto& Obj : ToDelete) {
-                    Cache.erase(Obj);
+            ToDelete.clear();
+            for (auto it = Cache.begin(); it != Cache.end(); ++it) {
+                if (((*it)->GetRefCnt_() - NUMWEAKREFS) <= (i64)1) {
+                    ToDelete.push_back(it);
                 }
-                ToDelete.clear();
-                for (auto it = Cache.begin(); it != Cache.end(); ++it) {
-                    if (((*it)->GetRefCnt_() - NUMWEAKREFS) <= (i64)1) {
-                        ToDelete.push_back(it);
-                    }
-                }
-            } while (ToDelete.size() > 0);
-        }
+            }
+        } while (ToDelete.size() > 0);
+    }
 
-        inline void Clear()
-        {
-            Cache.clear();
-        }
-    };
+    inline void Clear()
+    {
+        Cache.clear();
+    }
+};
 
 } /* end namespace ESMC */
 

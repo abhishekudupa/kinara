@@ -46,47 +46,47 @@
 
 namespace ESMC {
 
-    class RefCountable
+class RefCountable
+{
+private:
+    mutable i64 RefCount_;
+
+public:
+    inline RefCountable()
+        : RefCount_((i64)0)
     {
-    private:
-        mutable i64 RefCount_;
+        // Nothing here
+    }
 
-    public:
-        inline RefCountable()
-            : RefCount_((i64)0)
-        {
-            // Nothing here
-        }
+    inline RefCountable(const RefCountable& Other)
+        : RefCount_((i64)0)
+    {
+        // Nothing here
+    }
 
-        inline RefCountable(const RefCountable& Other)
-            : RefCount_((i64)0)
-        {
-            // Nothing here
-        }
+    virtual ~RefCountable()
+    {
+        // Nothing here
+    }
 
-        virtual ~RefCountable()
-        {
-            // Nothing here
-        }
+    inline void IncRef_() const
+    {
+        RefCount_++;
+    }
 
-        inline void IncRef_() const
-        {
-            RefCount_++;
+    inline void DecRef_() const
+    {
+        RefCount_--;
+        if (RefCount_ <= (i64)0) {
+            delete this;
         }
+    }
 
-        inline void DecRef_() const
-        {
-            RefCount_--;
-            if (RefCount_ <= (i64)0) {
-                delete this;
-            }
-        }
-
-        inline i64 GetRefCnt_() const
-        {
-            return RefCount_;
-        }
-    };
+    inline i64 GetRefCnt_() const
+    {
+        return RefCount_;
+    }
+};
 
 } /* end namespace */
 

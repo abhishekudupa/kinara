@@ -43,143 +43,143 @@
 #include "LTSState.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        using namespace Decls;
+using namespace Decls;
 
-        AutomatonBase::AutomatonBase(LabelledTS* TheLTS, const string& Name,
-                                     const vector<ExpT>& Params, const ExpT& Constraint)
-            : TheLTS(TheLTS), Name(Name), Params(Params), Constraint(Constraint),
-              ClassID(TheLTS->GetAutomataClassUID()), StatesFrozen(false)
-        {
-            auto Mgr = TheLTS->GetMgr();
-            CheckParams(Params, Constraint, SymTab, Mgr, true);
+AutomatonBase::AutomatonBase(LabelledTS* TheLTS, const string& Name,
+                             const vector<ExpT>& Params, const ExpT& Constraint)
+    : TheLTS(TheLTS), Name(Name), Params(Params), Constraint(Constraint),
+      ClassID(TheLTS->GetAutomataClassUID()), StatesFrozen(false)
+{
+    auto Mgr = TheLTS->GetMgr();
+    CheckParams(Params, Constraint, SymTab, Mgr, true);
 
-            // Instantiate the parameters
-            const u32 NumParams = Params.size();
-            ParamInsts = InstantiateParams(Params, Constraint, Mgr);
+    // Instantiate the parameters
+    const u32 NumParams = Params.size();
+    ParamInsts = InstantiateParams(Params, Constraint, Mgr);
 
-            for (auto const& ParamInst : ParamInsts) {
-                MgrT::SubstMapT SubstMap;
-                for (u32 i = 0; i < NumParams; ++i) {
-                    SubstMap[Params[i]] = ParamInst[i];
-                }
-                ParamSubsts.push_back(SubstMap);
-            }
+    for (auto const& ParamInst : ParamInsts) {
+        MgrT::SubstMapT SubstMap;
+        for (u32 i = 0; i < NumParams; ++i) {
+            SubstMap[Params[i]] = ParamInst[i];
         }
+        ParamSubsts.push_back(SubstMap);
+    }
+}
 
-        AutomatonBase::~AutomatonBase()
-        {
-            // Nothing here
-        }
+AutomatonBase::~AutomatonBase()
+{
+    // Nothing here
+}
 
-        void AutomatonBase::AssertStatesFrozen() const
-        {
-            if (!StatesFrozen) {
-                throw ESMCError((string)"An operation was attempted before states of the " +
-                                "automaton \"" + Name + "\" were frozen. This operation " +
-                                "can only be performed after freezing states");
-            }
-        }
+void AutomatonBase::AssertStatesFrozen() const
+{
+    if (!StatesFrozen) {
+        throw ESMCError((string)"An operation was attempted before states of the " +
+                        "automaton \"" + Name + "\" were frozen. This operation " +
+                        "can only be performed after freezing states");
+    }
+}
 
-        void AutomatonBase::AssertStatesNotFrozen() const
-        {
-            if (StatesFrozen) {
-                throw ESMCError((string)"An operation was attempted after states of the " +
-                                "automaton \"" + Name + "\" were frozen. This operation " +
-                                "can only be performed before freezing states");
-            }
-        }
+void AutomatonBase::AssertStatesNotFrozen() const
+{
+    if (StatesFrozen) {
+        throw ESMCError((string)"An operation was attempted after states of the " +
+                        "automaton \"" + Name + "\" were frozen. This operation " +
+                        "can only be performed before freezing states");
+    }
+}
 
-        void AutomatonBase::CheckState(const string& StateName) const
-        {
-            if (States.find(StateName) == States.end()) {
-                throw ESMCError((string)"Automaton named \"" + Name + "\" has no state named \"" +
-                                StateName + "\"");
-            }
-        }
+void AutomatonBase::CheckState(const string& StateName) const
+{
+    if (States.find(StateName) == States.end()) {
+        throw ESMCError((string)"Automaton named \"" + Name + "\" has no state named \"" +
+                        StateName + "\"");
+    }
+}
 
-        void AutomatonBase::FreezeStates()
-        {
-            auto Mgr = TheLTS->GetMgr();
-            if (StatesFrozen) {
-                return;
-            }
+void AutomatonBase::FreezeStates()
+{
+    auto Mgr = TheLTS->GetMgr();
+    if (StatesFrozen) {
+        return;
+    }
 
-            set<string> StateNames;
-            for (auto const& State : States) {
-                StateNames.insert(State.first);
-            }
+    set<string> StateNames;
+    for (auto const& State : States) {
+        StateNames.insert(State.first);
+    }
 
-            StateType = Mgr->MakeType<EnumType>(Name + "_StateT", StateNames);
-            StatesFrozen = true;
-        }
+    StateType = Mgr->MakeType<EnumType>(Name + "_StateT", StateNames);
+    StatesFrozen = true;
+}
 
-        void AutomatonBase::AddState(const string& StateName,
-                                     bool Initial, bool Final,
-                                     bool Accepting, bool Error)
-        {
-            if (States.find(StateName) != States.end()) {
-                throw ESMCError((string)"Error, state \"" + StateName + "\" already " +
-                                "declared for automaton \"" + Name + "\"");
-            }
+void AutomatonBase::AddState(const string& StateName,
+                             bool Initial, bool Final,
+                             bool Accepting, bool Error)
+{
+    if (States.find(StateName) != States.end()) {
+        throw ESMCError((string)"Error, state \"" + StateName + "\" already " +
+                        "declared for automaton \"" + Name + "\"");
+    }
 
-            States[StateName] = LTSState(StateName, Initial, Final, Accepting, Error);
-        }
+    States[StateName] = LTSState(StateName, Initial, Final, Accepting, Error);
+}
 
-        vector<LTSState> AutomatonBase::GetStates() const
-        {
-            vector<LTSState> Retval;
-            for (auto const& State : States) {
-                Retval.push_back(State.second);
-            }
-            return Retval;
-        }
+vector<LTSState> AutomatonBase::GetStates() const
+{
+    vector<LTSState> Retval;
+    for (auto const& State : States) {
+        Retval.push_back(State.second);
+    }
+    return Retval;
+}
 
-        const TypeRef& AutomatonBase::GetStateType() const
-        {
-            if (!StatesFrozen) {
-                throw ESMCError((string)"Cannot call AutomatonBase::GetStateType() before " +
-                                "freezing states of automaton using Automaton::FreezeStates()");
-            }
-            return StateType;
-        }
+const TypeRef& AutomatonBase::GetStateType() const
+{
+    if (!StatesFrozen) {
+        throw ESMCError((string)"Cannot call AutomatonBase::GetStateType() before " +
+                        "freezing states of automaton using Automaton::FreezeStates()");
+    }
+    return StateType;
+}
 
-        const vector<vector<ExpT>>& AutomatonBase::GetParamInsts() const
-        {
-            return ParamInsts;
-        }
+const vector<vector<ExpT>>& AutomatonBase::GetParamInsts() const
+{
+    return ParamInsts;
+}
 
-        const vector<MgrT::SubstMapT>& AutomatonBase::GetParamSubsts() const
-        {
-            return ParamSubsts;
-        }
+const vector<MgrT::SubstMapT>& AutomatonBase::GetParamSubsts() const
+{
+    return ParamSubsts;
+}
 
-        u32 AutomatonBase::GetNumInstances() const
-        {
-            return ParamInsts.size();
-        }
+u32 AutomatonBase::GetNumInstances() const
+{
+    return ParamInsts.size();
+}
 
-        const string& AutomatonBase::GetName() const
-        {
-            return Name;
-        }
+const string& AutomatonBase::GetName() const
+{
+    return Name;
+}
 
-        u32 AutomatonBase::GetClassID() const
-        {
-            return ClassID;
-        }
+u32 AutomatonBase::GetClassID() const
+{
+    return ClassID;
+}
 
-        u32 AutomatonBase::GetNumInstancesUnconstrained() const
-        {
-            u32 Retval = 1;
-            for (auto const& Param : Params) {
-                Retval *= Param->GetType()->GetCardinalityNoUndef();
-            }
-            return Retval;
-        }
+u32 AutomatonBase::GetNumInstancesUnconstrained() const
+{
+    u32 Retval = 1;
+    for (auto const& Param : Params) {
+        Retval *= Param->GetType()->GetCardinalityNoUndef();
+    }
+    return Retval;
+}
 
-    } /* end namespace LTS */
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 //

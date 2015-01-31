@@ -43,72 +43,72 @@
 #include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
-    namespace MC {
+namespace MC {
 
-        using namespace ESMC::LTS;
+using namespace ESMC::LTS;
 
-        class ScalarPrinter
-        {
-        private:
-            u32 Offset;
-            u32 Size;
-            TypeRef Type;
-            i64 Low;
-            i64 High;
-            vector<string> MsgNameMap;
-            bool IsMsgType;
+class ScalarPrinter
+{
+private:
+    u32 Offset;
+    u32 Size;
+    TypeRef Type;
+    i64 Low;
+    i64 High;
+    vector<string> MsgNameMap;
+    bool IsMsgType;
 
-        public:
-            ScalarPrinter();
-            ScalarPrinter(u32 Offset, const TypeRef& Type);
-            ScalarPrinter(u32 Offset, const vector<string> MsgNameMap);
-            ScalarPrinter(const ScalarPrinter& Other);
-            ~ScalarPrinter();
+public:
+    ScalarPrinter();
+    ScalarPrinter(u32 Offset, const TypeRef& Type);
+    ScalarPrinter(u32 Offset, const vector<string> MsgNameMap);
+    ScalarPrinter(const ScalarPrinter& Other);
+    ~ScalarPrinter();
 
-            ScalarPrinter& operator = (const ScalarPrinter& Other);
-            bool operator == (const ScalarPrinter& Other) const;
+    ScalarPrinter& operator = (const ScalarPrinter& Other);
+    bool operator == (const ScalarPrinter& Other) const;
 
-            string Print(const StateVec* StateVector) const;
-        };
+    string Print(const StateVec* StateVector) const;
+};
 
-        class StateVecPrinter
-        {
-        private:
-            vector<pair<ExpT, ScalarPrinter>> ExpsToPrint;
-            LTSCompiler* Compiler;
+class StateVecPrinter
+{
+private:
+    vector<pair<ExpT, ScalarPrinter>> ExpsToPrint;
+    LTSCompiler* Compiler;
 
-            void MakePrinters(const ExpT& Exp, LabelledTS* TheLTS);
+    void MakePrinters(const ExpT& Exp, LabelledTS* TheLTS);
 
-        public:
-            StateVecPrinter(LabelledTS* TheLTS, LTSCompiler* Compiler);
-            ~StateVecPrinter();
+public:
+    StateVecPrinter(LabelledTS* TheLTS, LTSCompiler* Compiler);
+    ~StateVecPrinter();
 
-            vector<string> PrintState(const StateVec* StateVector) const;
+    vector<string> PrintState(const StateVec* StateVector) const;
 
-            // Prints delta
-            vector<string> PrintState(const StateVec* StateVector,
-                                      const StateVec* PrevStateVector) const;
+    // Prints delta
+    vector<string> PrintState(const StateVec* StateVector,
+                              const StateVec* PrevStateVector) const;
 
-            void PrintState(const StateVec* StateVector, ostream& Out) const;
-            void PrintState(const StateVec* StateVector,
-                            const StateVec* PrevStateVector,
-                            ostream& Out) const;
+    void PrintState(const StateVec* StateVector, ostream& Out) const;
+    void PrintState(const StateVec* StateVector,
+                    const StateVec* PrevStateVector,
+                    ostream& Out) const;
 
-            void PrintState(const ProductState* State,
-                            ostream& Out) const;
-            void PrintState(const ProductState* State,
-                            const ProductState* Prev, ostream& Out) const;
+    void PrintState(const ProductState* State,
+                    ostream& Out) const;
+    void PrintState(const ProductState* State,
+                    const ProductState* Prev, ostream& Out) const;
 
-            void PrintState(const ProductState* State,
-                            const ProductStructure* ThePS, ostream& Out) const;
-            void PrintState(const ProductState* State,
-                            const ProductState* Prev,
-                            const ProductStructure* ThePS,
-                            ostream& Out) const;
+    void PrintState(const ProductState* State,
+                    const ProductStructure* ThePS, ostream& Out) const;
+    void PrintState(const ProductState* State,
+                    const ProductState* Prev,
+                    const ProductStructure* ThePS,
+                    ostream& Out) const;
 
-        };
+};
 
-    } /* end namespace MC */
+} /* end namespace MC */
 } /* end namespace ESMC */
 
 #endif /* ESMC_STATE_VEC_PRINTER_HPP_ */

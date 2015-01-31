@@ -54,87 +54,88 @@
 #include "Z3Objects.hpp"
 
 namespace ESMC {
-    namespace TP {
+namespace TP {
 
-        using ESMC::LTS::ExpT;
-        using ESMC::LTS::LExpT;
+using ESMC::LTS::ExpT;
+using ESMC::LTS::LExpT;
 
-        enum class TPResult {
-            SATISFIABLE, UNSATISFIABLE, UNKNOWN
-        };
+enum class TPResult
+{
+    SATISFIABLE, UNSATISFIABLE, UNKNOWN
+};
 
-        class IncompleteTheoryException : public exception
-        {
-        private:
-            ExpT Expression;
-            string ExceptionInfo;
+class IncompleteTheoryException : public exception
+{
+private:
+    ExpT Expression;
+    string ExceptionInfo;
 
-        public:
-            IncompleteTheoryException(const ExpT& Expression) throw ();
-            virtual ~IncompleteTheoryException() throw ();
-            virtual const char* what() const throw () override;
-            const ExpT& GetExpression() const;
-        };
+public:
+    IncompleteTheoryException(const ExpT& Expression) throw ();
+    virtual ~IncompleteTheoryException() throw ();
+    virtual const char* what() const throw () override;
+    const ExpT& GetExpression() const;
+};
 
-        class Z3TheoremProver : public RefCountable
-        {
-        private:
-            Z3Ctx Ctx;
-            Z3Model TheModel;
-            Z3Solver Solver;
-            Z3Solver FlashSolver;
-            bool LastSolveWasFlash;
-            Z3_ast* AssumptionVec;
-            TPResult LastSolveResult;
-            u32 IncSolverTimeout;
-            vector<Z3Expr> ImmutableAssertions;
+class Z3TheoremProver : public RefCountable
+{
+private:
+    Z3Ctx Ctx;
+    Z3Model TheModel;
+    Z3Solver Solver;
+    Z3Solver FlashSolver;
+    bool LastSolveWasFlash;
+    Z3_ast* AssumptionVec;
+    TPResult LastSolveResult;
+    u32 IncSolverTimeout;
+    vector<Z3Expr> ImmutableAssertions;
 
-            static const u32 MaxNumAssumptions;
+    static const u32 MaxNumAssumptions;
 
-            inline void SetIncSolverTimeout();
+    inline void SetIncSolverTimeout();
 
-        public:
-            Z3TheoremProver(u32 IncSolverTimeout = UINT32_MAX);
-            Z3TheoremProver(const Z3Ctx& Ctx);
-            virtual ~Z3TheoremProver();
+public:
+    Z3TheoremProver(u32 IncSolverTimeout = UINT32_MAX);
+    Z3TheoremProver(const Z3Ctx& Ctx);
+    virtual ~Z3TheoremProver();
 
-            void ClearSolution();
-            void Push();
-            void Pop(u32 NumScopes = 1);
+    void ClearSolution();
+    void Push();
+    void Pop(u32 NumScopes = 1);
 
-            void Assert(const ExpT& Assertion, bool Immutable, bool UnrollQuantifiers);
-            void Assert(const vector<ExpT>& Assertions, bool Immutable,
-                        bool UnrollQuantifiers);
-            void Assert(const Z3Expr& Assertion, bool Immutable);
+    void Assert(const ExpT& Assertion, bool Immutable, bool UnrollQuantifiers);
+    void Assert(const vector<ExpT>& Assertions, bool Immutable,
+                bool UnrollQuantifiers);
+    void Assert(const Z3Expr& Assertion, bool Immutable);
 
-            // Creates a new context and solver, translates
-            // all assertions from the current solver into the
-            // new context/solver, reasserts the translated constraints
-            // into the new solver and returns
-            // Used to clear all learned lemmas
-            void Reset(u32 NewIncSolverTimeout = 0);
+    // Creates a new context and solver, translates
+    // all assertions from the current solver into the
+    // new context/solver, reasserts the translated constraints
+    // into the new solver and returns
+    // Used to clear all learned lemmas
+    void Reset(u32 NewIncSolverTimeout = 0);
 
-            // Same as reset, but retains only the assertions
-            // marked immutable during the call to Assert
-            void ResetToImmutable(u32 NewIncSolverTimeout = 0);
+    // Same as reset, but retains only the assertions
+    // marked immutable during the call to Assert
+    void ResetToImmutable(u32 NewIncSolverTimeout = 0);
 
-            TPResult CheckSat();
-            TPResult CheckSatWithAssumptions(const vector<Z3Expr>& Assumptions);
-            TPResult CheckSatWithAssumptions(const deque<Z3Expr>& Assumptions);
-            TPResult CheckSat(const ExpT& Assertion, bool UnrollQuantifiers);
+    TPResult CheckSat();
+    TPResult CheckSatWithAssumptions(const vector<Z3Expr>& Assumptions);
+    TPResult CheckSatWithAssumptions(const deque<Z3Expr>& Assumptions);
+    TPResult CheckSat(const ExpT& Assertion, bool UnrollQuantifiers);
 
-            void Interrupt();
+    void Interrupt();
 
-            u64 GetNumAssertions() const;
+    u64 GetNumAssertions() const;
 
-            ExpT Evaluate(const ExpT& Exp);
+    ExpT Evaluate(const ExpT& Exp);
 
-            const Z3Model& GetModel();
-            const Z3Ctx& GetCtx() const;
-            const Z3Solver& GetSolver() const;
-        };
+    const Z3Model& GetModel();
+    const Z3Ctx& GetCtx() const;
+    const Z3Solver& GetSolver() const;
+};
 
-    } /* end namespace TP */
+} /* end namespace TP */
 } /* end namespace ESMC */
 
 #endif /* ESMC_THEOREM_PROVER_HPP_ */

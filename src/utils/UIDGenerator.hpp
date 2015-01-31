@@ -44,21 +44,21 @@
 
 namespace ESMC {
 
-    class UIDGenerator
-    {
-    private:
-        i64 NextUID;
-        i64 InitSeed;
+class UIDGenerator
+{
+private:
+    i64 NextUID;
+    i64 InitSeed;
 
-    public:
-        UIDGenerator(i64 Seed = 0);
-        ~UIDGenerator();
+public:
+    UIDGenerator(i64 Seed = 0);
+    ~UIDGenerator();
 
-        i64 GetUID();
-        i64 LastUID() const;
-        void Reset();
-        string GetStrUID();
-    };
+    i64 GetUID();
+    i64 LastUID() const;
+    void Reset();
+    string GetStrUID();
+};
 
 } /* end namespace */
 

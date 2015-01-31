@@ -47,195 +47,195 @@
 #include "LTSEFSMBase.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        using namespace Symm;
+using namespace Symm;
 
-        class GeneralEFSM : public EFSMBase
-        {
-        public:
-            GeneralEFSM(LabelledTS* TheLTS, const string& Name,
-                        const vector<ExpT>& Params, const ExpT& Constraint,
-                        LTSFairnessType Fairness = LTSFairnessType::None);
-            virtual ~GeneralEFSM();
-            // Nothing needs to be overridden here
-        };
+class GeneralEFSM : public EFSMBase
+{
+public:
+    GeneralEFSM(LabelledTS* TheLTS, const string& Name,
+                const vector<ExpT>& Params, const ExpT& Constraint,
+                LTSFairnessType Fairness = LTSFairnessType::None);
+    virtual ~GeneralEFSM();
+    // Nothing needs to be overridden here
+};
 
-        class DetEFSM : public EFSMBase
-        {
-        private:
-            inline void
-            CheckTransition(const Z3TPRef& TP, u32 TransIndex,
-                            const vector<LTSSymbTransRef>& CandTrans) const;
+class DetEFSM : public EFSMBase
+{
+private:
+    inline void
+    CheckTransition(const Z3TPRef& TP, u32 TransIndex,
+                    const vector<LTSSymbTransRef>& CandTrans) const;
 
-        public:
-            DetEFSM(LabelledTS* TheLTS, const string& Name,
-                    const vector<ExpT>& Params, const ExpT& Constraint,
-                    LTSFairnessType Fairness = LTSFairnessType::None);
+public:
+    DetEFSM(LabelledTS* TheLTS, const string& Name,
+            const vector<ExpT>& Params, const ExpT& Constraint,
+            LTSFairnessType Fairness = LTSFairnessType::None);
 
-            virtual ~DetEFSM();
+    virtual ~DetEFSM();
 
-            // Override freeze to check for determinism
-            virtual void Freeze() override;
-        };
+    // Override freeze to check for determinism
+    virtual void Freeze() override;
+};
 
-        class IncompleteEFSM : public DetEFSM
-        {
-            friend class ESMC::LTS::LabelledTS;
-            friend class ESMC::Synth::Solver;
+class IncompleteEFSM : public DetEFSM
+{
+    friend class ESMC::LTS::LabelledTS;
+    friend class ESMC::Synth::Solver;
 
-        private:
-            // Map from update op code to the LValue term
-            // that it updates
-            unordered_map<i64, pair<ExpT, ExpT>> UpdateOpToUpdateLValue;
+private:
+    // Map from update op code to the LValue term
+    // that it updates
+    unordered_map<i64, pair<ExpT, ExpT>> UpdateOpToUpdateLValue;
 
-            unordered_map<i64, ExpT> GuardOpToExp;
-            unordered_map<i64, WellOrderedExpSetT> GuardSymmetryConstraints;
-            unordered_map<i64, WellOrderedExpSetT> GuardMutualExclusiveSets;
-            unordered_map<i64, WellOrderedExpSetT> GuardOpToUpdates;
-            unordered_map<i64, WellOrderedExpSetT> GuardOpToUpdateSymmetryConstraints;
-            unordered_map<string, WellOrderedExpSetT> AddedTransitionsByState;
-            unordered_map<i64, ExpT> StateUpdateOpToExp;
-            unordered_map<i64, ExpT> AllOpToExp;
+    unordered_map<i64, ExpT> GuardOpToExp;
+    unordered_map<i64, WellOrderedExpSetT> GuardSymmetryConstraints;
+    unordered_map<i64, WellOrderedExpSetT> GuardMutualExclusiveSets;
+    unordered_map<i64, WellOrderedExpSetT> GuardOpToUpdates;
+    unordered_map<i64, WellOrderedExpSetT> GuardOpToUpdateSymmetryConstraints;
+    unordered_map<string, WellOrderedExpSetT> AddedTransitionsByState;
+    unordered_map<i64, ExpT> StateUpdateOpToExp;
+    unordered_map<i64, ExpT> AllOpToExp;
 
-            map<string, set<SymmMsgDeclRef>> BlockedCompletions;
-            set<string> CompleteStates;
-            set<string> ReadOnlyVars;
-            map<string, TypeRef> UpdateableVariables;
-            map<string, TypeRef> AllVariables;
-            map<pair<string, SymmMsgDeclRef>, set<string>> VarDeps;
-            map<pair<string, SymmMsgDeclRef>, set<string>> VarMsgFieldDeps;
-            map<pair<string, SymmMsgDeclRef>, set<string>> OutMsgFieldDeps;
-            map<pair<string, SymmMsgDeclRef>, set<string>> NextStatesOnTransition;
+    map<string, set<SymmMsgDeclRef>> BlockedCompletions;
+    set<string> CompleteStates;
+    set<string> ReadOnlyVars;
+    map<string, TypeRef> UpdateableVariables;
+    map<string, TypeRef> AllVariables;
+    map<pair<string, SymmMsgDeclRef>, set<string>> VarDeps;
+    map<pair<string, SymmMsgDeclRef>, set<string>> VarMsgFieldDeps;
+    map<pair<string, SymmMsgDeclRef>, set<string>> OutMsgFieldDeps;
+    map<pair<string, SymmMsgDeclRef>, set<string>> NextStatesOnTransition;
 
-            UIDGenerator GuardUFUIDGen;
-            UIDGenerator UpdateUFUIDGen;
+    UIDGenerator GuardUFUIDGen;
+    UIDGenerator UpdateUFUIDGen;
 
-            inline void FilterTerms(WellOrderedExpSetT& DomainTerms, const TypeRef& RangeType);
-            WellOrderedExpSetT GetDomainTerms(const map<string, TypeRef>& DomainVars);
+    inline void FilterTerms(WellOrderedExpSetT& DomainTerms, const TypeRef& RangeType);
+    WellOrderedExpSetT GetDomainTerms(const map<string, TypeRef>& DomainVars);
 
-            inline set<WellOrderedExpSetT>
-            GetArrayLValueGroups(const WellOrderedExpSetT& LValues);
+    inline set<WellOrderedExpSetT>
+    GetArrayLValueGroups(const WellOrderedExpSetT& LValues);
 
-            inline vector<TypeRef> GetSymmTypesInExpr(const ExpT& Exp);
-            inline void PartitionDomain(const vector<ExpT>& Args,
-                                        vector<ExpT>& SymmArgs,
-                                        vector<ExpT>& NonSymmArgs);
+    inline vector<TypeRef> GetSymmTypesInExpr(const ExpT& Exp);
+    inline void PartitionDomain(const vector<ExpT>& Args,
+                                vector<ExpT>& SymmArgs,
+                                vector<ExpT>& NonSymmArgs);
 
-            inline void MergeEquivalences(const WellOrderedExpSetT& NewEquivalences,
-                                          set<WellOrderedExpSetT>& EquivalenceSets);
+    inline void MergeEquivalences(const WellOrderedExpSetT& NewEquivalences,
+                                  set<WellOrderedExpSetT>& EquivalenceSets);
 
-            inline set<WellOrderedExpSetT>
-            FindEquivalences(const ExpT& Exp,
-                             const vector<TypeRef>& SymmTypes,
-                             const vector<ExpT>& SymmArgs,
-                             const vector<ExpT>& NonSymmArgs);
+    inline set<WellOrderedExpSetT>
+    FindEquivalences(const ExpT& Exp,
+                     const vector<TypeRef>& SymmTypes,
+                     const vector<ExpT>& SymmArgs,
+                     const vector<ExpT>& NonSymmArgs);
 
-            inline vector<ExpT> GetSymmetryConstraints(const ExpT& Exp);
+    inline vector<ExpT> GetSymmetryConstraints(const ExpT& Exp);
 
-            // Make symmetry constraints for a group
-            inline vector<ExpT>
-            GetSymmetryConstraints(const WellOrderedExpSetT& UpdateGroup,
-                                   const WellOrderedExpMapT<ExpT>& UpdateMap);
+    // Make symmetry constraints for a group
+    inline vector<ExpT>
+    GetSymmetryConstraints(const WellOrderedExpSetT& UpdateGroup,
+                           const WellOrderedExpMapT<ExpT>& UpdateMap);
 
-            inline ExpT FindDisjunction(const vector<LTSSymbTransRef>& Transitions,
-                                        const Z3TPRef& TP,
-                                        const ExpT& CoveredRegion);
+    inline ExpT FindDisjunction(const vector<LTSSymbTransRef>& Transitions,
+                                const Z3TPRef& TP,
+                                const ExpT& CoveredRegion);
 
-            inline ExpT FindInputCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
-                                               const Z3TPRef& TP,
-                                               const TypeRef& MsgType,
-                                               const ExpT& CoveredRegion);
+    inline ExpT FindInputCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
+                                       const Z3TPRef& TP,
+                                       const TypeRef& MsgType,
+                                       const ExpT& CoveredRegion);
 
-            inline ExpT FindGlobalCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
-                                                const Z3TPRef& TP);
+    inline ExpT FindGlobalCoveredRegion(const vector<LTSSymbTransRef>& Transitions,
+                                        const Z3TPRef& TP);
 
-            inline void CompleteInputTransitions(const string& StateName,
-                                                 const vector<LTSSymbTransRef>& Transitions,
-                                                 const ExpT& CoveredPredicate,
-                                                 const Z3TPRef& TP);
+    inline void CompleteInputTransitions(const string& StateName,
+                                         const vector<LTSSymbTransRef>& Transitions,
+                                         const ExpT& CoveredPredicate,
+                                         const Z3TPRef& TP);
 
-            inline ExpT MakeGuard(const WellOrderedExpSetT& DomainTerms,
-                                  const ExpT& CoveredPredicate,
-                                  const string& NameSuffix);
+    inline ExpT MakeGuard(const WellOrderedExpSetT& DomainTerms,
+                          const ExpT& CoveredPredicate,
+                          const string& NameSuffix);
 
-            inline WellOrderedExpSetT
-            GetDomainTermsForUpdate(const ExpT& LValueTerm,
-                                    const WellOrderedExpSetT& DomainTerms,
-                                    const SymmMsgDeclRef& MsgDecl);
+    inline WellOrderedExpSetT
+    GetDomainTermsForUpdate(const ExpT& LValueTerm,
+                            const WellOrderedExpSetT& DomainTerms,
+                            const SymmMsgDeclRef& MsgDecl);
 
-            inline vector<LTSAssignRef>
-            MakeUpdates(i64 GuardOp,
-                        const string& InitStateName,
-                        const WellOrderedExpSetT& DomainTerms,
-                        const string& NameSuffix,
-                        const SymmMsgDeclRef& MsgDecl);
+    inline vector<LTSAssignRef>
+    MakeUpdates(i64 GuardOp,
+                const string& InitStateName,
+                const WellOrderedExpSetT& DomainTerms,
+                const string& NameSuffix,
+                const SymmMsgDeclRef& MsgDecl);
 
-            inline void CompleteOneInputTransition(const string& InitStateName,
-                                                   const SymmMsgDeclRef& MsgDecl,
-                                                   const map<string, TypeRef>& DomainVars,
-                                                   const ExpT& CoveredPred);
-
-            inline void CompleteOutputTransitions(const string& InitStateName,
-                                                  const ExpT& CoveredPredicate,
-                                                  const Z3TPRef& TP);
-
-            inline void CompleteOneOutputTransition(const string& InitStateName,
-                                                    const SymmMsgDeclRef& MsgDecl,
-                                                    const map<string, TypeRef>& DomainVars,
-                                                    vector<ExpT>& GuardExps,
-                                                    const ExpT& CoveredPred);
-
-
-        public:
-            IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
-                           const vector<ExpT>& Params, const ExpT& Constraint,
-                           LTSFairnessType Fairness = LTSFairnessType::None);
-
-            virtual ~IncompleteEFSM();
-            // overrides to remember variables
-            virtual void AddVariable(const string& VarName,
-                                     const TypeRef& VarType) override;
-
-            // Do not add completions particular set of messages on a
-            // particular state
-            void IgnoreMsgOnState(const SymmMsgDeclRef& MsgDecl,
-                                  const string& StateName);
-            void IgnoreAllMsgsOnState(const string& StateName);
-            void HandleMsgOnState(const SymmMsgDeclRef& MsgDecl,
-                                  const string& StateName);
-
-            // Do not add any more completions on any message
-            // type on a particular state
-            void MarkStateComplete(const string& StateName);
-            void MarkAllStatesComplete();
-            void MarkStateIncomplete(const string& StateName);
-
-            // Do not include updates to variables
-            // in completion
-            void MarkVariableReadOnly(const string& VarName);
-            void MarkAllVariablesReadOnly();
-            void MarkVariableWriteable(const string& VarName);
-
-            void SetVariableDepsOnMsg(const string& VarName,
-                                      const SymmMsgDeclRef& MsgDecl,
-                                      const set<string>& DepVars,
-                                      const set<string>& MessageFieldName);
-
-            void SetOutMsgFieldDeps(const SymmMsgDeclRef& OutMsgDecl,
-                                    const string& FieldName,
-                                    const set<string>& DepVars);
-
-            void SetNextStatesOnTransition(const string& StateName,
+    inline void CompleteOneInputTransition(const string& InitStateName,
                                            const SymmMsgDeclRef& MsgDecl,
-                                           const set<string>& NextStateNames);
+                                           const map<string, TypeRef>& DomainVars,
+                                           const ExpT& CoveredPred);
 
-            // override freeze to add additional transitions
-            // and such
-            virtual void Freeze() override;
-        };
+    inline void CompleteOutputTransitions(const string& InitStateName,
+                                          const ExpT& CoveredPredicate,
+                                          const Z3TPRef& TP);
 
-    } /* end namespace LTS */
+    inline void CompleteOneOutputTransition(const string& InitStateName,
+                                            const SymmMsgDeclRef& MsgDecl,
+                                            const map<string, TypeRef>& DomainVars,
+                                            vector<ExpT>& GuardExps,
+                                            const ExpT& CoveredPred);
+
+
+public:
+    IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
+                   const vector<ExpT>& Params, const ExpT& Constraint,
+                   LTSFairnessType Fairness = LTSFairnessType::None);
+
+    virtual ~IncompleteEFSM();
+    // overrides to remember variables
+    virtual void AddVariable(const string& VarName,
+                             const TypeRef& VarType) override;
+
+    // Do not add completions particular set of messages on a
+    // particular state
+    void IgnoreMsgOnState(const SymmMsgDeclRef& MsgDecl,
+                          const string& StateName);
+    void IgnoreAllMsgsOnState(const string& StateName);
+    void HandleMsgOnState(const SymmMsgDeclRef& MsgDecl,
+                          const string& StateName);
+
+    // Do not add any more completions on any message
+    // type on a particular state
+    void MarkStateComplete(const string& StateName);
+    void MarkAllStatesComplete();
+    void MarkStateIncomplete(const string& StateName);
+
+    // Do not include updates to variables
+    // in completion
+    void MarkVariableReadOnly(const string& VarName);
+    void MarkAllVariablesReadOnly();
+    void MarkVariableWriteable(const string& VarName);
+
+    void SetVariableDepsOnMsg(const string& VarName,
+                              const SymmMsgDeclRef& MsgDecl,
+                              const set<string>& DepVars,
+                              const set<string>& MessageFieldName);
+
+    void SetOutMsgFieldDeps(const SymmMsgDeclRef& OutMsgDecl,
+                            const string& FieldName,
+                            const set<string>& DepVars);
+
+    void SetNextStatesOnTransition(const string& StateName,
+                                   const SymmMsgDeclRef& MsgDecl,
+                                   const set<string>& NextStateNames);
+
+    // override freeze to add additional transitions
+    // and such
+    virtual void Freeze() override;
+};
+
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LTS_EFSM_HPP_ */

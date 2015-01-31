@@ -60,2546 +60,2546 @@
 // to allow for flexibility via arbitrary extension objects
 
 namespace ESMC {
-    namespace Exprs {
-
-        // Comparators
-        class ExpressionPtrEquals
-        {
-        public:
-            template <typename E, template <typename> class S>
-            inline bool operator () (const ExpressionBase<E, S>* Exp1,
-                                     const ExpressionBase<E, S>* Exp2) const
-            {
-                return Exp1->Equals(Exp2);
-            }
-
-            template<typename E, template <typename> class S>
-            inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
-                                     const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
-            {
-                return Exp1->Equals(Exp2);
-            }
-        };
-
-        class FastExpressionPtrEquals
-        {
-        public:
-            template <typename E, template <typename> class S>
-            inline bool operator () (const ExpressionBase<E, S>* Exp1,
-                                     const ExpressionBase<E, S>* Exp2) const
-            {
-                return Exp1->FastEQ(Exp2);
-            }
-
-            template<typename E, template <typename> class S>
-            inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
-                                     const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
-            {
-                return Exp1->FastEQ(Exp2);
-            }
-        };
-
-
-        class ExpressionPtrHasher
-        {
-        public:
-            template <typename E, template <typename> class S>
-            inline u64 operator () (const ExpressionBase<E, S>* Exp) const
-            {
-                return Exp->Hash();
-            }
-
-            template<typename E, template <typename> class S>
-            inline u64 operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp) const
-            {
-                return (Exp->Hash());
-            }
-        };
-
-
-        class ExpressionPtrCompare
-        {
-        public:
-            template <typename E, template <typename> class S>
-            inline bool operator () (const ExpressionBase<E, S>* Exp1,
-                                     const ExpressionBase<E, S>* Exp2) const
-            {
-                return Exp1->LT(Exp2);
-            }
-
-            template<typename E, template <typename> class S>
-            inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
-                                     const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
-            {
-                return Exp1->LT(Exp2);
-            }
-        };
-
-        // An empty extension type
-        struct EmptyExtType
-        {
-            // Nothing here
-        };
-
-        // Base class for extension lists
-        class ExtListExtBase : public RefCountable
-        {
-        public:
-            ExtListExtBase();
-            virtual ~ExtListExtBase();
-
-            virtual string ToString() const = 0;
-
-            // Downcasts
-            template <typename T>
-            inline T* As()
-            {
-                return dynamic_cast<T*>(this);
-            }
-
-            template <typename T>
-            inline T* As() const
-            {
-                return dynamic_cast<const T*>(this);
-            }
-
-            template <typename T>
-            inline T* SAs()
-            {
-                return static_cast<T*>(this);
-            }
-
-            template <typename T>
-            inline T* SAs() const
-            {
-                return static_cast<const T*>(this);
-            }
-        };
-
-        template <typename E, template <typename> class S>
-        class ExpressionBase : public RefCountable, public Stringifiable
-        {
-            friend class ExprMgr<E, S>;
-        private:
-            ExprMgr<E, S>* Mgr;
-            mutable bool HashValid;
-            mutable typename S<E>::TypeT ExpType;
-
-        public:
-            mutable E ExtensionData;
-            typedef typename S<E>::TypeT TypeRef;
-
-        protected:
-            mutable u64 HashCode;
-
-        public:
-            inline ExpressionBase(ExprMgr<E, S>* Manager,
-                                  const E& ExtData = E());
-            virtual inline ~ExpressionBase();
-
-            inline ExprMgr<E, S>* GetMgr() const;
-            inline u64 Hash() const;
-            inline u64 Rehash() const;
-            inline const TypeRef& GetType() const;
-            inline void SetType(const TypeRef& Type) const;
-            inline bool Equals(const ExpressionBase<E, S>* Other) const;
-            inline bool NEquals(const ExpressionBase<E, S>* Other) const;
-            inline bool LT(const ExpressionBase<E, S>* Other) const;
-            inline bool LE(const ExpressionBase<E, S>* Other) const;
-            inline bool GE(const ExpressionBase<E, S>* Other) const;
-            inline bool GT(const ExpressionBase<E, S>* Other) const;
-            virtual string ToString(u32 Verbosity = 0) const override;
-
-            // Abstract methods
-        protected:
-            virtual void ComputeHash() const = 0;
-
-        public:
-            virtual i32 Compare(const ExpressionBase<E, S>* Other) const = 0;
-            virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const = 0;
-            // Fast eq which assumes that children can be compared for
-            // equality by simple pointer equality
-            virtual bool FastEQ(const ExpressionBase<E, S>* Other) const;
-
-            // Downcasts
-            template <template <typename, template <typename> class> class U>
-            inline U<E, S>* As()
-            {
-                return dynamic_cast<U<E, S>*>(this);
-            }
-
-            template <template <typename, template <typename> class> class U>
-            inline const U<E, S>* As() const
-            {
-                return dynamic_cast<const U<E, S>*>(this);
-            }
-
-            template <template <typename, template <typename> class> class U>
-            inline U<E, S>* SAs()
-            {
-                return static_cast<U<E, S>*>(this);
-            }
-
-            template <template <typename, template <typename> class> class U>
-            inline const U<E, S>* SAs() const
-            {
-                return static_cast<const U<E, S>*>(this);
-            }
-
-            template <template <typename, template <typename> class> class U>
-            inline bool Is() const
-            {
-                return (dynamic_cast<const U<E, S>*>(this) != nullptr);
-            }
-        };
-
-        // Specialization for extension lists
-        template <template <typename> class S>
-        class ExpressionBase<ExtListT, S> : public RefCountable, public Stringifiable
-        {
-            friend class ExprMgr<ExtListT, S>;
-        private:
-            ExprMgr<ExtListT, S>* Mgr;
-            mutable bool HashValid;
-            mutable i64 ExpType;
-
-        public:
-            mutable ExtListT ExtensionData;
-
-        protected:
-            mutable u64 HashCode;
-
-        public:
-            inline ExpressionBase(ExprMgr<ExtListT, S>* Manager,
-                                  const ExtListT& ExtData = ExtListT());
-            virtual inline ~ExpressionBase();
-
-            inline ExprMgr<ExtListT, S>* GetMgr() const;
-            inline u64 Hash() const;
-            inline u64 Rehash() const;
-            inline i64 GetType() const;
-            inline void SetType(i64 Type) const;
-            inline bool Equals(const ExpressionBase<ExtListT, S>* Other) const;
-            inline bool NEquals(const ExpressionBase<ExtListT, S>* Other) const;
-            inline bool LT(const ExpressionBase<ExtListT, S>* Other) const;
-            inline bool LE(const ExpressionBase<ExtListT, S>* Other) const;
-            inline bool GE(const ExpressionBase<ExtListT, S>* Other) const;
-            inline bool GT(const ExpressionBase<ExtListT, S>* Other) const;
-            virtual string ToString(u32 Verbosity = 0) const override;
-
-            // Abstract methods
-        protected:
-            virtual void ComputeHash() const = 0;
-
-        public:
-            virtual i32 Compare(const ExpressionBase<ExtListT, S>* Other) const = 0;
-            virtual void Accept(ExpressionVisitorBase<ExtListT, S>* Visitor) const = 0;
-            // Fast eq which assumes that children can be compared for
-            // equality by simple pointer equality
-            virtual bool FastEQ(const ExpressionBase<ExtListT, S>* Other) const;
-
-            // Downcasts
-            template <template <typename, template <typename> class> class U>
-            inline U<ExtListT, S>* As()
-            {
-                return dynamic_cast<U<ExtListT, S>*>(this);
-            }
-
-            template <template <typename, template <typename> class> class U>
-            inline const U<ExtListT, S>* As() const
-            {
-                return dynamic_cast<const U<ExtListT, S>*>(this);
-            }
-
-            template <template <typename, template <typename> class> class U>
-            inline U<ExtListT, S>* SAs()
-            {
-                return static_cast<U<ExtListT, S>*>(this);
-            }
-
-            template <template <typename, template <typename> class> class U>
-            inline const U<ExtListT, S>* SAs() const
-            {
-                return static_cast<const U<ExtListT, S>*>(this);
-            }
-
-            template <template <typename, template <typename> class> class U>
-            inline bool Is() const
-            {
-                return (dynamic_cast<const U<ExtListT, S>*>(this) != nullptr);
-            }
-
-            // Extension list accessors and manipulators
-            template <typename U>
-            inline const ExtListExtRef& GetExtension() const;
-
-            template <typename U>
-            inline vector<ExtListExtRef> GetExtensions() const;
-
-            inline void PurgeExtension(const ExtListExtRef& Ext) const;
-
-            template <typename U>
-            inline void PurgeExtensionsOfType() const;
-
-            inline void PurgeAllExtensions() const;
-        };
-
-
-        // Type V must have the equality and < operator defined,
-        // and must have a hash defined.
-        // Type V must also be assignable, default constructible
-        // and copy constructible
-        template <typename E, template <typename> class S>
-        class ConstExpression : public ExpressionBase<E, S>
-        {
-        public:
-            typedef typename S<E>::TypeT TypeRef;
-        private:
-            string ConstValue;
-            TypeRef ConstType;
-
-        public:
-            inline ConstExpression(ExprMgr<E, S>* Mgr,
-                                   const string& ConstValue,
-                                   const TypeRef& ConstType,
-                                   const E& ExtData = E());
-            inline virtual ~ConstExpression();
-
-            inline const string& GetConstValue() const;
-            inline const TypeRef& GetConstType() const;
-
-        protected:
-            inline virtual void ComputeHash() const override;
-
-        public:
-            inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
-            inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
-        };
-
-
-        template <typename E, template <typename> class S>
-        class VarExpression : public ExpressionBase<E, S>
-        {
-        public:
-            typedef typename S<E>::TypeT TypeRef;
-        private:
-            string VarName;
-            TypeRef VarType;
-
-        public:
-            inline VarExpression(ExprMgr<E, S>* Manager,
-                                 const string& VarName,
-                                 const TypeRef& VarType,
-                                 const E& ExtData = E());
-            inline virtual ~VarExpression();
-            inline const string& GetVarName() const;
-            inline const TypeRef& GetVarType() const;
-
-        protected:
-            inline virtual void ComputeHash() const override;
-
-        public:
-            inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
-            inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
-        };
-
-        template<typename E, template <typename> class S>
-        class BoundVarExpression : public ExpressionBase<E, S>
-        {
-        public:
-            typedef typename S<E>::TypeT TypeRef;
-        private:
-            TypeRef VarType;
-            u64 VarIdx;
-
-        public:
-            inline BoundVarExpression(ExprMgr<E, S>* Manager,
-                                      const TypeRef& VarType,
-                                      i64 VarIdx,
-                                      const E& ExtData = E());
-            inline virtual ~BoundVarExpression();
-            inline u64 GetVarIdx() const;
-            inline const TypeRef& GetVarType() const;
-
-        protected:
-            inline virtual void ComputeHash() const override;
-
-        public:
-            inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
-            inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
-        };
-
-
-        template<typename E, template <typename> class S>
-        class OpExpression : public ExpressionBase<E, S>
-        {
-        private:
-            i64 OpCode;
-            vector<Expr<E, S>> Children;
-
-        public:
-            inline OpExpression(ExprMgr<E, S>* Manager,
-                                i64 OpCode,
-                                const vector<Expr<E, S>>& Children,
-                                const E& ExtData = E());
-
-            inline virtual ~OpExpression();
-            inline i64 GetOpCode() const;
-            inline const vector<Expr<E, S>>& GetChildren() const;
-
-        protected:
-            inline virtual void ComputeHash() const override;
-
-        public:
-            inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
-            inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
-            inline virtual bool FastEQ(const ExpressionBase<E, S>* Other) const override;
-        };
-
-
-        template<typename E, template <typename> class S>
-        class QuantifiedExpressionBase : public ExpressionBase<E, S>
-        {
-        public:
-            typedef typename S<E>::TypeT TypeRef;
-        private:
-            vector<TypeRef> QVarTypes;
-            Expr<E, S> QExpression;
-
-        public:
-            inline QuantifiedExpressionBase(ExprMgr<E, S>* Manager,
-                                            const vector<TypeRef>& QVarTypes,
-                                            const Expr<E, S>& QExpression,
-                                            const E& ExtData = E());
-            inline virtual ~QuantifiedExpressionBase();
-            inline const vector<TypeRef>& GetQVarTypes() const;
-            inline const Expr<E, S>& GetQExpression() const;
-
-        protected:
-            inline i32 CompareInternal(const QuantifiedExpressionBase<E, S>* Other) const;
-            inline void ComputeHashInternal() const;
-            inline bool FastEQInternal(const QuantifiedExpressionBase<E, S>* Other) const;
-
-        public:
-            virtual bool IsForAll() const = 0;
-            virtual bool IsExists() const = 0;
-        };
-
-
-        template<typename E, template <typename> class S>
-        class EQuantifiedExpression : public QuantifiedExpressionBase<E, S>
-        {
-        public:
-            using QuantifiedExpressionBase<E, S>::QuantifiedExpressionBase;
-            inline virtual ~EQuantifiedExpression();
-
-        protected:
-            inline virtual void ComputeHash() const override;
-
-        public:
-            inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
-            inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
-            inline virtual bool IsForAll() const override;
-            inline virtual bool IsExists() const override;
-            inline virtual bool FastEQ(const ExpressionBase<E, S>* Other) const override;
-        };
-
-
-        template<typename E, template <typename> class S>
-        class AQuantifiedExpression : public QuantifiedExpressionBase<E, S>
-        {
-        public:
-            using QuantifiedExpressionBase<E, S>::QuantifiedExpressionBase;
-            inline virtual ~AQuantifiedExpression();
-
-        protected:
-            inline virtual void ComputeHash() const override;
-
-        public:
-            inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
-            inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
-            inline virtual bool IsForAll() const override;
-            inline virtual bool IsExists() const override;
-            inline virtual bool FastEQ(const ExpressionBase<E, S>* Other) const override;
-        };
-
-        // The manager classes
-
-        class ExprTypeError : public exception
-        {
-        private:
-            string Message;
-
-        public:
-            ExprTypeError(const string& Message) : Message(Message) {}
-            virtual ~ExprTypeError() {}
-
-            virtual const char* what() const noexcept override
-            {
-                return Message.c_str();
-            }
-        };
-
-        template <typename E, template <typename> class S>
-        class ExprMgr
-        {
-        public:
-            typedef S<E> SemT;
-            typedef typename SemT::LExpT LExpT;
-            typedef typename SemT::TypeT TypeT;
-            typedef Expr<E, S> ExpT;
-            typedef ExprI<E, S> IExpT;
-
-            typedef unordered_map<ExpT, ExpT, ExpressionPtrHasher> SubstMapT;
-
-            typedef RefCache<ExpressionBase<E, S>, ExpressionPtrHasher,
-                             FastExpressionPtrEquals, CSmartPtr> ExpCacheT;
-
-            typedef unordered_set<ExpT, ExpressionPtrHasher, FastExpressionPtrEquals> ExpSetT;
-
-        private:
-            SemT* Sem;
-            ExpCacheT ExpCache;
-            ExpT TrueExp;
-            ExpT FalseExp;
-
-            inline void CheckMgr(const vector<ExpT>& Children) const;
-            inline void CheckMgr(const ExpT& Exp) const;
-            template <template <typename, template<typename> class> class T>
-            inline ExpT MakeQExpression(const vector<TypeT>& QVars,
-                                        const ExpT& QExpr,
-                                        const E& ExtVal);
-
-            // Insert the expression and all subexpressions
-            // into the set of expressions owned by this manager
-            inline ExpT Internalize(const ExpT& Exp);
-
-        public:
-            template <typename... ArgTypes>
-            inline ExprMgr(ArgTypes&&... Args);
-            inline ~ExprMgr();
-
-            template<typename T, typename... ArgTypes>
-            inline TypeT MakeType(ArgTypes&&... Args);
-
-            inline TypeT GetNamedType(const string& Name) const;
-
-            inline ExpT MakeTrue(const E& ExtVal = E());
-            inline ExpT MakeFalse(const E& ExtVal = E());
-
-            inline ExpT MakeVal(const string& ValString, const TypeT& ValType,
-                                const E& ExtVal = E());
-
-            inline ExpT MakeVar(const string& VarName, const TypeT& VarType,
-                                const E& ExtVal = E());
-
-            inline ExpT MakeBoundVar(const TypeT& VarType, i64 VarIdx,
-                                     const E& ExtVal = E());
-
-            inline ExpT MakeExpr(i64 OpCode, const vector<ExpT>& Children,
-                                 const E& ExtVal = E());
-
-            inline ExpT MakeExpr(i64 OpCode, const ExpT& Child1,
-                                 const E& ExtVal = E());
-
-            inline ExpT MakeExpr(i64 OpCode, const ExpT& Child1,
-                                 const ExpT& Child2,
-                                 const E& ExtVal = E());
-
-            inline ExpT MakeExpr(i64 OpCode, const ExpT& Child1,
-                                 const ExpT& Child2, const ExpT& Child3,
-                                 const E& ExtVal = E());
-
-            inline ExpT MakeExists(const vector<TypeT>& QVarTypes,
-                                   const ExpT& QExpr,
-                                   const E& ExtVal = E());
-
-            inline ExpT MakeForAll(const vector<TypeT>& QVarTypes,
-                                   const ExpT& QExpr,
-                                   const E& ExtVal = E());
-
-            inline i64 MakeUninterpretedFunction(const string& Name,
-                                                 const vector<TypeT>& Range,
-                                                 const TypeT& Domain);
-            inline TypeT LookupUninterpretedFunction(i64 OpCode) const;
-
-            template <class T, typename... ArgTypes>
-            inline ExpT ApplyTransform(const ExpT& Exp, ArgTypes&&... Args);
-
-            inline SemT* GetSemanticizer() const;
-            template <typename... ArgTypes>
-            inline LExpT LowerExpr(const ExpT& Exp, ArgTypes&&... Args);
-            template <typename... ArgTypes>
-            inline ExpT RaiseExpr(const LExpT& Exp, ArgTypes&&... Args);
-            inline ExpT ElimQuantifiers(const ExpT& Exp);
-            template <typename... ArgTypes>
-            inline ExpT UnrollQuantifiers(const ExpT& Exp, ArgTypes&&... Args);
-            inline ExpT Simplify(const ExpT& Exp);
-            inline ExpT SimplifyFP(const ExpT& Exp);
-            inline ExpT Substitute(const SubstMapT& Subst, const ExpT& Exp);
-            inline ExpT TermSubstitute(const SubstMapT& Subst, const ExpT& Exp);
-            inline ExpT BoundSubstitute(const SubstMapT& Subst, const ExpT& Exp);
-            inline ExpSetT
-            Gather(const ExpT& Exp,
-                   const function<bool(const ExpressionBase<E, S>*)>& Pred) const;
-
-            inline void GC();
-
-            static inline ExprMgr* Make();
-        };
-
-        // Visitor classes
-        // ExpressionVisitorBase
-        template <typename E, template <typename> class S>
-        class ExpressionVisitorBase
-        {
-        private:
-            string Name;
-
-        public:
-            ExpressionVisitorBase(const string& Name);
-            virtual ~ExpressionVisitorBase();
-            const string& GetName() const;
-
-            virtual void VisitConstExpression(const ConstExpression<E, S>* Exp);
-            virtual void VisitVarExpression(const VarExpression<E, S>* Exp);
-            virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp);
-            virtual void VisitOpExpression(const OpExpression<E, S>* Exp);
-            virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp);
-            virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp);
-        };
-
-        // The substitution transform, which is the only
-        // built-in transform. We only allow variable substitutions
-        template <typename E, template <typename> class S>
-        class Substitutor : ExpressionVisitorBase<E, S>
-        {
-        private:
-            typedef ExprMgr<E, S> MgrType;
-            typedef typename MgrType::ExpT ExpT;
-            typedef typename MgrType::SubstMapT SubstMapT;
-
-            MgrType* Mgr;
-            SubstMapT Subst;
-            vector<typename ExprMgr<E, S>::ExpT> SubstStack;
-
-        public:
-            inline Substitutor(MgrType* Mgr, const SubstMapT& Subst);
-            inline virtual ~Substitutor();
-
-            inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
-            inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
-            inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
-                override;
-            inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
-            inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
-                override;
-            inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
-                override;
-
-            inline static ExpT Do(MgrType* Mgr,
-                                  const ExpT& Exp,
-                                  const SubstMapT& SubstMap);
-        };
-
-        // A term substitutor
-        template <typename E, template <typename> class S>
-        class TermSubstitutor : public ExpressionVisitorBase<E, S>
-        {
-        protected:
-            typedef ExprMgr<E, S> MgrType;
-            typedef typename MgrType::ExpT ExpT;
-            typedef typename MgrType::SubstMapT SubstMapT;
-
-            MgrType* Mgr;
-            SubstMapT SubstMap;
-            stack<ExpT> ExpStack;
-
-        public:
-            inline TermSubstitutor(MgrType* Mgr, const SubstMapT& Subst);
-            inline virtual ~TermSubstitutor();
-
-            inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
-            inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
-            inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
-                override;
-            inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
-            inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
-                override;
-            inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
-                override;
-
-            inline static ExpT Do(MgrType* Mgr,
-                                  const ExpT& Exp,
-                                  const SubstMapT& SubstMap);
-        };
-
-        // A term substitutor for substituting a term with bound de-bruijn vars
-        template <typename E, template <typename> class S>
-        class BoundSubstitutor : public ExpressionVisitorBase<E, S>
-        {
-        private:
-            typedef ExprMgr<E, S> MgrType;
-            typedef typename MgrType::ExpT ExpT;
-            typedef typename MgrType::SubstMapT SubstMapT;
-
-            MgrType* Mgr;
-            SubstMapT SubstMap;
-            stack<ExpT> ExpStack;
-            u32 OffsetToAdd;
-
-            inline bool TrySubstitute(const ExpressionBase<E, S>* Exp);
-
-        public:
-            inline BoundSubstitutor(MgrType* Mgr, const SubstMapT& Subst);
-            inline virtual ~BoundSubstitutor();
-
-            inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
-            inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
-            inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
-                override;
-            inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
-            inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
-                override;
-            inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
-                override;
-
-            inline static ExpT Do(MgrType* Mgr, const ExpT& Exp,
-                                  const SubstMapT& SubstMap);
-        };
-
-        template <typename E, template <typename> class S>
-        class Gatherer : ExpressionVisitorBase<E, S>
-        {
-        private:
-            typedef Expr<E, S> ExpT;
-            typedef typename ExprMgr<E, S>::ExpSetT ExpSetT;
-            function<bool(const ExpressionBase<E, S>*)> Pred;
-            ExpSetT GatheredExps;
-
-        public:
-            inline Gatherer(const function<bool(const ExpressionBase<E, S>*)>& Pred);
-            inline virtual ~Gatherer();
-
-            inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
-            inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
-            inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
-                override;
-            inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
-            inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
-                override;
-            inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
-                override;
-
-            static inline ExpSetT
-            Do(const ExpT& Exp, const function<bool(const ExpressionBase<E, S>*)>& Pred);
-        };
-
-        template <typename E, template <typename> class S>
-        ExpressionVisitorBase<E, S>::ExpressionVisitorBase(const string& Name)
-            : Name(Name)
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        ExpressionVisitorBase<E, S>::~ExpressionVisitorBase()
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        const string& ExpressionVisitorBase<E, S>::GetName() const
-        {
-            return Name;
-        }
-
-        template <typename E, template <typename> class S>
-        void ExpressionVisitorBase<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
-        {
-            return;
-        }
-
-        template <typename E, template <typename> class S>
-        void ExpressionVisitorBase<E, S>::VisitVarExpression
-        (
-         const VarExpression<E, S>* Exp
-         )
-        {
-            return;
-        }
-
-        template <typename E, template <typename> class S>
-        void ExpressionVisitorBase<E, S>::VisitBoundVarExpression
-        (
-         const BoundVarExpression<E, S>* Exp
-         )
-        {
-            return;
-        }
-
-        template <typename E, template <typename> class S>
-        void ExpressionVisitorBase<E, S>::VisitOpExpression
-        (
-         const OpExpression<E, S>* Exp
-         )
-        {
-            auto const& Children = Exp->GetChildren();
-            for (auto const& Child : Children) {
-                Child->Accept(this);
-            }
-            return;
-        }
-
-        template <typename E, template <typename> class S>
-        void ExpressionVisitorBase<E, S>::VisitAQuantifiedExpression
-        (
-         const AQuantifiedExpression<E, S>* Exp
-         )
-        {
-            Exp->GetQExpression()->Accept(this);
-        }
-
-        template <typename E, template <typename> class S>
-        void ExpressionVisitorBase<E, S>::VisitEQuantifiedExpression
-        (
-         const EQuantifiedExpression<E, S>* Exp
-         )
-        {
-            Exp->GetQExpression()->Accept(this);
-        }
-
-        // Substitutor implementation
-        template <typename E, template <typename> class S>
-        inline Substitutor<E, S>::Substitutor(MgrType* Mgr, const SubstMapT& Subst)
-            : ExpressionVisitorBase<E, S>("Substitutor"), Mgr(Mgr), Subst(Subst)
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline Substitutor<E,S>::~Substitutor()
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        Substitutor<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
-        {
-            auto it = Subst.find(Exp);
-            if (it != Subst.end()) {
-                SubstStack.push_back(it->second);
-            } else {
-                SubstStack.push_back(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        Substitutor<E, S>::VisitConstExpression(const ConstExpression<E,S>* Exp)
-        {
-            SubstStack.push_back(Exp);
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        Substitutor<E, S>::VisitBoundVarExpression(const BoundVarExpression<E,S>* Exp)
-        {
-            auto it = Subst.find(Exp);
-            if (it != Subst.end()) {
-                SubstStack.push_back(it->second);
-            } else {
-                SubstStack.push_back(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        Substitutor<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
-        {
-            ExpressionVisitorBase<E,S>::VisitOpExpression(Exp);
-            const u32 NumChildren = Exp->GetChildren().size();
-            vector<ExpT> SubstChildren(NumChildren);
-            for (u32 i = 0; i < NumChildren; ++i) {
-                SubstChildren[NumChildren - i - 1] = SubstStack.back();
-                SubstStack.pop_back();
-            }
-            SubstStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(),
-                                               SubstChildren));
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        Substitutor<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E,S>* Exp)
-        {
-            Exp->GetQExpression()->Accept(this);
-            auto SubstQExpr = SubstStack.back();
-            SubstStack.pop_back();
-            SubstStack.push_back(Mgr->MakeExists(Exp->GetQVarTypes(),
-                                                 SubstQExpr));
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        Substitutor<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E,S>* Exp)
-        {
-            Exp->GetQExpression()->Accept(this);
-            auto SubstQExpr = SubstStack.back();
-            SubstStack.pop_back();
-            SubstStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(),
-                                                 SubstQExpr));
-        }
-
-        template <typename E, template <typename> class S>
-        inline typename Substitutor<E, S>::ExpT
-        Substitutor<E, S>::Do(MgrType* Mgr,
-                              const ExpT& Exp, const SubstMapT& Subst)
-        {
-            Substitutor TheSubstitutor(Mgr, Subst);
-            Exp->Accept(&TheSubstitutor);
-            return TheSubstitutor.SubstStack[0];
-        }
-
-        // Term substitutor implementation
-
-        // Assumptions on the substmap:
-        // for all substitution pairs of the form
-        // from1 |--> to1 and from2 |--> to2:
-        // 1. from1 is not a subterm of from2
-        // 2. from2 is not a subterm of from1
-        // 3. from1 is not a subterm of to1
-        // 4. from2 is not a subterm of to1
-
-        template <typename E, template <typename> class S>
-        inline TermSubstitutor<E, S>::TermSubstitutor(MgrType* Mgr,
-                                                      const SubstMapT& SubstMap)
-            : ExpressionVisitorBase<E, S>("TermSubstitutor"),
-              Mgr(Mgr), SubstMap(SubstMap)
-        {
-            // for (auto it1 = SubstMap.begin(); it1 != SubstMap.end(); ++it1) {
-            //     auto const& From1 = it1->first;
-
-            //     for (auto it2 = next(it1); it2 != SubstMap.end(); ++it2) {
-            //         auto const& From2 = it2->first;
-            //         auto&& Terms1 =
-            //             Mgr->Gather(From2,
-            //                         [&] (const ExpressionBase<E, S>* Exp) -> bool
-            //                         {
-            //                             return (Exp == From1);
-            //                         });
-            //         if (Terms1.size() != 0) {
-            //             throw ExprTypeError((string)"The term:\n" + From1->ToString() +
-            //                                 "\nis a subterm of term\n:" + From2->ToString() +
-            //                                 "\nin substitution. And both occur as " +
-            //                                 "terms to be substituted for");
-            //         }
-            //         auto&& Terms2 =
-            //             Mgr->Gather(From1,
-            //                         [&] (const ExpressionBase<E, S>* Exp) -> bool
-            //                         {
-            //                             return (Exp == From2);
-            //                         });
-            //         if (Terms2.size() != 0) {
-            //             throw ExprTypeError((string)"The term:\n" + From2->ToString() +
-            //                                 "\nis a subterm of term\n:" + From1->ToString() +
-            //                                 "\nin substitution. And both occur as " +
-            //                                 "terms to be substituted for");
-            //         }
-            //     }
-
-            //     for (auto it2 = SubstMap.begin(); it2 != SubstMap.end(); ++it2) {
-            //         auto const& To2 = it2->second;
-            //         auto&& Terms1 =
-            //             Mgr->Gather(To2,
-            //                         [&] (const ExpressionBase<E, S>* Exp) -> bool
-            //                         {
-            //                             return (Exp == From1);
-            //                         });
-
-            //         if (Terms1.size() != 0) {
-            //             throw ExprTypeError((string)"The term:\n" + From1->ToString() +
-            //                                 "\nis a subterm of term\n:" + To2->ToString() +
-            //                                 "\nin substitution. The first is an LHS term " +
-            //                                 "and the second is an RHS term!");
-            //         }
-            //     }
-            // }
-        }
-
-        template <typename E, template <typename> class S>
-        inline TermSubstitutor<E, S>::~TermSubstitutor()
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        TermSubstitutor<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
-        {
-            auto it = SubstMap.find(Exp);
-            if (it != SubstMap.end()) {
-                ExpStack.push(it->second);
-            } else {
-                ExpStack.push(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        TermSubstitutor<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
-        {
-            auto it = SubstMap.find(Exp);
-            if (it != SubstMap.end()) {
-                ExpStack.push(it->second);
-            } else {
-                ExpStack.push(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        TermSubstitutor<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
-        {
-            auto it = SubstMap.find(Exp);
-            if (it != SubstMap.end()) {
-                ExpStack.push(it->second);
-            } else {
-                ExpStack.push(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        TermSubstitutor<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
-        {
-            auto it = SubstMap.find(Exp);
-            if (it != SubstMap.end()) {
-                ExpStack.push(it->second);
-            } else {
-                ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
-                auto const& OldChildren = Exp->GetChildren();
-                const u32 NumChildren = OldChildren.size();
-                vector<ExpT> NewChildren(NumChildren);
-
-                for (u32 i = 0; i < NumChildren; ++i) {
-                    NewChildren[NumChildren - i - 1] = ExpStack.top();
-                    ExpStack.pop();
-                }
-
-                ExpStack.push(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        TermSubstitutor<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
-        {
-            auto const& QVarTypes = Exp->GetQVarTypes();
-            auto const& QExpr = Exp->GetQExpression();
-
-            QExpr->Accept(this);
-            auto NewQExpr = ExpStack.top();
+namespace Exprs {
+
+// Comparators
+class ExpressionPtrEquals
+{
+public:
+    template <typename E, template <typename> class S>
+    inline bool operator () (const ExpressionBase<E, S>* Exp1,
+                             const ExpressionBase<E, S>* Exp2) const
+    {
+        return Exp1->Equals(Exp2);
+    }
+
+    template<typename E, template <typename> class S>
+    inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
+                             const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
+    {
+        return Exp1->Equals(Exp2);
+    }
+};
+
+class FastExpressionPtrEquals
+{
+public:
+    template <typename E, template <typename> class S>
+    inline bool operator () (const ExpressionBase<E, S>* Exp1,
+                             const ExpressionBase<E, S>* Exp2) const
+    {
+        return Exp1->FastEQ(Exp2);
+    }
+
+    template<typename E, template <typename> class S>
+    inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
+                             const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
+    {
+        return Exp1->FastEQ(Exp2);
+    }
+};
+
+
+class ExpressionPtrHasher
+{
+public:
+    template <typename E, template <typename> class S>
+    inline u64 operator () (const ExpressionBase<E, S>* Exp) const
+    {
+        return Exp->Hash();
+    }
+
+    template<typename E, template <typename> class S>
+    inline u64 operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp) const
+    {
+        return (Exp->Hash());
+    }
+};
+
+
+class ExpressionPtrCompare
+{
+public:
+    template <typename E, template <typename> class S>
+    inline bool operator () (const ExpressionBase<E, S>* Exp1,
+                             const ExpressionBase<E, S>* Exp2) const
+    {
+        return Exp1->LT(Exp2);
+    }
+
+    template<typename E, template <typename> class S>
+    inline bool operator () (const CSmartPtr<ExpressionBase<E, S>>& Exp1,
+                             const CSmartPtr<ExpressionBase<E, S>>& Exp2) const
+    {
+        return Exp1->LT(Exp2);
+    }
+};
+
+// An empty extension type
+struct EmptyExtType
+{
+    // Nothing here
+};
+
+// Base class for extension lists
+class ExtListExtBase : public RefCountable
+{
+public:
+    ExtListExtBase();
+    virtual ~ExtListExtBase();
+
+    virtual string ToString() const = 0;
+
+    // Downcasts
+    template <typename T>
+    inline T* As()
+    {
+        return dynamic_cast<T*>(this);
+    }
+
+    template <typename T>
+    inline T* As() const
+    {
+        return dynamic_cast<const T*>(this);
+    }
+
+    template <typename T>
+    inline T* SAs()
+    {
+        return static_cast<T*>(this);
+    }
+
+    template <typename T>
+    inline T* SAs() const
+    {
+        return static_cast<const T*>(this);
+    }
+};
+
+template <typename E, template <typename> class S>
+class ExpressionBase : public RefCountable, public Stringifiable
+{
+    friend class ExprMgr<E, S>;
+private:
+    ExprMgr<E, S>* Mgr;
+    mutable bool HashValid;
+    mutable typename S<E>::TypeT ExpType;
+
+public:
+    mutable E ExtensionData;
+    typedef typename S<E>::TypeT TypeRef;
+
+protected:
+    mutable u64 HashCode;
+
+public:
+    inline ExpressionBase(ExprMgr<E, S>* Manager,
+                          const E& ExtData = E());
+    virtual inline ~ExpressionBase();
+
+    inline ExprMgr<E, S>* GetMgr() const;
+    inline u64 Hash() const;
+    inline u64 Rehash() const;
+    inline const TypeRef& GetType() const;
+    inline void SetType(const TypeRef& Type) const;
+    inline bool Equals(const ExpressionBase<E, S>* Other) const;
+    inline bool NEquals(const ExpressionBase<E, S>* Other) const;
+    inline bool LT(const ExpressionBase<E, S>* Other) const;
+    inline bool LE(const ExpressionBase<E, S>* Other) const;
+    inline bool GE(const ExpressionBase<E, S>* Other) const;
+    inline bool GT(const ExpressionBase<E, S>* Other) const;
+    virtual string ToString(u32 Verbosity = 0) const override;
+
+    // Abstract methods
+protected:
+    virtual void ComputeHash() const = 0;
+
+public:
+    virtual i32 Compare(const ExpressionBase<E, S>* Other) const = 0;
+    virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const = 0;
+    // Fast eq which assumes that children can be compared for
+    // equality by simple pointer equality
+    virtual bool FastEQ(const ExpressionBase<E, S>* Other) const;
+
+    // Downcasts
+    template <template <typename, template <typename> class> class U>
+    inline U<E, S>* As()
+    {
+        return dynamic_cast<U<E, S>*>(this);
+    }
+
+    template <template <typename, template <typename> class> class U>
+    inline const U<E, S>* As() const
+    {
+        return dynamic_cast<const U<E, S>*>(this);
+    }
+
+    template <template <typename, template <typename> class> class U>
+    inline U<E, S>* SAs()
+    {
+        return static_cast<U<E, S>*>(this);
+    }
+
+    template <template <typename, template <typename> class> class U>
+    inline const U<E, S>* SAs() const
+    {
+        return static_cast<const U<E, S>*>(this);
+    }
+
+    template <template <typename, template <typename> class> class U>
+    inline bool Is() const
+    {
+        return (dynamic_cast<const U<E, S>*>(this) != nullptr);
+    }
+};
+
+// Specialization for extension lists
+template <template <typename> class S>
+class ExpressionBase<ExtListT, S> : public RefCountable, public Stringifiable
+{
+    friend class ExprMgr<ExtListT, S>;
+private:
+    ExprMgr<ExtListT, S>* Mgr;
+    mutable bool HashValid;
+    mutable i64 ExpType;
+
+public:
+    mutable ExtListT ExtensionData;
+
+protected:
+    mutable u64 HashCode;
+
+public:
+    inline ExpressionBase(ExprMgr<ExtListT, S>* Manager,
+                          const ExtListT& ExtData = ExtListT());
+    virtual inline ~ExpressionBase();
+
+    inline ExprMgr<ExtListT, S>* GetMgr() const;
+    inline u64 Hash() const;
+    inline u64 Rehash() const;
+    inline i64 GetType() const;
+    inline void SetType(i64 Type) const;
+    inline bool Equals(const ExpressionBase<ExtListT, S>* Other) const;
+    inline bool NEquals(const ExpressionBase<ExtListT, S>* Other) const;
+    inline bool LT(const ExpressionBase<ExtListT, S>* Other) const;
+    inline bool LE(const ExpressionBase<ExtListT, S>* Other) const;
+    inline bool GE(const ExpressionBase<ExtListT, S>* Other) const;
+    inline bool GT(const ExpressionBase<ExtListT, S>* Other) const;
+    virtual string ToString(u32 Verbosity = 0) const override;
+
+    // Abstract methods
+protected:
+    virtual void ComputeHash() const = 0;
+
+public:
+    virtual i32 Compare(const ExpressionBase<ExtListT, S>* Other) const = 0;
+    virtual void Accept(ExpressionVisitorBase<ExtListT, S>* Visitor) const = 0;
+    // Fast eq which assumes that children can be compared for
+    // equality by simple pointer equality
+    virtual bool FastEQ(const ExpressionBase<ExtListT, S>* Other) const;
+
+    // Downcasts
+    template <template <typename, template <typename> class> class U>
+    inline U<ExtListT, S>* As()
+    {
+        return dynamic_cast<U<ExtListT, S>*>(this);
+    }
+
+    template <template <typename, template <typename> class> class U>
+    inline const U<ExtListT, S>* As() const
+    {
+        return dynamic_cast<const U<ExtListT, S>*>(this);
+    }
+
+    template <template <typename, template <typename> class> class U>
+    inline U<ExtListT, S>* SAs()
+    {
+        return static_cast<U<ExtListT, S>*>(this);
+    }
+
+    template <template <typename, template <typename> class> class U>
+    inline const U<ExtListT, S>* SAs() const
+    {
+        return static_cast<const U<ExtListT, S>*>(this);
+    }
+
+    template <template <typename, template <typename> class> class U>
+    inline bool Is() const
+    {
+        return (dynamic_cast<const U<ExtListT, S>*>(this) != nullptr);
+    }
+
+    // Extension list accessors and manipulators
+    template <typename U>
+    inline const ExtListExtRef& GetExtension() const;
+
+    template <typename U>
+    inline vector<ExtListExtRef> GetExtensions() const;
+
+    inline void PurgeExtension(const ExtListExtRef& Ext) const;
+
+    template <typename U>
+    inline void PurgeExtensionsOfType() const;
+
+    inline void PurgeAllExtensions() const;
+};
+
+
+// Type V must have the equality and < operator defined,
+// and must have a hash defined.
+// Type V must also be assignable, default constructible
+// and copy constructible
+template <typename E, template <typename> class S>
+class ConstExpression : public ExpressionBase<E, S>
+{
+public:
+    typedef typename S<E>::TypeT TypeRef;
+private:
+    string ConstValue;
+    TypeRef ConstType;
+
+public:
+    inline ConstExpression(ExprMgr<E, S>* Mgr,
+                           const string& ConstValue,
+                           const TypeRef& ConstType,
+                           const E& ExtData = E());
+    inline virtual ~ConstExpression();
+
+    inline const string& GetConstValue() const;
+    inline const TypeRef& GetConstType() const;
+
+protected:
+    inline virtual void ComputeHash() const override;
+
+public:
+    inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
+    inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
+};
+
+
+template <typename E, template <typename> class S>
+class VarExpression : public ExpressionBase<E, S>
+{
+public:
+    typedef typename S<E>::TypeT TypeRef;
+private:
+    string VarName;
+    TypeRef VarType;
+
+public:
+    inline VarExpression(ExprMgr<E, S>* Manager,
+                         const string& VarName,
+                         const TypeRef& VarType,
+                         const E& ExtData = E());
+    inline virtual ~VarExpression();
+    inline const string& GetVarName() const;
+    inline const TypeRef& GetVarType() const;
+
+protected:
+    inline virtual void ComputeHash() const override;
+
+public:
+    inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
+    inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
+};
+
+template<typename E, template <typename> class S>
+class BoundVarExpression : public ExpressionBase<E, S>
+{
+public:
+    typedef typename S<E>::TypeT TypeRef;
+private:
+    TypeRef VarType;
+    u64 VarIdx;
+
+public:
+    inline BoundVarExpression(ExprMgr<E, S>* Manager,
+                              const TypeRef& VarType,
+                              i64 VarIdx,
+                              const E& ExtData = E());
+    inline virtual ~BoundVarExpression();
+    inline u64 GetVarIdx() const;
+    inline const TypeRef& GetVarType() const;
+
+protected:
+    inline virtual void ComputeHash() const override;
+
+public:
+    inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
+    inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
+};
+
+
+template<typename E, template <typename> class S>
+class OpExpression : public ExpressionBase<E, S>
+{
+private:
+    i64 OpCode;
+    vector<Expr<E, S>> Children;
+
+public:
+    inline OpExpression(ExprMgr<E, S>* Manager,
+                        i64 OpCode,
+                        const vector<Expr<E, S>>& Children,
+                        const E& ExtData = E());
+
+    inline virtual ~OpExpression();
+    inline i64 GetOpCode() const;
+    inline const vector<Expr<E, S>>& GetChildren() const;
+
+protected:
+    inline virtual void ComputeHash() const override;
+
+public:
+    inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
+    inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
+    inline virtual bool FastEQ(const ExpressionBase<E, S>* Other) const override;
+};
+
+
+template<typename E, template <typename> class S>
+class QuantifiedExpressionBase : public ExpressionBase<E, S>
+{
+public:
+    typedef typename S<E>::TypeT TypeRef;
+private:
+    vector<TypeRef> QVarTypes;
+    Expr<E, S> QExpression;
+
+public:
+    inline QuantifiedExpressionBase(ExprMgr<E, S>* Manager,
+                                    const vector<TypeRef>& QVarTypes,
+                                    const Expr<E, S>& QExpression,
+                                    const E& ExtData = E());
+    inline virtual ~QuantifiedExpressionBase();
+    inline const vector<TypeRef>& GetQVarTypes() const;
+    inline const Expr<E, S>& GetQExpression() const;
+
+protected:
+    inline i32 CompareInternal(const QuantifiedExpressionBase<E, S>* Other) const;
+    inline void ComputeHashInternal() const;
+    inline bool FastEQInternal(const QuantifiedExpressionBase<E, S>* Other) const;
+
+public:
+    virtual bool IsForAll() const = 0;
+    virtual bool IsExists() const = 0;
+};
+
+
+template<typename E, template <typename> class S>
+class EQuantifiedExpression : public QuantifiedExpressionBase<E, S>
+{
+public:
+    using QuantifiedExpressionBase<E, S>::QuantifiedExpressionBase;
+    inline virtual ~EQuantifiedExpression();
+
+protected:
+    inline virtual void ComputeHash() const override;
+
+public:
+    inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
+    inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
+    inline virtual bool IsForAll() const override;
+    inline virtual bool IsExists() const override;
+    inline virtual bool FastEQ(const ExpressionBase<E, S>* Other) const override;
+};
+
+
+template<typename E, template <typename> class S>
+class AQuantifiedExpression : public QuantifiedExpressionBase<E, S>
+{
+public:
+    using QuantifiedExpressionBase<E, S>::QuantifiedExpressionBase;
+    inline virtual ~AQuantifiedExpression();
+
+protected:
+    inline virtual void ComputeHash() const override;
+
+public:
+    inline virtual i32 Compare(const ExpressionBase<E, S>* Other) const override;
+    inline virtual void Accept(ExpressionVisitorBase<E, S>* Visitor) const override;
+    inline virtual bool IsForAll() const override;
+    inline virtual bool IsExists() const override;
+    inline virtual bool FastEQ(const ExpressionBase<E, S>* Other) const override;
+};
+
+// The manager classes
+
+class ExprTypeError : public exception
+{
+private:
+    string Message;
+
+public:
+    ExprTypeError(const string& Message) : Message(Message) {}
+    virtual ~ExprTypeError() {}
+
+    virtual const char* what() const noexcept override
+    {
+        return Message.c_str();
+    }
+};
+
+template <typename E, template <typename> class S>
+class ExprMgr
+{
+public:
+    typedef S<E> SemT;
+    typedef typename SemT::LExpT LExpT;
+    typedef typename SemT::TypeT TypeT;
+    typedef Expr<E, S> ExpT;
+    typedef ExprI<E, S> IExpT;
+
+    typedef unordered_map<ExpT, ExpT, ExpressionPtrHasher> SubstMapT;
+
+    typedef RefCache<ExpressionBase<E, S>, ExpressionPtrHasher,
+                     FastExpressionPtrEquals, CSmartPtr> ExpCacheT;
+
+    typedef unordered_set<ExpT, ExpressionPtrHasher, FastExpressionPtrEquals> ExpSetT;
+
+private:
+    SemT* Sem;
+    ExpCacheT ExpCache;
+    ExpT TrueExp;
+    ExpT FalseExp;
+
+    inline void CheckMgr(const vector<ExpT>& Children) const;
+    inline void CheckMgr(const ExpT& Exp) const;
+    template <template <typename, template<typename> class> class T>
+    inline ExpT MakeQExpression(const vector<TypeT>& QVars,
+                                const ExpT& QExpr,
+                                const E& ExtVal);
+
+    // Insert the expression and all subexpressions
+    // into the set of expressions owned by this manager
+    inline ExpT Internalize(const ExpT& Exp);
+
+public:
+    template <typename... ArgTypes>
+    inline ExprMgr(ArgTypes&&... Args);
+    inline ~ExprMgr();
+
+    template<typename T, typename... ArgTypes>
+    inline TypeT MakeType(ArgTypes&&... Args);
+
+    inline TypeT GetNamedType(const string& Name) const;
+
+    inline ExpT MakeTrue(const E& ExtVal = E());
+    inline ExpT MakeFalse(const E& ExtVal = E());
+
+    inline ExpT MakeVal(const string& ValString, const TypeT& ValType,
+                        const E& ExtVal = E());
+
+    inline ExpT MakeVar(const string& VarName, const TypeT& VarType,
+                        const E& ExtVal = E());
+
+    inline ExpT MakeBoundVar(const TypeT& VarType, i64 VarIdx,
+                             const E& ExtVal = E());
+
+    inline ExpT MakeExpr(i64 OpCode, const vector<ExpT>& Children,
+                         const E& ExtVal = E());
+
+    inline ExpT MakeExpr(i64 OpCode, const ExpT& Child1,
+                         const E& ExtVal = E());
+
+    inline ExpT MakeExpr(i64 OpCode, const ExpT& Child1,
+                         const ExpT& Child2,
+                         const E& ExtVal = E());
+
+    inline ExpT MakeExpr(i64 OpCode, const ExpT& Child1,
+                         const ExpT& Child2, const ExpT& Child3,
+                         const E& ExtVal = E());
+
+    inline ExpT MakeExists(const vector<TypeT>& QVarTypes,
+                           const ExpT& QExpr,
+                           const E& ExtVal = E());
+
+    inline ExpT MakeForAll(const vector<TypeT>& QVarTypes,
+                           const ExpT& QExpr,
+                           const E& ExtVal = E());
+
+    inline i64 MakeUninterpretedFunction(const string& Name,
+                                         const vector<TypeT>& Range,
+                                         const TypeT& Domain);
+    inline TypeT LookupUninterpretedFunction(i64 OpCode) const;
+
+    template <class T, typename... ArgTypes>
+    inline ExpT ApplyTransform(const ExpT& Exp, ArgTypes&&... Args);
+
+    inline SemT* GetSemanticizer() const;
+    template <typename... ArgTypes>
+    inline LExpT LowerExpr(const ExpT& Exp, ArgTypes&&... Args);
+    template <typename... ArgTypes>
+    inline ExpT RaiseExpr(const LExpT& Exp, ArgTypes&&... Args);
+    inline ExpT ElimQuantifiers(const ExpT& Exp);
+    template <typename... ArgTypes>
+    inline ExpT UnrollQuantifiers(const ExpT& Exp, ArgTypes&&... Args);
+    inline ExpT Simplify(const ExpT& Exp);
+    inline ExpT SimplifyFP(const ExpT& Exp);
+    inline ExpT Substitute(const SubstMapT& Subst, const ExpT& Exp);
+    inline ExpT TermSubstitute(const SubstMapT& Subst, const ExpT& Exp);
+    inline ExpT BoundSubstitute(const SubstMapT& Subst, const ExpT& Exp);
+    inline ExpSetT
+    Gather(const ExpT& Exp,
+           const function<bool(const ExpressionBase<E, S>*)>& Pred) const;
+
+    inline void GC();
+
+    static inline ExprMgr* Make();
+};
+
+// Visitor classes
+// ExpressionVisitorBase
+template <typename E, template <typename> class S>
+class ExpressionVisitorBase
+{
+private:
+    string Name;
+
+public:
+    ExpressionVisitorBase(const string& Name);
+    virtual ~ExpressionVisitorBase();
+    const string& GetName() const;
+
+    virtual void VisitConstExpression(const ConstExpression<E, S>* Exp);
+    virtual void VisitVarExpression(const VarExpression<E, S>* Exp);
+    virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp);
+    virtual void VisitOpExpression(const OpExpression<E, S>* Exp);
+    virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp);
+    virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp);
+};
+
+// The substitution transform, which is the only
+// built-in transform. We only allow variable substitutions
+template <typename E, template <typename> class S>
+class Substitutor : ExpressionVisitorBase<E, S>
+{
+private:
+    typedef ExprMgr<E, S> MgrType;
+    typedef typename MgrType::ExpT ExpT;
+    typedef typename MgrType::SubstMapT SubstMapT;
+
+    MgrType* Mgr;
+    SubstMapT Subst;
+    vector<typename ExprMgr<E, S>::ExpT> SubstStack;
+
+public:
+    inline Substitutor(MgrType* Mgr, const SubstMapT& Subst);
+    inline virtual ~Substitutor();
+
+    inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+    inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+    inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+        override;
+    inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+    inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+        override;
+    inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+        override;
+
+    inline static ExpT Do(MgrType* Mgr,
+                          const ExpT& Exp,
+                          const SubstMapT& SubstMap);
+};
+
+// A term substitutor
+template <typename E, template <typename> class S>
+class TermSubstitutor : public ExpressionVisitorBase<E, S>
+{
+protected:
+    typedef ExprMgr<E, S> MgrType;
+    typedef typename MgrType::ExpT ExpT;
+    typedef typename MgrType::SubstMapT SubstMapT;
+
+    MgrType* Mgr;
+    SubstMapT SubstMap;
+    stack<ExpT> ExpStack;
+
+public:
+    inline TermSubstitutor(MgrType* Mgr, const SubstMapT& Subst);
+    inline virtual ~TermSubstitutor();
+
+    inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+    inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+    inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+        override;
+    inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+    inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+        override;
+    inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+        override;
+
+    inline static ExpT Do(MgrType* Mgr,
+                          const ExpT& Exp,
+                          const SubstMapT& SubstMap);
+};
+
+// A term substitutor for substituting a term with bound de-bruijn vars
+template <typename E, template <typename> class S>
+class BoundSubstitutor : public ExpressionVisitorBase<E, S>
+{
+private:
+    typedef ExprMgr<E, S> MgrType;
+    typedef typename MgrType::ExpT ExpT;
+    typedef typename MgrType::SubstMapT SubstMapT;
+
+    MgrType* Mgr;
+    SubstMapT SubstMap;
+    stack<ExpT> ExpStack;
+    u32 OffsetToAdd;
+
+    inline bool TrySubstitute(const ExpressionBase<E, S>* Exp);
+
+public:
+    inline BoundSubstitutor(MgrType* Mgr, const SubstMapT& Subst);
+    inline virtual ~BoundSubstitutor();
+
+    inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+    inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+    inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+        override;
+    inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+    inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+        override;
+    inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+        override;
+
+    inline static ExpT Do(MgrType* Mgr, const ExpT& Exp,
+                          const SubstMapT& SubstMap);
+};
+
+template <typename E, template <typename> class S>
+class Gatherer : ExpressionVisitorBase<E, S>
+{
+private:
+    typedef Expr<E, S> ExpT;
+    typedef typename ExprMgr<E, S>::ExpSetT ExpSetT;
+    function<bool(const ExpressionBase<E, S>*)> Pred;
+    ExpSetT GatheredExps;
+
+public:
+    inline Gatherer(const function<bool(const ExpressionBase<E, S>*)>& Pred);
+    inline virtual ~Gatherer();
+
+    inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override;
+    inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override;
+    inline virtual void VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+        override;
+    inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override;
+    inline virtual void VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+        override;
+    inline virtual void VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+        override;
+
+    static inline ExpSetT
+    Do(const ExpT& Exp, const function<bool(const ExpressionBase<E, S>*)>& Pred);
+};
+
+template <typename E, template <typename> class S>
+ExpressionVisitorBase<E, S>::ExpressionVisitorBase(const string& Name)
+    : Name(Name)
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+ExpressionVisitorBase<E, S>::~ExpressionVisitorBase()
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+const string& ExpressionVisitorBase<E, S>::GetName() const
+{
+    return Name;
+}
+
+template <typename E, template <typename> class S>
+void ExpressionVisitorBase<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+{
+    return;
+}
+
+template <typename E, template <typename> class S>
+void ExpressionVisitorBase<E, S>::VisitVarExpression
+(
+ const VarExpression<E, S>* Exp
+ )
+{
+    return;
+}
+
+template <typename E, template <typename> class S>
+void ExpressionVisitorBase<E, S>::VisitBoundVarExpression
+(
+ const BoundVarExpression<E, S>* Exp
+ )
+{
+    return;
+}
+
+template <typename E, template <typename> class S>
+void ExpressionVisitorBase<E, S>::VisitOpExpression
+(
+ const OpExpression<E, S>* Exp
+ )
+{
+    auto const& Children = Exp->GetChildren();
+    for (auto const& Child : Children) {
+        Child->Accept(this);
+    }
+    return;
+}
+
+template <typename E, template <typename> class S>
+void ExpressionVisitorBase<E, S>::VisitAQuantifiedExpression
+(
+ const AQuantifiedExpression<E, S>* Exp
+ )
+{
+    Exp->GetQExpression()->Accept(this);
+}
+
+template <typename E, template <typename> class S>
+void ExpressionVisitorBase<E, S>::VisitEQuantifiedExpression
+(
+ const EQuantifiedExpression<E, S>* Exp
+ )
+{
+    Exp->GetQExpression()->Accept(this);
+}
+
+// Substitutor implementation
+template <typename E, template <typename> class S>
+inline Substitutor<E, S>::Substitutor(MgrType* Mgr, const SubstMapT& Subst)
+    : ExpressionVisitorBase<E, S>("Substitutor"), Mgr(Mgr), Subst(Subst)
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline Substitutor<E,S>::~Substitutor()
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline void
+Substitutor<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+{
+    auto it = Subst.find(Exp);
+    if (it != Subst.end()) {
+        SubstStack.push_back(it->second);
+    } else {
+        SubstStack.push_back(Exp);
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void
+Substitutor<E, S>::VisitConstExpression(const ConstExpression<E,S>* Exp)
+{
+    SubstStack.push_back(Exp);
+}
+
+template <typename E, template <typename> class S>
+inline void
+Substitutor<E, S>::VisitBoundVarExpression(const BoundVarExpression<E,S>* Exp)
+{
+    auto it = Subst.find(Exp);
+    if (it != Subst.end()) {
+        SubstStack.push_back(it->second);
+    } else {
+        SubstStack.push_back(Exp);
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void
+Substitutor<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+{
+    ExpressionVisitorBase<E,S>::VisitOpExpression(Exp);
+    const u32 NumChildren = Exp->GetChildren().size();
+    vector<ExpT> SubstChildren(NumChildren);
+    for (u32 i = 0; i < NumChildren; ++i) {
+        SubstChildren[NumChildren - i - 1] = SubstStack.back();
+        SubstStack.pop_back();
+    }
+    SubstStack.push_back(Mgr->MakeExpr(Exp->GetOpCode(),
+                                       SubstChildren));
+}
+
+template <typename E, template <typename> class S>
+inline void
+Substitutor<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E,S>* Exp)
+{
+    Exp->GetQExpression()->Accept(this);
+    auto SubstQExpr = SubstStack.back();
+    SubstStack.pop_back();
+    SubstStack.push_back(Mgr->MakeExists(Exp->GetQVarTypes(),
+                                         SubstQExpr));
+}
+
+template <typename E, template <typename> class S>
+inline void
+Substitutor<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E,S>* Exp)
+{
+    Exp->GetQExpression()->Accept(this);
+    auto SubstQExpr = SubstStack.back();
+    SubstStack.pop_back();
+    SubstStack.push_back(Mgr->MakeForAll(Exp->GetQVarTypes(),
+                                         SubstQExpr));
+}
+
+template <typename E, template <typename> class S>
+inline typename Substitutor<E, S>::ExpT
+Substitutor<E, S>::Do(MgrType* Mgr,
+                      const ExpT& Exp, const SubstMapT& Subst)
+{
+    Substitutor TheSubstitutor(Mgr, Subst);
+    Exp->Accept(&TheSubstitutor);
+    return TheSubstitutor.SubstStack[0];
+}
+
+// Term substitutor implementation
+
+// Assumptions on the substmap:
+// for all substitution pairs of the form
+// from1 |--> to1 and from2 |--> to2:
+// 1. from1 is not a subterm of from2
+// 2. from2 is not a subterm of from1
+// 3. from1 is not a subterm of to1
+// 4. from2 is not a subterm of to1
+
+template <typename E, template <typename> class S>
+inline TermSubstitutor<E, S>::TermSubstitutor(MgrType* Mgr,
+                                              const SubstMapT& SubstMap)
+    : ExpressionVisitorBase<E, S>("TermSubstitutor"),
+      Mgr(Mgr), SubstMap(SubstMap)
+{
+    // for (auto it1 = SubstMap.begin(); it1 != SubstMap.end(); ++it1) {
+    //     auto const& From1 = it1->first;
+
+    //     for (auto it2 = next(it1); it2 != SubstMap.end(); ++it2) {
+    //         auto const& From2 = it2->first;
+    //         auto&& Terms1 =
+    //             Mgr->Gather(From2,
+    //                         [&] (const ExpressionBase<E, S>* Exp) -> bool
+    //                         {
+    //                             return (Exp == From1);
+    //                         });
+    //         if (Terms1.size() != 0) {
+    //             throw ExprTypeError((string)"The term:\n" + From1->ToString() +
+    //                                 "\nis a subterm of term\n:" + From2->ToString() +
+    //                                 "\nin substitution. And both occur as " +
+    //                                 "terms to be substituted for");
+    //         }
+    //         auto&& Terms2 =
+    //             Mgr->Gather(From1,
+    //                         [&] (const ExpressionBase<E, S>* Exp) -> bool
+    //                         {
+    //                             return (Exp == From2);
+    //                         });
+    //         if (Terms2.size() != 0) {
+    //             throw ExprTypeError((string)"The term:\n" + From2->ToString() +
+    //                                 "\nis a subterm of term\n:" + From1->ToString() +
+    //                                 "\nin substitution. And both occur as " +
+    //                                 "terms to be substituted for");
+    //         }
+    //     }
+
+    //     for (auto it2 = SubstMap.begin(); it2 != SubstMap.end(); ++it2) {
+    //         auto const& To2 = it2->second;
+    //         auto&& Terms1 =
+    //             Mgr->Gather(To2,
+    //                         [&] (const ExpressionBase<E, S>* Exp) -> bool
+    //                         {
+    //                             return (Exp == From1);
+    //                         });
+
+    //         if (Terms1.size() != 0) {
+    //             throw ExprTypeError((string)"The term:\n" + From1->ToString() +
+    //                                 "\nis a subterm of term\n:" + To2->ToString() +
+    //                                 "\nin substitution. The first is an LHS term " +
+    //                                 "and the second is an RHS term!");
+    //         }
+    //     }
+    // }
+}
+
+template <typename E, template <typename> class S>
+inline TermSubstitutor<E, S>::~TermSubstitutor()
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline void
+TermSubstitutor<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+{
+    auto it = SubstMap.find(Exp);
+    if (it != SubstMap.end()) {
+        ExpStack.push(it->second);
+    } else {
+        ExpStack.push(Exp);
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void
+TermSubstitutor<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+{
+    auto it = SubstMap.find(Exp);
+    if (it != SubstMap.end()) {
+        ExpStack.push(it->second);
+    } else {
+        ExpStack.push(Exp);
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void
+TermSubstitutor<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+{
+    auto it = SubstMap.find(Exp);
+    if (it != SubstMap.end()) {
+        ExpStack.push(it->second);
+    } else {
+        ExpStack.push(Exp);
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void
+TermSubstitutor<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+{
+    auto it = SubstMap.find(Exp);
+    if (it != SubstMap.end()) {
+        ExpStack.push(it->second);
+    } else {
+        ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+        auto const& OldChildren = Exp->GetChildren();
+        const u32 NumChildren = OldChildren.size();
+        vector<ExpT> NewChildren(NumChildren);
+
+        for (u32 i = 0; i < NumChildren; ++i) {
+            NewChildren[NumChildren - i - 1] = ExpStack.top();
             ExpStack.pop();
-            ExpStack.push(Mgr->MakeExists(QVarTypes, NewQExpr));
         }
 
-        template <typename E, template <typename> class S>
-        inline void
-        TermSubstitutor<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
-        {
-            auto const& QVarTypes = Exp->GetQVarTypes();
-            auto const& QExpr = Exp->GetQExpression();
+        ExpStack.push(Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
+    }
+}
 
-            QExpr->Accept(this);
-            auto NewQExpr = ExpStack.top();
-            ExpStack.pop();
-            ExpStack.push(Mgr->MakeForAll(QVarTypes, NewQExpr));
-        }
+template <typename E, template <typename> class S>
+inline void
+TermSubstitutor<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+{
+    auto const& QVarTypes = Exp->GetQVarTypes();
+    auto const& QExpr = Exp->GetQExpression();
 
-        template <typename E, template <typename> class S>
-        inline typename TermSubstitutor<E, S>::ExpT
-        TermSubstitutor<E, S>::Do(MgrType* Mgr, const ExpT& Exp,
-                                  const SubstMapT& SubstMap)
-        {
-            TermSubstitutor TheSubstitutor(Mgr, SubstMap);
-            Exp->Accept(&TheSubstitutor);
-            return TheSubstitutor.ExpStack.top();
-        }
+    QExpr->Accept(this);
+    auto NewQExpr = ExpStack.top();
+    ExpStack.pop();
+    ExpStack.push(Mgr->MakeExists(QVarTypes, NewQExpr));
+}
 
-        // BoundSubstitutor implementation
-        template <typename E, template <typename> class S>
-        inline BoundSubstitutor<E, S>::BoundSubstitutor(MgrType* Mgr,
-                                                        const SubstMapT& SubstMap)
-            : ExpressionVisitorBase<E, S>("BoundSubstitutor"),
-              Mgr(Mgr), SubstMap(SubstMap), OffsetToAdd(0)
-        {
-            // Copy paste from above :-(
-            for (auto it1 = SubstMap.begin(); it1 != SubstMap.end(); ++it1) {
-                auto const& From1 = it1->first;
+template <typename E, template <typename> class S>
+inline void
+TermSubstitutor<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+{
+    auto const& QVarTypes = Exp->GetQVarTypes();
+    auto const& QExpr = Exp->GetQExpression();
 
-                for (auto it2 = next(it1); it2 != SubstMap.end(); ++it2) {
-                    auto const& From2 = it2->first;
-                    auto&& Terms1 =
-                        Mgr->Gather(From2,
-                                    [&] (const ExpressionBase<E, S>* Exp) -> bool
-                                    {
-                                        return (Exp == From1);
-                                    });
-                    if (Terms1.size() != 0) {
-                        throw ExprTypeError((string)"The term:\n" + From1->ToString() +
-                                            "\nis a subterm of term\n:" + From2->ToString() +
-                                            "\nin substitution. And both occur as " +
-                                            "terms to be substituted for");
-                    }
-                    auto&& Terms2 =
-                        Mgr->Gather(From1,
-                                    [&] (const ExpressionBase<E, S>* Exp) -> bool
-                                    {
-                                        return (Exp == From2);
-                                    });
-                    if (Terms2.size() != 0) {
-                        throw ExprTypeError((string)"The term:\n" + From2->ToString() +
-                                            "\nis a subterm of term\n:" + From1->ToString() +
-                                            "\nin substitution. And both occur as " +
-                                            "terms to be substituted for");
-                    }
-                }
+    QExpr->Accept(this);
+    auto NewQExpr = ExpStack.top();
+    ExpStack.pop();
+    ExpStack.push(Mgr->MakeForAll(QVarTypes, NewQExpr));
+}
 
-                for (auto it2 = SubstMap.begin(); it2 != SubstMap.end(); ++it2) {
-                    auto const& To2 = it2->second;
-                    auto&& Terms1 =
-                        Mgr->Gather(To2,
-                                    [&] (const ExpressionBase<E, S>* Exp) -> bool
-                                    {
-                                        return (Exp == From1);
-                                    });
+template <typename E, template <typename> class S>
+inline typename TermSubstitutor<E, S>::ExpT
+TermSubstitutor<E, S>::Do(MgrType* Mgr, const ExpT& Exp,
+                          const SubstMapT& SubstMap)
+{
+    TermSubstitutor TheSubstitutor(Mgr, SubstMap);
+    Exp->Accept(&TheSubstitutor);
+    return TheSubstitutor.ExpStack.top();
+}
 
-                    if (Terms1.size() != 0) {
-                        throw ExprTypeError((string)"The term:\n" + From1->ToString() +
-                                            "\nis a subterm of term\n:" + To2->ToString() +
-                                            "\nin substitution. The first is an LHS term " +
-                                            "and the second is an RHS term!");
-                    }
-                }
+// BoundSubstitutor implementation
+template <typename E, template <typename> class S>
+inline BoundSubstitutor<E, S>::BoundSubstitutor(MgrType* Mgr,
+                                                const SubstMapT& SubstMap)
+    : ExpressionVisitorBase<E, S>("BoundSubstitutor"),
+      Mgr(Mgr), SubstMap(SubstMap), OffsetToAdd(0)
+{
+    // Copy paste from above :-(
+    for (auto it1 = SubstMap.begin(); it1 != SubstMap.end(); ++it1) {
+        auto const& From1 = it1->first;
+
+        for (auto it2 = next(it1); it2 != SubstMap.end(); ++it2) {
+            auto const& From2 = it2->first;
+            auto&& Terms1 =
+                Mgr->Gather(From2,
+                            [&] (const ExpressionBase<E, S>* Exp) -> bool
+                            {
+                                return (Exp == From1);
+                            });
+            if (Terms1.size() != 0) {
+                throw ExprTypeError((string)"The term:\n" + From1->ToString() +
+                                    "\nis a subterm of term\n:" + From2->ToString() +
+                                    "\nin substitution. And both occur as " +
+                                    "terms to be substituted for");
             }
-
-
-            for (auto const& SubstEntry : SubstMap) {
-                if (!(SubstEntry.second->template Is<BoundVarExpression>())) {
-                    throw ESMCError((string)"Substitute terms must be bound variables " +
-                                    "in BoundSubstitutor");
-                }
-                if (SubstEntry.first->template Is<BoundVarExpression>()) {
-                    throw ESMCError((string)"Bound variables cannot be substituted for " +
-                                    "in BoundSubstitutor");
-                }
+            auto&& Terms2 =
+                Mgr->Gather(From1,
+                            [&] (const ExpressionBase<E, S>* Exp) -> bool
+                            {
+                                return (Exp == From2);
+                            });
+            if (Terms2.size() != 0) {
+                throw ExprTypeError((string)"The term:\n" + From2->ToString() +
+                                    "\nis a subterm of term\n:" + From1->ToString() +
+                                    "\nin substitution. And both occur as " +
+                                    "terms to be substituted for");
             }
         }
 
-        template <typename E, template <typename> class S>
-        inline BoundSubstitutor<E, S>::~BoundSubstitutor()
-        {
-            // Nothing here
-        }
+        for (auto it2 = SubstMap.begin(); it2 != SubstMap.end(); ++it2) {
+            auto const& To2 = it2->second;
+            auto&& Terms1 =
+                Mgr->Gather(To2,
+                            [&] (const ExpressionBase<E, S>* Exp) -> bool
+                            {
+                                return (Exp == From1);
+                            });
 
-        template <typename E, template <typename> class S>
-        inline bool
-        BoundSubstitutor<E, S>::TrySubstitute(const ExpressionBase<E, S>* Exp)
-        {
-            auto const& SubstMap = this->SubstMap;
-            auto it = SubstMap.find(Exp);
-            if (it == SubstMap.end()) {
-                return false;
-            } else if (OffsetToAdd == 0) {
-                this->ExpStack.push(it->second);
-                return true;
-            } else {
-                auto OrigBoundVar = it->second->template SAs<BoundVarExpression>();
-                auto Type = OrigBoundVar->GetVarType();
-                auto OrigIndex = OrigBoundVar->GetVarIdx();
-                auto NewIndex = OrigIndex + OffsetToAdd;
-                auto NewExp = this->Mgr->MakeBoundVar(Type, NewIndex);
-                this->ExpStack.push(NewExp);
-                return true;
+            if (Terms1.size() != 0) {
+                throw ExprTypeError((string)"The term:\n" + From1->ToString() +
+                                    "\nis a subterm of term\n:" + To2->ToString() +
+                                    "\nin substitution. The first is an LHS term " +
+                                    "and the second is an RHS term!");
             }
         }
+    }
 
-        template <typename E, template <typename> class S>
-        inline void
-        BoundSubstitutor<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
-        {
-            if (TrySubstitute(Exp)) {
-                return;
-            } else {
-                this->ExpStack.push(Exp);
-            }
+
+    for (auto const& SubstEntry : SubstMap) {
+        if (!(SubstEntry.second->template Is<BoundVarExpression>())) {
+            throw ESMCError((string)"Substitute terms must be bound variables " +
+                            "in BoundSubstitutor");
         }
-
-        template <typename E, template <typename> class S>
-        inline void
-        BoundSubstitutor<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
-        {
-            if (TrySubstitute(Exp)) {
-                return;
-            } else {
-                this->ExpStack.push(Exp);
-            }
+        if (SubstEntry.first->template Is<BoundVarExpression>()) {
+            throw ESMCError((string)"Bound variables cannot be substituted for " +
+                            "in BoundSubstitutor");
         }
+    }
+}
 
-        template <typename E, template <typename> class S>
-        inline void
-        BoundSubstitutor<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
-        {
-            this->ExpStack.push(Exp);
-        }
+template <typename E, template <typename> class S>
+inline BoundSubstitutor<E, S>::~BoundSubstitutor()
+{
+    // Nothing here
+}
 
-        template <typename E, template <typename> class S>
-        inline void
-        BoundSubstitutor<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
-        {
-            if (TrySubstitute(Exp)) {
-                return;
-            } else {
-                ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
-                auto const& OldChildren = Exp->GetChildren();
-                auto const NumChildren = OldChildren.size();
-                vector<ExpT> NewChildren(NumChildren);
+template <typename E, template <typename> class S>
+inline bool
+BoundSubstitutor<E, S>::TrySubstitute(const ExpressionBase<E, S>* Exp)
+{
+    auto const& SubstMap = this->SubstMap;
+    auto it = SubstMap.find(Exp);
+    if (it == SubstMap.end()) {
+        return false;
+    } else if (OffsetToAdd == 0) {
+        this->ExpStack.push(it->second);
+        return true;
+    } else {
+        auto OrigBoundVar = it->second->template SAs<BoundVarExpression>();
+        auto Type = OrigBoundVar->GetVarType();
+        auto OrigIndex = OrigBoundVar->GetVarIdx();
+        auto NewIndex = OrigIndex + OffsetToAdd;
+        auto NewExp = this->Mgr->MakeBoundVar(Type, NewIndex);
+        this->ExpStack.push(NewExp);
+        return true;
+    }
+}
 
-                for (u32 i = 0; i < NumChildren; ++i) {
-                    NewChildren[NumChildren - i - 1] = this->ExpStack.top();
-                    this->ExpStack.pop();
-                }
+template <typename E, template <typename> class S>
+inline void
+BoundSubstitutor<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+{
+    if (TrySubstitute(Exp)) {
+        return;
+    } else {
+        this->ExpStack.push(Exp);
+    }
+}
 
-                this->ExpStack.push(this->Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
-            }
-        }
+template <typename E, template <typename> class S>
+inline void
+BoundSubstitutor<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+{
+    if (TrySubstitute(Exp)) {
+        return;
+    } else {
+        this->ExpStack.push(Exp);
+    }
+}
 
-        template <typename E, template <typename> class S>
-        inline void
-        BoundSubstitutor<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
-        {
-            OffsetToAdd += Exp->GetQVarTypes().size();
-            Exp->GetQExpression()->Accept(this);
-            auto NewQExpr = this->ExpStack.top();
+template <typename E, template <typename> class S>
+inline void
+BoundSubstitutor<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+{
+    this->ExpStack.push(Exp);
+}
+
+template <typename E, template <typename> class S>
+inline void
+BoundSubstitutor<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+{
+    if (TrySubstitute(Exp)) {
+        return;
+    } else {
+        ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+        auto const& OldChildren = Exp->GetChildren();
+        auto const NumChildren = OldChildren.size();
+        vector<ExpT> NewChildren(NumChildren);
+
+        for (u32 i = 0; i < NumChildren; ++i) {
+            NewChildren[NumChildren - i - 1] = this->ExpStack.top();
             this->ExpStack.pop();
-            this->ExpStack.push(this->Mgr->MakeExists(Exp->GetQVarTypes(), NewQExpr));
-            OffsetToAdd -= Exp->GetQVarTypes().size();
         }
 
-        template <typename E, template <typename> class S>
-        inline void
-        BoundSubstitutor<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
-        {
-            OffsetToAdd += Exp->GetQVarTypes().size();
-            Exp->GetQExpression()->Accept(this);
-            auto NewQExpr = this->ExpStack.top();
-            this->ExpStack.pop();
-            this->ExpStack.push(this->Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
-            OffsetToAdd -= Exp->GetQVarTypes().size();
+        this->ExpStack.push(this->Mgr->MakeExpr(Exp->GetOpCode(), NewChildren));
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void
+BoundSubstitutor<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+{
+    OffsetToAdd += Exp->GetQVarTypes().size();
+    Exp->GetQExpression()->Accept(this);
+    auto NewQExpr = this->ExpStack.top();
+    this->ExpStack.pop();
+    this->ExpStack.push(this->Mgr->MakeExists(Exp->GetQVarTypes(), NewQExpr));
+    OffsetToAdd -= Exp->GetQVarTypes().size();
+}
+
+template <typename E, template <typename> class S>
+inline void
+BoundSubstitutor<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+{
+    OffsetToAdd += Exp->GetQVarTypes().size();
+    Exp->GetQExpression()->Accept(this);
+    auto NewQExpr = this->ExpStack.top();
+    this->ExpStack.pop();
+    this->ExpStack.push(this->Mgr->MakeForAll(Exp->GetQVarTypes(), NewQExpr));
+    OffsetToAdd -= Exp->GetQVarTypes().size();
+}
+
+template <typename E, template <typename> class S>
+inline typename BoundSubstitutor<E, S>::ExpT
+BoundSubstitutor<E, S>::Do(MgrType* Mgr, const ExpT& Exp, const SubstMapT& SubstMap)
+{
+    BoundSubstitutor TheSubstitutor(Mgr, SubstMap);
+    Exp->Accept(&TheSubstitutor);
+    return TheSubstitutor.ExpStack.top();
+}
+
+// Gatherer implementation
+template <typename E, template <typename> class S>
+inline Gatherer<E, S>::Gatherer(const function<bool(const ExpressionBase<E, S>*)>& Pred)
+    : ExpressionVisitorBase<E, S>("Gatherer"), Pred(Pred)
+{
+    // Nothing here
+}
+
+
+template <typename E, template <typename> class S>
+inline Gatherer<E, S>::~Gatherer()
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline void Gatherer<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
+{
+    ExpressionVisitorBase<E, S>::VisitVarExpression(Exp);
+    if (Pred(Exp)) {
+        GatheredExps.insert(Exp);
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void Gatherer<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
+{
+    ExpressionVisitorBase<E, S>::VisitConstExpression(Exp);
+    if (Pred(Exp)) {
+        GatheredExps.insert(Exp);
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void Gatherer<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
+{
+    ExpressionVisitorBase<E, S>::VisitBoundVarExpression(Exp);
+    if (Pred(Exp)) {
+        GatheredExps.insert(Exp);
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void Gatherer<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
+{
+    ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+    if (Pred(Exp)) {
+        GatheredExps.insert(Exp);
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void
+Gatherer<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
+{
+    ExpressionVisitorBase<E, S>::VisitEQuantifiedExpression(Exp);
+    if (Pred(Exp)) {
+        GatheredExps.insert(Exp);
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void
+Gatherer<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
+{
+    ExpressionVisitorBase<E, S>::VisitAQuantifiedExpression(Exp);
+    if (Pred(Exp)) {
+        GatheredExps.insert(Exp);
+    }
+}
+
+template <typename E, template <typename> class S>
+inline typename Gatherer<E, S>::ExpSetT
+Gatherer<E, S>::Do(const ExpT& Exp,
+                   const function<bool (const ExpressionBase<E, S> *)>& Pred)
+{
+    Gatherer<E, S> TheGatherer(Pred);
+    Exp->Accept(&TheGatherer);
+    return TheGatherer.GatheredExps;
+}
+
+
+// ExpressionBase implementation
+template <typename E, template <typename> class S>
+inline ExpressionBase<E, S>::ExpressionBase(ExprMgr<E, S>* Manager,
+                                            const E& ExtVal)
+    : Mgr(Manager), HashValid(false),
+      ExpType(S<E>::InvalidType), ExtensionData(ExtVal),
+      HashCode(0)
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline ExpressionBase<E, S>::~ExpressionBase()
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline ExprMgr<E, S>*
+ExpressionBase<E, S>::GetMgr() const
+{
+    return Mgr;
+}
+
+template <typename E, template <typename> class S>
+inline u64 ExpressionBase<E, S>::Hash() const
+{
+    if (!HashValid) {
+        ComputeHash();
+        HashValid = true;
+    }
+    return HashCode;
+}
+
+template <typename E, template <typename> class S>
+inline u64 ExpressionBase<E, S>::Rehash() const
+{
+    ComputeHash();
+    HashValid = true;
+    return HashCode;
+}
+
+
+template <typename E, template <typename> class S>
+inline const typename ExpressionBase<E, S>::TypeRef&
+ExpressionBase<E, S>::GetType() const
+{
+    return ExpType;
+}
+
+template <typename E, template <typename> class S>
+inline void
+ExpressionBase<E, S>::SetType(const TypeRef& Type) const
+{
+    ExpType = Type;
+}
+
+template <typename E, template <typename> class S>
+inline bool ExpressionBase<E, S>::Equals(const ExpressionBase<E, S>* Other) const
+{
+    if (Hash() != Other->Hash()) {
+        return false;
+    }
+    return (Compare(Other) == 0);
+}
+
+template <typename E, template <typename> class S>
+inline bool ExpressionBase<E, S>::NEquals(const ExpressionBase<E, S>* Other) const
+{
+    if (Hash() != Other->Hash()) {
+        return true;
+    }
+    return (Compare(Other) != 0);
+}
+
+template <typename E, template <typename> class S>
+inline bool ExpressionBase<E, S>::LT(const ExpressionBase<E, S>* Other) const
+{
+    return (Compare(Other) < 0);
+}
+
+template <typename E, template <typename> class S>
+inline bool ExpressionBase<E, S>::LE(const ExpressionBase<E, S>* Other) const
+{
+    return (Compare(Other) <= 0);
+}
+
+template <typename E, template <typename> class S>
+inline bool ExpressionBase<E, S>::GT(const ExpressionBase<E, S>* Other) const
+{
+    return (Compare(Other) > 0);
+}
+
+template <typename E, template <typename> class S>
+inline bool ExpressionBase<E, S>::GE(const ExpressionBase<E, S>* Other) const
+{
+    return (Compare(Other) >= 0);
+}
+
+template <typename E, template <typename> class S>
+inline bool ExpressionBase<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
+{
+    return (Equals(Other));
+}
+
+template <typename E, template <typename> class S>
+string ExpressionBase<E, S>::ToString(u32 Verbosity) const
+{
+    auto Sem = Mgr->GetSemanticizer();
+    return (Sem->ExprToString(this));
+}
+
+
+// ExpressionBase with ExtList specialization
+template <template <typename> class S>
+inline ExpressionBase<ExtListT, S>::ExpressionBase(ExprMgr<ExtListT, S>* Manager,
+                                                   const ExtListT& ExtVal)
+    : Mgr(Manager), HashValid(false),
+      ExpType(-1), ExtensionData(ExtVal),
+      HashCode(0)
+{
+    // Nothing here
+}
+
+template <template <typename> class S>
+inline ExpressionBase<ExtListT, S>::~ExpressionBase()
+{
+    // Nothing here
+}
+
+template <template <typename> class S>
+inline ExprMgr<ExtListT, S>*
+ExpressionBase<ExtListT, S>::GetMgr() const
+{
+    return Mgr;
+}
+
+template <template <typename> class S>
+inline u64 ExpressionBase<ExtListT, S>::Hash() const
+{
+    if (!HashValid) {
+        ComputeHash();
+        HashValid = true;
+    }
+    return HashCode;
+}
+
+template <template <typename> class S>
+inline u64 ExpressionBase<ExtListT, S>::Rehash() const
+{
+    ComputeHash();
+    HashValid = true;
+    return HashCode;
+}
+
+template <template <typename> class S>
+inline i64 ExpressionBase<ExtListT, S>::GetType() const
+{
+    return ExpType;
+}
+
+template <template <typename> class S>
+inline void ExpressionBase<ExtListT, S>::SetType(i64 Type) const
+{
+    ExpType = Type;
+}
+
+template <template <typename> class S>
+inline bool ExpressionBase<ExtListT, S>::Equals(const ExpressionBase<ExtListT, S>* Other)
+    const
+{
+    if (Hash() != Other->Hash()) {
+        return false;
+    }
+    return (Compare(Other) == 0);
+}
+
+template <template <typename> class S>
+inline bool ExpressionBase<ExtListT, S>::NEquals(const ExpressionBase<ExtListT, S>* Other)
+    const
+{
+    if (Hash() != Other->Hash()) {
+        return true;
+    }
+    return (Compare(Other) != 0);
+}
+
+template <template <typename> class S>
+inline bool ExpressionBase<ExtListT, S>::LT(const ExpressionBase<ExtListT, S>* Other) const
+{
+    return (Compare(Other) < 0);
+}
+
+template <template <typename> class S>
+inline bool ExpressionBase<ExtListT, S>::LE(const ExpressionBase<ExtListT, S>* Other) const
+{
+    return (Compare(Other) <= 0);
+}
+
+template <template <typename> class S>
+inline bool ExpressionBase<ExtListT, S>::GT(const ExpressionBase<ExtListT, S>* Other) const
+{
+    return (Compare(Other) > 0);
+}
+
+template <template <typename> class S>
+inline bool ExpressionBase<ExtListT, S>::GE(const ExpressionBase<ExtListT, S>* Other) const
+{
+    return (Compare(Other) >= 0);
+}
+
+template <template <typename> class S>
+inline bool ExpressionBase<ExtListT, S>::FastEQ(const ExpressionBase<ExtListT, S>* Other)
+    const
+{
+    return (Equals(Other));
+}
+
+template <template <typename> class S>
+string ExpressionBase<ExtListT, S>::ToString(u32 Verbosity) const
+{
+    auto Sem = Mgr->GetSemanticizer();
+    return (Sem->ExprToString(this));
+}
+
+// Additional methods specific to ExtList Expressions
+template <template <typename> class S>
+template <typename U>
+inline const ExtListExtRef&
+ExpressionBase<ExtListT, S>::GetExtension() const
+{
+    for (auto const& Ext : ExtensionData) {
+        if (Ext->template As<U>() != nullptr) {
+            return Ext;
         }
+    }
+}
 
-        template <typename E, template <typename> class S>
-        inline typename BoundSubstitutor<E, S>::ExpT
-        BoundSubstitutor<E, S>::Do(MgrType* Mgr, const ExpT& Exp, const SubstMapT& SubstMap)
-        {
-            BoundSubstitutor TheSubstitutor(Mgr, SubstMap);
-            Exp->Accept(&TheSubstitutor);
-            return TheSubstitutor.ExpStack.top();
+template <template <typename> class S>
+template <typename U>
+inline vector<ExtListExtRef>
+ExpressionBase<ExtListT, S>::GetExtensions() const
+{
+    vector<ExtListExtRef> Retval;
+
+    for(auto const& Ext : ExtensionData) {
+        if (Ext->template As<U>() != nullptr) {
+            Retval.push_back(Ext);
         }
+    }
+    return Retval;
+}
 
-        // Gatherer implementation
-        template <typename E, template <typename> class S>
-        inline Gatherer<E, S>::Gatherer(const function<bool(const ExpressionBase<E, S>*)>& Pred)
-            : ExpressionVisitorBase<E, S>("Gatherer"), Pred(Pred)
-        {
-            // Nothing here
+template <template <typename> class S>
+inline void ExpressionBase<ExtListT, S>::PurgeExtension(const ExtListExtRef& Ext) const
+{
+    ExtensionData.remove(Ext);
+}
+
+template <template <typename> class S>
+template <typename U>
+inline void
+ExpressionBase<ExtListT, S>::PurgeExtensionsOfType() const
+{
+    vector<ExtListT::iterator> ToRemove;
+
+    for (auto it = ExtensionData.begin(); it != ExtensionData.end(); ++it) {
+        if ((*it)->template As<U>() != nullptr) {
+            ToRemove.push_back(it);
         }
+    }
+
+    for (auto const& Elem : ToRemove) {
+        ExtensionData.erase(Elem);
+    }
+}
+
+template <template <typename> class S>
+inline void
+ExpressionBase<ExtListT, S>::PurgeAllExtensions() const
+{
+    ExtensionData.clear();
+}
+
+// ConstExpression implementation
+template <typename E, template <typename> class S>
+inline ConstExpression<E, S>::ConstExpression(ExprMgr<E, S>* Manager,
+                                              const string& ConstValue,
+                                              const TypeRef& ConstType,
+                                              const E& ExtVal)
+    : ExpressionBase<E, S>(Manager, ExtVal),
+      ConstValue(ConstValue),
+      ConstType(ConstType)
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline ConstExpression<E, S>::~ConstExpression()
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline const string& ConstExpression<E, S>::GetConstValue() const
+{
+    return ConstValue;
+}
+
+template <typename E, template <typename> class S>
+inline const typename ConstExpression<E, S>::TypeRef&
+ConstExpression<E, S>::GetConstType() const
+{
+    return ConstType;
+}
+
+template <typename E, template <typename> class S>
+inline i32 ConstExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
+{
+    auto OtherAsConst = Other->template As<ESMC::Exprs::ConstExpression>();
+    typename S<E>::TypeComparatorT Comp;
+    // All other exp types > ConstExpression
+    if (OtherAsConst == nullptr) {
+        return -1;
+    }
+    if (ConstValue < OtherAsConst->ConstValue) {
+        return -1;
+    } else if (ConstValue > OtherAsConst->ConstValue) {
+        return 1;
+    } else if (Comp(ConstType, OtherAsConst->ConstType)) {
+        return -1;
+    } else if (Comp(OtherAsConst->ConstType, ConstType)) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void ConstExpression<E, S>::ComputeHash() const
+{
+    this->HashCode = 0;
+    boost::hash_combine(this->HashCode, ConstValue);
+    boost::hash_combine(this->HashCode, ConstType->Hash());
+}
+
+template <typename E, template <typename> class S>
+inline void ConstExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
+{
+    Visitor->VisitConstExpression(this);
+}
+
+// VarExpression implementation
+template <typename E, template <typename> class S>
+inline VarExpression<E, S>::VarExpression(ExprMgr<E, S>* Manager,
+                                          const string& VarName,
+                                          const TypeRef& VarType,
+                                          const E& ExtVal)
+    : ExpressionBase<E, S>(Manager, ExtVal),
+      VarName(VarName), VarType(VarType)
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline VarExpression<E, S>::~VarExpression()
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline const string& VarExpression<E, S>::GetVarName() const
+{
+    return VarName;
+}
+
+template <typename E, template <typename> class S>
+inline const typename VarExpression<E, S>::TypeRef&
+VarExpression<E, S>::GetVarType() const
+{
+    return VarType;
+}
+
+template <typename E, template <typename> class S>
+inline i32 VarExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
+{
+    auto OtherAsVar = Other->template As<ESMC::Exprs::VarExpression>();
+    auto OtherAsConst = Other->template As<ConstExpression>();
+    typename S<E>::TypeComparatorT Comp;
+    // ConstExpression < VarExpression
+    if (OtherAsConst != nullptr) {
+        return 1;
+    }
+    // All other expressions > VarExpression
+    if (OtherAsVar == nullptr) {
+        return -1;
+    }
+
+    if (VarName < OtherAsVar->VarName) {
+        return -1;
+    } else if (VarName > OtherAsVar->VarName) {
+        return 1;
+    } else if (Comp(VarType, OtherAsVar->VarType)) {
+        return -1;
+    } else if (Comp(OtherAsVar->VarType, VarType)) {
+        return 1;
+    } else {
+        return 0;
+    }
+}
+
+template <typename E, template <typename> class S>
+inline void VarExpression<E, S>::ComputeHash() const
+{
+    this->HashCode = 0;
+    boost::hash_combine(this->HashCode, VarName);
+    boost::hash_combine(this->HashCode, VarType->Hash());
+}
+
+template <typename E, template <typename> class S>
+inline void VarExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
+{
+    Visitor->VisitVarExpression(this);
+}
 
 
-        template <typename E, template <typename> class S>
-        inline Gatherer<E, S>::~Gatherer()
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline void Gatherer<E, S>::VisitVarExpression(const VarExpression<E, S>* Exp)
-        {
-            ExpressionVisitorBase<E, S>::VisitVarExpression(Exp);
-            if (Pred(Exp)) {
-                GatheredExps.insert(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void Gatherer<E, S>::VisitConstExpression(const ConstExpression<E, S>* Exp)
-        {
-            ExpressionVisitorBase<E, S>::VisitConstExpression(Exp);
-            if (Pred(Exp)) {
-                GatheredExps.insert(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void Gatherer<E, S>::VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp)
-        {
-            ExpressionVisitorBase<E, S>::VisitBoundVarExpression(Exp);
-            if (Pred(Exp)) {
-                GatheredExps.insert(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void Gatherer<E, S>::VisitOpExpression(const OpExpression<E, S>* Exp)
-        {
-            ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
-            if (Pred(Exp)) {
-                GatheredExps.insert(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        Gatherer<E, S>::VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp)
-        {
-            ExpressionVisitorBase<E, S>::VisitEQuantifiedExpression(Exp);
-            if (Pred(Exp)) {
-                GatheredExps.insert(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void
-        Gatherer<E, S>::VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp)
-        {
-            ExpressionVisitorBase<E, S>::VisitAQuantifiedExpression(Exp);
-            if (Pred(Exp)) {
-                GatheredExps.insert(Exp);
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline typename Gatherer<E, S>::ExpSetT
-        Gatherer<E, S>::Do(const ExpT& Exp,
-                           const function<bool (const ExpressionBase<E, S> *)>& Pred)
-        {
-            Gatherer<E, S> TheGatherer(Pred);
-            Exp->Accept(&TheGatherer);
-            return TheGatherer.GatheredExps;
-        }
-
-
-        // ExpressionBase implementation
-        template <typename E, template <typename> class S>
-        inline ExpressionBase<E, S>::ExpressionBase(ExprMgr<E, S>* Manager,
+// BoundVarExpression implementation
+template <typename E, template <typename> class S>
+inline BoundVarExpression<E, S>::BoundVarExpression(ExprMgr<E, S>* Manager,
+                                                    const TypeRef& VarType,
+                                                    i64 VarIdx,
                                                     const E& ExtVal)
-            : Mgr(Manager), HashValid(false),
-              ExpType(S<E>::InvalidType), ExtensionData(ExtVal),
-              HashCode(0)
-        {
-            // Nothing here
+    : ExpressionBase<E, S>(Manager, ExtVal),
+      VarType(VarType), VarIdx(VarIdx)
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline BoundVarExpression<E, S>::~BoundVarExpression()
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline u64 BoundVarExpression<E, S>::GetVarIdx() const
+{
+    return VarIdx;
+}
+
+template <typename E, template <typename> class S>
+inline const typename BoundVarExpression<E, S>::TypeRef&
+BoundVarExpression<E, S>::GetVarType() const
+{
+    return VarType;
+}
+
+template <typename E, template <typename> class S>
+inline i32 BoundVarExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
+{
+    if ((Other->template As<ConstExpression>() != nullptr) ||
+        (Other->template As<VarExpression>() != nullptr)) {
+        return 1;
+    }
+    typename S<E>::TypeComparatorT Comp;
+    auto OtherAsBound = Other->template As<ESMC::Exprs::BoundVarExpression>();
+    // VarExpression < BoundVarExpression
+    if (OtherAsBound == nullptr) {
+        return -1;
+    } else {
+        if (VarIdx < OtherAsBound->VarIdx) {
+            return -1;
+        } else if (VarIdx > OtherAsBound->VarIdx) {
+            return 1;
+        } else if (Comp(VarType, OtherAsBound->VarType)) {
+            return -1;
+        } else if (Comp(OtherAsBound->VarType, VarType)) {
+            return 1;
+        } else {
+            return 0;
         }
+    }
+}
 
-        template <typename E, template <typename> class S>
-        inline ExpressionBase<E, S>::~ExpressionBase()
-        {
-            // Nothing here
-        }
+template <typename E, template <typename> class S>
+inline void BoundVarExpression<E, S>::ComputeHash() const
+{
+    this->HashCode = 0;
+    boost::hash_combine(this->HashCode, VarIdx);
+    boost::hash_combine(this->HashCode, VarType->Hash());
+}
 
-        template <typename E, template <typename> class S>
-        inline ExprMgr<E, S>*
-        ExpressionBase<E, S>::GetMgr() const
-        {
-            return Mgr;
-        }
+template <typename E, template <typename> class S>
+inline void BoundVarExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
+{
+    Visitor->VisitBoundVarExpression(this);
+}
 
-        template <typename E, template <typename> class S>
-        inline u64 ExpressionBase<E, S>::Hash() const
-        {
-            if (!HashValid) {
-                ComputeHash();
-                HashValid = true;
-            }
-            return HashCode;
-        }
+// OpExpression implementation
+template <typename E, template <typename> class S>
+inline OpExpression<E, S>::OpExpression(ExprMgr<E, S>* Manager,
+                                        i64 OpCode,
+                                        const vector<Expr<E, S>>& Children,
+                                        const E& ExtVal)
+    : ExpressionBase<E, S>(Manager, ExtVal), OpCode(OpCode), Children(Children)
+{
+    // Nothing here
+}
 
-        template <typename E, template <typename> class S>
-        inline u64 ExpressionBase<E, S>::Rehash() const
-        {
-            ComputeHash();
-            HashValid = true;
-            return HashCode;
-        }
+template <typename E, template <typename> class S>
+inline OpExpression<E, S>::~OpExpression()
+{
+    // Nothing here
+}
 
+template <typename E, template <typename> class S>
+inline i64 OpExpression<E, S>::GetOpCode() const
+{
+    return OpCode;
+}
 
-        template <typename E, template <typename> class S>
-        inline const typename ExpressionBase<E, S>::TypeRef&
-        ExpressionBase<E, S>::GetType() const
-        {
-            return ExpType;
-        }
+template <typename E, template <typename> class S>
+inline const vector<Expr<E, S>>&
+    OpExpression<E, S>::GetChildren() const
+{
+    return Children;
+}
 
-        template <typename E, template <typename> class S>
-        inline void
-        ExpressionBase<E, S>::SetType(const TypeRef& Type) const
-        {
-            ExpType = Type;
-        }
+template <typename E, template <typename> class S>
+inline i32 OpExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
+{
+    if ((Other->template As<ConstExpression>() != nullptr) ||
+        (Other->template As<VarExpression>() != nullptr) ||
+        (Other->template As<BoundVarExpression>() != nullptr)) {
+        return 1;
+    }
 
-        template <typename E, template <typename> class S>
-        inline bool ExpressionBase<E, S>::Equals(const ExpressionBase<E, S>* Other) const
-        {
-            if (Hash() != Other->Hash()) {
-                return false;
-            }
-            return (Compare(Other) == 0);
-        }
+    auto OtherAsOp = Other->template As<ESMC::Exprs::OpExpression>();
 
-        template <typename E, template <typename> class S>
-        inline bool ExpressionBase<E, S>::NEquals(const ExpressionBase<E, S>* Other) const
-        {
-            if (Hash() != Other->Hash()) {
-                return true;
-            }
-            return (Compare(Other) != 0);
-        }
+    if (OtherAsOp == nullptr) {
+        return -1;
+    }
 
-        template <typename E, template <typename> class S>
-        inline bool ExpressionBase<E, S>::LT(const ExpressionBase<E, S>* Other) const
-        {
-            return (Compare(Other) < 0);
-        }
-
-        template <typename E, template <typename> class S>
-        inline bool ExpressionBase<E, S>::LE(const ExpressionBase<E, S>* Other) const
-        {
-            return (Compare(Other) <= 0);
-        }
-
-        template <typename E, template <typename> class S>
-        inline bool ExpressionBase<E, S>::GT(const ExpressionBase<E, S>* Other) const
-        {
-            return (Compare(Other) > 0);
-        }
-
-        template <typename E, template <typename> class S>
-        inline bool ExpressionBase<E, S>::GE(const ExpressionBase<E, S>* Other) const
-        {
-            return (Compare(Other) >= 0);
-        }
-
-        template <typename E, template <typename> class S>
-        inline bool ExpressionBase<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
-        {
-            return (Equals(Other));
-        }
-
-        template <typename E, template <typename> class S>
-        string ExpressionBase<E, S>::ToString(u32 Verbosity) const
-        {
-            auto Sem = Mgr->GetSemanticizer();
-            return (Sem->ExprToString(this));
-        }
-
-
-        // ExpressionBase with ExtList specialization
-        template <template <typename> class S>
-        inline ExpressionBase<ExtListT, S>::ExpressionBase(ExprMgr<ExtListT, S>* Manager,
-                                                          const ExtListT& ExtVal)
-            : Mgr(Manager), HashValid(false),
-              ExpType(-1), ExtensionData(ExtVal),
-              HashCode(0)
-        {
-            // Nothing here
-        }
-
-        template <template <typename> class S>
-        inline ExpressionBase<ExtListT, S>::~ExpressionBase()
-        {
-            // Nothing here
-        }
-
-        template <template <typename> class S>
-        inline ExprMgr<ExtListT, S>*
-        ExpressionBase<ExtListT, S>::GetMgr() const
-        {
-            return Mgr;
-        }
-
-        template <template <typename> class S>
-        inline u64 ExpressionBase<ExtListT, S>::Hash() const
-        {
-            if (!HashValid) {
-                ComputeHash();
-                HashValid = true;
-            }
-            return HashCode;
-        }
-
-        template <template <typename> class S>
-        inline u64 ExpressionBase<ExtListT, S>::Rehash() const
-        {
-            ComputeHash();
-            HashValid = true;
-            return HashCode;
-        }
-
-        template <template <typename> class S>
-        inline i64 ExpressionBase<ExtListT, S>::GetType() const
-        {
-            return ExpType;
-        }
-
-        template <template <typename> class S>
-        inline void ExpressionBase<ExtListT, S>::SetType(i64 Type) const
-        {
-            ExpType = Type;
-        }
-
-        template <template <typename> class S>
-        inline bool ExpressionBase<ExtListT, S>::Equals(const ExpressionBase<ExtListT, S>* Other)
-            const
-        {
-            if (Hash() != Other->Hash()) {
-                return false;
-            }
-            return (Compare(Other) == 0);
-        }
-
-        template <template <typename> class S>
-        inline bool ExpressionBase<ExtListT, S>::NEquals(const ExpressionBase<ExtListT, S>* Other)
-            const
-        {
-            if (Hash() != Other->Hash()) {
-                return true;
-            }
-            return (Compare(Other) != 0);
-        }
-
-        template <template <typename> class S>
-        inline bool ExpressionBase<ExtListT, S>::LT(const ExpressionBase<ExtListT, S>* Other) const
-        {
-            return (Compare(Other) < 0);
-        }
-
-        template <template <typename> class S>
-        inline bool ExpressionBase<ExtListT, S>::LE(const ExpressionBase<ExtListT, S>* Other) const
-        {
-            return (Compare(Other) <= 0);
-        }
-
-        template <template <typename> class S>
-        inline bool ExpressionBase<ExtListT, S>::GT(const ExpressionBase<ExtListT, S>* Other) const
-        {
-            return (Compare(Other) > 0);
-        }
-
-        template <template <typename> class S>
-        inline bool ExpressionBase<ExtListT, S>::GE(const ExpressionBase<ExtListT, S>* Other) const
-        {
-            return (Compare(Other) >= 0);
-        }
-
-        template <template <typename> class S>
-        inline bool ExpressionBase<ExtListT, S>::FastEQ(const ExpressionBase<ExtListT, S>* Other)
-            const
-        {
-            return (Equals(Other));
-        }
-
-        template <template <typename> class S>
-        string ExpressionBase<ExtListT, S>::ToString(u32 Verbosity) const
-        {
-            auto Sem = Mgr->GetSemanticizer();
-            return (Sem->ExprToString(this));
-        }
-
-        // Additional methods specific to ExtList Expressions
-        template <template <typename> class S>
-        template <typename U>
-        inline const ExtListExtRef&
-        ExpressionBase<ExtListT, S>::GetExtension() const
-        {
-            for (auto const& Ext : ExtensionData) {
-                if (Ext->template As<U>() != nullptr) {
-                    return Ext;
-                }
+    if (OpCode < OtherAsOp->OpCode) {
+        return -1;
+    } else if (OpCode > OtherAsOp->OpCode) {
+        return 1;
+    } else if (Children.size() < OtherAsOp->Children.size()) {
+        return -1;
+    } else if (Children.size() > OtherAsOp->Children.size()) {
+        return 1;
+    } else {
+        for(u32 i = 0; i < Children.size(); ++i) {
+            auto Res = Children[i]->Compare(OtherAsOp->Children[i]);
+            if (Res != 0) {
+                return Res;
             }
         }
-
-        template <template <typename> class S>
-        template <typename U>
-        inline vector<ExtListExtRef>
-        ExpressionBase<ExtListT, S>::GetExtensions() const
-        {
-            vector<ExtListExtRef> Retval;
-
-            for(auto const& Ext : ExtensionData) {
-                if (Ext->template As<U>() != nullptr) {
-                    Retval.push_back(Ext);
-                }
-            }
-            return Retval;
-        }
-
-        template <template <typename> class S>
-        inline void ExpressionBase<ExtListT, S>::PurgeExtension(const ExtListExtRef& Ext) const
-        {
-            ExtensionData.remove(Ext);
-        }
-
-        template <template <typename> class S>
-        template <typename U>
-        inline void
-        ExpressionBase<ExtListT, S>::PurgeExtensionsOfType() const
-        {
-            vector<ExtListT::iterator> ToRemove;
-
-            for (auto it = ExtensionData.begin(); it != ExtensionData.end(); ++it) {
-                if ((*it)->template As<U>() != nullptr) {
-                    ToRemove.push_back(it);
-                }
-            }
-
-            for (auto const& Elem : ToRemove) {
-                ExtensionData.erase(Elem);
-            }
-        }
-
-        template <template <typename> class S>
-        inline void
-        ExpressionBase<ExtListT, S>::PurgeAllExtensions() const
-        {
-            ExtensionData.clear();
-        }
-
-        // ConstExpression implementation
-        template <typename E, template <typename> class S>
-        inline ConstExpression<E, S>::ConstExpression(ExprMgr<E, S>* Manager,
-                                                      const string& ConstValue,
-                                                      const TypeRef& ConstType,
-                                                      const E& ExtVal)
-            : ExpressionBase<E, S>(Manager, ExtVal),
-              ConstValue(ConstValue),
-              ConstType(ConstType)
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline ConstExpression<E, S>::~ConstExpression()
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline const string& ConstExpression<E, S>::GetConstValue() const
-        {
-            return ConstValue;
-        }
-
-        template <typename E, template <typename> class S>
-        inline const typename ConstExpression<E, S>::TypeRef&
-        ConstExpression<E, S>::GetConstType() const
-        {
-            return ConstType;
-        }
-
-        template <typename E, template <typename> class S>
-        inline i32 ConstExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
-        {
-            auto OtherAsConst = Other->template As<ESMC::Exprs::ConstExpression>();
-            typename S<E>::TypeComparatorT Comp;
-            // All other exp types > ConstExpression
-            if (OtherAsConst == nullptr) {
-                return -1;
-            }
-            if (ConstValue < OtherAsConst->ConstValue) {
-                return -1;
-            } else if (ConstValue > OtherAsConst->ConstValue) {
-                return 1;
-            } else if (Comp(ConstType, OtherAsConst->ConstType)) {
-                return -1;
-            } else if (Comp(OtherAsConst->ConstType, ConstType)) {
-                return 1;
-            } else {
-                return 0;
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void ConstExpression<E, S>::ComputeHash() const
-        {
-            this->HashCode = 0;
-            boost::hash_combine(this->HashCode, ConstValue);
-            boost::hash_combine(this->HashCode, ConstType->Hash());
-        }
-
-        template <typename E, template <typename> class S>
-        inline void ConstExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
-        {
-            Visitor->VisitConstExpression(this);
-        }
-
-        // VarExpression implementation
-        template <typename E, template <typename> class S>
-        inline VarExpression<E, S>::VarExpression(ExprMgr<E, S>* Manager,
-                                                  const string& VarName,
-                                                  const TypeRef& VarType,
-                                                  const E& ExtVal)
-            : ExpressionBase<E, S>(Manager, ExtVal),
-              VarName(VarName), VarType(VarType)
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline VarExpression<E, S>::~VarExpression()
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline const string& VarExpression<E, S>::GetVarName() const
-        {
-            return VarName;
-        }
-
-        template <typename E, template <typename> class S>
-        inline const typename VarExpression<E, S>::TypeRef&
-        VarExpression<E, S>::GetVarType() const
-        {
-            return VarType;
-        }
-
-        template <typename E, template <typename> class S>
-        inline i32 VarExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
-        {
-            auto OtherAsVar = Other->template As<ESMC::Exprs::VarExpression>();
-            auto OtherAsConst = Other->template As<ConstExpression>();
-            typename S<E>::TypeComparatorT Comp;
-            // ConstExpression < VarExpression
-            if (OtherAsConst != nullptr) {
-                return 1;
-            }
-            // All other expressions > VarExpression
-            if (OtherAsVar == nullptr) {
-                return -1;
-            }
-
-            if (VarName < OtherAsVar->VarName) {
-                return -1;
-            } else if (VarName > OtherAsVar->VarName) {
-                return 1;
-            } else if (Comp(VarType, OtherAsVar->VarType)) {
-                return -1;
-            } else if (Comp(OtherAsVar->VarType, VarType)) {
-                return 1;
-            } else {
-                return 0;
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void VarExpression<E, S>::ComputeHash() const
-        {
-            this->HashCode = 0;
-            boost::hash_combine(this->HashCode, VarName);
-            boost::hash_combine(this->HashCode, VarType->Hash());
-        }
-
-        template <typename E, template <typename> class S>
-        inline void VarExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
-        {
-            Visitor->VisitVarExpression(this);
-        }
-
-
-        // BoundVarExpression implementation
-        template <typename E, template <typename> class S>
-        inline BoundVarExpression<E, S>::BoundVarExpression(ExprMgr<E, S>* Manager,
-                                                            const TypeRef& VarType,
-                                                            i64 VarIdx,
-                                                            const E& ExtVal)
-            : ExpressionBase<E, S>(Manager, ExtVal),
-              VarType(VarType), VarIdx(VarIdx)
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline BoundVarExpression<E, S>::~BoundVarExpression()
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline u64 BoundVarExpression<E, S>::GetVarIdx() const
-        {
-            return VarIdx;
-        }
-
-        template <typename E, template <typename> class S>
-        inline const typename BoundVarExpression<E, S>::TypeRef&
-        BoundVarExpression<E, S>::GetVarType() const
-        {
-            return VarType;
-        }
-
-        template <typename E, template <typename> class S>
-        inline i32 BoundVarExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
-        {
-            if ((Other->template As<ConstExpression>() != nullptr) ||
-                (Other->template As<VarExpression>() != nullptr)) {
-                return 1;
-            }
-            typename S<E>::TypeComparatorT Comp;
-            auto OtherAsBound = Other->template As<ESMC::Exprs::BoundVarExpression>();
-            // VarExpression < BoundVarExpression
-            if (OtherAsBound == nullptr) {
-                return -1;
-            } else {
-                if (VarIdx < OtherAsBound->VarIdx) {
-                    return -1;
-                } else if (VarIdx > OtherAsBound->VarIdx) {
-                    return 1;
-                } else if (Comp(VarType, OtherAsBound->VarType)) {
-                    return -1;
-                } else if (Comp(OtherAsBound->VarType, VarType)) {
-                    return 1;
-                } else {
-                    return 0;
-                }
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void BoundVarExpression<E, S>::ComputeHash() const
-        {
-            this->HashCode = 0;
-            boost::hash_combine(this->HashCode, VarIdx);
-            boost::hash_combine(this->HashCode, VarType->Hash());
-        }
-
-        template <typename E, template <typename> class S>
-        inline void BoundVarExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
-        {
-            Visitor->VisitBoundVarExpression(this);
-        }
-
-        // OpExpression implementation
-        template <typename E, template <typename> class S>
-        inline OpExpression<E, S>::OpExpression(ExprMgr<E, S>* Manager,
-                                                i64 OpCode,
-                                                const vector<Expr<E, S>>& Children,
-                                                const E& ExtVal)
-            : ExpressionBase<E, S>(Manager, ExtVal), OpCode(OpCode), Children(Children)
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline OpExpression<E, S>::~OpExpression()
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline i64 OpExpression<E, S>::GetOpCode() const
-        {
-            return OpCode;
-        }
-
-        template <typename E, template <typename> class S>
-        inline const vector<Expr<E, S>>&
-        OpExpression<E, S>::GetChildren() const
-        {
-            return Children;
-        }
-
-        template <typename E, template <typename> class S>
-        inline i32 OpExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
-        {
-            if ((Other->template As<ConstExpression>() != nullptr) ||
-                (Other->template As<VarExpression>() != nullptr) ||
-                (Other->template As<BoundVarExpression>() != nullptr)) {
-                return 1;
-            }
-
-            auto OtherAsOp = Other->template As<ESMC::Exprs::OpExpression>();
-
-            if (OtherAsOp == nullptr) {
-                return -1;
-            }
-
-            if (OpCode < OtherAsOp->OpCode) {
-                return -1;
-            } else if (OpCode > OtherAsOp->OpCode) {
-                return 1;
-            } else if (Children.size() < OtherAsOp->Children.size()) {
-                return -1;
-            } else if (Children.size() > OtherAsOp->Children.size()) {
-                return 1;
-            } else {
-                for(u32 i = 0; i < Children.size(); ++i) {
-                    auto Res = Children[i]->Compare(OtherAsOp->Children[i]);
-                    if (Res != 0) {
-                        return Res;
-                    }
-                }
-                return 0;
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline bool OpExpression<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
-        {
-            if (this->Hash() != Other->Hash()) {
-                return false;
-            }
-            auto OtherAsOp = Other->template As<ESMC::Exprs::OpExpression>();
-            if (OtherAsOp == nullptr) {
-                return false;
-            }
-
-            if (OtherAsOp->OpCode != OpCode ||
-                OtherAsOp->Children.size() != Children.size()) {
-                return false;
-            }
-
-            const u32 NumChildren = Children.size();
-            for (u32 i = 0; i < NumChildren; ++i) {
-                if (Children[i] != OtherAsOp->Children[i]) {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        template <typename E, template <typename> class S>
-        inline void OpExpression<E, S>::ComputeHash() const
-        {
-            this->HashCode = 0;
-            boost::hash_combine(this->HashCode, OpCode);
-            for (auto const& Child : Children) {
-                boost::hash_combine(this->HashCode, Child->Hash());
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void OpExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
-        {
-            Visitor->VisitOpExpression(this);
-        }
-
-        template <typename E, template <typename> class S>
-        inline QuantifiedExpressionBase<E, S>::QuantifiedExpressionBase
-        (
-         ExprMgr<E, S>* Manager,
-         const vector<TypeRef>& QVarTypes,
-         const Expr<E, S>& QExpression,
-         const E& ExtVal
-         )
-            : ExpressionBase<E, S>(Manager, ExtVal), QVarTypes(QVarTypes), QExpression(QExpression)
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline QuantifiedExpressionBase<E, S>::~QuantifiedExpressionBase()
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline const vector<typename QuantifiedExpressionBase<E, S>::TypeRef>&
-        QuantifiedExpressionBase<E, S>::GetQVarTypes() const
-        {
-            return QVarTypes;
-        }
-
-        template <typename E, template <typename> class S>
-        inline const Expr<E, S>& QuantifiedExpressionBase<E, S>::GetQExpression() const
-        {
-            return QExpression;
-        }
-
-        template <typename E, template <typename> class S>
-        inline i32
-        QuantifiedExpressionBase<E, S>::CompareInternal(const QuantifiedExpressionBase<E, S>*
-                                                        Other) const
-        {
-            typename S<E>::TypeComparatorT Comp;
-
-            if (QVarTypes.size() < Other->QVarTypes.size()) {
-                return -1;
-            } else if (QVarTypes.size() > Other->QVarTypes.size()) {
-                return 1;
-            } else {
-                for (u32 i = 0; i < QVarTypes.size(); ++i) {
-
-                    i32 Res = 0;
-                    if (Comp(QVarTypes[i], Other->QVarTypes[i])) {
-                        Res = -1;
-                    } else if (Comp(Other->QVarTypes[i], QVarTypes[i])) {
-                        Res = 1;
-                    }
-                    if (Res != 0) {
-                        return Res;
-                    }
-                }
-                auto Res2 = QExpression->Compare(Other->QExpression);
-                return Res2;
-            }
-        }
-
-        template <typename E, template <typename> class S>
-        inline void QuantifiedExpressionBase<E, S>::ComputeHashInternal() const
-        {
-            this->HashCode = 0;
-            for (auto const& VarType : QVarTypes) {
-                boost::hash_combine(this->HashCode, VarType->Hash());
-            }
-
-            boost::hash_combine(this->HashCode, QExpression->Hash());
-        }
-
-        template <typename E, template <typename> class S>
-        inline bool QuantifiedExpressionBase<E, S>::
-        FastEQInternal(const QuantifiedExpressionBase<E, S>* Other)
-            const
-        {
-            if (Other->QVarTypes.size() != QVarTypes.size()) {
-                return false;
-            }
-
-            const u32 NumQVars = QVarTypes.size();
-
-            for (u32 i = 0; i < NumQVars; ++i) {
-                if (QVarTypes[i] != Other->QVarTypes[i]) {
-                    return false;
-                }
-            }
-            return (QExpression == Other->QExpression);
-        }
-
-
-        // EQuantifiedExpression implementation
-        template <typename E, template <typename> class S>
-        inline EQuantifiedExpression<E, S>::~EQuantifiedExpression()
-        {
-            // Nothing here
-        }
-
-        template <typename E, template <typename> class S>
-        inline i32 EQuantifiedExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
-        {
-            if ((Other->template As<VarExpression>() != nullptr) ||
-                (Other->template As<ConstExpression>() != nullptr) ||
-                (Other->template As<BoundVarExpression>() != nullptr) ||
-                (Other->template As<OpExpression>() != nullptr)) {
-                return 1;
-            }
-            auto OtherAsExists = Other->template As<ESMC::Exprs::EQuantifiedExpression>();
-            if (OtherAsExists == nullptr) {
-                return -1;
-            }
-
-            return QuantifiedExpressionBase<E, S>::CompareInternal(OtherAsExists);
-        }
-
-        template <typename E, template <typename> class S>
-        inline bool EQuantifiedExpression<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
-        {
-            if (this->Hash() != Other->Hash()) {
-                return false;
-            }
-            auto OtherAsExists = Other->template As<ESMC::Exprs::EQuantifiedExpression>();
-            if (OtherAsExists == nullptr) {
-                return false;
-            }
-
-            return this->FastEQInternal(OtherAsExists);
-        }
-
-        template <typename E, template <typename> class S>
-        inline void EQuantifiedExpression<E, S>::ComputeHash() const
-        {
-            this->ComputeHashInternal();
-            boost::hash_combine(this->HashCode, (string)"exists");
-        }
-
-        template <typename E, template <typename> class S>
-        inline void EQuantifiedExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
-        {
-            Visitor->VisitEQuantifiedExpression(this);
-        }
-
-        template <typename E, template <typename> class S>
-        inline bool EQuantifiedExpression<E, S>::IsForAll() const
-        {
+        return 0;
+    }
+}
+
+template <typename E, template <typename> class S>
+inline bool OpExpression<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
+{
+    if (this->Hash() != Other->Hash()) {
+        return false;
+    }
+    auto OtherAsOp = Other->template As<ESMC::Exprs::OpExpression>();
+    if (OtherAsOp == nullptr) {
+        return false;
+    }
+
+    if (OtherAsOp->OpCode != OpCode ||
+        OtherAsOp->Children.size() != Children.size()) {
+        return false;
+    }
+
+    const u32 NumChildren = Children.size();
+    for (u32 i = 0; i < NumChildren; ++i) {
+        if (Children[i] != OtherAsOp->Children[i]) {
             return false;
         }
+    }
+    return true;
+}
 
-        template <typename E, template <typename> class S>
-        inline bool EQuantifiedExpression<E, S>::IsExists() const
-        {
-            return true;
-        }
+template <typename E, template <typename> class S>
+inline void OpExpression<E, S>::ComputeHash() const
+{
+    this->HashCode = 0;
+    boost::hash_combine(this->HashCode, OpCode);
+    for (auto const& Child : Children) {
+        boost::hash_combine(this->HashCode, Child->Hash());
+    }
+}
 
+template <typename E, template <typename> class S>
+inline void OpExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
+{
+    Visitor->VisitOpExpression(this);
+}
 
-        // AQuantifiedExpression implementation
-        template <typename E, template <typename> class S>
-        inline AQuantifiedExpression<E, S>::~AQuantifiedExpression()
-        {
-            // Nothing here
-        }
+template <typename E, template <typename> class S>
+inline QuantifiedExpressionBase<E, S>::QuantifiedExpressionBase
+(
+ ExprMgr<E, S>* Manager,
+ const vector<TypeRef>& QVarTypes,
+ const Expr<E, S>& QExpression,
+ const E& ExtVal
+ )
+    : ExpressionBase<E, S>(Manager, ExtVal), QVarTypes(QVarTypes), QExpression(QExpression)
+{
+    // Nothing here
+}
 
-        template <typename E, template <typename> class S>
-        inline i32 AQuantifiedExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
-        {
-            if ((Other->template As<VarExpression>() != nullptr) ||
-                (Other->template As<ConstExpression>() != nullptr) ||
-                (Other->template As<BoundVarExpression>() != nullptr) ||
-                (Other->template As<OpExpression>() != nullptr) ||
-                (Other->template As<EQuantifiedExpression>() != nullptr)) {
-                return 1;
+template <typename E, template <typename> class S>
+inline QuantifiedExpressionBase<E, S>::~QuantifiedExpressionBase()
+{
+    // Nothing here
+}
+
+template <typename E, template <typename> class S>
+inline const vector<typename QuantifiedExpressionBase<E, S>::TypeRef>&
+QuantifiedExpressionBase<E, S>::GetQVarTypes() const
+{
+    return QVarTypes;
+}
+
+template <typename E, template <typename> class S>
+inline const Expr<E, S>& QuantifiedExpressionBase<E, S>::GetQExpression() const
+{
+    return QExpression;
+}
+
+template <typename E, template <typename> class S>
+inline i32
+QuantifiedExpressionBase<E, S>::CompareInternal(const QuantifiedExpressionBase<E, S>*
+                                                Other) const
+{
+    typename S<E>::TypeComparatorT Comp;
+
+    if (QVarTypes.size() < Other->QVarTypes.size()) {
+        return -1;
+    } else if (QVarTypes.size() > Other->QVarTypes.size()) {
+        return 1;
+    } else {
+        for (u32 i = 0; i < QVarTypes.size(); ++i) {
+
+            i32 Res = 0;
+            if (Comp(QVarTypes[i], Other->QVarTypes[i])) {
+                Res = -1;
+            } else if (Comp(Other->QVarTypes[i], QVarTypes[i])) {
+                Res = 1;
             }
-            auto OtherAsForall = Other->template As<ESMC::Exprs::AQuantifiedExpression>();
-            // In case we decide to add more expression types
-            if (OtherAsForall == nullptr) {
-                return -1;
+            if (Res != 0) {
+                return Res;
             }
-
-            return QuantifiedExpressionBase<E, S>::CompareInternal(OtherAsForall);
         }
+        auto Res2 = QExpression->Compare(Other->QExpression);
+        return Res2;
+    }
+}
 
-        template <typename E, template <typename> class S>
-        inline bool AQuantifiedExpression<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
-        {
-            if (this->Hash() != Other->Hash()) {
-                return false;
-            }
-            auto OtherAsForAll = Other->template As<ESMC::Exprs::EQuantifiedExpression>();
-            if (OtherAsForAll == nullptr) {
-                return false;
-            }
+template <typename E, template <typename> class S>
+inline void QuantifiedExpressionBase<E, S>::ComputeHashInternal() const
+{
+    this->HashCode = 0;
+    for (auto const& VarType : QVarTypes) {
+        boost::hash_combine(this->HashCode, VarType->Hash());
+    }
 
-            return this->FastEQInternal(OtherAsForAll);
-        }
+    boost::hash_combine(this->HashCode, QExpression->Hash());
+}
 
-        template <typename E, template <typename> class S>
-        inline void AQuantifiedExpression<E, S>::ComputeHash() const
-        {
-            this->ComputeHashInternal();
-            boost::hash_combine(this->HashCode, (string)"forall");
-        }
+template <typename E, template <typename> class S>
+inline bool QuantifiedExpressionBase<E, S>::
+FastEQInternal(const QuantifiedExpressionBase<E, S>* Other)
+    const
+{
+    if (Other->QVarTypes.size() != QVarTypes.size()) {
+        return false;
+    }
 
-        template <typename E, template <typename> class S>
-        inline void AQuantifiedExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
-        {
-            Visitor->VisitAQuantifiedExpression(this);
-        }
+    const u32 NumQVars = QVarTypes.size();
 
-        template <typename E, template <typename> class S>
-        inline bool AQuantifiedExpression<E, S>::IsForAll() const
-        {
-            return true;
-        }
-
-        template <typename E, template <typename> class S>
-        inline bool AQuantifiedExpression<E, S>::IsExists() const
-        {
+    for (u32 i = 0; i < NumQVars; ++i) {
+        if (QVarTypes[i] != Other->QVarTypes[i]) {
             return false;
         }
+    }
+    return (QExpression == Other->QExpression);
+}
 
-        // ExprMgr implementation
-        template <typename E, template <typename> class S>
-        template <typename... ArgTypes>
-        inline ExprMgr<E, S>::ExprMgr(ArgTypes&&... Args)
-        {
-            Sem = new S<E>(this, forward<ArgTypes>(Args)...);
-            TrueExp = ExpCache.template Get<ConstExpression<E, S>>(this, "true",
-                                                                   Sem->MakeBoolType(),
-                                                                   E());
-            FalseExp = ExpCache.template Get<ConstExpression<E, S>>(this, "false",
-                                                                    Sem->MakeBoolType(),
-                                                                    E());
-        }
 
-        template <typename E, template <typename> class S>
-        inline ExprMgr<E, S>::~ExprMgr()
-        {
-            delete Sem;
-        }
+// EQuantifiedExpression implementation
+template <typename E, template <typename> class S>
+inline EQuantifiedExpression<E, S>::~EQuantifiedExpression()
+{
+    // Nothing here
+}
 
-        template <typename E, template <typename> class S>
-        template <typename T, typename... ArgTypes>
-        inline typename ExprMgr<E, S>::TypeT
-        ExprMgr<E, S>::MakeType(ArgTypes&&... Args)
-        {
-            return Sem->template MakeType<T>(forward<ArgTypes>(Args)...);
-        }
+template <typename E, template <typename> class S>
+inline i32 EQuantifiedExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
+{
+    if ((Other->template As<VarExpression>() != nullptr) ||
+        (Other->template As<ConstExpression>() != nullptr) ||
+        (Other->template As<BoundVarExpression>() != nullptr) ||
+        (Other->template As<OpExpression>() != nullptr)) {
+        return 1;
+    }
+    auto OtherAsExists = Other->template As<ESMC::Exprs::EQuantifiedExpression>();
+    if (OtherAsExists == nullptr) {
+        return -1;
+    }
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::TypeT
-        ExprMgr<E, S>::GetNamedType(const string& Name) const
-        {
-            return Sem->GetNamedType(Name);
-        }
+    return QuantifiedExpressionBase<E, S>::CompareInternal(OtherAsExists);
+}
 
-        template <typename E, template <typename> class S>
-        void ExprMgr<E, S>::CheckMgr(const vector<ExpT>& Children) const
-        {
-            for (auto const& Child : Children) {
-                CheckMgr(Child);
-            }
-        }
+template <typename E, template <typename> class S>
+inline bool EQuantifiedExpression<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
+{
+    if (this->Hash() != Other->Hash()) {
+        return false;
+    }
+    auto OtherAsExists = Other->template As<ESMC::Exprs::EQuantifiedExpression>();
+    if (OtherAsExists == nullptr) {
+        return false;
+    }
 
-        template <typename E, template <typename> class S>
-        void ExprMgr<E, S>::CheckMgr(const ExpT& Exp) const
-        {
-            if (Exp->GetMgr() != this) {
-                throw ExprTypeError("ExprMgr: I don't own this expression!");
-            }
-        }
+    return this->FastEQInternal(OtherAsExists);
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::Internalize(const ExpT& Exp)
-        {
-            // audupa: 01/15/14, we don't need to internalize
-            // the children, the assumption is that the canonicalizer
-            // will not introduce any NEW expressions
-            return ExpCache.Get(Exp);
+template <typename E, template <typename> class S>
+inline void EQuantifiedExpression<E, S>::ComputeHash() const
+{
+    this->ComputeHashInternal();
+    boost::hash_combine(this->HashCode, (string)"exists");
+}
 
-            // const_cast<ExpressionBase<E, S>*>(&*Exp)->Mgr = this;
-            // if ((Exp->template As<ConstExpression>() != nullptr) ||
-            //     (Exp->template As<VarExpression>() != nullptr) ||
-            //     (Exp->template As<BoundVarExpression>() != nullptr)) {
-            //     return ExpCache.Get(Exp);
-            // }
-            // auto ExpAsOp = Exp->template As<OpExpression>();
-            // if (ExpAsOp != nullptr) {
+template <typename E, template <typename> class S>
+inline void EQuantifiedExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
+{
+    Visitor->VisitEQuantifiedExpression(this);
+}
 
-            //     // First check if I already have an entry in the cache
-            //     auto Existing = ExpCache.Find(Exp);
-            //     if (Existing != ExpT::NullPtr) {
-            //         return Existing;
-            //     } else {
+template <typename E, template <typename> class S>
+inline bool EQuantifiedExpression<E, S>::IsForAll() const
+{
+    return false;
+}
 
-            //         auto const& Children = ExpAsOp->GetChildren();
-            //         const u32 NumChildren = Children.size();
-            //         vector<ExpT> IntChildren(NumChildren);
-            //         for (u32 i = 0; i < NumChildren; ++i) {
-            //             IntChildren[i] = Internalize(Children[i]);
-            //         }
-            //         return ExpCache.template Put<OpExpression<E, S>>(this,
-            //                                                          ExpAsOp->GetOpCode(),
-            //                                                          IntChildren,
-            //                                                          Exp->ExtensionData);
-            //     }
-            // }
-            // auto ExpAsQuantified = Exp->template As<QuantifiedExpressionBase>();
-            // if (ExpAsQuantified != nullptr) {
-            //     auto const& QVarTypes = ExpAsQuantified->GetQVarTypes();
-            //     auto IntQExpr = Internalize(ExpAsQuantified->GetQExpression());
-            //     if (ExpAsQuantified->IsForAll()) {
-            //         return ExpCache.template Get<AQuantifiedExpression<E, S>>(this,
-            //                                                                   QVarTypes,
-            //                                                                   IntQExpr,
-            //                                                                   Exp->ExtensionData);
-            //     } else {
-            //         return ExpCache.template Get<EQuantifiedExpression<E, S>>(this,
-            //                                                                   QVarTypes,
-            //                                                                   IntQExpr,
-            //                                                                   Exp->ExtensionData);
-            //     }
-            // } else {
-            //     throw ExprTypeError("Strange type of expression encountered");
-            // }
-        }
+template <typename E, template <typename> class S>
+inline bool EQuantifiedExpression<E, S>::IsExists() const
+{
+    return true;
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeTrue(const E& ExtVal)
-        {
-            auto Retval = ExpCache.template Get<ConstExpression<E, S>>(this,
-                                                                       "true",
-                                                                       Sem->MakeBoolType(),
-                                                                       ExtVal);
-            Sem->TypeCheck(Retval);
-            return Retval;
-        }
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeFalse(const E& ExtVal)
-        {
-            auto Retval = ExpCache.template Get<ConstExpression<E, S>>(this,
-                                                                       "false",
-                                                                       Sem->MakeBoolType(),
-                                                                       ExtVal);
-            Sem->TypeCheck(Retval);
-            return Retval;
-        }
+// AQuantifiedExpression implementation
+template <typename E, template <typename> class S>
+inline AQuantifiedExpression<E, S>::~AQuantifiedExpression()
+{
+    // Nothing here
+}
 
-        template <typename E, template<typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeVal(const string& ValString, const TypeT& ValType,
+template <typename E, template <typename> class S>
+inline i32 AQuantifiedExpression<E, S>::Compare(const ExpressionBase<E, S>* Other) const
+{
+    if ((Other->template As<VarExpression>() != nullptr) ||
+        (Other->template As<ConstExpression>() != nullptr) ||
+        (Other->template As<BoundVarExpression>() != nullptr) ||
+        (Other->template As<OpExpression>() != nullptr) ||
+        (Other->template As<EQuantifiedExpression>() != nullptr)) {
+        return 1;
+    }
+    auto OtherAsForall = Other->template As<ESMC::Exprs::AQuantifiedExpression>();
+    // In case we decide to add more expression types
+    if (OtherAsForall == nullptr) {
+        return -1;
+    }
+
+    return QuantifiedExpressionBase<E, S>::CompareInternal(OtherAsForall);
+}
+
+template <typename E, template <typename> class S>
+inline bool AQuantifiedExpression<E, S>::FastEQ(const ExpressionBase<E, S>* Other) const
+{
+    if (this->Hash() != Other->Hash()) {
+        return false;
+    }
+    auto OtherAsForAll = Other->template As<ESMC::Exprs::EQuantifiedExpression>();
+    if (OtherAsForAll == nullptr) {
+        return false;
+    }
+
+    return this->FastEQInternal(OtherAsForAll);
+}
+
+template <typename E, template <typename> class S>
+inline void AQuantifiedExpression<E, S>::ComputeHash() const
+{
+    this->ComputeHashInternal();
+    boost::hash_combine(this->HashCode, (string)"forall");
+}
+
+template <typename E, template <typename> class S>
+inline void AQuantifiedExpression<E, S>::Accept(ExpressionVisitorBase<E, S>* Visitor) const
+{
+    Visitor->VisitAQuantifiedExpression(this);
+}
+
+template <typename E, template <typename> class S>
+inline bool AQuantifiedExpression<E, S>::IsForAll() const
+{
+    return true;
+}
+
+template <typename E, template <typename> class S>
+inline bool AQuantifiedExpression<E, S>::IsExists() const
+{
+    return false;
+}
+
+// ExprMgr implementation
+template <typename E, template <typename> class S>
+template <typename... ArgTypes>
+inline ExprMgr<E, S>::ExprMgr(ArgTypes&&... Args)
+{
+    Sem = new S<E>(this, forward<ArgTypes>(Args)...);
+    TrueExp = ExpCache.template Get<ConstExpression<E, S>>(this, "true",
+                                                           Sem->MakeBoolType(),
+                                                           E());
+    FalseExp = ExpCache.template Get<ConstExpression<E, S>>(this, "false",
+                                                            Sem->MakeBoolType(),
+                                                            E());
+}
+
+template <typename E, template <typename> class S>
+inline ExprMgr<E, S>::~ExprMgr()
+{
+    delete Sem;
+}
+
+template <typename E, template <typename> class S>
+template <typename T, typename... ArgTypes>
+inline typename ExprMgr<E, S>::TypeT
+ExprMgr<E, S>::MakeType(ArgTypes&&... Args)
+{
+    return Sem->template MakeType<T>(forward<ArgTypes>(Args)...);
+}
+
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::TypeT
+ExprMgr<E, S>::GetNamedType(const string& Name) const
+{
+    return Sem->GetNamedType(Name);
+}
+
+template <typename E, template <typename> class S>
+void ExprMgr<E, S>::CheckMgr(const vector<ExpT>& Children) const
+{
+    for (auto const& Child : Children) {
+        CheckMgr(Child);
+    }
+}
+
+template <typename E, template <typename> class S>
+void ExprMgr<E, S>::CheckMgr(const ExpT& Exp) const
+{
+    if (Exp->GetMgr() != this) {
+        throw ExprTypeError("ExprMgr: I don't own this expression!");
+    }
+}
+
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::Internalize(const ExpT& Exp)
+{
+    // audupa: 01/15/14, we don't need to internalize
+    // the children, the assumption is that the canonicalizer
+    // will not introduce any NEW expressions
+    return ExpCache.Get(Exp);
+
+    // const_cast<ExpressionBase<E, S>*>(&*Exp)->Mgr = this;
+    // if ((Exp->template As<ConstExpression>() != nullptr) ||
+    //     (Exp->template As<VarExpression>() != nullptr) ||
+    //     (Exp->template As<BoundVarExpression>() != nullptr)) {
+    //     return ExpCache.Get(Exp);
+    // }
+    // auto ExpAsOp = Exp->template As<OpExpression>();
+    // if (ExpAsOp != nullptr) {
+
+    //     // First check if I already have an entry in the cache
+    //     auto Existing = ExpCache.Find(Exp);
+    //     if (Existing != ExpT::NullPtr) {
+    //         return Existing;
+    //     } else {
+
+    //         auto const& Children = ExpAsOp->GetChildren();
+    //         const u32 NumChildren = Children.size();
+    //         vector<ExpT> IntChildren(NumChildren);
+    //         for (u32 i = 0; i < NumChildren; ++i) {
+    //             IntChildren[i] = Internalize(Children[i]);
+    //         }
+    //         return ExpCache.template Put<OpExpression<E, S>>(this,
+    //                                                          ExpAsOp->GetOpCode(),
+    //                                                          IntChildren,
+    //                                                          Exp->ExtensionData);
+    //     }
+    // }
+    // auto ExpAsQuantified = Exp->template As<QuantifiedExpressionBase>();
+    // if (ExpAsQuantified != nullptr) {
+    //     auto const& QVarTypes = ExpAsQuantified->GetQVarTypes();
+    //     auto IntQExpr = Internalize(ExpAsQuantified->GetQExpression());
+    //     if (ExpAsQuantified->IsForAll()) {
+    //         return ExpCache.template Get<AQuantifiedExpression<E, S>>(this,
+    //                                                                   QVarTypes,
+    //                                                                   IntQExpr,
+    //                                                                   Exp->ExtensionData);
+    //     } else {
+    //         return ExpCache.template Get<EQuantifiedExpression<E, S>>(this,
+    //                                                                   QVarTypes,
+    //                                                                   IntQExpr,
+    //                                                                   Exp->ExtensionData);
+    //     }
+    // } else {
+    //     throw ExprTypeError("Strange type of expression encountered");
+    // }
+}
+
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::MakeTrue(const E& ExtVal)
+{
+    auto Retval = ExpCache.template Get<ConstExpression<E, S>>(this,
+                                                               "true",
+                                                               Sem->MakeBoolType(),
+                                                               ExtVal);
+    Sem->TypeCheck(Retval);
+    return Retval;
+}
+
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::MakeFalse(const E& ExtVal)
+{
+    auto Retval = ExpCache.template Get<ConstExpression<E, S>>(this,
+                                                               "false",
+                                                               Sem->MakeBoolType(),
+                                                               ExtVal);
+    Sem->TypeCheck(Retval);
+    return Retval;
+}
+
+template <typename E, template<typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::MakeVal(const string& ValString, const TypeT& ValType,
+                       const E& ExtVal)
+{
+    auto TrimmedValString = boost::algorithm::trim_copy(ValString);
+    auto Retval =
+        ExpCache.template Get<ConstExpression<E, S>>(this,
+                                                     TrimmedValString,
+                                                     ValType, ExtVal);
+    Sem->TypeCheck(Retval);
+    return Retval;
+}
+
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::MakeVar(const string& VarName, const TypeT& VarType,
+                       const E& ExtVal)
+{
+    auto Retval =
+        ExpCache.template Get<VarExpression<E, S>>(this, VarName, VarType, ExtVal);
+    Sem->TypeCheck(Retval);
+    return Retval;
+}
+
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::MakeBoundVar(const TypeT& VarType,
+                            i64 VarUID, const E& ExtVal)
+{
+    auto Retval =
+        ExpCache.template Get<BoundVarExpression<E, S>>(this, VarType, VarUID, ExtVal);
+    Sem->TypeCheck(Retval);
+    return Retval;
+}
+
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::MakeExpr(const i64 OpCode,
+                        const vector<ExpT>& Children,
+                        const E& ExtVal)
+{
+    CheckMgr(Children);
+    ExpT NewExp = new OpExpression<E, S>(this, OpCode, Children, ExtVal);
+    auto Retval = Sem->Canonicalize(NewExp);
+    Retval = Internalize(Retval);
+    Sem->TypeCheck(Retval);
+    return Retval;
+}
+
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::MakeExpr(const i64 OpCode, const ExpT& Child1,
+                        const E& ExtVal)
+{
+    vector<ExpT> Children(1);
+    Children[0] = Child1;
+    return MakeExpr(OpCode, Children, ExtVal);
+}
+
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::MakeExpr(const i64 OpCode, const ExpT& Child1,
+                        const ExpT& Child2,
+                        const E& ExtVal)
+{
+    vector<ExpT> Children(2);
+    Children[0] = Child1;
+    Children[1] = Child2;
+    return MakeExpr(OpCode, Children, ExtVal);
+}
+
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::MakeExpr(const i64 OpCode, const ExpT& Child1,
+                        const ExpT& Child2, const ExpT& Child3,
+                        const E& ExtVal)
+{
+    vector<ExpT> Children(3);
+    Children[0] = Child1;
+    Children[1] = Child2;
+    Children[2] = Child3;
+    return MakeExpr(OpCode, Children, ExtVal);
+}
+
+template <typename E, template <typename> class S>
+template <template <typename, template <typename> class> class T>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::MakeQExpression(const vector<TypeT>& QVarTypes,
+                               const ExpT& QExpr,
                                const E& ExtVal)
-        {
-            auto TrimmedValString = boost::algorithm::trim_copy(ValString);
-            auto Retval =
-                ExpCache.template Get<ConstExpression<E, S>>(this,
-                                                             TrimmedValString,
-                                                             ValType, ExtVal);
-            Sem->TypeCheck(Retval);
-            return Retval;
-        }
+{
+    CheckMgr(QExpr);
+    ExpT NewExp = new T<E, S>(this, QVarTypes, QExpr, ExtVal);
+    auto Retval = Sem->Canonicalize(NewExp);
+    Retval = Internalize(Retval);
+    Sem->TypeCheck(Retval);
+    if (QVarTypes.size() == 0) {
+        return QExpr;
+    } else {
+        return Retval;
+    }
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeVar(const string& VarName, const TypeT& VarType,
-                               const E& ExtVal)
-        {
-            auto Retval =
-                ExpCache.template Get<VarExpression<E, S>>(this, VarName, VarType, ExtVal);
-            Sem->TypeCheck(Retval);
-            return Retval;
-        }
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::MakeExists(const vector<TypeT>& QVarTypes,
+                          const ExpT& QExpr,
+                          const E& ExtVal)
+{
+    return MakeQExpression<EQuantifiedExpression>(QVarTypes, QExpr, ExtVal);
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeBoundVar(const TypeT& VarType,
-                                    i64 VarUID, const E& ExtVal)
-        {
-            auto Retval =
-                ExpCache.template Get<BoundVarExpression<E, S>>(this, VarType, VarUID, ExtVal);
-            Sem->TypeCheck(Retval);
-            return Retval;
-        }
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::MakeForAll(const vector<TypeT>& QVarTypes,
+                          const ExpT& QExpr,
+                          const E& ExtVal)
+{
+    return MakeQExpression<AQuantifiedExpression>(QVarTypes, QExpr, ExtVal);
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeExpr(const i64 OpCode,
-                                const vector<ExpT>& Children,
-                                const E& ExtVal)
-        {
-            CheckMgr(Children);
-            ExpT NewExp = new OpExpression<E, S>(this, OpCode, Children, ExtVal);
-            auto Retval = Sem->Canonicalize(NewExp);
-            Retval = Internalize(Retval);
-            Sem->TypeCheck(Retval);
-            return Retval;
-        }
+template <typename E, template <typename> class S>
+inline i64 ExprMgr<E, S>::MakeUninterpretedFunction(const string& Name,
+                                                    const vector<TypeT>& Domain,
+                                                    const TypeT& Range)
+{
+    return Sem->RegisterUninterpretedFunction(Name, Domain, Range);
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeExpr(const i64 OpCode, const ExpT& Child1,
-                                const E& ExtVal)
-        {
-            vector<ExpT> Children(1);
-            Children[0] = Child1;
-            return MakeExpr(OpCode, Children, ExtVal);
-        }
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::TypeT
+ExprMgr<E, S>::LookupUninterpretedFunction(i64 OpCode) const
+{
+    return Sem->LookupUninterpretedFunction(OpCode);
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeExpr(const i64 OpCode, const ExpT& Child1,
-                                const ExpT& Child2,
-                                const E& ExtVal)
-        {
-            vector<ExpT> Children(2);
-            Children[0] = Child1;
-            Children[1] = Child2;
-            return MakeExpr(OpCode, Children, ExtVal);
-        }
+template <typename E, template <typename> class S>
+template <class T, typename... ArgTypes>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::ApplyTransform(const ExpT& Exp,
+                              ArgTypes&&... Args)
+{
+    CheckMgr(Exp);
+    return T::Do(this, Exp, forward<ArgTypes>(Args)...);
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeExpr(const i64 OpCode, const ExpT& Child1,
-                                const ExpT& Child2, const ExpT& Child3,
-                                const E& ExtVal)
-        {
-            vector<ExpT> Children(3);
-            Children[0] = Child1;
-            Children[1] = Child2;
-            Children[2] = Child3;
-            return MakeExpr(OpCode, Children, ExtVal);
-        }
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::SemT*
+ExprMgr<E, S>::GetSemanticizer() const
+{
+    return Sem;
+}
 
-        template <typename E, template <typename> class S>
-        template <template <typename, template <typename> class> class T>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeQExpression(const vector<TypeT>& QVarTypes,
-                                       const ExpT& QExpr,
-                                       const E& ExtVal)
-        {
-            CheckMgr(QExpr);
-            ExpT NewExp = new T<E, S>(this, QVarTypes, QExpr, ExtVal);
-            auto Retval = Sem->Canonicalize(NewExp);
-            Retval = Internalize(Retval);
-            Sem->TypeCheck(Retval);
-            if (QVarTypes.size() == 0) {
-                return QExpr;
-            } else {
-                return Retval;
-            }
-        }
+template <typename E, template <typename> class S>
+template <typename... ArgTypes>
+inline typename ExprMgr<E, S>::LExpT
+ExprMgr<E, S>::LowerExpr(const ExpT& Exp, ArgTypes&&... Args)
+{
+    if (Exp->GetMgr() != this) {
+        throw ExprTypeError("ExprMgr: I don't own this expression");
+    }
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeExists(const vector<TypeT>& QVarTypes,
-                                  const ExpT& QExpr,
-                                  const E& ExtVal)
-        {
-            return MakeQExpression<EQuantifiedExpression>(QVarTypes, QExpr, ExtVal);
-        }
+    return Sem->LowerExpr(Exp, forward<ArgTypes>(Args)...);
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::MakeForAll(const vector<TypeT>& QVarTypes,
-                                  const ExpT& QExpr,
-                                  const E& ExtVal)
-        {
-            return MakeQExpression<AQuantifiedExpression>(QVarTypes, QExpr, ExtVal);
-        }
+template <typename E, template <typename> class S>
+template <typename... ArgTypes>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::RaiseExpr(const LExpT& LExp, ArgTypes&&... Args)
+{
+    auto Retval = Sem->RaiseExpr(this, LExp, forward<ArgTypes>(Args)...);
+    return Retval;
+}
 
-        template <typename E, template <typename> class S>
-        inline i64 ExprMgr<E, S>::MakeUninterpretedFunction(const string& Name,
-                                                            const vector<TypeT>& Domain,
-                                                            const TypeT& Range)
-        {
-            return Sem->RegisterUninterpretedFunction(Name, Domain, Range);
-        }
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::Simplify(const ExpT& Exp)
+{
+    auto Retval = Sem->Simplify(Exp);
+    return Retval;
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::TypeT
-        ExprMgr<E, S>::LookupUninterpretedFunction(i64 OpCode) const
-        {
-            return Sem->LookupUninterpretedFunction(OpCode);
-        }
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::SimplifyFP(const ExpT &Exp)
+{
+    auto OldExp = Exp;
+    ExpT SimpExp = OldExp;
+    do {
+        OldExp = SimpExp;
+        SimpExp = Simplify(OldExp);
+    } while (SimpExp != OldExp);
+    return SimpExp;
+}
 
-        template <typename E, template <typename> class S>
-        template <class T, typename... ArgTypes>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::ApplyTransform(const ExpT& Exp,
-                                      ArgTypes&&... Args)
-        {
-            CheckMgr(Exp);
-            return T::Do(this, Exp, forward<ArgTypes>(Args)...);
-        }
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::ElimQuantifiers(const ExpT& Exp)
+{
+    auto Retval = Sem->ElimQuantifiers(this, Exp);
+    return Retval;
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::SemT*
-        ExprMgr<E, S>::GetSemanticizer() const
-        {
-            return Sem;
-        }
+template <typename E, template <typename> class S>
+template <typename... ArgTypes>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::UnrollQuantifiers(const ExpT& Exp, ArgTypes&&... Args)
+{
+    auto Retval = Sem->UnrollQuantifiers(this, Exp, forward<ArgTypes>(Args)...);
+    return Retval;
+}
 
-        template <typename E, template <typename> class S>
-        template <typename... ArgTypes>
-        inline typename ExprMgr<E, S>::LExpT
-        ExprMgr<E, S>::LowerExpr(const ExpT& Exp, ArgTypes&&... Args)
-        {
-            if (Exp->GetMgr() != this) {
-                throw ExprTypeError("ExprMgr: I don't own this expression");
-            }
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpSetT
+ExprMgr<E, S>::Gather(const ExpT& Exp,
+                      const function<bool(const ExpressionBase<E, S>*)>& Pred) const
+{
+    return Gatherer<E, S>::Do(Exp, Pred);
+}
 
-            return Sem->LowerExpr(Exp, forward<ArgTypes>(Args)...);
-        }
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::Substitute(const SubstMapT& Subst, const ExpT& Exp)
+{
+    return ApplyTransform<Substitutor<E, S>>(Exp, Subst);
+}
 
-        template <typename E, template <typename> class S>
-        template <typename... ArgTypes>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::RaiseExpr(const LExpT& LExp, ArgTypes&&... Args)
-        {
-            auto Retval = Sem->RaiseExpr(this, LExp, forward<ArgTypes>(Args)...);
-            return Retval;
-        }
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::TermSubstitute(const SubstMapT& Subst, const ExpT& Exp)
+{
+    return ApplyTransform<TermSubstitutor<E, S>>(Exp, Subst);
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::Simplify(const ExpT& Exp)
-        {
-            auto Retval = Sem->Simplify(Exp);
-            return Retval;
-        }
+template <typename E, template <typename> class S>
+inline typename ExprMgr<E, S>::ExpT
+ExprMgr<E, S>::BoundSubstitute(const SubstMapT& Subst, const ExpT& Exp)
+{
+    return ApplyTransform<BoundSubstitutor<E, S>>(Exp, Subst);
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::SimplifyFP(const ExpT &Exp)
-        {
-            auto OldExp = Exp;
-            ExpT SimpExp = OldExp;
-            do {
-                OldExp = SimpExp;
-                SimpExp = Simplify(OldExp);
-            } while (SimpExp != OldExp);
-            return SimpExp;
-        }
+template <typename E, template <typename> class S>
+inline void ExprMgr<E, S>::GC()
+{
+    ExpCache.GC();
+}
 
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::ElimQuantifiers(const ExpT& Exp)
-        {
-            auto Retval = Sem->ElimQuantifiers(this, Exp);
-            return Retval;
-        }
+template <typename E, template <typename> class S>
+inline ExprMgr<E, S>* ExprMgr<E, S>::Make()
+{
+    return new ExprMgr<E, S>();
+}
 
-        template <typename E, template <typename> class S>
-        template <typename... ArgTypes>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::UnrollQuantifiers(const ExpT& Exp, ArgTypes&&... Args)
-        {
-            auto Retval = Sem->UnrollQuantifiers(this, Exp, forward<ArgTypes>(Args)...);
-            return Retval;
-        }
-
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpSetT
-        ExprMgr<E, S>::Gather(const ExpT& Exp,
-                              const function<bool(const ExpressionBase<E, S>*)>& Pred) const
-        {
-            return Gatherer<E, S>::Do(Exp, Pred);
-        }
-
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::Substitute(const SubstMapT& Subst, const ExpT& Exp)
-        {
-            return ApplyTransform<Substitutor<E, S>>(Exp, Subst);
-        }
-
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::TermSubstitute(const SubstMapT& Subst, const ExpT& Exp)
-        {
-            return ApplyTransform<TermSubstitutor<E, S>>(Exp, Subst);
-        }
-
-        template <typename E, template <typename> class S>
-        inline typename ExprMgr<E, S>::ExpT
-        ExprMgr<E, S>::BoundSubstitute(const SubstMapT& Subst, const ExpT& Exp)
-        {
-            return ApplyTransform<BoundSubstitutor<E, S>>(Exp, Subst);
-        }
-
-        template <typename E, template <typename> class S>
-        inline void ExprMgr<E, S>::GC()
-        {
-            ExpCache.GC();
-        }
-
-        template <typename E, template <typename> class S>
-        inline ExprMgr<E, S>* ExprMgr<E, S>::Make()
-        {
-            return new ExprMgr<E, S>();
-        }
-
-    } /* end namespace */
+} /* end namespace */
 } /* end namespace */
 
 #endif /* ESMC_EXPRESSIONS_HPP_ */

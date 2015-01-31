@@ -52,541 +52,541 @@
 #include "LTSFairnessSet.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        const string LabelledTS::ProductMsgName = "__trans_msg__";
+const string LabelledTS::ProductMsgName = "__trans_msg__";
 
-        using ESMC::Symm::PermutationSet;
-        using namespace Decls;
+using ESMC::Symm::PermutationSet;
+using namespace Decls;
 
-        LabelledTS::LabelledTS()
-            : Mgr(new MgrT()),
-              Frozen(false), MsgsFrozen(false), AutomataFrozen(false),
-              InvariantExp(Mgr->MakeTrue()), FinalCondExp(Mgr->MakeTrue())
-        {
-            // Nothing here
-        }
+LabelledTS::LabelledTS()
+    : Mgr(new MgrT()),
+      Frozen(false), MsgsFrozen(false), AutomataFrozen(false),
+      InvariantExp(Mgr->MakeTrue()), FinalCondExp(Mgr->MakeTrue())
+{
+    // Nothing here
+}
 
-        LabelledTS::~LabelledTS()
-        {
-            delete Mgr;
-            for (auto const& NameEFSM : AllEFSMs) {
-                delete NameEFSM.second;
-            }
-        }
+LabelledTS::~LabelledTS()
+{
+    delete Mgr;
+    for (auto const& NameEFSM : AllEFSMs) {
+        delete NameEFSM.second;
+    }
+}
 
-        u32 LabelledTS::GetAutomataClassUID()
-        {
-            auto Retval = AutomatonClassIDGen.GetUID();
-            return Retval;
-        }
+u32 LabelledTS::GetAutomataClassUID()
+{
+    auto Retval = AutomatonClassIDGen.GetUID();
+    return Retval;
+}
 
-        const string& LabelledTS::GetProductMsgName() const
-        {
-            return ProductMsgName;
-        }
+const string& LabelledTS::GetProductMsgName() const
+{
+    return ProductMsgName;
+}
 
-        const vector<vector<u32>>& LabelledTS::GetMsgCanonMap() const
-        {
-            return MsgCanonMap;
-        }
+const vector<vector<u32>>& LabelledTS::GetMsgCanonMap() const
+{
+    return MsgCanonMap;
+}
 
-        const vector<string>& LabelledTS::GetMsgTypeMap() const
-        {
-            return MsgTypeMap;
-        }
+const vector<string>& LabelledTS::GetMsgTypeMap() const
+{
+    return MsgTypeMap;
+}
 
-        // helpers
-        void LabelledTS::AssertFrozen() const
-        {
-            if (!Frozen) {
-                throw ESMCError((string)"Operation cannot be performed before freezing " +
-                                "the Labelled Transition System");
-            }
-        }
+// helpers
+void LabelledTS::AssertFrozen() const
+{
+    if (!Frozen) {
+        throw ESMCError((string)"Operation cannot be performed before freezing " +
+                        "the Labelled Transition System");
+    }
+}
 
-        void LabelledTS::AssertNotFrozen() const
-        {
-            if (Frozen) {
-                throw ESMCError((string)"Operation cannot be performed after freezing " +
-                                "the Labelled Transition System");
-            }
+void LabelledTS::AssertNotFrozen() const
+{
+    if (Frozen) {
+        throw ESMCError((string)"Operation cannot be performed after freezing " +
+                        "the Labelled Transition System");
+    }
 
-        }
+}
 
-        void LabelledTS::AssertMsgsFrozen() const
-        {
-            if (!MsgsFrozen) {
-                throw ESMCError((string)"Operation cannot be performed before freezing " +
-                                "messages of the Labelled Transition System");
-            }
-        }
+void LabelledTS::AssertMsgsFrozen() const
+{
+    if (!MsgsFrozen) {
+        throw ESMCError((string)"Operation cannot be performed before freezing " +
+                        "messages of the Labelled Transition System");
+    }
+}
 
-        void LabelledTS::AssertMsgsNotFrozen() const
-        {
-            if (MsgsFrozen) {
-                throw ESMCError((string)"Operation cannot be performed after freezing " +
-                                "messages of the Labelled Transition System");
-            }
-        }
+void LabelledTS::AssertMsgsNotFrozen() const
+{
+    if (MsgsFrozen) {
+        throw ESMCError((string)"Operation cannot be performed after freezing " +
+                        "messages of the Labelled Transition System");
+    }
+}
 
-        void LabelledTS::AssertAutomataFrozen() const
-        {
-            if (!AutomataFrozen) {
-                throw ESMCError((string)"Operation cannot be performed before freezing " +
-                                "the automata of the Labelled Transition System");
-            }
-        }
+void LabelledTS::AssertAutomataFrozen() const
+{
+    if (!AutomataFrozen) {
+        throw ESMCError((string)"Operation cannot be performed before freezing " +
+                        "the automata of the Labelled Transition System");
+    }
+}
 
-        void LabelledTS::AssertAutomataNotFrozen() const
-        {
-            if (AutomataFrozen) {
-                throw ESMCError((string)"Operation cannot be performed after freezing " +
-                                "the automata of the Labelled Transition System");
-            }
-        }
+void LabelledTS::AssertAutomataNotFrozen() const
+{
+    if (AutomataFrozen) {
+        throw ESMCError((string)"Operation cannot be performed after freezing " +
+                        "the automata of the Labelled Transition System");
+    }
+}
 
-        void LabelledTS::CheckConsistency() const
-        {
-            set<TypeRef> Inputs;
-            set<TypeRef> Outputs;
-            for (auto const& NameEFSM : AllEFSMs) {
-                auto EFSM = NameEFSM.second;
-                auto const& ParamInsts = EFSM->GetParamInsts();
-                for (auto const& ParamInst : ParamInsts) {
-                    auto const& InpSet = EFSM->Inputs[ParamInst];
-                    auto const& OutSet = EFSM->Outputs[ParamInst];
+void LabelledTS::CheckConsistency() const
+{
+    set<TypeRef> Inputs;
+    set<TypeRef> Outputs;
+    for (auto const& NameEFSM : AllEFSMs) {
+        auto EFSM = NameEFSM.second;
+        auto const& ParamInsts = EFSM->GetParamInsts();
+        for (auto const& ParamInst : ParamInsts) {
+            auto const& InpSet = EFSM->Inputs[ParamInst];
+            auto const& OutSet = EFSM->Outputs[ParamInst];
 
-                    for (auto const& Output : OutSet) {
-                        if (Outputs.find(Output) != Outputs.end()) {
-                            throw ESMCError((string)"Multiple EFSMs have message type \"" +
-                                            Output->SAs<RecordType>()->GetName() +
-                                            "\" defined as an output");
-                        }
-                        Outputs.insert(Output);
-                    }
-
-                    Inputs.insert(InpSet.begin(), InpSet.end());
+            for (auto const& Output : OutSet) {
+                if (Outputs.find(Output) != Outputs.end()) {
+                    throw ESMCError((string)"Multiple EFSMs have message type \"" +
+                                    Output->SAs<RecordType>()->GetName() +
+                                    "\" defined as an output");
                 }
+                Outputs.insert(Output);
             }
 
-            if ((!includes(Inputs.begin(), Inputs.end(),
-                           Outputs.begin(), Outputs.end())) ||
-                (!includes(Outputs.begin(), Outputs.end(),
-                           Inputs.begin(), Inputs.end()))) {
-
-                ostringstream sstr;
-                sstr << "The LTS is not closed." << endl;
-                vector<TypeRef> InputsMinusOutputs;
-                vector<TypeRef> OutputsMinusInputs;
-                set_difference(Inputs.begin(), Inputs.end(),
-                               Outputs.begin(), Outputs.end(),
-                               back_inserter(InputsMinusOutputs));
-                set_difference(Outputs.begin(), Outputs.end(),
-                               Inputs.begin(), Inputs.end(),
-                               back_inserter(OutputsMinusInputs));
-                if (InputsMinusOutputs.size() > 0) {
-                    sstr << "The following types are the output of no EFSM:" << endl;
-                    for (auto const& Type : InputsMinusOutputs) {
-                        sstr << Type->SAs<RecordType>()->GetName() << endl;
-                    }
-                }
-
-                if (OutputsMinusInputs.size() > 0) {
-                    sstr << "The following types are the input of no EFSM:" << endl;
-                    for (auto const& Type : OutputsMinusInputs) {
-                        sstr << Type->SAs<RecordType>()->GetName() << endl;
-                    }
-                }
-
-                throw ESMCError(sstr.str());
-            }
-
-            return;
+            Inputs.insert(InpSet.begin(), InpSet.end());
         }
+    }
 
-        // Checks if an expression is based off of a message field
-        bool LabelledTS::HasMsgLValue(const ExpT& Exp) const
-        {
-            auto&& Vars =
-                Mgr->Gather(Exp,
-                            [&] (const ExpBaseT* Exp) -> bool
-                            {
-                                auto ExpAsVar = Exp->As<VarExpression>();
-                                if (ExpAsVar != nullptr) {
-                                    if (ExpAsVar->GetType() == UnifiedMsgType &&
-                                        ExpAsVar->GetVarName() == ProductMsgName) {
-                                        return true;
-                                    }
-                                }
-                                return false;
-                            });
-            return (Vars.size() > 0);
-        }
+    if ((!includes(Inputs.begin(), Inputs.end(),
+                   Outputs.begin(), Outputs.end())) ||
+        (!includes(Outputs.begin(), Outputs.end(),
+                   Inputs.begin(), Inputs.end()))) {
 
-        // Removes the dependence on the __trans_msg__ variable
-        // TODO: This currently does not support messages with
-        // non-scalar fields. The LabelledTS accordingly does not
-        // allow message types with non-scalar fields to be created.
-        // Fix this if it becomes necessary to support messages with
-        // non-scalar fields. So far, nothing seems to require this.
-        vector<GCmdRef> LabelledTS::ElimMsgFromCommands(const vector<GCmdRef>& Commands) const
-        {
-            vector<GCmdRef> Retval;
-            for (auto const& Cmd : Commands) {
-                MgrT::SubstMapT SubstMap;
-                auto const& Updates = Cmd->GetUpdates();
-                vector<LTSAssignRef> NewUpdates;
-                for (auto const& Update : Updates) {
-                    auto const& LHS = Update->GetLHS();
-                    auto const& RHS = Update->GetRHS();
-
-                    if (HasMsgLValue(LHS)) {
-                        auto NewSubstitution = Mgr->TermSubstitute(SubstMap, RHS);
-                        SubstMap[LHS] = NewSubstitution;
-                    } else {
-                        auto NewRHS = Mgr->TermSubstitute(SubstMap, RHS);
-                        auto SimpLHS = Mgr->SimplifyFP(LHS);
-                        auto SimpRHS = Mgr->SimplifyFP(NewRHS);
-                        NewUpdates.push_back(new LTSAssignSimple(SimpLHS, SimpRHS));
-                    }
-                }
-
-                Retval.push_back(new LTSGuardedCommand(Cmd->GetMgr(),
-                                                       Cmd->GetGuardComps(),
-                                                       NewUpdates,
-                                                       Cmd->GetMsgType(),
-                                                       Cmd->GetMsgTypeID(),
-                                                       Cmd->GetProductTransition()));
-                Retval.back()->SetCmdID(Cmd->GetCmdID());
-            }
-            return Retval;
-        }
-
-        GCmdRef
-        LabelledTS::MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const
-        {
-            vector<ExpT> GuardComps;
-            vector<LTSAssignRef> UpdateComps;
-            TypeRef MsgType = TypeRef::NullPtr;
-
-            // All the fields of the message are initially set to be
-            // undefined
-            auto MsgLHS = Mgr->MakeVar(ProductMsgName, UnifiedMsgType);
-            auto MsgRHS = Mgr->MakeVal("clear", UnifiedMsgType);
-            LTSAssignRef MsgClear = new LTSAssignSimple(MsgLHS, MsgRHS);
-            UpdateComps = MsgClear->ExpandNonScalarUpdates();
-
-            for (auto const& Trans : ProductTrans) {
-                if (!Trans->Is<LTSTransitionIOBase>()) {
-                    throw InternalError((string)"Expected transition to be an IO " +
-                                        "transition.\nAt: " + __FILE__ + ":" +
-                                        to_string(__LINE__));
-                }
-                auto TransAsIO = Trans->SAs<LTSTransitionIOBase>();
-                auto const& MsgName = TransAsIO->GetMessageName();
-                if (MsgType == TypeRef::NullPtr) {
-                    MsgType = TransAsIO->GetMessageType();
-                } else {
-                    if (MsgType != TransAsIO->GetMessageType()) {
-                        throw InternalError((string)"Error in cross product construction. " +
-                                            "Expected all product transitions to be on the " +
-                                            "same message type.\nAt: " + __FILE__ + ":" +
-                                            to_string(__LINE__));
-                    }
-                }
-
-                MgrT::SubstMapT SubstMap;
-                SubstMap[Mgr->MakeVar(MsgName, UnifiedMsgType)] =
-                    Mgr->MakeVar(ProductMsgName, UnifiedMsgType);
-
-                GuardComps.push_back(Mgr->Substitute(SubstMap, TransAsIO->GetGuard()));
-                auto const& OldUpdates = TransAsIO->GetUpdates();
-
-                for (auto const& Update : OldUpdates) {
-                    auto SubstLHS = Mgr->Substitute(SubstMap, Update->GetLHS());
-                    auto SubstRHS = Mgr->Substitute(SubstMap, Update->GetRHS());
-                    UpdateComps.push_back(new LTSAssignSimple(SubstLHS, SubstRHS));
-                }
-            }
-
-            auto UMTypeAsUnion = UnifiedMsgType->As<UnionType>();
-            auto MsgTypeID = UMTypeAsUnion->GetTypeIDForMemberType(MsgType);
-            return (new LTSGuardedCommand(Mgr, GuardComps, UpdateComps, MsgType,
-                                          MsgTypeID, ProductTrans));
-        }
-
-        void LabelledTS::Freeze()
-        {
-            AssertAutomataFrozen();
-            if (Frozen) {
-                return;
-            }
-            Frozen = true;
-            u32 GCmdCounter = 0;
-
-            // We now compute the product
-            // which will be represented as a
-            // list of guarded commands
-
-            // First check consistency of EFSMs
-            CheckConsistency();
-
-            // for each message type, get the transitions
-            // on the message type from each efsm
-
-            for (auto const& NameType : MsgTypes) {
-                vector<vector<LTSTransRef>> TransForCP;
-
-                auto const& MType = NameType.second;
-
-                // Get the output transitions first
-                for (auto const& NameEFSM : AllEFSMs) {
-                    auto EFSM = NameEFSM.second;
-
-                    auto&& OutputTrans = EFSM->GetOutputTransitionsOnMsg(MType);
-                    if (OutputTrans.size() > 0) {
-                        TransForCP.push_back(OutputTrans);
-                        break;
-                    }
-                }
-
-                const bool HasOutput = (TransForCP.size() > 0);
-
-                // Now get the input transitions on all EFSMs
-                for (auto const& NameEFSM : AllEFSMs) {
-                    auto EFSM = NameEFSM.second;
-                    auto&& InputTrans = EFSM->GetInputTransitionsOnMsg(MType);
-                    if (InputTrans.size() > 0) {
-                        TransForCP.insert(TransForCP.end(), InputTrans.begin(),
-                                          InputTrans.end());
-                    }
-                }
-
-                if (TransForCP.size() > 0 && !HasOutput) {
-                    throw ESMCError((string)"Message type \"" +
-                                    MType->SAs<RecordType>()->GetName() +
-                                    "\" is the output of no EFSM but is used as an " +
-                                    "input to one or more EFSMs");
-                }
-
-                auto&& CPTrans = CrossProduct<LTSTransRef>(TransForCP.begin(), TransForCP.end());
-                for (auto const& CPElem : CPTrans) {
-                    GuardedCommands.push_back(MakeGuardedCommand(CPElem));
-                    GuardedCommands.back()->SetCmdID(GCmdCounter++);
-                }
-            }
-
-            // Push the internal transitions as well
-            for (auto const& NameEFSM : AllEFSMs) {
-                auto EFSM = NameEFSM.second;
-                auto&& CurTrans = EFSM->GetInternalTransitions();
-                for (auto const& Trans : CurTrans) {
-                    auto CurGCmd = new LTSGuardedCommand(Mgr, { Trans->GetGuard() },
-                                                         Trans->GetUpdates(), TypeRef::NullPtr,
-                                                         -1, { Trans });
-                    GuardedCommands.push_back(CurGCmd);
-                    GuardedCommands.back()->SetCmdID(GCmdCounter++);
-                }
-            }
-
-            // Compile the guarded commands
-            GuardedCommands = ElimMsgFromCommands(GuardedCommands);
-
-            // Sort the guarded commands so that the tentative ones are at the end
-            sort(GuardedCommands.begin(), GuardedCommands.end(),
-                 [&] (const GCmdRef& Cmd1, const GCmdRef& Cmd2) -> bool
-                 {
-                     if (Cmd1->IsTentative() && !Cmd2->IsTentative()) {
-                         return false;
-                     } else if (Cmd2->IsTentative() && !Cmd1->IsTentative()) {
-                         return true;
-                     } else {
-                         StringifiablePtrCompare<0> Cmp;
-                         return (Cmp(Cmd1, Cmd2) < 0);
-                     }
-                 });
-            // Reset command IDs as well
-            for (u32 i = 0; i < GuardedCommands.size(); ++i) {
-                GuardedCommands[i]->SetCmdID(i);
-            }
-
-            // Build the invariant and final condition
-            for (auto const& NameEFSM : AllEFSMs) {
-                auto EFSM = NameEFSM.second;
-                InvariantExp = Mgr->MakeExpr(LTSOps::OpAND, InvariantExp,
-                                             Mgr->MakeExpr(LTSOps::OpNOT,
-                                                           EFSM->ErrorCondition));
-                FinalCondExp = Mgr->MakeExpr(LTSOps::OpAND, FinalCondExp,
-                                             EFSM->FinalCondition);
-            }
-
-            InvariantExp = Mgr->Simplify(InvariantExp);
-            FinalCondExp = Mgr->Simplify(FinalCondExp);
-
-            // unify the constraints on completions from each incomplete EFSM
-            for (auto const& NameEFSM : AllEFSMs) {
-                auto EFSM = NameEFSM.second;
-                if (!EFSM->Is<IncompleteEFSM>()) {
-                    continue;
-                }
-                auto IncEFSM = EFSM->SAs<IncompleteEFSM>();
-                UpdateOpToUpdateLValue.insert(IncEFSM->UpdateOpToUpdateLValue.begin(),
-                                              IncEFSM->UpdateOpToUpdateLValue.end());
-                GuardOpToExp.insert(IncEFSM->GuardOpToExp.begin(),
-                                    IncEFSM->GuardOpToExp.end());
-                GuardSymmetryConstraints.insert(IncEFSM->GuardSymmetryConstraints.begin(),
-                                                IncEFSM->GuardSymmetryConstraints.end());
-                GuardMutualExclusiveSets.insert(IncEFSM->GuardMutualExclusiveSets.begin(),
-                                                IncEFSM->GuardMutualExclusiveSets.end());
-                GuardOpToUpdates.insert(IncEFSM->GuardOpToUpdates.begin(),
-                                        IncEFSM->GuardOpToUpdates.end());
-                AllOpToExp.insert(IncEFSM->AllOpToExp.begin(), IncEFSM->AllOpToExp.end());
-                StateUpdateOpToExp.insert(IncEFSM->StateUpdateOpToExp.begin(),
-                                          IncEFSM->StateUpdateOpToExp.end());
-                auto& LHS = GuardOpToUpdateSymmetryConstraints;
-                auto const& RHS = IncEFSM->GuardOpToUpdateSymmetryConstraints;
-                LHS.insert(RHS.begin(), RHS.end());
+        ostringstream sstr;
+        sstr << "The LTS is not closed." << endl;
+        vector<TypeRef> InputsMinusOutputs;
+        vector<TypeRef> OutputsMinusInputs;
+        set_difference(Inputs.begin(), Inputs.end(),
+                       Outputs.begin(), Outputs.end(),
+                       back_inserter(InputsMinusOutputs));
+        set_difference(Outputs.begin(), Outputs.end(),
+                       Inputs.begin(), Inputs.end(),
+                       back_inserter(OutputsMinusInputs));
+        if (InputsMinusOutputs.size() > 0) {
+            sstr << "The following types are the output of no EFSM:" << endl;
+            for (auto const& Type : InputsMinusOutputs) {
+                sstr << Type->SAs<RecordType>()->GetName() << endl;
             }
         }
 
-        const ExpT& LabelledTS::GetInvariant() const
-        {
-            return InvariantExp;
-        }
-
-        const ExpT& LabelledTS::GetFinalCond() const
-        {
-            return FinalCondExp;
-        }
-
-        const WellOrderedTypeSetT& LabelledTS::GetUsedSymmTypes() const
-        {
-            return UsedSymmTypes;
-        }
-
-        const WellOrderedTypeMapT<u32>& LabelledTS::GetSymmTypeOffsets() const
-        {
-            return SymmTypeOffsets;
-        }
-
-        u32 LabelledTS::GetStateVectorSize() const
-        {
-            return StateVectorSize;
-        }
-
-        MgrT::SubstMapT LabelledTS::ApplyPerm(const vector<vector<ExpT>>& ParamElems,
-                                              const vector<u08>& Perm)
-        {
-            MgrT::SubstMapT Retval;
-            for (auto const& ParamElemVec : ParamElems) {
-                auto const& ParamType = ParamElemVec[0]->GetType();
-                auto Extension = ParamType->GetExtension<LTSTypeExtensionT>();
-                const i32 Offset = Extension->TypeOffset;
-                for (u32 i = 0; i < ParamElemVec.size(); ++i) {
-                    Retval[ParamElemVec[i]] = ParamElemVec[Perm[Offset + i]];
-                }
+        if (OutputsMinusInputs.size() > 0) {
+            sstr << "The following types are the input of no EFSM:" << endl;
+            for (auto const& Type : OutputsMinusInputs) {
+                sstr << Type->SAs<RecordType>()->GetName() << endl;
             }
-            return Retval;
         }
 
-        void LabelledTS::MakeMsgCanonMap()
-        {
-            auto UMType = UnifiedMsgType->As<UnionType>();
-            const u32 NumMsgTypes = UMType->GetMemberTypes().size();
-            MsgCanonMap = vector<vector<u32>>(NumMsgTypes + 1);
+        throw ESMCError(sstr.str());
+    }
 
-            vector<u32> TypeSizes;
-            for (auto const& Type : UsedSymmTypes) {
-                TypeSizes.push_back(Type->GetCardinalityNoUndef());
-            }
+    return;
+}
 
-            PermutationSet PermSet(TypeSizes, true);
-            const u32 NumPerms = PermSet.GetSize();
-            for (u32 i = 0; i < NumMsgTypes + 1; ++i) {
-                MsgCanonMap[i] = vector<u32>(NumPerms);
-            }
-            for (u32 i = 0; i < NumPerms; ++i) {
-                MsgCanonMap[0][i] = 0;
-            }
-
-            vector<vector<ExpT>> ParamElems;
-            for (auto const& Type : UsedSymmTypes) {
-                ParamElems.push_back(vector<ExpT>());
-                auto&& Elems = Type->GetElementsNoUndef();
-                for (auto const Elem : Elems) {
-                    ParamElems.back().push_back(Mgr->MakeVal(Elem, Type));
-                }
-            }
-
-            for (auto const& NameType : MsgTypes) {
-                auto const& CurMType = NameType.second;
-                const u32 CurMTypeID = UMType->GetTypeIDForMemberType(CurMType);
-                auto it1 = PInstToParams.find(CurMType);
-                if (it1 == PInstToParams.end()) {
-                    for (u32 j = 0; j < NumPerms; ++j) {
-                        MsgCanonMap[CurMTypeID][j] = CurMTypeID;
-                    }
-                } else {
-                    auto const& InstParams = it1->second;
-                    auto const& ParamType = PInstToParamType[CurMType];
-                    for (auto it2 = PermSet.Begin(); it2 != PermSet.End(); ++it2) {
-                        const u32 CurPermIndex = it2.GetIndex();
-                        auto const& CurPerm = it2.GetPerm();
-
-                        auto SubstMap = ApplyPerm(ParamElems, CurPerm);
-
-                        vector<ExpT> PermParams;
-                        for (auto const& InstParam : InstParams) {
-                            if (SubstMap.find(InstParam) == SubstMap.end()) {
-                                // Not a part of the symmetry
-                                // set up an identity mapping
-                                PermParams.push_back(InstParam);
-                            } else {
-                                PermParams.push_back(SubstMap[InstParam]);
+// Checks if an expression is based off of a message field
+bool LabelledTS::HasMsgLValue(const ExpT& Exp) const
+{
+    auto&& Vars =
+        Mgr->Gather(Exp,
+                    [&] (const ExpBaseT* Exp) -> bool
+                    {
+                        auto ExpAsVar = Exp->As<VarExpression>();
+                        if (ExpAsVar != nullptr) {
+                            if (ExpAsVar->GetType() == UnifiedMsgType &&
+                                ExpAsVar->GetVarName() == ProductMsgName) {
+                                return true;
                             }
                         }
+                        return false;
+                    });
+    return (Vars.size() > 0);
+}
 
-                        auto PermType =
-                            Mgr->GetSemanticizer()->InstantiateType(ParamType, PermParams);
-                        u32 PermTypeID = UMType->GetTypeIDForMemberType(PermType);
-                        MsgCanonMap[CurMTypeID][CurPermIndex] = PermTypeID;
-                    }
-                }
-            }
+// Removes the dependence on the __trans_msg__ variable
+// TODO: This currently does not support messages with
+// non-scalar fields. The LabelledTS accordingly does not
+// allow message types with non-scalar fields to be created.
+// Fix this if it becomes necessary to support messages with
+// non-scalar fields. So far, nothing seems to require this.
+vector<GCmdRef> LabelledTS::ElimMsgFromCommands(const vector<GCmdRef>& Commands) const
+{
+    vector<GCmdRef> Retval;
+    for (auto const& Cmd : Commands) {
+        MgrT::SubstMapT SubstMap;
+        auto const& Updates = Cmd->GetUpdates();
+        vector<LTSAssignRef> NewUpdates;
+        for (auto const& Update : Updates) {
+            auto const& LHS = Update->GetLHS();
+            auto const& RHS = Update->GetRHS();
 
-            // We also populate the msg type map
-            MsgTypeMap = vector<string>(NumMsgTypes + 1);
-            MsgTypeMap[0] = "undefined_mtype";
-            for (auto const& NameType : MsgTypes) {
-                auto const& Type = NameType.second;
-                auto const& Name = NameType.first;
-
-                const u32 TypeID = UMType->GetTypeIDForMemberType(Type);
-                MsgTypeMap[TypeID] = Name;
+            if (HasMsgLValue(LHS)) {
+                auto NewSubstitution = Mgr->TermSubstitute(SubstMap, RHS);
+                SubstMap[LHS] = NewSubstitution;
+            } else {
+                auto NewRHS = Mgr->TermSubstitute(SubstMap, RHS);
+                auto SimpLHS = Mgr->SimplifyFP(LHS);
+                auto SimpRHS = Mgr->SimplifyFP(NewRHS);
+                NewUpdates.push_back(new LTSAssignSimple(SimpLHS, SimpRHS));
             }
         }
 
-        void LabelledTS::FreezeAutomata()
-        {
-            AssertMsgsFrozen();
-            if (AutomataFrozen) {
-                return;
+        Retval.push_back(new LTSGuardedCommand(Cmd->GetMgr(),
+                                               Cmd->GetGuardComps(),
+                                               NewUpdates,
+                                               Cmd->GetMsgType(),
+                                               Cmd->GetMsgTypeID(),
+                                               Cmd->GetProductTransition()));
+        Retval.back()->SetCmdID(Cmd->GetCmdID());
+    }
+    return Retval;
+}
+
+GCmdRef
+LabelledTS::MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const
+{
+    vector<ExpT> GuardComps;
+    vector<LTSAssignRef> UpdateComps;
+    TypeRef MsgType = TypeRef::NullPtr;
+
+    // All the fields of the message are initially set to be
+    // undefined
+    auto MsgLHS = Mgr->MakeVar(ProductMsgName, UnifiedMsgType);
+    auto MsgRHS = Mgr->MakeVal("clear", UnifiedMsgType);
+    LTSAssignRef MsgClear = new LTSAssignSimple(MsgLHS, MsgRHS);
+    UpdateComps = MsgClear->ExpandNonScalarUpdates();
+
+    for (auto const& Trans : ProductTrans) {
+        if (!Trans->Is<LTSTransitionIOBase>()) {
+            throw InternalError((string)"Expected transition to be an IO " +
+                                "transition.\nAt: " + __FILE__ + ":" +
+                                to_string(__LINE__));
+        }
+        auto TransAsIO = Trans->SAs<LTSTransitionIOBase>();
+        auto const& MsgName = TransAsIO->GetMessageName();
+        if (MsgType == TypeRef::NullPtr) {
+            MsgType = TransAsIO->GetMessageType();
+        } else {
+            if (MsgType != TransAsIO->GetMessageType()) {
+                throw InternalError((string)"Error in cross product construction. " +
+                                    "Expected all product transitions to be on the " +
+                                    "same message type.\nAt: " + __FILE__ + ":" +
+                                    to_string(__LINE__));
             }
+        }
 
-            AutomataFrozen = true;
+        MgrT::SubstMapT SubstMap;
+        SubstMap[Mgr->MakeVar(MsgName, UnifiedMsgType)] =
+            Mgr->MakeVar(ProductMsgName, UnifiedMsgType);
 
-            StateVectorSize = 0;
-            // Create the state variables
-            for (auto& NameEFSM : AllEFSMs) {
-                auto EFSM = NameEFSM.second;
-                EFSM->Freeze();
-                auto const& Name = EFSM->Name;
-                auto const& StateVarType = EFSM->StateVarType;
+        GuardComps.push_back(Mgr->Substitute(SubstMap, TransAsIO->GetGuard()));
+        auto const& OldUpdates = TransAsIO->GetUpdates();
 
-                // Make the state variables
-                auto CurStateVar = Mgr->MakeVar(Name, StateVarType);
-                // Not strictly our job, but it's easiest to
+        for (auto const& Update : OldUpdates) {
+            auto SubstLHS = Mgr->Substitute(SubstMap, Update->GetLHS());
+            auto SubstRHS = Mgr->Substitute(SubstMap, Update->GetRHS());
+            UpdateComps.push_back(new LTSAssignSimple(SubstLHS, SubstRHS));
+        }
+    }
+
+    auto UMTypeAsUnion = UnifiedMsgType->As<UnionType>();
+    auto MsgTypeID = UMTypeAsUnion->GetTypeIDForMemberType(MsgType);
+    return (new LTSGuardedCommand(Mgr, GuardComps, UpdateComps, MsgType,
+                                  MsgTypeID, ProductTrans));
+}
+
+void LabelledTS::Freeze()
+{
+    AssertAutomataFrozen();
+    if (Frozen) {
+        return;
+    }
+    Frozen = true;
+    u32 GCmdCounter = 0;
+
+    // We now compute the product
+    // which will be represented as a
+    // list of guarded commands
+
+    // First check consistency of EFSMs
+    CheckConsistency();
+
+    // for each message type, get the transitions
+    // on the message type from each efsm
+
+    for (auto const& NameType : MsgTypes) {
+        vector<vector<LTSTransRef>> TransForCP;
+
+        auto const& MType = NameType.second;
+
+        // Get the output transitions first
+        for (auto const& NameEFSM : AllEFSMs) {
+            auto EFSM = NameEFSM.second;
+
+            auto&& OutputTrans = EFSM->GetOutputTransitionsOnMsg(MType);
+            if (OutputTrans.size() > 0) {
+                TransForCP.push_back(OutputTrans);
+                break;
+            }
+        }
+
+        const bool HasOutput = (TransForCP.size() > 0);
+
+        // Now get the input transitions on all EFSMs
+        for (auto const& NameEFSM : AllEFSMs) {
+            auto EFSM = NameEFSM.second;
+            auto&& InputTrans = EFSM->GetInputTransitionsOnMsg(MType);
+            if (InputTrans.size() > 0) {
+                TransForCP.insert(TransForCP.end(), InputTrans.begin(),
+                                  InputTrans.end());
+            }
+        }
+
+        if (TransForCP.size() > 0 && !HasOutput) {
+            throw ESMCError((string)"Message type \"" +
+                            MType->SAs<RecordType>()->GetName() +
+                            "\" is the output of no EFSM but is used as an " +
+                            "input to one or more EFSMs");
+        }
+
+        auto&& CPTrans = CrossProduct<LTSTransRef>(TransForCP.begin(), TransForCP.end());
+        for (auto const& CPElem : CPTrans) {
+            GuardedCommands.push_back(MakeGuardedCommand(CPElem));
+            GuardedCommands.back()->SetCmdID(GCmdCounter++);
+        }
+    }
+
+    // Push the internal transitions as well
+    for (auto const& NameEFSM : AllEFSMs) {
+        auto EFSM = NameEFSM.second;
+        auto&& CurTrans = EFSM->GetInternalTransitions();
+        for (auto const& Trans : CurTrans) {
+            auto CurGCmd = new LTSGuardedCommand(Mgr, { Trans->GetGuard() },
+                                                 Trans->GetUpdates(), TypeRef::NullPtr,
+                                                 -1, { Trans });
+            GuardedCommands.push_back(CurGCmd);
+            GuardedCommands.back()->SetCmdID(GCmdCounter++);
+        }
+    }
+
+    // Compile the guarded commands
+    GuardedCommands = ElimMsgFromCommands(GuardedCommands);
+
+    // Sort the guarded commands so that the tentative ones are at the end
+    sort(GuardedCommands.begin(), GuardedCommands.end(),
+         [&] (const GCmdRef& Cmd1, const GCmdRef& Cmd2) -> bool
+         {
+             if (Cmd1->IsTentative() && !Cmd2->IsTentative()) {
+                 return false;
+             } else if (Cmd2->IsTentative() && !Cmd1->IsTentative()) {
+                 return true;
+             } else {
+                 StringifiablePtrCompare<0> Cmp;
+                 return (Cmp(Cmd1, Cmd2) < 0);
+             }
+         });
+    // Reset command IDs as well
+    for (u32 i = 0; i < GuardedCommands.size(); ++i) {
+        GuardedCommands[i]->SetCmdID(i);
+    }
+
+    // Build the invariant and final condition
+    for (auto const& NameEFSM : AllEFSMs) {
+        auto EFSM = NameEFSM.second;
+        InvariantExp = Mgr->MakeExpr(LTSOps::OpAND, InvariantExp,
+                                     Mgr->MakeExpr(LTSOps::OpNOT,
+                                                   EFSM->ErrorCondition));
+        FinalCondExp = Mgr->MakeExpr(LTSOps::OpAND, FinalCondExp,
+                                     EFSM->FinalCondition);
+    }
+
+    InvariantExp = Mgr->Simplify(InvariantExp);
+    FinalCondExp = Mgr->Simplify(FinalCondExp);
+
+    // unify the constraints on completions from each incomplete EFSM
+    for (auto const& NameEFSM : AllEFSMs) {
+        auto EFSM = NameEFSM.second;
+        if (!EFSM->Is<IncompleteEFSM>()) {
+            continue;
+        }
+        auto IncEFSM = EFSM->SAs<IncompleteEFSM>();
+        UpdateOpToUpdateLValue.insert(IncEFSM->UpdateOpToUpdateLValue.begin(),
+                                      IncEFSM->UpdateOpToUpdateLValue.end());
+        GuardOpToExp.insert(IncEFSM->GuardOpToExp.begin(),
+                            IncEFSM->GuardOpToExp.end());
+        GuardSymmetryConstraints.insert(IncEFSM->GuardSymmetryConstraints.begin(),
+                                        IncEFSM->GuardSymmetryConstraints.end());
+        GuardMutualExclusiveSets.insert(IncEFSM->GuardMutualExclusiveSets.begin(),
+                                        IncEFSM->GuardMutualExclusiveSets.end());
+        GuardOpToUpdates.insert(IncEFSM->GuardOpToUpdates.begin(),
+                                IncEFSM->GuardOpToUpdates.end());
+        AllOpToExp.insert(IncEFSM->AllOpToExp.begin(), IncEFSM->AllOpToExp.end());
+        StateUpdateOpToExp.insert(IncEFSM->StateUpdateOpToExp.begin(),
+                                  IncEFSM->StateUpdateOpToExp.end());
+        auto& LHS = GuardOpToUpdateSymmetryConstraints;
+        auto const& RHS = IncEFSM->GuardOpToUpdateSymmetryConstraints;
+        LHS.insert(RHS.begin(), RHS.end());
+    }
+}
+
+const ExpT& LabelledTS::GetInvariant() const
+{
+    return InvariantExp;
+}
+
+const ExpT& LabelledTS::GetFinalCond() const
+{
+    return FinalCondExp;
+}
+
+const WellOrderedTypeSetT& LabelledTS::GetUsedSymmTypes() const
+{
+    return UsedSymmTypes;
+}
+
+const WellOrderedTypeMapT<u32>& LabelledTS::GetSymmTypeOffsets() const
+{
+    return SymmTypeOffsets;
+}
+
+u32 LabelledTS::GetStateVectorSize() const
+{
+    return StateVectorSize;
+}
+
+MgrT::SubstMapT LabelledTS::ApplyPerm(const vector<vector<ExpT>>& ParamElems,
+                                      const vector<u08>& Perm)
+{
+    MgrT::SubstMapT Retval;
+    for (auto const& ParamElemVec : ParamElems) {
+        auto const& ParamType = ParamElemVec[0]->GetType();
+        auto Extension = ParamType->GetExtension<LTSTypeExtensionT>();
+        const i32 Offset = Extension->TypeOffset;
+        for (u32 i = 0; i < ParamElemVec.size(); ++i) {
+            Retval[ParamElemVec[i]] = ParamElemVec[Perm[Offset + i]];
+        }
+    }
+    return Retval;
+}
+
+void LabelledTS::MakeMsgCanonMap()
+{
+    auto UMType = UnifiedMsgType->As<UnionType>();
+    const u32 NumMsgTypes = UMType->GetMemberTypes().size();
+    MsgCanonMap = vector<vector<u32>>(NumMsgTypes + 1);
+
+    vector<u32> TypeSizes;
+    for (auto const& Type : UsedSymmTypes) {
+        TypeSizes.push_back(Type->GetCardinalityNoUndef());
+    }
+
+    PermutationSet PermSet(TypeSizes, true);
+    const u32 NumPerms = PermSet.GetSize();
+    for (u32 i = 0; i < NumMsgTypes + 1; ++i) {
+        MsgCanonMap[i] = vector<u32>(NumPerms);
+    }
+    for (u32 i = 0; i < NumPerms; ++i) {
+        MsgCanonMap[0][i] = 0;
+    }
+
+    vector<vector<ExpT>> ParamElems;
+    for (auto const& Type : UsedSymmTypes) {
+        ParamElems.push_back(vector<ExpT>());
+        auto&& Elems = Type->GetElementsNoUndef();
+        for (auto const Elem : Elems) {
+            ParamElems.back().push_back(Mgr->MakeVal(Elem, Type));
+        }
+    }
+
+    for (auto const& NameType : MsgTypes) {
+        auto const& CurMType = NameType.second;
+        const u32 CurMTypeID = UMType->GetTypeIDForMemberType(CurMType);
+        auto it1 = PInstToParams.find(CurMType);
+        if (it1 == PInstToParams.end()) {
+            for (u32 j = 0; j < NumPerms; ++j) {
+                MsgCanonMap[CurMTypeID][j] = CurMTypeID;
+            }
+        } else {
+            auto const& InstParams = it1->second;
+            auto const& ParamType = PInstToParamType[CurMType];
+            for (auto it2 = PermSet.Begin(); it2 != PermSet.End(); ++it2) {
+                const u32 CurPermIndex = it2.GetIndex();
+                auto const& CurPerm = it2.GetPerm();
+
+                auto SubstMap = ApplyPerm(ParamElems, CurPerm);
+
+                vector<ExpT> PermParams;
+                for (auto const& InstParam : InstParams) {
+                    if (SubstMap.find(InstParam) == SubstMap.end()) {
+                        // Not a part of the symmetry
+                        // set up an identity mapping
+                        PermParams.push_back(InstParam);
+                    } else {
+                        PermParams.push_back(SubstMap[InstParam]);
+                    }
+                }
+
+                auto PermType =
+                    Mgr->GetSemanticizer()->InstantiateType(ParamType, PermParams);
+                u32 PermTypeID = UMType->GetTypeIDForMemberType(PermType);
+                MsgCanonMap[CurMTypeID][CurPermIndex] = PermTypeID;
+            }
+        }
+    }
+
+    // We also populate the msg type map
+    MsgTypeMap = vector<string>(NumMsgTypes + 1);
+    MsgTypeMap[0] = "undefined_mtype";
+    for (auto const& NameType : MsgTypes) {
+        auto const& Type = NameType.second;
+        auto const& Name = NameType.first;
+
+        const u32 TypeID = UMType->GetTypeIDForMemberType(Type);
+        MsgTypeMap[TypeID] = Name;
+    }
+}
+
+void LabelledTS::FreezeAutomata()
+{
+    AssertMsgsFrozen();
+    if (AutomataFrozen) {
+        return;
+    }
+
+    AutomataFrozen = true;
+
+    StateVectorSize = 0;
+    // Create the state variables
+    for (auto& NameEFSM : AllEFSMs) {
+        auto EFSM = NameEFSM.second;
+        EFSM->Freeze();
+        auto const& Name = EFSM->Name;
+        auto const& StateVarType = EFSM->StateVarType;
+
+        // Make the state variables
+        auto CurStateVar = Mgr->MakeVar(Name, StateVarType);
+        // Not strictly our job, but it's easiest to
                 // add the extension data right here
                 CurStateVar->ExtensionData.Offset = StateVectorSize;
                 StateVectorVars.push_back(CurStateVar);

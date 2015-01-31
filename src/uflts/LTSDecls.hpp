@@ -47,95 +47,98 @@
 #include "LTSExtensions.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        // Enum classes for fairness types
-        enum class LTSFairnessType {
-            None, Weak, Strong
-        };
+// Enum classes for fairness types
+enum class LTSFairnessType
+{
+    None, Weak, Strong
+};
 
-        enum class FairSetFairnessType {
-            Weak, Strong
-        };
+enum class FairSetFairnessType
+{
+    Weak, Strong
+};
 
-        enum class LossDupFairnessType {
-            None, NotAlwaysLost, NotAlwaysDup, NotAlwaysLostOrDup
-        };
+enum class LossDupFairnessType
+{
+    None, NotAlwaysLost, NotAlwaysDup, NotAlwaysLostOrDup
+};
 
-        class LabelledTS;
+class LabelledTS;
 
-        class AutomatonBase;
-        class EFSMBase;
-        class GeneralEFSM;
-        class DetEFSM;
-        class ChannelEFSM;
+class AutomatonBase;
+class EFSMBase;
+class GeneralEFSM;
+class DetEFSM;
+class ChannelEFSM;
 
-        class LTSState;
+class LTSState;
 
-        class LTSAssignBase;
-        class LTSAssignSimple;
-        class LTSAssignParam;
+class LTSAssignBase;
+class LTSAssignSimple;
+class LTSAssignParam;
 
-        typedef CSmartPtr<LTSAssignBase> LTSAssignRef;
+typedef CSmartPtr<LTSAssignBase> LTSAssignRef;
 
-        class AutomatonTransitionBase;
-        class LTSTransitionBase;
-        class LTSTransitionInput;
-        class LTSTransitionOutput;
-        class LTSTransitionInternal;
-        class LTSInitState;
+class AutomatonTransitionBase;
+class LTSTransitionBase;
+class LTSTransitionInput;
+class LTSTransitionOutput;
+class LTSTransitionInternal;
+class LTSInitState;
 
-        typedef CSmartPtr<LTSTransitionBase> LTSTransRef;
-        typedef CSmartPtr<LTSInitState> InitStateRef;
+typedef CSmartPtr<LTSTransitionBase> LTSTransRef;
+typedef CSmartPtr<LTSInitState> InitStateRef;
 
-        class LTSFairnessObject;
-        class LTSFairnessSet;
-        class LTSProcessFairnessGroup;
+class LTSFairnessObject;
+class LTSFairnessSet;
+class LTSProcessFairnessGroup;
 
-        typedef CSmartPtr<LTSFairnessObject> LTSFairObjRef;
-        typedef CSmartPtr<LTSFairnessSet> LTSFairSetRef;
-        typedef CSmartPtr<LTSProcessFairnessGroup> LTSPFGRef;
+typedef CSmartPtr<LTSFairnessObject> LTSFairObjRef;
+typedef CSmartPtr<LTSFairnessSet> LTSFairSetRef;
+typedef CSmartPtr<LTSProcessFairnessGroup> LTSPFGRef;
 
-        class LTSGuardedCommand;
-        typedef CSmartPtr<LTSGuardedCommand> GCmdRef;
+class LTSGuardedCommand;
+typedef CSmartPtr<LTSGuardedCommand> GCmdRef;
 
-        typedef Exprs::Expr<LTSExtensionT, LTSTermSemanticizer> ExpT;
-        typedef Exprs::ExprMgr<LTSExtensionT, LTSTermSemanticizer> MgrT;
-        typedef typename LTSTermSemanticizer<LTSExtensionT>::LExpT LExpT;
-        typedef Exprs::ExpressionVisitorBase<LTSExtensionT, LTSTermSemanticizer> VisitorBaseT;
+typedef Exprs::Expr<LTSExtensionT, LTSTermSemanticizer> ExpT;
+typedef Exprs::ExprMgr<LTSExtensionT, LTSTermSemanticizer> MgrT;
+typedef typename LTSTermSemanticizer<LTSExtensionT>::LExpT LExpT;
+typedef Exprs::ExpressionVisitorBase<LTSExtensionT, LTSTermSemanticizer> VisitorBaseT;
 
-        typedef Exprs::ExpressionBase<LTSExtensionT, LTSTermSemanticizer> ExpBaseT;
-        typedef Exprs::VarExpression<LTSExtensionT, LTSTermSemanticizer> VarExpT;
-        typedef Exprs::ConstExpression<LTSExtensionT, LTSTermSemanticizer> ConstExpT;
-        typedef Exprs::BoundVarExpression<LTSExtensionT, LTSTermSemanticizer> BoundVarExpT;
-        typedef Exprs::OpExpression<LTSExtensionT, LTSTermSemanticizer> OpExpT;
-        typedef Exprs::QuantifiedExpressionBase<LTSExtensionT, LTSTermSemanticizer> QExpT;
-        typedef Exprs::EQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> EQExpT;
-        typedef Exprs::AQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> AQExpT;
+typedef Exprs::ExpressionBase<LTSExtensionT, LTSTermSemanticizer> ExpBaseT;
+typedef Exprs::VarExpression<LTSExtensionT, LTSTermSemanticizer> VarExpT;
+typedef Exprs::ConstExpression<LTSExtensionT, LTSTermSemanticizer> ConstExpT;
+typedef Exprs::BoundVarExpression<LTSExtensionT, LTSTermSemanticizer> BoundVarExpT;
+typedef Exprs::OpExpression<LTSExtensionT, LTSTermSemanticizer> OpExpT;
+typedef Exprs::QuantifiedExpressionBase<LTSExtensionT, LTSTermSemanticizer> QExpT;
+typedef Exprs::EQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> EQExpT;
+typedef Exprs::AQuantifiedExpression<LTSExtensionT, LTSTermSemanticizer> AQExpT;
 
-        typedef unordered_set<ExpT, Exprs::ExpressionPtrHasher> FastExpSetT;
-        typedef unordered_map<ExpT, ExpT, Exprs::ExpressionPtrHasher> FastExpMapT;
+typedef unordered_set<ExpT, Exprs::ExpressionPtrHasher> FastExpSetT;
+typedef unordered_map<ExpT, ExpT, Exprs::ExpressionPtrHasher> FastExpMapT;
 
-        typedef set<ExpT, Exprs::ExpressionPtrCompare> WellOrderedExpSetT;
-        template <typename ValType>
-        using WellOrderedExpMapT = map<ExpT, ValType, Exprs::ExpressionPtrCompare>;
+typedef set<ExpT, Exprs::ExpressionPtrCompare> WellOrderedExpSetT;
+template <typename ValType>
+using WellOrderedExpMapT = map<ExpT, ValType, Exprs::ExpressionPtrCompare>;
 
-        typedef set<TypeRef, TypePtrCompare> WellOrderedTypeSetT;
-        template <typename ValType>
-        using WellOrderedTypeMapT = map<TypeRef, ValType, TypePtrCompare>;
+typedef set<TypeRef, TypePtrCompare> WellOrderedTypeSetT;
+template <typename ValType>
+using WellOrderedTypeMapT = map<TypeRef, ValType, TypePtrCompare>;
 
-        typedef set<LTSFairObjRef, StringifiablePtrCompare<0>> FairObjSetT;
-        typedef unordered_set<LTSFairObjRef, StringifiablePtrHasher<0>,
-                              StringifiablePtrEquals<0>> FairObjUnorderedSetT;
+typedef set<LTSFairObjRef, StringifiablePtrCompare<0>> FairObjSetT;
+typedef unordered_set<LTSFairObjRef, StringifiablePtrHasher<0>,
+                      StringifiablePtrEquals<0>> FairObjUnorderedSetT;
 
-        template <typename ValType>
-        using FairObjMapT = map<LTSFairObjRef, StringifiablePtrCompare<0>, ValType>;
+template <typename ValType>
+using FairObjMapT = map<LTSFairObjRef, StringifiablePtrCompare<0>, ValType>;
 
-        template <typename ValType>
-        using FairObjUnorderedMapT = unordered_map<LTSFairObjRef, StringifiablePtrHasher<0>,
-                                                   StringifiablePtrEquals<0>, ValType>;
+template <typename ValType>
+using FairObjUnorderedMapT = unordered_map<LTSFairObjRef, StringifiablePtrHasher<0>,
+                                           StringifiablePtrEquals<0>, ValType>;
 
-    } /* end namespace LTS */
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LTS_DECLS_HPP_ */

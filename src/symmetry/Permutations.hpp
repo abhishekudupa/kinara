@@ -48,157 +48,157 @@
 #include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
-    namespace Symm {
+namespace Symm {
 
-        namespace Detail {
-            class PermVecHasher
-            {
-            public:
-                inline u64 operator () (const vector<u08>& PermVec) const
-                {
-                    u64 Retval = 0;
-                    for (auto const& Elem : PermVec) {
-                        boost::hash_combine(Retval, Elem);
-                    }
-                    return Retval;
-                }
-            };
-        } /* end namespace Detail */
-
-
-        static inline string PermToString(const vector<u08>& Perm)
-        {
-            ostringstream sstr;
-            sstr << "< ";
-            for (auto const& Elem : Perm) {
-                sstr << (u32)Elem << " ";
-            }
-            sstr << ">";
-            return sstr.str();
+namespace Detail {
+class PermVecHasher
+{
+public:
+    inline u64 operator () (const vector<u08>& PermVec) const
+    {
+        u64 Retval = 0;
+        for (auto const& Elem : PermVec) {
+            boost::hash_combine(Retval, Elem);
         }
-
-        class DomainPermuter
-        {
-        private:
-            static const u32 MaxExplicitSize;
-
-            u32 DomainSize;
-            u32 PermSize;
-            u32 Offset;
-            vector<u08> IdentityPerm;
-            bool Compact;
-            const u32 DomMinusOneFactorial;
-            mutable vector<u08> CachedPerm;
-            mutable vector<u08> CachedInvPerm;
-            vector<vector<u08>> Permutations;
-            unordered_map<vector<u08>, u32, Detail::PermVecHasher> PermToIdxMap;
-            vector<u32> PermIdxToInvPermIdx;
-
-            inline void GetPermForLehmerCode(u32 Code, vector<u08>& OutPerm) const;
-            inline u32 GetLehmerCodeForPerm(const vector<u08>& Perm) const;
-            inline void InvertPerm(const vector<u08>& Perm, vector<u08>& OutPerm) const;
-
-        public:
-            DomainPermuter(u32 DomainSize, u32 Offset,
-                           bool Compact = false);
-            ~DomainPermuter();
-
-            // Accessors
-            u32 GetDomainSize() const;
-            u32 GetOffset() const;
-            const vector<u08>& GetIdentityPerm() const;
-            u32 GetPermSize() const;
-
-            const vector<u08>& GetPerm(u32 Idx) const;
-            const vector<u08>& GetInvPerm(u32 Idx) const;
-            const vector<u08>& GetInvPerm(const vector<u08>& Perm) const;
-            void GetInvPerm(const vector<u08>& Perm,
-                            vector<u08>& OutPerm) const;
-
-            void GetPerm(u32 Idx, vector<u08>& OutPerm) const;
-            void GetInvPerm(u32 Idx, vector<u08>& OutPerm) const;
-            u32 GetPermIdx(const vector<u08>& Perm) const;
-            u32 GetInvPermIdx(const vector<u08>& Perm) const;
-            u32 GetInvPermIdx(u32 Idx) const;
-        };
+        return Retval;
+    }
+};
+} /* end namespace Detail */
 
 
-        class PermutationSet
-        {
-        public:
-            class iterator
-            {
-                friend class PermutationSet;
-            private:
-                PermutationSet* PermSet;
-                u32 Index;
+static inline string PermToString(const vector<u08>& Perm)
+{
+    ostringstream sstr;
+    sstr << "< ";
+    for (auto const& Elem : Perm) {
+        sstr << (u32)Elem << " ";
+    }
+    sstr << ">";
+    return sstr.str();
+}
 
-            public:
-                iterator();
-                iterator(const iterator& Other);
-                iterator(u32 Index, PermutationSet* PermSet);
-                ~iterator();
+class DomainPermuter
+{
+private:
+    static const u32 MaxExplicitSize;
 
-                iterator& operator ++ ();
-                iterator operator ++ (int Dummy);
+    u32 DomainSize;
+    u32 PermSize;
+    u32 Offset;
+    vector<u08> IdentityPerm;
+    bool Compact;
+    const u32 DomMinusOneFactorial;
+    mutable vector<u08> CachedPerm;
+    mutable vector<u08> CachedInvPerm;
+    vector<vector<u08>> Permutations;
+    unordered_map<vector<u08>, u32, Detail::PermVecHasher> PermToIdxMap;
+    vector<u32> PermIdxToInvPermIdx;
 
-                iterator& operator -- ();
-                iterator operator -- (int Dummy);
+    inline void GetPermForLehmerCode(u32 Code, vector<u08>& OutPerm) const;
+    inline u32 GetLehmerCodeForPerm(const vector<u08>& Perm) const;
+    inline void InvertPerm(const vector<u08>& Perm, vector<u08>& OutPerm) const;
 
-                iterator& operator += (u32 Addend);
-                iterator& operator -= (u32 Addend);
+public:
+    DomainPermuter(u32 DomainSize, u32 Offset,
+                   bool Compact = false);
+    ~DomainPermuter();
 
-                iterator operator + (u32 Addend) const;
-                iterator operator - (u32 Addend) const;
+    // Accessors
+    u32 GetDomainSize() const;
+    u32 GetOffset() const;
+    const vector<u08>& GetIdentityPerm() const;
+    u32 GetPermSize() const;
 
-                const vector<u08>& GetPerm() const;
-                u32 GetIndex() const;
+    const vector<u08>& GetPerm(u32 Idx) const;
+    const vector<u08>& GetInvPerm(u32 Idx) const;
+    const vector<u08>& GetInvPerm(const vector<u08>& Perm) const;
+    void GetInvPerm(const vector<u08>& Perm,
+                    vector<u08>& OutPerm) const;
 
-                bool operator == (const iterator& Other) const;
-                bool operator != (const iterator& Other) const;
-                iterator& operator = (const iterator& Other);
-            };
-
-            friend class iterator;
-
-        private:
-            vector<u32> DomainSizes;
-            vector<DomainPermuter*> DomPermuters;
-            vector<u32> Multipliers;
-            const u32 NumDomains;
-            iterator BeginIterator;
-            iterator EndIterator;
-            u32 Size;
-            u32 PermVecSize;
-            u32 CachedIdx;
-            vector<u32> CachedIndices;
-            vector<u08> CachedPerm;
+    void GetPerm(u32 Idx, vector<u08>& OutPerm) const;
+    void GetInvPerm(u32 Idx, vector<u08>& OutPerm) const;
+    u32 GetPermIdx(const vector<u08>& Perm) const;
+    u32 GetInvPermIdx(const vector<u08>& Perm) const;
+    u32 GetInvPermIdx(u32 Idx) const;
+};
 
 
-        public:
-            PermutationSet(const vector<u32>& DomainSizes, bool Compact);
-            ~PermutationSet();
+class PermutationSet
+{
+public:
+    class iterator
+    {
+        friend class PermutationSet;
+    private:
+        PermutationSet* PermSet;
+        u32 Index;
 
-            u32 GetSize() const;
-            u32 GetPermVecSize() const;
+    public:
+        iterator();
+        iterator(const iterator& Other);
+        iterator(u32 Index, PermutationSet* PermSet);
+        ~iterator();
 
-            iterator GetIterator(u32 Idx) const;
-            iterator GetIteratorForInv(u32 Idx) const;
-            iterator Compose(const iterator& Perm, u32 Idx);
-            iterator Compose(u32 PermIdx, u32 Idx);
+        iterator& operator ++ ();
+        iterator operator ++ (int Dummy);
 
-            const iterator& Begin() const;
-            const iterator& End() const;
+        iterator& operator -- ();
+        iterator operator -- (int Dummy);
 
-            void GetPermForIndex(u32 Index);
-            void GetPermForIndex(u32 Index, vector<u08>& OutVec) const;
+        iterator& operator += (u32 Addend);
+        iterator& operator -= (u32 Addend);
 
-            u32 GetIndexForPerm(const vector<u08>& Perm) const;
+        iterator operator + (u32 Addend) const;
+        iterator operator - (u32 Addend) const;
 
-            void Print(u32 PermIdx, ostream& Out) const;
-        };
+        const vector<u08>& GetPerm() const;
+        u32 GetIndex() const;
 
-    } /* end namespace Symm */
+        bool operator == (const iterator& Other) const;
+        bool operator != (const iterator& Other) const;
+        iterator& operator = (const iterator& Other);
+    };
+
+    friend class iterator;
+
+private:
+    vector<u32> DomainSizes;
+    vector<DomainPermuter*> DomPermuters;
+    vector<u32> Multipliers;
+    const u32 NumDomains;
+    iterator BeginIterator;
+    iterator EndIterator;
+    u32 Size;
+    u32 PermVecSize;
+    u32 CachedIdx;
+    vector<u32> CachedIndices;
+    vector<u08> CachedPerm;
+
+
+public:
+    PermutationSet(const vector<u32>& DomainSizes, bool Compact);
+    ~PermutationSet();
+
+    u32 GetSize() const;
+    u32 GetPermVecSize() const;
+
+    iterator GetIterator(u32 Idx) const;
+    iterator GetIteratorForInv(u32 Idx) const;
+    iterator Compose(const iterator& Perm, u32 Idx);
+    iterator Compose(u32 PermIdx, u32 Idx);
+
+    const iterator& Begin() const;
+    const iterator& End() const;
+
+    void GetPermForIndex(u32 Index);
+    void GetPermForIndex(u32 Index, vector<u08>& OutVec) const;
+
+    u32 GetIndexForPerm(const vector<u08>& Perm) const;
+
+    void Print(u32 PermIdx, ostream& Out) const;
+};
+
+} /* end namespace Symm */
 } /* end namespace ESMC */
 
 #endif /* ESMC_PERMUTATIONS_HPP_ */

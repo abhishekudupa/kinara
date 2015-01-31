@@ -50,263 +50,266 @@
 #include "../utils/TimeValue.hpp"
 
 namespace ESMC {
-    namespace Synth {
+namespace Synth {
 
-        using namespace ESMC::LTS;
-        using namespace ESMC::MC;
-        using namespace ESMC::TP;
-        using namespace ESMC::Synth;
+using namespace ESMC::LTS;
+using namespace ESMC::MC;
+using namespace ESMC::TP;
+using namespace ESMC::Synth;
 
-        extern const u64 TentativeEdgeCost;
+extern const u64 TentativeEdgeCost;
 
-        enum class GuardBoundingMethodT {
-            PointBound, NonFalseBound, VarDepBound, NoBounding
-        };
+enum class GuardBoundingMethodT
+{
+    PointBound, NonFalseBound, VarDepBound, NoBounding
+};
 
-        enum class UpdateBoundingMethodT {
-            PointBound, NonIdentityBound, VarDepBound, NoBounding
-        };
+enum class UpdateBoundingMethodT
+{
+    PointBound, NonIdentityBound, VarDepBound, NoBounding
+};
 
-        enum class StateUpdateBoundingMethodT {
-            AllSame, VarDepBound, NoBounding
-        };
+enum class StateUpdateBoundingMethodT
+{
+    AllSame, VarDepBound, NoBounding
+};
 
-        class SolverOptionsT {
-        public:
-            GuardBoundingMethodT GBoundMethod;
-            UpdateBoundingMethodT UBoundMethod;
-            StateUpdateBoundingMethodT SBoundMethod;
-            bool UnrollQuantifiers;
-            u64 CPULimitInSeconds;
-            u64 MemLimitInMB;
-            u32 NumCExToProcess;
-            u32 BoundLimit;
-            bool GeneralFixForDL;
-            bool PrioritizeNonTentative;
-            u32 IncSolverTimeout;
+class SolverOptionsT {
+public:
+    GuardBoundingMethodT GBoundMethod;
+    UpdateBoundingMethodT UBoundMethod;
+    StateUpdateBoundingMethodT SBoundMethod;
+    bool UnrollQuantifiers;
+    u64 CPULimitInSeconds;
+    u64 MemLimitInMB;
+    u32 NumCExToProcess;
+    u32 BoundLimit;
+    bool GeneralFixForDL;
+    bool PrioritizeNonTentative;
+    u32 IncSolverTimeout;
 
-            inline SolverOptionsT()
-                : GBoundMethod(GuardBoundingMethodT::NoBounding),
-                  UBoundMethod(UpdateBoundingMethodT::NoBounding),
-                  SBoundMethod(StateUpdateBoundingMethodT::NoBounding),
-                  UnrollQuantifiers(false), CPULimitInSeconds(UINT64_MAX),
-                  MemLimitInMB(UINT64_MAX), NumCExToProcess(8),
-                  BoundLimit(256), GeneralFixForDL(false),
-                  PrioritizeNonTentative(false), IncSolverTimeout(UINT32_MAX)
-            {
-                // Nothing here
-            }
+    inline SolverOptionsT()
+        : GBoundMethod(GuardBoundingMethodT::NoBounding),
+          UBoundMethod(UpdateBoundingMethodT::NoBounding),
+          SBoundMethod(StateUpdateBoundingMethodT::NoBounding),
+          UnrollQuantifiers(false), CPULimitInSeconds(UINT64_MAX),
+          MemLimitInMB(UINT64_MAX), NumCExToProcess(8),
+          BoundLimit(256), GeneralFixForDL(false),
+          PrioritizeNonTentative(false), IncSolverTimeout(UINT32_MAX)
+    {
+        // Nothing here
+    }
 
-            inline SolverOptionsT(const SolverOptionsT& Other)
-                : GBoundMethod(Other.GBoundMethod),
-                  UBoundMethod(Other.UBoundMethod),
-                  SBoundMethod(Other.SBoundMethod),
-                  UnrollQuantifiers(Other.UnrollQuantifiers),
-                  CPULimitInSeconds(Other.CPULimitInSeconds),
-                  MemLimitInMB(Other.MemLimitInMB),
-                  NumCExToProcess(Other.NumCExToProcess == 0 ?
-                                  UINT32_MAX : Other.NumCExToProcess),
-                  BoundLimit(Other.BoundLimit == 0 ? 256 : Other.BoundLimit),
-                  GeneralFixForDL(Other.GeneralFixForDL),
-                  PrioritizeNonTentative(Other.PrioritizeNonTentative),
-                  IncSolverTimeout(Other.IncSolverTimeout)
-            {
-                // Nothing here
-            }
+    inline SolverOptionsT(const SolverOptionsT& Other)
+        : GBoundMethod(Other.GBoundMethod),
+          UBoundMethod(Other.UBoundMethod),
+          SBoundMethod(Other.SBoundMethod),
+          UnrollQuantifiers(Other.UnrollQuantifiers),
+          CPULimitInSeconds(Other.CPULimitInSeconds),
+          MemLimitInMB(Other.MemLimitInMB),
+          NumCExToProcess(Other.NumCExToProcess == 0 ?
+                          UINT32_MAX : Other.NumCExToProcess),
+          BoundLimit(Other.BoundLimit == 0 ? 256 : Other.BoundLimit),
+        GeneralFixForDL(Other.GeneralFixForDL),
+        PrioritizeNonTentative(Other.PrioritizeNonTentative),
+        IncSolverTimeout(Other.IncSolverTimeout)
+    {
+        // Nothing here
+    }
 
-            inline SolverOptionsT& operator = (const SolverOptionsT& Other)
-            {
-                if (&Other == this) {
-                    return *this;
-                }
+    inline SolverOptionsT& operator = (const SolverOptionsT& Other)
+    {
+        if (&Other == this) {
+            return *this;
+        }
 
-                GBoundMethod = Other.GBoundMethod;
-                SBoundMethod = Other.SBoundMethod;
-                UBoundMethod = Other.UBoundMethod;
-                UnrollQuantifiers = Other.UnrollQuantifiers;
-                CPULimitInSeconds = Other.CPULimitInSeconds;
-                MemLimitInMB = Other.MemLimitInMB;
-                NumCExToProcess =
-                    Other.NumCExToProcess == 0 ? UINT32_MAX : Other.NumCExToProcess;
-                BoundLimit = Other.BoundLimit == 0 ? 256 : Other.BoundLimit;
-                GeneralFixForDL = Other.GeneralFixForDL;
-                PrioritizeNonTentative = Other.PrioritizeNonTentative;
-                IncSolverTimeout = Other.IncSolverTimeout;
-                return *this;
-            }
-        };
+        GBoundMethod = Other.GBoundMethod;
+        SBoundMethod = Other.SBoundMethod;
+        UBoundMethod = Other.UBoundMethod;
+        UnrollQuantifiers = Other.UnrollQuantifiers;
+        CPULimitInSeconds = Other.CPULimitInSeconds;
+        MemLimitInMB = Other.MemLimitInMB;
+        NumCExToProcess =
+            Other.NumCExToProcess == 0 ? UINT32_MAX : Other.NumCExToProcess;
+        BoundLimit = Other.BoundLimit == 0 ? 256 : Other.BoundLimit;
+        GeneralFixForDL = Other.GeneralFixForDL;
+        PrioritizeNonTentative = Other.PrioritizeNonTentative;
+        IncSolverTimeout = Other.IncSolverTimeout;
+        return *this;
+    }
+};
 
-        namespace Detail {
+namespace Detail {
 
-            // A cost functor for shortest paths
-            class SynthCostFunction
-            {
-            private:
-                unordered_set<u32> FixedCommands;
+// A cost functor for shortest paths
+class SynthCostFunction
+{
+private:
+    unordered_set<u32> FixedCommands;
 
-            public:
-                inline SynthCostFunction()
-                {
-                    // Default (empty) constructor
-                }
+public:
+    inline SynthCostFunction()
+    {
+        // Default (empty) constructor
+    }
 
-                inline SynthCostFunction(const unordered_set<u32>& FixedCommands)
-                    : FixedCommands(FixedCommands)
-                {
-                    // Nothing here
-                }
+    inline SynthCostFunction(const unordered_set<u32>& FixedCommands)
+        : FixedCommands(FixedCommands)
+    {
+        // Nothing here
+    }
 
-                ~SynthCostFunction()
-                {
-                    // Nothing here
-                }
+    ~SynthCostFunction()
+    {
+        // Nothing here
+    }
 
-                inline u64 operator () (const StateVec* SVPtr, const AQSEdge* Edge) const
-                {
-                    auto it = FixedCommands.find(Edge->GetGCmdIndex());
-                    if (it == FixedCommands.end()) {
-                        return TentativeEdgeCost;
-                    } else {
-                        return 1;
-                    }
-                }
-            };
+    inline u64 operator () (const StateVec* SVPtr, const AQSEdge* Edge) const
+    {
+        auto it = FixedCommands.find(Edge->GetGCmdIndex());
+        if (it == FixedCommands.end()) {
+            return TentativeEdgeCost;
+        } else {
+            return 1;
+        }
+    }
+};
 
-        } /* end namespace Detail */
-
-
-        struct SolverStatsT
-        {
-            TimeValue SolveStartTime;
-            TimeValue SolveEndTime;
-            u64 InitialNumAssertions;
-            u64 FinalNumAssertions;
-            u64 NumIterations;
-            u64 TotalSMTTime;
-            u64 MinSMTTime;
-            u64 MaxSMTTime;
-
-            inline SolverStatsT()
-                : InitialNumAssertions(0), FinalNumAssertions(0),
-                  NumIterations(0), TotalSMTTime(0), MinSMTTime(0),
-                  MaxSMTTime(0)
-            {
-                // Nothing here
-            }
-        };
-
-        class Solver
-        {
-            friend class ESMC::Analyses::TraceAnalyses;
-
-        private:
-            static const string BoundsVarPrefix;
-
-            SolverOptionsT Options;
-            // The set of assertions already asserted
-            FastExpSetT AssertedConstraintSet;
-            vector<ExpT> AssertedConstraints;
-            // Barring the cost bounds assertions, which are in the
-            // assumptions queue here:
-            deque<Z3Expr> CurrentAssumptions;
-            Z3TPRef TP;
-            LabelledTS* TheLTS;
-            LTSCompiler* Compiler;
-            LTSChecker* Checker;
-            u32 Bound;
-            ExpT BoundsVariable;
-            vector<GCmdRef> GuardedCommands;
-            Detail::SynthCostFunction CostFunction;
-
-            unordered_set<i64> UnveiledGuardOps;
-            unordered_set<i64> UnveiledUpdateOps;
-            bool UnveiledNewOps;
-            // Union of the two sets above, maintained
-            // for efficiency
-            unordered_set<i64> InterpretedOps;
+} /* end namespace Detail */
 
 
-            vector<ExpT> GuardFuncCosts;
-            vector<ExpT> UpdateFuncCosts;
-            // AllFalse preds for guards
-            // used for updating the models in the compiler/interpreter
-            unordered_map<i64, ExpT> AllFalsePreds;
+struct SolverStatsT
+{
+    TimeValue SolveStartTime;
+    TimeValue SolveEndTime;
+    u64 InitialNumAssertions;
+    u64 FinalNumAssertions;
+    u64 NumIterations;
+    u64 TotalSMTTime;
+    u64 MinSMTTime;
+    u64 MaxSMTTime;
 
-            Z3Ctx Ctx;
-            SolverStatsT Stats;
+    inline SolverStatsT()
+        : InitialNumAssertions(0), FinalNumAssertions(0),
+          NumIterations(0), TotalSMTTime(0), MinSMTTime(0),
+          MaxSMTTime(0)
+    {
+        // Nothing here
+    }
+};
 
-            inline void CheckedAssert(const ExpT& Assertion);
-            inline void CreateMutualExclusionConstraint(const ExpT& GuardExp1,
-                                                        const ExpT& GuardExp2);
-            inline void AssertBoundsConstraint(u32 CurrentBound);
-            inline void HandleSafetyViolations();
-            inline void HandleOneSafetyViolation(const StateVec* ErrorState,
-                                                 const ExpT& BlownInvariant);
-            inline void HandleOneDeadlockViolation(const StateVec* ErrorState);
-            inline void HandleLivenessViolation(const LivenessViolation* Trace,
-                                                StateBuchiAutomaton* Monitor);
-            inline void UpdateCommands();
-            inline void ResetStats();
-            inline void PrintStats();
-            inline void HandleResourceLimit();
+class Solver
+{
+    friend class ESMC::Analyses::TraceAnalyses;
 
-            // Returns the set of update ops associated with the guard
-            inline unordered_set<i64> AssertConstraintsForNewGuard(i64 GuardOp);
+private:
+    static const string BoundsVarPrefix;
 
-            // returns predicate for allfalse and alltrue
-            inline pair<ExpT, ExpT> MakeAllFalseConstraint(i64 GuardOp,
-                                                           const ExpT& GuardExp,
-                                                           bool MakeAllTrue);
-            inline ExpT MakeIdentityConstraint(i64 Op, const ExpT& UpdateExp,
-                                               u32 LValueIndex);
-            inline ExpT MakeConstantConstraint(i64 Op, const ExpT& Exp);
-            inline tuple<ExpT, ExpT, ExpT, ExpT>
-            CreateArgDepSubsts(vector<TypeRef>& QVars,
-                               const ExpT& UpdateExp,
-                               const ExpT& CurrentArg);
-            inline ExpT MakeArgDepConstraints(i64 OpCode, const ExpT& Exp);
-            inline vector<ExpT> MakePointApplications(i64 OpCode);
+    SolverOptionsT Options;
+    // The set of assertions already asserted
+    FastExpSetT AssertedConstraintSet;
+    vector<ExpT> AssertedConstraints;
+    // Barring the cost bounds assertions, which are in the
+    // assumptions queue here:
+    deque<Z3Expr> CurrentAssumptions;
+    Z3TPRef TP;
+    LabelledTS* TheLTS;
+    LTSCompiler* Compiler;
+    LTSChecker* Checker;
+    u32 Bound;
+    ExpT BoundsVariable;
+    vector<GCmdRef> GuardedCommands;
+    Detail::SynthCostFunction CostFunction;
 
-            inline void MakeArgDepCCForGuard(i64 Op, const ExpT& Exp);
-            inline void MakeNonFalseCCForGuard(i64 Op, const ExpT& Exp);
-            inline void MakePointCCForGuard(i64 Op, const ExpT& Exp);
+    unordered_set<i64> UnveiledGuardOps;
+    unordered_set<i64> UnveiledUpdateOps;
+    bool UnveiledNewOps;
+    // Union of the two sets above, maintained
+    // for efficiency
+    unordered_set<i64> InterpretedOps;
 
-            inline void MakeArgDepCCForLValUpdate(i64 Op, const ExpT& Exp,
-                                                  const ExpT& LValueExp);
-            inline void MakeIdentityCCForLValUpdate(i64 Op, const ExpT& Exp,
-                                                    const ExpT& LValueExp);
-            inline void MakePointCCForLValUpdate(i64 Op, const ExpT& Exp,
-                                                 const ExpT& LValueExp);
 
-            inline void MakeCostConstraintsForLValueUpdate(i64 Op, const ExpT& UpdateExp,
-                                                           const ExpT& LValueExp);
-            inline void MakeCostConstraintsForStateUpdate(i64 Op, const ExpT& UpdateExp);
-            inline void MakeCostConstraintsForNonLValueUpdate(i64 Op, const ExpT& UpdateExp);
-            inline void MakeCostConstraintsForGuard(i64 Op, const ExpT& Exp);
-            inline void MakeCostConstraintsForOp(i64 Op);
-            inline void MakeRangeConstraintsForOp(i64 UpdateOp);
-            inline void HandleTPReset();
+    vector<ExpT> GuardFuncCosts;
+    vector<ExpT> UpdateFuncCosts;
+    // AllFalse preds for guards
+    // used for updating the models in the compiler/interpreter
+    unordered_map<i64, ExpT> AllFalsePreds;
 
-        public:
-            Solver(LTSChecker* Checker, const SolverOptionsT& Options = SolverOptionsT());
-            virtual ~Solver();
+    Z3Ctx Ctx;
+    SolverStatsT Stats;
 
-            // makes an assertion. Also fixes up interpretations
-            // and marks the appropriate set of commands as having a
-            // fixed interpretation.
-            void MakeAssertion(const ExpT& Pred);
-            void UnveilGuardOp(i64 Op);
-            void UnveilNonCompletionGuardOp(i64 Op);
-            void UnveilNonCompletionOp(i64 Op);
-            void Solve();
-            ExpT Evaluate(const ExpT& Input);
-            void PrintOneUFFinalSolution(const vector<const UFInterpreter*>& Interps,
-                                         ostream& Out);
-            void PrintFinalSolution(ostream& Out);
-            const SolverStatsT& GetStats() const;
-        };
+    inline void CheckedAssert(const ExpT& Assertion);
+    inline void CreateMutualExclusionConstraint(const ExpT& GuardExp1,
+                                                const ExpT& GuardExp2);
+    inline void AssertBoundsConstraint(u32 CurrentBound);
+    inline void HandleSafetyViolations();
+    inline void HandleOneSafetyViolation(const StateVec* ErrorState,
+                                         const ExpT& BlownInvariant);
+    inline void HandleOneDeadlockViolation(const StateVec* ErrorState);
+    inline void HandleLivenessViolation(const LivenessViolation* Trace,
+                                        StateBuchiAutomaton* Monitor);
+    inline void UpdateCommands();
+    inline void ResetStats();
+    inline void PrintStats();
+    inline void HandleResourceLimit();
 
-    } /* end namespace Synth */
+    // Returns the set of update ops associated with the guard
+    inline unordered_set<i64> AssertConstraintsForNewGuard(i64 GuardOp);
+
+    // returns predicate for allfalse and alltrue
+    inline pair<ExpT, ExpT> MakeAllFalseConstraint(i64 GuardOp,
+                                                   const ExpT& GuardExp,
+                                                   bool MakeAllTrue);
+    inline ExpT MakeIdentityConstraint(i64 Op, const ExpT& UpdateExp,
+                                       u32 LValueIndex);
+    inline ExpT MakeConstantConstraint(i64 Op, const ExpT& Exp);
+    inline tuple<ExpT, ExpT, ExpT, ExpT>
+    CreateArgDepSubsts(vector<TypeRef>& QVars,
+                       const ExpT& UpdateExp,
+                       const ExpT& CurrentArg);
+    inline ExpT MakeArgDepConstraints(i64 OpCode, const ExpT& Exp);
+    inline vector<ExpT> MakePointApplications(i64 OpCode);
+
+    inline void MakeArgDepCCForGuard(i64 Op, const ExpT& Exp);
+    inline void MakeNonFalseCCForGuard(i64 Op, const ExpT& Exp);
+    inline void MakePointCCForGuard(i64 Op, const ExpT& Exp);
+
+    inline void MakeArgDepCCForLValUpdate(i64 Op, const ExpT& Exp,
+                                          const ExpT& LValueExp);
+    inline void MakeIdentityCCForLValUpdate(i64 Op, const ExpT& Exp,
+                                            const ExpT& LValueExp);
+    inline void MakePointCCForLValUpdate(i64 Op, const ExpT& Exp,
+                                         const ExpT& LValueExp);
+
+    inline void MakeCostConstraintsForLValueUpdate(i64 Op, const ExpT& UpdateExp,
+                                                   const ExpT& LValueExp);
+    inline void MakeCostConstraintsForStateUpdate(i64 Op, const ExpT& UpdateExp);
+    inline void MakeCostConstraintsForNonLValueUpdate(i64 Op, const ExpT& UpdateExp);
+    inline void MakeCostConstraintsForGuard(i64 Op, const ExpT& Exp);
+    inline void MakeCostConstraintsForOp(i64 Op);
+    inline void MakeRangeConstraintsForOp(i64 UpdateOp);
+    inline void HandleTPReset();
+
+public:
+    Solver(LTSChecker* Checker, const SolverOptionsT& Options = SolverOptionsT());
+    virtual ~Solver();
+
+    // makes an assertion. Also fixes up interpretations
+    // and marks the appropriate set of commands as having a
+    // fixed interpretation.
+    void MakeAssertion(const ExpT& Pred);
+    void UnveilGuardOp(i64 Op);
+    void UnveilNonCompletionGuardOp(i64 Op);
+    void UnveilNonCompletionOp(i64 Op);
+    void Solve();
+    ExpT Evaluate(const ExpT& Input);
+    void PrintOneUFFinalSolution(const vector<const UFInterpreter*>& Interps,
+                                 ostream& Out);
+    void PrintFinalSolution(ostream& Out);
+    const SolverStatsT& GetStats() const;
+};
+
+} /* end namespace Synth */
 } /* end namespace ESMC */
 
 #endif /* ESMC_SOLVER_HPP_ */

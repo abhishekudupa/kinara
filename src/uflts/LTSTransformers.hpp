@@ -45,165 +45,165 @@
 #include "LTSDecls.hpp"
 
 namespace ESMC {
-    namespace LTS {
-        namespace Detail {
+namespace LTS {
+namespace Detail {
 
-            struct VarGatherer
-            {
-                typedef const Exprs::ExpressionBase<LTSExtensionT, LTSTermSemanticizer>* ExpCPtrT;
+struct VarGatherer
+{
+    typedef const Exprs::ExpressionBase<LTSExtensionT, LTSTermSemanticizer>* ExpCPtrT;
 
-                inline bool operator () (ExpCPtrT Exp) const
-                {
-                    auto ExpAsVar = Exp->template As<Exprs::VarExpression>();
-                    if (ExpAsVar == nullptr) {
-                        return false;
-                    }
-                    // We don't want to return field access vars
-                    auto Type = ExpAsVar->GetVarType();
-                    auto TypeAsFA = Type->As<FieldAccessType>();
-                    return (TypeAsFA == nullptr);
-                }
-            };
+    inline bool operator () (ExpCPtrT Exp) const
+    {
+        auto ExpAsVar = Exp->template As<Exprs::VarExpression>();
+        if (ExpAsVar == nullptr) {
+            return false;
+        }
+        // We don't want to return field access vars
+        auto Type = ExpAsVar->GetVarType();
+        auto TypeAsFA = Type->As<FieldAccessType>();
+        return (TypeAsFA == nullptr);
+    }
+};
 
-            struct SymmConstGatherer
-            {
-                typedef const Exprs::ExpressionBase<LTSExtensionT, LTSTermSemanticizer>* ExpCPtrT;
+struct SymmConstGatherer
+{
+    typedef const Exprs::ExpressionBase<LTSExtensionT, LTSTermSemanticizer>* ExpCPtrT;
 
-                inline bool operator () (ExpCPtrT Exp) const
-                {
-                    auto ExpAsConst = Exp->template As<Exprs::ConstExpression>();
-                    if (ExpAsConst == nullptr) {
-                        return false;
-                    }
-                    auto Type = ExpAsConst->GetConstType();
-                    return (Type->Is<SymmetricType>());
-                };
-            };
+    inline bool operator () (ExpCPtrT Exp) const
+    {
+        auto ExpAsConst = Exp->template As<Exprs::ConstExpression>();
+        if (ExpAsConst == nullptr) {
+            return false;
+        }
+        auto Type = ExpAsConst->GetConstType();
+        return (Type->Is<SymmetricType>());
+    };
+};
 
-            // Transforms all references to a particular
-            // message type in an expression into a
-            // unified message type reference, renaming
-            // all field accesses appropriately
-            class MsgTransformer : public VisitorBaseT
-            {
-            private:
-                stack<ExpT> ExpStack;
-                MgrT* Mgr;
-                string MsgVarName;
-                TypeRef MsgRecType;
-                TypeRef UnifiedMType;
+// Transforms all references to a particular
+// message type in an expression into a
+// unified message type reference, renaming
+// all field accesses appropriately
+class MsgTransformer : public VisitorBaseT
+{
+private:
+    stack<ExpT> ExpStack;
+    MgrT* Mgr;
+    string MsgVarName;
+    TypeRef MsgRecType;
+    TypeRef UnifiedMType;
 
-            public:
-                MsgTransformer(MgrT* Mgr, const string& MsgVarName,
-                               const TypeRef& MsgRecType,
-                               const TypeRef& UnifiedMType);
-                virtual ~MsgTransformer();
+public:
+    MsgTransformer(MgrT* Mgr, const string& MsgVarName,
+                   const TypeRef& MsgRecType,
+                   const TypeRef& UnifiedMType);
+    virtual ~MsgTransformer();
 
-                virtual void VisitVarExpression(const VarExpT* Exp) override;
-                virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
-                virtual void VisitConstExpression(const ConstExpT* Exp) override;
-                virtual void VisitOpExpression(const OpExpT* Exp) override;
-                virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
-                virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+    virtual void VisitVarExpression(const VarExpT* Exp) override;
+    virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
+    virtual void VisitConstExpression(const ConstExpT* Exp) override;
+    virtual void VisitOpExpression(const OpExpT* Exp) override;
+    virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+    virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
 
-                static ExpT Do(MgrT* Mgr,
-                               const ExpT& Exp,
-                               const string& MsgVarName,
-                               const TypeRef& MsgRecType,
-                               const TypeRef& UnifiedMType);
-            };
+    static ExpT Do(MgrT* Mgr,
+                   const ExpT& Exp,
+                   const string& MsgVarName,
+                   const TypeRef& MsgRecType,
+                   const TypeRef& UnifiedMType);
+};
 
-            class ExpressionPermuter : public VisitorBaseT
-            {
-            private:
-                MgrT* Mgr;
-                const vector<u08>& PermVec;
-                WellOrderedTypeMapT<u32> TypeOffsets;
-                stack<ExpT> ExpStack;
+class ExpressionPermuter : public VisitorBaseT
+{
+private:
+    MgrT* Mgr;
+    const vector<u08>& PermVec;
+    WellOrderedTypeMapT<u32> TypeOffsets;
+    stack<ExpT> ExpStack;
 
-            public:
-                ExpressionPermuter(MgrT* Mgr, const vector<u08>& PermVec,
-                                   const WellOrderedTypeMapT<u32>& TypeOffsets);
-                virtual ~ExpressionPermuter();
+public:
+    ExpressionPermuter(MgrT* Mgr, const vector<u08>& PermVec,
+                       const WellOrderedTypeMapT<u32>& TypeOffsets);
+    virtual ~ExpressionPermuter();
 
-                virtual void VisitVarExpression(const VarExpT* Exp) override;
-                virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
-                virtual void VisitConstExpression(const ConstExpT* Exp) override;
-                virtual void VisitOpExpression(const OpExpT* Exp) override;
-                virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
-                virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+    virtual void VisitVarExpression(const VarExpT* Exp) override;
+    virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
+    virtual void VisitConstExpression(const ConstExpT* Exp) override;
+    virtual void VisitOpExpression(const OpExpT* Exp) override;
+    virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+    virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
 
-                static ExpT Do(MgrT* Mgr, const ExpT& Exp,
-                               const vector<u08>& PermVec,
-                               const WellOrderedTypeMapT<u32>& TypeOffsets);
+    static ExpT Do(MgrT* Mgr, const ExpT& Exp,
+                   const vector<u08>& PermVec,
+                   const WellOrderedTypeMapT<u32>& TypeOffsets);
 
-            };
+};
 
-            class ArrayRValueTransformer : public VisitorBaseT
-            {
-            private:
-                MgrT* Mgr;
-                stack<ExpT> ExpStack;
+class ArrayRValueTransformer : public VisitorBaseT
+{
+private:
+    MgrT* Mgr;
+    stack<ExpT> ExpStack;
 
-                inline void VisitQuantifiedExpression(const QExpT* Exp);
+    inline void VisitQuantifiedExpression(const QExpT* Exp);
 
-            public:
-                ArrayRValueTransformer(MgrT* Mgr);
-                virtual ~ArrayRValueTransformer();
+public:
+    ArrayRValueTransformer(MgrT* Mgr);
+    virtual ~ArrayRValueTransformer();
 
-                virtual void VisitVarExpression(const VarExpT* Exp) override;
-                virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
-                virtual void VisitConstExpression(const ConstExpT* Exp) override;
-                virtual void VisitOpExpression(const OpExpT* Exp) override;
-                virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
-                virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+    virtual void VisitVarExpression(const VarExpT* Exp) override;
+    virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
+    virtual void VisitConstExpression(const ConstExpT* Exp) override;
+    virtual void VisitOpExpression(const OpExpT* Exp) override;
+    virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+    virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
 
-                static ExpT Do(MgrT* Mgr, const ExpT& Exp);
-            };
+    static ExpT Do(MgrT* Mgr, const ExpT& Exp);
+};
 
-            class UFIndexExpGatherer : public VisitorBaseT
-            {
-            private:
-                set<pair<ExpT, TypeRef>> UFIndexExpSet;
-                vector<pair<ExpT, TypeRef>>& UFIndexExps;
+class UFIndexExpGatherer : public VisitorBaseT
+{
+private:
+    set<pair<ExpT, TypeRef>> UFIndexExpSet;
+    vector<pair<ExpT, TypeRef>>& UFIndexExps;
 
-            public:
-                UFIndexExpGatherer(vector<pair<ExpT, TypeRef>>& UFIndexExps);
-                virtual ~UFIndexExpGatherer();
+public:
+    UFIndexExpGatherer(vector<pair<ExpT, TypeRef>>& UFIndexExps);
+    virtual ~UFIndexExpGatherer();
 
-                virtual void VisitOpExpression(const OpExpT* Exp) override;
-                virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
-                virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
-                static void Do(const ExpT& Exp, vector<pair<ExpT, TypeRef>>& UFIndexExps);
-            };
+    virtual void VisitOpExpression(const OpExpT* Exp) override;
+    virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+    virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+    static void Do(const ExpT& Exp, vector<pair<ExpT, TypeRef>>& UFIndexExps);
+};
 
-            class ConstraintPurifier : public VisitorBaseT
-            {
-            private:
-                MgrT* Mgr;
-                stack<ExpT> ExpStack;
+class ConstraintPurifier : public VisitorBaseT
+{
+private:
+    MgrT* Mgr;
+    stack<ExpT> ExpStack;
 
-            public:
-                ConstraintPurifier(MgrT* Mgr);
-                virtual ~ConstraintPurifier();
+public:
+    ConstraintPurifier(MgrT* Mgr);
+    virtual ~ConstraintPurifier();
 
-                inline vector<pair<ExpT, ExpT>>
-                    MakeITEBranches(const ExpT& Exp,
-                                    const vector<pair<ExpT, TypeRef>>& UFIndexExps);
+    inline vector<pair<ExpT, ExpT>>
+        MakeITEBranches(const ExpT& Exp,
+                        const vector<pair<ExpT, TypeRef>>& UFIndexExps);
 
-                virtual void VisitVarExpression(const VarExpT* Exp) override;
-                virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
-                virtual void VisitConstExpression(const ConstExpT* Exp) override;
-                virtual void VisitOpExpression(const OpExpT* Exp) override;
-                virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
-                virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
+    virtual void VisitVarExpression(const VarExpT* Exp) override;
+    virtual void VisitBoundVarExpression(const BoundVarExpT* Exp) override;
+    virtual void VisitConstExpression(const ConstExpT* Exp) override;
+    virtual void VisitOpExpression(const OpExpT* Exp) override;
+    virtual void VisitEQuantifiedExpression(const EQExpT* Exp) override;
+    virtual void VisitAQuantifiedExpression(const AQExpT* Exp) override;
 
-                static ExpT Do(MgrT* Mgr, const ExpT& Exp);
-            };
+    static ExpT Do(MgrT* Mgr, const ExpT& Exp);
+};
 
-        } /* end namespace Detail */
+} /* end namespace Detail */
 
-    } /* end namespace LTS */
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LTS_TRANSFORMERS_HPP_ */

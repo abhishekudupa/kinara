@@ -40,114 +40,114 @@
 #include "LTSState.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        LTSState::LTSState()
-        {
-            // Nothing here
-        }
+LTSState::LTSState()
+{
+    // Nothing here
+}
 
-        LTSState::LTSState(const string& StateName, bool Initial,
-                           bool Final, bool Accepting, bool Error)
-            : StateName(StateName), Accepting(Accepting),
-              Final(Final), Error(Error), Initial(Initial)
-        {
-            // Nothing here
-        }
+LTSState::LTSState(const string& StateName, bool Initial,
+                   bool Final, bool Accepting, bool Error)
+    : StateName(StateName), Accepting(Accepting),
+      Final(Final), Error(Error), Initial(Initial)
+{
+    // Nothing here
+}
 
-        LTSState::LTSState(const LTSState& Other)
-            : StateName(Other.StateName),
-              Accepting(Other.Accepting),
-              Final(Other.Final),
-              Error(Other.Error),
-              Initial(Other.Initial)
-        {
-            // Nothing here
-        }
+LTSState::LTSState(const LTSState& Other)
+    : StateName(Other.StateName),
+      Accepting(Other.Accepting),
+      Final(Other.Final),
+      Error(Other.Error),
+      Initial(Other.Initial)
+{
+    // Nothing here
+}
 
-        LTSState::~LTSState()
-        {
-            // Nothing here
-        }
+LTSState::~LTSState()
+{
+    // Nothing here
+}
 
-        LTSState& LTSState::operator = (const LTSState& Other)
-        {
-            if (&Other == this) {
-                return *this;
-            }
-            StateName = Other.StateName;
-            Accepting = Other.Accepting;
-            Final = Other.Final;
-            Error = Other.Error;
-            Initial = Other.Initial;
-            return *this;
-        }
+LTSState& LTSState::operator = (const LTSState& Other)
+{
+    if (&Other == this) {
+        return *this;
+    }
+    StateName = Other.StateName;
+    Accepting = Other.Accepting;
+    Final = Other.Final;
+    Error = Other.Error;
+    Initial = Other.Initial;
+    return *this;
+}
 
-        string LTSState::GetName() const
-        {
-            return StateName;
-        }
+string LTSState::GetName() const
+{
+    return StateName;
+}
 
-        bool LTSState::IsAccepting() const
-        {
-            return Accepting;
-        }
+bool LTSState::IsAccepting() const
+{
+    return Accepting;
+}
 
-        bool LTSState::IsFinal() const
-        {
-            return Final;
-        }
+bool LTSState::IsFinal() const
+{
+    return Final;
+}
 
-        bool LTSState::IsError() const
-        {
-            return Error;
-        }
+bool LTSState::IsError() const
+{
+    return Error;
+}
 
-        bool LTSState::IsInitial() const
-        {
-            return Initial;
-        }
+bool LTSState::IsInitial() const
+{
+    return Initial;
+}
 
-        string LTSState::ToString(u32 Verbosity) const
-        {
-            ostringstream sstr;
-            sstr << StateName << " : "
-                 << (Accepting ? "Accepting, " : "")
-                 << (Final ? "Final, " : "")
-                 << (Error ? "Error, " : "")
-                 << (Initial ? "Initial" : "");
-            return sstr.str();
-        }
+string LTSState::ToString(u32 Verbosity) const
+{
+    ostringstream sstr;
+    sstr << StateName << " : "
+         << (Accepting ? "Accepting, " : "")
+         << (Final ? "Final, " : "")
+         << (Error ? "Error, " : "")
+         << (Initial ? "Initial" : "");
+    return sstr.str();
+}
 
-        LTSState LTSState::MakeEFSMState(const string& StateName,
-                                         bool Initial,
-                                         bool Final,
-                                         bool Error)
-        {
-            LTSState Retval;
-            Retval.StateName = StateName;
-            Retval.Initial = Initial;
-            Retval.Final = Final;
-            Retval.Error = Error;
-            Retval.Accepting = false;
-            return Retval;
-        }
+LTSState LTSState::MakeEFSMState(const string& StateName,
+                                 bool Initial,
+                                 bool Final,
+                                 bool Error)
+{
+    LTSState Retval;
+    Retval.StateName = StateName;
+    Retval.Initial = Initial;
+    Retval.Final = Final;
+    Retval.Error = Error;
+    Retval.Accepting = false;
+    return Retval;
+}
 
-        LTSState LTSState::MakeMonitorState(const string& StateName,
-                                            bool Initial,
-                                            bool Accepting)
-        {
-            LTSState Retval;
-            Retval.StateName = StateName;
-            Retval.Initial = Initial;
-            Retval.Accepting = Accepting;
-            Retval.Error = false;
-            Retval.Final = false;
-            return Retval;
-        }
+LTSState LTSState::MakeMonitorState(const string& StateName,
+                                    bool Initial,
+                                    bool Accepting)
+{
+    LTSState Retval;
+    Retval.StateName = StateName;
+    Retval.Initial = Initial;
+    Retval.Accepting = Accepting;
+    Retval.Error = false;
+    Retval.Final = false;
+    return Retval;
+}
 
 
-    } /* end namespace ESMC */
+} /* end namespace ESMC */
 } /* end namespace ESMC */
 
 //

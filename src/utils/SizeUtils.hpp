@@ -45,41 +45,41 @@
 
 namespace ESMC {
 
-    static inline u32 NextMultiple(u32 Value, u32 Size)
-    {
-        auto Rem = Value % Size;
-        return (Rem == 0 ? Value : (Value + (Size - Rem)));
-    }
+static inline u32 NextMultiple(u32 Value, u32 Size)
+{
+    auto Rem = Value % Size;
+    return (Rem == 0 ? Value : (Value + (Size - Rem)));
+}
 
-    // Pads value by some number of bytes to get the best alignment
-    static inline u32 Align(u32 Value, u32 Size)
-    {
-        if (Size == 1) {
-            return Value;
-        } else if (Size == 2) {
-            return NextMultiple(Value, 2);
-        } else {
-            // An alignment of 4 is considered
-            // sufficient for all types
-            return NextMultiple(Value, 4);
-        }
+// Pads value by some number of bytes to get the best alignment
+static inline u32 Align(u32 Value, u32 Size)
+{
+    if (Size == 1) {
+        return Value;
+    } else if (Size == 2) {
+        return NextMultiple(Value, 2);
+    } else {
+        // An alignment of 4 is considered
+        // sufficient for all types
+        return NextMultiple(Value, 4);
     }
+}
 
-    // We add one to the range to accommodate the
-    // undefined value
-    static inline u32 BytesForRange(u32 RangeWidth)
-    {
-        auto LogVal = (u32)ceil(log((double)(RangeWidth + 1)) / log(2.0));
-        if (LogVal <= 8) {
-            return 1;
-        } else if (LogVal <= 16) {
-            return 2;
-        } else if (LogVal <= 32) {
-            return 4;
-        } else {
-            throw ESMCError((string)"Domain of variable too large");
-        }
+// We add one to the range to accommodate the
+// undefined value
+static inline u32 BytesForRange(u32 RangeWidth)
+{
+    auto LogVal = (u32)ceil(log((double)(RangeWidth + 1)) / log(2.0));
+    if (LogVal <= 8) {
+        return 1;
+    } else if (LogVal <= 16) {
+        return 2;
+    } else if (LogVal <= 32) {
+        return 4;
+    } else {
+        throw ESMCError((string)"Domain of variable too large");
     }
+}
 
 
 

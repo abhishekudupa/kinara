@@ -47,81 +47,81 @@
 #include "LTSState.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        using namespace Decls;
+using namespace Decls;
 
-        class AutomatonBase : public Stringifiable
-        {
-        protected:
-            LabelledTS* TheLTS;
-            string Name;
-            vector<ExpT> Params;
-            ExpT Constraint;
-            SymbolTable SymTab;
-            map<string, LTSState> States;
-            TypeRef StateType;
-            vector<vector<ExpT>> ParamInsts;
-            vector<MgrT::SubstMapT> ParamSubsts;
-            u32 ClassID;
+class AutomatonBase : public Stringifiable
+{
+protected:
+    LabelledTS* TheLTS;
+    string Name;
+    vector<ExpT> Params;
+    ExpT Constraint;
+    SymbolTable SymTab;
+    map<string, LTSState> States;
+    TypeRef StateType;
+    vector<vector<ExpT>> ParamInsts;
+    vector<MgrT::SubstMapT> ParamSubsts;
+    u32 ClassID;
 
-            bool StatesFrozen;
+    bool StatesFrozen;
 
-            void AssertStatesFrozen() const;
-            void AssertStatesNotFrozen() const;
-            void CheckState(const string& Name) const;
+    void AssertStatesFrozen() const;
+    void AssertStatesNotFrozen() const;
+    void CheckState(const string& Name) const;
 
-        public:
-            AutomatonBase(LabelledTS* TheLTS, const string& Name,
-                          const vector<ExpT>& Params, const ExpT& Constraint);
-            virtual ~AutomatonBase();
+public:
+    AutomatonBase(LabelledTS* TheLTS, const string& Name,
+                  const vector<ExpT>& Params, const ExpT& Constraint);
+    virtual ~AutomatonBase();
 
-            virtual void FreezeStates();
-            virtual void AddState(const string& StateName,
-                                  bool Initial = false, bool Final = false,
-                                  bool Accepting = false, bool Error = false);
+    virtual void FreezeStates();
+    virtual void AddState(const string& StateName,
+                          bool Initial = false, bool Final = false,
+                          bool Accepting = false, bool Error = false);
 
-            const string& GetName() const;
-            vector<LTSState> GetStates() const;
-            const TypeRef& GetStateType() const;
-            const vector<vector<ExpT>>& GetParamInsts() const;
-            const vector<MgrT::SubstMapT>& GetParamSubsts() const;
-            u32 GetNumInstances() const;
-            u32 GetNumInstancesUnconstrained() const;
-            u32 GetClassID() const;
+    const string& GetName() const;
+    vector<LTSState> GetStates() const;
+    const TypeRef& GetStateType() const;
+    const vector<vector<ExpT>>& GetParamInsts() const;
+    const vector<MgrT::SubstMapT>& GetParamSubsts() const;
+    u32 GetNumInstances() const;
+    u32 GetNumInstancesUnconstrained() const;
+    u32 GetClassID() const;
 
-            template <typename T>
-            inline T* As()
-            {
-                return dynamic_cast<T*>(this);
-            }
+    template <typename T>
+    inline T* As()
+    {
+        return dynamic_cast<T*>(this);
+    }
 
-            template <typename T>
-            inline const T* As() const
-            {
-                return dynamic_cast<const T*>(this);
-            }
+    template <typename T>
+    inline const T* As() const
+    {
+        return dynamic_cast<const T*>(this);
+    }
 
-            template <typename T>
-            inline T* SAs()
-            {
-                return static_cast<T*>(this);
-            }
+    template <typename T>
+    inline T* SAs()
+    {
+        return static_cast<T*>(this);
+    }
 
-            template <typename T>
-            inline const T* SAs() const
-            {
-                return static_cast<const T*>(this);
-            }
+    template <typename T>
+    inline const T* SAs() const
+    {
+        return static_cast<const T*>(this);
+    }
 
-            template <typename T>
-            inline bool Is() const
-            {
-                return (dynamic_cast<const T*>(this) != nullptr);
-            }
-        };
+    template <typename T>
+    inline bool Is() const
+    {
+        return (dynamic_cast<const T*>(this) != nullptr);
+    }
+};
 
-    } /* end namespace LTS */
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LTS_AUTOMATON_HPP_ */

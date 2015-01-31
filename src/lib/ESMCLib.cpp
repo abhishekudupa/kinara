@@ -44,78 +44,78 @@
 
 namespace ESMC {
 
-    ESMCLibOptionsT::ESMCLibOptionsT()
-        : LogFileName(""),
-          LogCompressionTechnique(LogFileCompressionTechniqueT::COMPRESS_NONE),
-          LoggingOptions()
-    {
-        // Nothing here
-    }
+ESMCLibOptionsT::ESMCLibOptionsT()
+    : LogFileName(""),
+      LogCompressionTechnique(LogFileCompressionTechniqueT::COMPRESS_NONE),
+      LoggingOptions()
+{
+    // Nothing here
+}
 
-    ESMCLibOptionsT::~ESMCLibOptionsT()
-    {
-        // Nothing here
-    }
+ESMCLibOptionsT::~ESMCLibOptionsT()
+{
+    // Nothing here
+}
 
-    ESMCLibOptionsT::ESMCLibOptionsT(const ESMCLibOptionsT& Other)
-        : LogFileName(Other.LogFileName),
-          LogCompressionTechnique(Other.LogCompressionTechnique),
-          LoggingOptions(Other.LoggingOptions)
-    {
-        // Nothing here
-    }
+ESMCLibOptionsT::ESMCLibOptionsT(const ESMCLibOptionsT& Other)
+    : LogFileName(Other.LogFileName),
+      LogCompressionTechnique(Other.LogCompressionTechnique),
+      LoggingOptions(Other.LoggingOptions)
+{
+    // Nothing here
+}
 
-    ESMCLibOptionsT& ESMCLibOptionsT::operator = (const ESMCLibOptionsT& Other)
-    {
-        if (&Other == this) {
-            return *this;
-        }
-        LogFileName = Other.LogFileName;
-        LogCompressionTechnique = Other.LogCompressionTechnique;
-        LoggingOptions = Other.LoggingOptions;
+ESMCLibOptionsT& ESMCLibOptionsT::operator = (const ESMCLibOptionsT& Other)
+{
+    if (&Other == this) {
         return *this;
     }
+    LogFileName = Other.LogFileName;
+    LogCompressionTechnique = Other.LogCompressionTechnique;
+    LoggingOptions = Other.LoggingOptions;
+    return *this;
+}
 
-    ESMCLibOptionsT& ESMCLib::ESMCLibOptions()
-    {
-        static ESMCLibOptionsT ESMCLibOptions_;
-        return ESMCLibOptions_;
-    }
+ESMCLibOptionsT& ESMCLib::ESMCLibOptions()
+{
+    static ESMCLibOptionsT ESMCLibOptions_;
+    return ESMCLibOptions_;
+}
 
-    ESMCLib::ESMCLib()
-    {
-        // Nothing here
-    }
+ESMCLib::ESMCLib()
+{
+    // Nothing here
+}
 
-    void ESMCLib::Initialize()
-    {
-        Logging::LogManager::Initialize();
-    }
+void ESMCLib::Initialize()
+{
+    Logging::LogManager::Initialize();
+}
 
-    void ESMCLib::Initialize(const ESMCLibOptionsT& LibOptions)
-    {
-        ESMCLibOptions() = LibOptions;
-        Logging::LogManager::Initialize(ESMCLibOptions().LogFileName,
-                                        ESMCLibOptions().LogCompressionTechnique);
-        Logging::LogManager::EnableLogOptions(ESMCLibOptions().LoggingOptions.begin(),
-                                              ESMCLibOptions().LoggingOptions.end());
-    }
+void ESMCLib::Initialize(const ESMCLibOptionsT& LibOptions)
+{
+    ESMCLibOptions() = LibOptions;
+    Logging::LogManager::Initialize(ESMCLibOptions().LogFileName,
+                                    ESMCLibOptions().LogCompressionTechnique);
+    Logging::LogManager::EnableLogOptions(ESMCLibOptions().LoggingOptions.begin(),
+                                          ESMCLibOptions().LoggingOptions.end());
+}
 
-    void ESMCLib::Finalize()
-    {
-        Logging::LogManager::Finalize();
-    }
+void ESMCLib::Finalize()
+{
+    Logging::LogManager::Finalize();
+}
 
-    // The library initializer
-    __attribute__((constructor)) void ESMCLibInitialize_()
-    {
-        ESMCLib::Initialize();
-    }
+// The library initializer
+__attribute__((constructor)) void ESMCLibInitialize_()
+{
+    ESMCLib::Initialize();
+}
 
-    __attribute__((destructor)) void ESMCLibFinalize_()
-    {
-        ESMCLib::Finalize();
-    }
+__attribute__((destructor)) void ESMCLibFinalize_()
+{
+    ESMCLib::Finalize();
+}
 
 } /* end namespace ESMC */
 

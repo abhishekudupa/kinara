@@ -41,220 +41,220 @@
 #include "LTSUtils.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        using namespace Decls;
+using namespace Decls;
 
-        LTSAssignBase::LTSAssignBase()
-        {
-            // Nothing here
-        }
+LTSAssignBase::LTSAssignBase()
+{
+    // Nothing here
+}
 
-        LTSAssignBase::LTSAssignBase(const ExpT& LHS, const ExpT& RHS)
-            : RefCountable(), LHS(LHS), RHS(RHS),
-              BoundsConstraint(ExpT::NullPtr),
-              LoweredBoundsConstraint(ExpT::NullPtr)
-        {
-            auto const& LHSType = LHS->GetType();
-            auto Mgr = LHS->GetMgr();
+LTSAssignBase::LTSAssignBase(const ExpT& LHS, const ExpT& RHS)
+    : RefCountable(), LHS(LHS), RHS(RHS),
+      BoundsConstraint(ExpT::NullPtr),
+      LoweredBoundsConstraint(ExpT::NullPtr)
+{
+    auto const& LHSType = LHS->GetType();
+    auto Mgr = LHS->GetMgr();
 
-            if (LHSType->Is<RangeType>()) {
-                auto TypeAsRange = LHSType->SAs<RangeType>();
-                auto LowStr = to_string(TypeAsRange->GetLow());
-                auto HighStr = to_string(TypeAsRange->GetHigh());
-                auto LowVal = Mgr->MakeVal(LowStr, LHSType);
-                auto HighVal = Mgr->MakeVal(HighStr, LHSType);
+    if (LHSType->Is<RangeType>()) {
+        auto TypeAsRange = LHSType->SAs<RangeType>();
+        auto LowStr = to_string(TypeAsRange->GetLow());
+        auto HighStr = to_string(TypeAsRange->GetHigh());
+        auto LowVal = Mgr->MakeVal(LowStr, LHSType);
+        auto HighVal = Mgr->MakeVal(HighStr, LHSType);
 
-                BoundsConstraint =
-                    Mgr->MakeExpr(LTSOps::OpAND,
-                                  Mgr->MakeExpr(LTSOps::OpGE, RHS, LowVal),
-                                  Mgr->MakeExpr(LTSOps::OpLE, RHS, HighVal));
-                BoundsConstraint = Mgr->SimplifyFP(BoundsConstraint);
-            } else {
-                BoundsConstraint = Mgr->MakeTrue();
-            }
+        BoundsConstraint =
+            Mgr->MakeExpr(LTSOps::OpAND,
+                          Mgr->MakeExpr(LTSOps::OpGE, RHS, LowVal),
+                          Mgr->MakeExpr(LTSOps::OpLE, RHS, HighVal));
+        BoundsConstraint = Mgr->SimplifyFP(BoundsConstraint);
+    } else {
+        BoundsConstraint = Mgr->MakeTrue();
+    }
 
-            LoweredBoundsConstraint = BoundsConstraint;
-        }
+    LoweredBoundsConstraint = BoundsConstraint;
+}
 
-        LTSAssignBase::~LTSAssignBase()
-        {
-            // Nothing here
-        }
+LTSAssignBase::~LTSAssignBase()
+{
+    // Nothing here
+}
 
-        const ExpT& LTSAssignBase::GetLHS() const
-        {
-            return LHS;
-        }
+const ExpT& LTSAssignBase::GetLHS() const
+{
+    return LHS;
+}
 
-        const ExpT& LTSAssignBase::GetRHS() const
-        {
-            return RHS;
-        }
+const ExpT& LTSAssignBase::GetRHS() const
+{
+    return RHS;
+}
 
-        const ExpT& LTSAssignBase::GetBoundsConstraint() const
-        {
-            return BoundsConstraint;
-        }
+const ExpT& LTSAssignBase::GetBoundsConstraint() const
+{
+    return BoundsConstraint;
+}
 
-        const ExpT& LTSAssignBase::GetLoweredBoundsConstraint() const
-        {
-            return LoweredBoundsConstraint;
-        }
+const ExpT& LTSAssignBase::GetLoweredBoundsConstraint() const
+{
+    return LoweredBoundsConstraint;
+}
 
-        void LTSAssignBase::SetLoweredBoundsConstraint(const ExpT& Constraint) const
-        {
-            LoweredBoundsConstraint = Constraint;
-        }
+void LTSAssignBase::SetLoweredBoundsConstraint(const ExpT& Constraint) const
+{
+    LoweredBoundsConstraint = Constraint;
+}
 
-        LTSAssignSimple::~LTSAssignSimple()
-        {
-            // Nothing here
-        }
+LTSAssignSimple::~LTSAssignSimple()
+{
+    // Nothing here
+}
 
-        string LTSAssignSimple::ToString(u32 Verbosity) const
-        {
-            return (LHS->ToString(Verbosity) + " := " + RHS->ToString(Verbosity));
-        }
+string LTSAssignSimple::ToString(u32 Verbosity) const
+{
+    return (LHS->ToString(Verbosity) + " := " + RHS->ToString(Verbosity));
+}
 
-        vector<LTSAssignRef> LTSAssignSimple::ExpandNonScalarUpdates() const
-        {
-            vector<LTSAssignRef> Retval;
-            auto Mgr = LHS->GetMgr();
-            auto FAType = Mgr->MakeType<FieldAccessType>();
+vector<LTSAssignRef> LTSAssignSimple::ExpandNonScalarUpdates() const
+{
+    vector<LTSAssignRef> Retval;
+    auto Mgr = LHS->GetMgr();
+    auto FAType = Mgr->MakeType<FieldAccessType>();
 
-            if (LHS->GetType()->Is<ScalarType>()) {
-                if (RHS->Is<ConstExpression>()) {
-                    auto RHSAsConst = RHS->SAs<ConstExpression>();
-                    auto const& ConstVal = RHSAsConst->GetConstValue();
-                    if (ConstVal == "clear") {
-                        auto ClearExp = Mgr->MakeVal(LHS->GetType()->GetClearValue(),
-                                                     LHS->GetType());
-                        auto NewAsgn = new LTSAssignSimple(LHS, ClearExp);
-                        Retval.push_back(NewAsgn);
-                        return Retval;
-                    }
-                }
-                Retval.push_back(this);
+    if (LHS->GetType()->Is<ScalarType>()) {
+        if (RHS->Is<ConstExpression>()) {
+            auto RHSAsConst = RHS->SAs<ConstExpression>();
+            auto const& ConstVal = RHSAsConst->GetConstValue();
+            if (ConstVal == "clear") {
+                auto ClearExp = Mgr->MakeVal(LHS->GetType()->GetClearValue(),
+                                             LHS->GetType());
+                auto NewAsgn = new LTSAssignSimple(LHS, ClearExp);
+                Retval.push_back(NewAsgn);
                 return Retval;
             }
+        }
+        Retval.push_back(this);
+        return Retval;
+    }
 
 
-            if (LHS->GetType()->Is<RecordType>()) {
-                auto TypeAsRec = LHS->GetType()->SAs<RecordType>();
-                auto const& Fields = TypeAsRec->GetMemberVec();
-                for (auto const& Field : Fields) {
+    if (LHS->GetType()->Is<RecordType>()) {
+        auto TypeAsRec = LHS->GetType()->SAs<RecordType>();
+        auto const& Fields = TypeAsRec->GetMemberVec();
+        for (auto const& Field : Fields) {
 
-                    auto const& FieldName = Field.first;
-                    auto const& FieldType = Field.second;
+            auto const& FieldName = Field.first;
+            auto const& FieldType = Field.second;
 
-                    auto NewLHS = Mgr->MakeExpr(LTSOps::OpField, LHS,
-                                                Mgr->MakeVar(FieldName, FAType));
-                    ExpT NewRHS = ExpT::NullPtr;
-                    if (RHS->Is<ConstExpression>()) {
-                        if (!FieldType->Is<ScalarType>()) {
-                            NewRHS = Mgr->MakeVal("clear", FieldType);
-                        } else {
-                            NewRHS = Mgr->MakeVal(FieldType->GetClearValue(), FieldType);
-                        }
-                    } else {
-                        NewRHS = Mgr->MakeExpr(LTSOps::OpField, RHS,
-                                               Mgr->MakeVar(FieldName, FAType));
-                    }
-
-                    auto NewAsgn = new LTSAssignSimple(NewLHS, NewRHS);
-                    auto&& Expansions = NewAsgn->ExpandNonScalarUpdates();
-                    Retval.insert(Retval.end(), Expansions.begin(), Expansions.end());
-                }
-            } else if (LHS->GetType()->Is<ArrayType>()) {
-                auto TypeAsArray = LHS->GetType()->SAs<ArrayType>();
-                auto const& IndexType = TypeAsArray->GetIndexType();
-                auto const& ValueType = TypeAsArray->GetValueType();
-                auto const& IndexElems = IndexType->GetElementsNoUndef();
-
-                for (auto const& IndexElem : IndexElems) {
-                    auto IndexExp = Mgr->MakeVal(IndexElem, IndexType);
-                    auto NewLHS = Mgr->MakeExpr(LTSOps::OpIndex, LHS, IndexExp);
-
-                    ExpT NewRHS = ExpT::NullPtr;
-                    if (RHS->Is<ConstExpression>()) {
-                        if (!ValueType->Is<ScalarType>()) {
-                            NewRHS = Mgr->MakeVal("clear", ValueType);
-                        } else {
-                            NewRHS = Mgr->MakeVal(ValueType->GetClearValue(), ValueType);
-                        }
-                    } else {
-                        NewRHS = Mgr->MakeExpr(LTSOps::OpIndex, RHS, IndexExp);
-                    }
-
-                    LTSAssignRef NewAsgn = new LTSAssignSimple(NewLHS, NewRHS);
-                    auto&& Expansions = NewAsgn->ExpandNonScalarUpdates();
-                    Retval.insert(Retval.end(), Expansions.begin(), Expansions.end());
+            auto NewLHS = Mgr->MakeExpr(LTSOps::OpField, LHS,
+                                        Mgr->MakeVar(FieldName, FAType));
+            ExpT NewRHS = ExpT::NullPtr;
+            if (RHS->Is<ConstExpression>()) {
+                if (!FieldType->Is<ScalarType>()) {
+                    NewRHS = Mgr->MakeVal("clear", FieldType);
+                } else {
+                    NewRHS = Mgr->MakeVal(FieldType->GetClearValue(), FieldType);
                 }
             } else {
-                throw InternalError((string)"Unhandled type:\n" + LHS->GetType()->ToString() +
-                                    "\nwhen trying expand updates in assignment:\n" +
-                                    this->ToString() + "\nAt: " + __FILE__ + ":" +
-                                    to_string(__LINE__));
+                NewRHS = Mgr->MakeExpr(LTSOps::OpField, RHS,
+                                       Mgr->MakeVar(FieldName, FAType));
             }
-            // Get the compiler to shut up
-            return Retval;
-        }
 
-        LTSAssignParam::LTSAssignParam(const vector<ExpT>& Params,
-                                       const ExpT& Constraint,
-                                       const ExpT& LHS, const ExpT& RHS)
-            : LTSAssignBase(LHS, RHS), Params(Params), Constraint(Constraint)
-        {
-            // If the RHS is an expression of a symmetric type,
-            // make sure that it does not refer to any of the params
-            if (LHS->GetType()->Is<SymmetricType>()) {
-                if (RHS->Is<Exprs::ConstExpression>()) {
-                    if (RHS->SAs<Exprs::ConstExpression>()->GetConstValue() !=
-                        LHS->GetType()->GetClearValue()) {
-                        throw ESMCError((string)"Cannot make a parametric assignment " +
-                                        "to an arbitrary constant of a symmetric type");
-                    }
+            auto NewAsgn = new LTSAssignSimple(NewLHS, NewRHS);
+            auto&& Expansions = NewAsgn->ExpandNonScalarUpdates();
+            Retval.insert(Retval.end(), Expansions.begin(), Expansions.end());
+        }
+    } else if (LHS->GetType()->Is<ArrayType>()) {
+        auto TypeAsArray = LHS->GetType()->SAs<ArrayType>();
+        auto const& IndexType = TypeAsArray->GetIndexType();
+        auto const& ValueType = TypeAsArray->GetValueType();
+        auto const& IndexElems = IndexType->GetElementsNoUndef();
+
+        for (auto const& IndexElem : IndexElems) {
+            auto IndexExp = Mgr->MakeVal(IndexElem, IndexType);
+            auto NewLHS = Mgr->MakeExpr(LTSOps::OpIndex, LHS, IndexExp);
+
+            ExpT NewRHS = ExpT::NullPtr;
+            if (RHS->Is<ConstExpression>()) {
+                if (!ValueType->Is<ScalarType>()) {
+                    NewRHS = Mgr->MakeVal("clear", ValueType);
+                } else {
+                    NewRHS = Mgr->MakeVal(ValueType->GetClearValue(), ValueType);
                 }
-                if (LHS->Is<Exprs::VarExpression>()) {
-                    for (auto const& Param : Params) {
-                        if (RHS == Param) {
-                            throw ESMCError((string)"Cannot initialize parameteric LHS to " +
-                                            "the value of a parameter");
-                        }
-                    }
+            } else {
+                NewRHS = Mgr->MakeExpr(LTSOps::OpIndex, RHS, IndexExp);
+            }
+
+            LTSAssignRef NewAsgn = new LTSAssignSimple(NewLHS, NewRHS);
+            auto&& Expansions = NewAsgn->ExpandNonScalarUpdates();
+            Retval.insert(Retval.end(), Expansions.begin(), Expansions.end());
+        }
+    } else {
+        throw InternalError((string)"Unhandled type:\n" + LHS->GetType()->ToString() +
+                            "\nwhen trying expand updates in assignment:\n" +
+                            this->ToString() + "\nAt: " + __FILE__ + ":" +
+                            to_string(__LINE__));
+    }
+    // Get the compiler to shut up
+    return Retval;
+}
+
+LTSAssignParam::LTSAssignParam(const vector<ExpT>& Params,
+                               const ExpT& Constraint,
+                               const ExpT& LHS, const ExpT& RHS)
+    : LTSAssignBase(LHS, RHS), Params(Params), Constraint(Constraint)
+{
+    // If the RHS is an expression of a symmetric type,
+    // make sure that it does not refer to any of the params
+    if (LHS->GetType()->Is<SymmetricType>()) {
+        if (RHS->Is<Exprs::ConstExpression>()) {
+            if (RHS->SAs<Exprs::ConstExpression>()->GetConstValue() !=
+                LHS->GetType()->GetClearValue()) {
+                throw ESMCError((string)"Cannot make a parametric assignment " +
+                                "to an arbitrary constant of a symmetric type");
+            }
+        }
+        if (LHS->Is<Exprs::VarExpression>()) {
+            for (auto const& Param : Params) {
+                if (RHS == Param) {
+                    throw ESMCError((string)"Cannot initialize parameteric LHS to " +
+                                    "the value of a parameter");
                 }
             }
         }
+    }
+}
 
-        LTSAssignParam::~LTSAssignParam()
-        {
-            // Nothing here
-        }
+LTSAssignParam::~LTSAssignParam()
+{
+    // Nothing here
+}
 
-        const vector<ExpT>& LTSAssignParam::GetParams() const
-        {
-            return Params;
-        }
+const vector<ExpT>& LTSAssignParam::GetParams() const
+{
+    return Params;
+}
 
-        const ExpT& LTSAssignParam::GetConstraint() const
-        {
-            return Constraint;
-        }
+const ExpT& LTSAssignParam::GetConstraint() const
+{
+    return Constraint;
+}
 
-        string LTSAssignParam::ToString(u32 Verbosity) const
-        {
-            return (LHS->ToString() + " := " + RHS->ToString());
-        }
+string LTSAssignParam::ToString(u32 Verbosity) const
+{
+    return (LHS->ToString() + " := " + RHS->ToString());
+}
 
-        vector<LTSAssignRef> LTSAssignParam::ExpandNonScalarUpdates() const
-        {
-            throw InternalError((string)"LTSAssignParam::ExpandNonScalarUpdates() " +
-                                "should never have been called\nAt: " + __FILE__ +
-                                ":" + to_string(__LINE__));
-        }
+vector<LTSAssignRef> LTSAssignParam::ExpandNonScalarUpdates() const
+{
+    throw InternalError((string)"LTSAssignParam::ExpandNonScalarUpdates() " +
+                        "should never have been called\nAt: " + __FILE__ +
+                        ":" + to_string(__LINE__));
+}
 
-    } /* end namespace LTS */
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 //

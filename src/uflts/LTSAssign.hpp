@@ -45,107 +45,107 @@
 #include "LTSDecls.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        class LTSAssignBase : public RefCountable, public Stringifiable
-        {
-        protected:
-            ExpT LHS;
-            ExpT RHS;
-            ExpT BoundsConstraint;
-            mutable ExpT LoweredBoundsConstraint;
+class LTSAssignBase : public RefCountable, public Stringifiable
+{
+protected:
+    ExpT LHS;
+    ExpT RHS;
+    ExpT BoundsConstraint;
+    mutable ExpT LoweredBoundsConstraint;
 
-        public:
-            LTSAssignBase();
-            LTSAssignBase(const ExpT& LHS, const ExpT& RHS);
-            virtual ~LTSAssignBase();
+public:
+    LTSAssignBase();
+    LTSAssignBase(const ExpT& LHS, const ExpT& RHS);
+    virtual ~LTSAssignBase();
 
-            const ExpT& GetLHS() const;
-            const ExpT& GetRHS() const;
-            const ExpT& GetBoundsConstraint() const;
-            const ExpT& GetLoweredBoundsConstraint() const;
-            void SetLoweredBoundsConstraint(const ExpT& Constraint) const;
+    const ExpT& GetLHS() const;
+    const ExpT& GetRHS() const;
+    const ExpT& GetBoundsConstraint() const;
+    const ExpT& GetLoweredBoundsConstraint() const;
+    void SetLoweredBoundsConstraint(const ExpT& Constraint) const;
 
-            virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const = 0;
+    virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const = 0;
 
-            template <typename T>
-            T* As()
-            {
-                return dynamic_cast<T*>(this);
-            }
+    template <typename T>
+    T* As()
+    {
+        return dynamic_cast<T*>(this);
+    }
 
-            template <typename T>
-            const T* As() const
-            {
-                return dynamic_cast<const T*>(this);
-            }
+    template <typename T>
+    const T* As() const
+    {
+        return dynamic_cast<const T*>(this);
+    }
 
-            template <typename T>
-            T* SAs()
-            {
-                return static_cast<T*>(this);
-            }
+    template <typename T>
+    T* SAs()
+    {
+        return static_cast<T*>(this);
+    }
 
-            template <typename T>
-            T* SAs() const
-            {
-                return static_cast<const T*>(this);
-            }
+    template <typename T>
+    T* SAs() const
+    {
+        return static_cast<const T*>(this);
+    }
 
-            template <typename T>
-            bool Is() const
-            {
-                return (dynamic_cast<const T*>(this) != nullptr);
-            }
-        };
+    template <typename T>
+    bool Is() const
+    {
+        return (dynamic_cast<const T*>(this) != nullptr);
+    }
+};
 
-        class LTSAssignSimple : public LTSAssignBase
-        {
-        public:
-            using LTSAssignBase::LTSAssignBase;
-            virtual ~LTSAssignSimple();
+class LTSAssignSimple : public LTSAssignBase
+{
+public:
+    using LTSAssignBase::LTSAssignBase;
+    virtual ~LTSAssignSimple();
 
-            virtual string ToString(u32 Verbosity = 0) const override;
-            virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const override;
-        };
+    virtual string ToString(u32 Verbosity = 0) const override;
+    virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const override;
+};
 
-        class LTSAssignParam : public LTSAssignBase
-        {
-        private:
-            vector<ExpT> Params;
-            ExpT Constraint;
+class LTSAssignParam : public LTSAssignBase
+{
+private:
+    vector<ExpT> Params;
+    ExpT Constraint;
 
-        public:
-            LTSAssignParam(const vector<ExpT>& Params,
-                           const ExpT& Constraint,
-                           const ExpT& LHS, const ExpT& RHS);
-            virtual ~LTSAssignParam();
-            const vector<ExpT>& GetParams() const;
-            const ExpT& GetConstraint() const;
+public:
+    LTSAssignParam(const vector<ExpT>& Params,
+                   const ExpT& Constraint,
+                   const ExpT& LHS, const ExpT& RHS);
+    virtual ~LTSAssignParam();
+    const vector<ExpT>& GetParams() const;
+    const ExpT& GetConstraint() const;
 
-            virtual string ToString(u32 Verbosity = 0) const override;
-            virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const override;
-        };
+    virtual string ToString(u32 Verbosity = 0) const override;
+    virtual vector<LTSAssignRef> ExpandNonScalarUpdates() const override;
+};
 
-        // helper method to expand a set of LTSAssignRefs
-        static inline vector<LTSAssignRef> ExpandUpdates(const vector<LTSAssignRef>& Updates)
-        {
-            vector<LTSAssignRef> Retval;
-            for (auto const& Update : Updates) {
-                if (!Update->Is<LTSAssignSimple>()) {
-                    throw InternalError((string)"ExpandUpdates() called on a non-simple " +
-                                        "update:\n" + Update->ToString() + "\nAt: " +
-                                        __FILE__ + ":" + to_string(__LINE__));
-                }
-
-                auto&& Expansions = Update->ExpandNonScalarUpdates();
-                Retval.insert(Retval.end(), Expansions.begin(), Expansions.end());
-            }
-            return Retval;
+// helper method to expand a set of LTSAssignRefs
+static inline vector<LTSAssignRef> ExpandUpdates(const vector<LTSAssignRef>& Updates)
+{
+    vector<LTSAssignRef> Retval;
+    for (auto const& Update : Updates) {
+        if (!Update->Is<LTSAssignSimple>()) {
+            throw InternalError((string)"ExpandUpdates() called on a non-simple " +
+                                "update:\n" + Update->ToString() + "\nAt: " +
+                                __FILE__ + ":" + to_string(__LINE__));
         }
 
+        auto&& Expansions = Update->ExpandNonScalarUpdates();
+        Retval.insert(Retval.end(), Expansions.begin(), Expansions.end());
+    }
+    return Retval;
+}
 
-    } /* end namespace LTS */
+
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LTS_ASSIGN_HPP_ */

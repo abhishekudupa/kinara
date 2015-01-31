@@ -43,35 +43,35 @@
 #include "LTSExtensions.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        LTSExtensionT::LTSExtensionT()
-            : Offset(-1),
-              ConstCompiled(false),
-              ConstVal(0),
-              FieldOffset(0),
-              Interp(nullptr)
-        {
-            // Nothing here
-        }
+LTSExtensionT::LTSExtensionT()
+    : Offset(-1),
+      ConstCompiled(false),
+      ConstVal(0),
+      FieldOffset(0),
+      Interp(nullptr)
+{
+    // Nothing here
+}
 
-        LTSExtensionT::~LTSExtensionT()
-        {
-            // Nothing here
-        }
+LTSExtensionT::~LTSExtensionT()
+{
+    // Nothing here
+}
 
-        LTSTypeExtensionT::LTSTypeExtensionT()
-            : TypeOffset(-1), TypeID(-1)
-        {
-            // Nothing here
-        }
+LTSTypeExtensionT::LTSTypeExtensionT()
+    : TypeOffset(-1), TypeID(-1)
+{
+    // Nothing here
+}
 
-        LTSTypeExtensionT::~LTSTypeExtensionT()
-        {
-            // Nothing here
-        }
+LTSTypeExtensionT::~LTSTypeExtensionT()
+{
+    // Nothing here
+}
 
-    } /* end namespace LTS */
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 //

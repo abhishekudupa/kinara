@@ -56,252 +56,252 @@
 
 namespace ESMC {
 
-    const u64 ResourceLimitManager::MemLimitDefault = UINT64_MAX;
-    const u64 ResourceLimitManager::CPULimitDefault = UINT64_MAX;
-    // Default to 500 ms = 500000000 ns.
-    const u64 ResourceLimitManager::TimerIntervalDefault = 500000000;
+const u64 ResourceLimitManager::MemLimitDefault = UINT64_MAX;
+const u64 ResourceLimitManager::CPULimitDefault = UINT64_MAX;
+// Default to 500 ms = 500000000 ns.
+const u64 ResourceLimitManager::TimerIntervalDefault = 500000000;
 
-    u64 ResourceLimitManager::MemLimit = ResourceLimitManager::MemLimitDefault;
-    u64 ResourceLimitManager::CPULimit = ResourceLimitManager::CPULimitDefault;
-    u64 ResourceLimitManager::TimerInterval = ResourceLimitManager::TimerIntervalDefault;
-    bool ResourceLimitManager::TimerHandlerInstalled = false;
-    bool ResourceLimitManager::TimerCreated = false;
+u64 ResourceLimitManager::MemLimit = ResourceLimitManager::MemLimitDefault;
+u64 ResourceLimitManager::CPULimit = ResourceLimitManager::CPULimitDefault;
+u64 ResourceLimitManager::TimerInterval = ResourceLimitManager::TimerIntervalDefault;
+bool ResourceLimitManager::TimerHandlerInstalled = false;
+bool ResourceLimitManager::TimerCreated = false;
 #ifndef __APPLE__
-    timer_t ResourceLimitManager::TimerID = (timer_t)0;
+timer_t ResourceLimitManager::TimerID = (timer_t)0;
 #endif
-    struct sigaction ResourceLimitManager::OldAction;
+struct sigaction ResourceLimitManager::OldAction;
 
-    bool ResourceLimitManager::TimeOut = false;
-    bool ResourceLimitManager::MemOut = false;
+bool ResourceLimitManager::TimeOut = false;
+bool ResourceLimitManager::MemOut = false;
 
-    vector<function<void(bool)>> ResourceLimitManager::OnLimitHandlers;
+vector<function<void(bool)>> ResourceLimitManager::OnLimitHandlers;
 
-    void ResourceLimitManager::TimerHandler(int SigNum, siginfo_t* SigInfo, void* Context)
-    {
-        // Already timedout of memedout?
-        if (TimeOut || MemOut) {
-            return;
-        }
-
-        // Check resource usage
-        struct rusage CurUsage;
-        getrusage(RUSAGE_SELF, &CurUsage);
-        if ((u64)CurUsage.ru_maxrss * 1024 >= MemLimit) {
-            MemOut = true;
-        }
-        double UCPUTime = (double)((CurUsage.ru_utime.tv_sec * (u64)1000000) +
-                                   CurUsage.ru_utime.tv_usec) / 1000000.0;
-        double SCPUTime = (double)((CurUsage.ru_stime.tv_sec * (u64)1000000) +
-                                   CurUsage.ru_stime.tv_usec) / 1000000.0;
-        u64 TotalTime = (u64)(UCPUTime + SCPUTime);
-        if (TotalTime >= CPULimit) {
-            TimeOut = true;
-        }
-
-        // Call any other registered handlers
-        if ((OldAction.sa_flags & SA_SIGINFO) != 0 && OldAction.sa_sigaction != nullptr) {
-            OldAction.sa_sigaction(SigNum, SigInfo, Context);
-        } else if(OldAction.sa_handler != nullptr) {
-            OldAction.sa_handler(SigNum);
-        }
-
-        // finally if timeout or memout is true, call the OnLimitHandlers
-        if (TimeOut || MemOut) {
-            for (auto const& Handler : OnLimitHandlers) {
-                Handler(TimeOut);
-            }
-        }
+void ResourceLimitManager::TimerHandler(int SigNum, siginfo_t* SigInfo, void* Context)
+{
+    // Already timedout of memedout?
+    if (TimeOut || MemOut) {
+        return;
     }
 
-    void ResourceLimitManager::RegisterTimerHandler()
-    {
-        if (TimerHandlerInstalled) {
-            return;
+    // Check resource usage
+    struct rusage CurUsage;
+    getrusage(RUSAGE_SELF, &CurUsage);
+    if ((u64)CurUsage.ru_maxrss * 1024 >= MemLimit) {
+        MemOut = true;
+    }
+    double UCPUTime = (double)((CurUsage.ru_utime.tv_sec * (u64)1000000) +
+                               CurUsage.ru_utime.tv_usec) / 1000000.0;
+    double SCPUTime = (double)((CurUsage.ru_stime.tv_sec * (u64)1000000) +
+                               CurUsage.ru_stime.tv_usec) / 1000000.0;
+    u64 TotalTime = (u64)(UCPUTime + SCPUTime);
+    if (TotalTime >= CPULimit) {
+        TimeOut = true;
+    }
+
+    // Call any other registered handlers
+    if ((OldAction.sa_flags & SA_SIGINFO) != 0 && OldAction.sa_sigaction != nullptr) {
+        OldAction.sa_sigaction(SigNum, SigInfo, Context);
+    } else if(OldAction.sa_handler != nullptr) {
+        OldAction.sa_handler(SigNum);
+    }
+
+    // finally if timeout or memout is true, call the OnLimitHandlers
+    if (TimeOut || MemOut) {
+        for (auto const& Handler : OnLimitHandlers) {
+            Handler(TimeOut);
         }
-        // Empty out the old action first
-        OldAction.sa_handler = nullptr;
-        OldAction.sa_sigaction = nullptr;
-        sigemptyset(&OldAction.sa_mask);
-        OldAction.sa_flags = 0;
+    }
+}
+
+void ResourceLimitManager::RegisterTimerHandler()
+{
+    if (TimerHandlerInstalled) {
+        return;
+    }
+    // Empty out the old action first
+    OldAction.sa_handler = nullptr;
+    OldAction.sa_sigaction = nullptr;
+    sigemptyset(&OldAction.sa_mask);
+    OldAction.sa_flags = 0;
 #ifdef __APPLE__
-        // sigaction does not have a sa_restorer field on osx.
+    // sigaction does not have a sa_restorer field on osx.
 #else
-        OldAction.sa_restorer = nullptr;
+    OldAction.sa_restorer = nullptr;
 #endif
 
-        struct sigaction NewAction;
-        NewAction.sa_handler = nullptr;
-        NewAction.sa_sigaction = ResourceLimitManager::TimerHandler;
-        sigemptyset(&NewAction.sa_mask);
-        NewAction.sa_flags = SA_SIGINFO;
+    struct sigaction NewAction;
+    NewAction.sa_handler = nullptr;
+    NewAction.sa_sigaction = ResourceLimitManager::TimerHandler;
+    sigemptyset(&NewAction.sa_mask);
+    NewAction.sa_flags = SA_SIGINFO;
 #ifdef __APPLE__
-        // sigaction does not have a sa_restorer field on osx.
+    // sigaction does not have a sa_restorer field on osx.
 #else
-        NewAction.sa_restorer = nullptr;
+    NewAction.sa_restorer = nullptr;
 #endif
-        // Register the new handler
-        sigaction(TIMER_SIG_NUM, &NewAction, &OldAction);
-        TimerHandlerInstalled = true;
+    // Register the new handler
+    sigaction(TIMER_SIG_NUM, &NewAction, &OldAction);
+    TimerHandlerInstalled = true;
 
-        if (TimerCreated) {
-            return;
-        }
+    if (TimerCreated) {
+        return;
+    }
 #ifndef __APPLE__
-        struct sigevent SigEvent;
-        SigEvent.sigev_notify = SIGEV_SIGNAL;
-        SigEvent.sigev_signo = TIMER_SIG_NUM;
-        SigEvent.sigev_value.sival_ptr = nullptr;
-        timer_create(CLOCK_PROCESS_CPUTIME_ID, &SigEvent, &TimerID);
+    struct sigevent SigEvent;
+    SigEvent.sigev_notify = SIGEV_SIGNAL;
+    SigEvent.sigev_signo = TIMER_SIG_NUM;
+    SigEvent.sigev_value.sival_ptr = nullptr;
+    timer_create(CLOCK_PROCESS_CPUTIME_ID, &SigEvent, &TimerID);
 #endif
-        TimerCreated = true;
+    TimerCreated = true;
+}
+
+void ResourceLimitManager::UnregisterTimerHandler()
+{
+    if (!TimerHandlerInstalled) {
+        return;
     }
 
-    void ResourceLimitManager::UnregisterTimerHandler()
-    {
-        if (!TimerHandlerInstalled) {
-            return;
-        }
-
-        if (TimerCreated) {
+    if (TimerCreated) {
 #ifdef __APPLE__
-            // In the absense of a timer_delete,
-            // I believe the best we can do here
-            // is to call setittimer with a 0 valued timer.
-            struct itimerval FreqSpec;
-            FreqSpec.it_value.tv_sec = 0;
-            FreqSpec.it_value.tv_usec = 0;
-            FreqSpec.it_interval.tv_sec = 0;
-            FreqSpec.it_interval.tv_usec = 0;
-            setitimer(ITIMER_VIRTUAL, &FreqSpec, NULL);
+        // In the absense of a timer_delete,
+        // I believe the best we can do here
+        // is to call setittimer with a 0 valued timer.
+        struct itimerval FreqSpec;
+        FreqSpec.it_value.tv_sec = 0;
+        FreqSpec.it_value.tv_usec = 0;
+        FreqSpec.it_interval.tv_sec = 0;
+        FreqSpec.it_interval.tv_usec = 0;
+        setitimer(ITIMER_VIRTUAL, &FreqSpec, NULL);
 #else
-            timer_delete(TimerID);
+        timer_delete(TimerID);
 #endif
-            TimerCreated = false;
-        }
-
-        // restore the old action
-        if (OldAction.sa_handler != nullptr || OldAction.sa_sigaction != nullptr) {
-            sigaction(TIMER_SIG_NUM, &OldAction, NULL);
-        }
-        TimerHandlerInstalled = false;
+        TimerCreated = false;
     }
 
-    ResourceLimitManager::ResourceLimitManager()
-    {
-        // Nothing here
+    // restore the old action
+    if (OldAction.sa_handler != nullptr || OldAction.sa_sigaction != nullptr) {
+        sigaction(TIMER_SIG_NUM, &OldAction, NULL);
     }
+    TimerHandlerInstalled = false;
+}
 
-    ResourceLimitManager::ResourceLimitManager(const ResourceLimitManager& Other)
-    {
-        // Nothing here
-    }
+ResourceLimitManager::ResourceLimitManager()
+{
+    // Nothing here
+}
 
-    void ResourceLimitManager::SetMemLimit(u64 MemLimit)
-    {
-        ResourceLimitManager::MemLimit = MemLimit;
-    }
+ResourceLimitManager::ResourceLimitManager(const ResourceLimitManager& Other)
+{
+    // Nothing here
+}
 
-    u64 ResourceLimitManager::GetMemLimit()
-    {
-        return ResourceLimitManager::MemLimit;
-    }
+void ResourceLimitManager::SetMemLimit(u64 MemLimit)
+{
+    ResourceLimitManager::MemLimit = MemLimit;
+}
 
-    void ResourceLimitManager::SetCPULimit(u64 CPULimit)
-    {
-        ResourceLimitManager::CPULimit = CPULimit;
-    }
+u64 ResourceLimitManager::GetMemLimit()
+{
+    return ResourceLimitManager::MemLimit;
+}
 
-    void ResourceLimitManager::SetTimerInterval(u64 TimerIntervalNS)
-    {
-        TimerInterval = TimerIntervalNS;
-    }
+void ResourceLimitManager::SetCPULimit(u64 CPULimit)
+{
+    ResourceLimitManager::CPULimit = CPULimit;
+}
 
-    void ResourceLimitManager::QueryStart()
-    {
-        // install handlers IF resource limits are specified
-        if (MemLimit != UINT64_MAX ||
-            CPULimit != UINT64_MAX) {
-            RegisterTimerHandler();
+void ResourceLimitManager::SetTimerInterval(u64 TimerIntervalNS)
+{
+    TimerInterval = TimerIntervalNS;
+}
+
+void ResourceLimitManager::QueryStart()
+{
+    // install handlers IF resource limits are specified
+    if (MemLimit != UINT64_MAX ||
+        CPULimit != UINT64_MAX) {
+        RegisterTimerHandler();
 #ifdef __APPLE__
-            struct itimerval FreqSpec;
-            FreqSpec.it_value.tv_sec = 0;
-            FreqSpec.it_value.tv_usec = 1000 * TimerInterval;
-            FreqSpec.it_interval.tv_sec = 0;
-            FreqSpec.it_interval.tv_usec = 1000 * TimerInterval;
+        struct itimerval FreqSpec;
+        FreqSpec.it_value.tv_sec = 0;
+        FreqSpec.it_value.tv_usec = 1000 * TimerInterval;
+        FreqSpec.it_interval.tv_sec = 0;
+        FreqSpec.it_interval.tv_usec = 1000 * TimerInterval;
 #else
-            struct itimerspec FreqSpec;
-            FreqSpec.it_value.tv_sec = 0;
-            FreqSpec.it_value.tv_nsec = TimerInterval;
-            FreqSpec.it_interval.tv_sec = 0;
-            FreqSpec.it_interval.tv_nsec = TimerInterval;
-#endif
-#ifdef __APPLE__
-            setitimer(ITIMER_VIRTUAL, &FreqSpec, NULL);
-#else
-            timer_settime(TimerID, 0, &FreqSpec, NULL);
-#endif
-        }
-
-        TimeOut = MemOut = false;
-    }
-
-    void ResourceLimitManager::QueryEnd()
-    {
-        if (TimerCreated) {
-            // Just reset the timer
-#ifdef __APPLE__
-            struct itimerval FreqSpec;
-            FreqSpec.it_interval.tv_sec = 0;
-            FreqSpec.it_interval.tv_usec = 0;
-            FreqSpec.it_value.tv_sec = 0;
-            FreqSpec.it_value.tv_usec = 0;
-#else
-            struct itimerspec FreqSpec;
-            FreqSpec.it_interval.tv_sec = 0;
-            FreqSpec.it_interval.tv_nsec = 0;
-            FreqSpec.it_value.tv_sec = 0;
-            FreqSpec.it_value.tv_nsec = 0;
+        struct itimerspec FreqSpec;
+        FreqSpec.it_value.tv_sec = 0;
+        FreqSpec.it_value.tv_nsec = TimerInterval;
+        FreqSpec.it_interval.tv_sec = 0;
+        FreqSpec.it_interval.tv_nsec = TimerInterval;
 #endif
 #ifdef __APPLE__
-            setitimer(ITIMER_VIRTUAL, &FreqSpec, NULL);
+        setitimer(ITIMER_VIRTUAL, &FreqSpec, NULL);
 #else
-            timer_settime(TimerID, 0, &FreqSpec, NULL);
+        timer_settime(TimerID, 0, &FreqSpec, NULL);
 #endif
-        }
-        TimeOut = MemOut = false;
     }
 
-    bool ResourceLimitManager::CheckTimeOut()
-    {
-        return (volatile bool)TimeOut;
-    }
+    TimeOut = MemOut = false;
+}
 
-    bool ResourceLimitManager::CheckMemOut()
-    {
-        return (volatile bool)MemOut;
+void ResourceLimitManager::QueryEnd()
+{
+    if (TimerCreated) {
+        // Just reset the timer
+#ifdef __APPLE__
+        struct itimerval FreqSpec;
+        FreqSpec.it_interval.tv_sec = 0;
+        FreqSpec.it_interval.tv_usec = 0;
+        FreqSpec.it_value.tv_sec = 0;
+        FreqSpec.it_value.tv_usec = 0;
+#else
+        struct itimerspec FreqSpec;
+        FreqSpec.it_interval.tv_sec = 0;
+        FreqSpec.it_interval.tv_nsec = 0;
+        FreqSpec.it_value.tv_sec = 0;
+        FreqSpec.it_value.tv_nsec = 0;
+#endif
+#ifdef __APPLE__
+        setitimer(ITIMER_VIRTUAL, &FreqSpec, NULL);
+#else
+        timer_settime(TimerID, 0, &FreqSpec, NULL);
+#endif
     }
+    TimeOut = MemOut = false;
+}
 
-    void ResourceLimitManager::AddOnLimitHandler(const function<void(bool)>& Handler)
-    {
-        OnLimitHandlers.push_back(Handler);
-    }
+bool ResourceLimitManager::CheckTimeOut()
+{
+    return (volatile bool)TimeOut;
+}
 
-    void ResourceLimitManager::ClearOnLimitHandlers()
-    {
-        OnLimitHandlers.clear();
-    }
+bool ResourceLimitManager::CheckMemOut()
+{
+    return (volatile bool)MemOut;
+}
 
-    void ResourceLimitManager::GetUsage(double& TotalTime, double& PeakMem)
-    {
-        struct rusage CurUsage;
-        getrusage(RUSAGE_SELF, &CurUsage);
-        double UCPUTime = (double)((CurUsage.ru_utime.tv_sec * (u64)1000000) +
-                                   CurUsage.ru_utime.tv_usec) / 1000000.0;
-        double SCPUTime = (double)((CurUsage.ru_stime.tv_sec * (u64)1000000) +
-                                   CurUsage.ru_stime.tv_usec) / 1000000.0;
-        TotalTime = (UCPUTime + SCPUTime);
-        PeakMem = (double)CurUsage.ru_maxrss / 1024.0;
-    }
+void ResourceLimitManager::AddOnLimitHandler(const function<void(bool)>& Handler)
+{
+    OnLimitHandlers.push_back(Handler);
+}
+
+void ResourceLimitManager::ClearOnLimitHandlers()
+{
+    OnLimitHandlers.clear();
+}
+
+void ResourceLimitManager::GetUsage(double& TotalTime, double& PeakMem)
+{
+    struct rusage CurUsage;
+    getrusage(RUSAGE_SELF, &CurUsage);
+    double UCPUTime = (double)((CurUsage.ru_utime.tv_sec * (u64)1000000) +
+                               CurUsage.ru_utime.tv_usec) / 1000000.0;
+    double SCPUTime = (double)((CurUsage.ru_stime.tv_sec * (u64)1000000) +
+                               CurUsage.ru_stime.tv_usec) / 1000000.0;
+    TotalTime = (UCPUTime + SCPUTime);
+    PeakMem = (double)CurUsage.ru_maxrss / 1024.0;
+}
 
 } /* End namespace ESMC */
 

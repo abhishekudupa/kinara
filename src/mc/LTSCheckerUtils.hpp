@@ -1,9 +1,7 @@
-// TimeValue.hpp ---
-//
-// Filename: TimeValue.hpp
+// LTSCheckerUtils.hpp ---
+// Filename: LTSCheckerUtils.hpp
 // Author: Abhishek Udupa
-// Created: Wed Jan 15 14:49:47 2014 (-0500)
-//
+// Created: Sat Jan 31 13:37:09 2015 (-0500)
 //
 // Copyright (c) 2013, Abhishek Udupa, University of Pennsylvania
 // All rights reserved.
@@ -37,50 +35,20 @@
 
 // Code:
 
-
-#if !defined ESMC_TIME_VALUE_HPP_
-#define ESMC_TIME_VALUE_HPP_
+#if !defined ESMC_LTS_CHECKER_UTILS_HPP_
+#define ESMC_LTS_CHECKER_UTILS_HPP_
 
 #include "../common/ESMCFwdDecls.hpp"
-#include <sys/time.h>
-
-#ifdef __APPLE__
-#include <mach/clock.h>
-#include <mach/mach.h>
-typedef uint8_t clockid_t;
-#endif
 
 namespace ESMC {
+namespace MC {
+namespace Detail {
 
-class TimeValue : public Stringifiable
-{
-private:
-    struct timespec Value;
-    // private constructors
-    TimeValue(const struct timespec& Value);
-    TimeValue(time_t sec, long nsec);
-    void Initialize(const TimeValue& Other);
+} /* end namespace Detail */
+} /* end namespace MC */
+} /* end namespace ESMC */
 
-public:
-    // Default constructor
-    TimeValue();
-    // Assignment operator
-    TimeValue& operator = (const TimeValue& Other);
-    // Subtraction
-    TimeValue operator - (const TimeValue& Other) const;
-    TimeValue operator + (const TimeValue& Other) const;
-    TimeValue operator += (const TimeValue& Other);
-    virtual string ToString(u32 Verbosity = 0) const override;
-    u64 InMicroSeconds() const;
-    static TimeValue GetTimeValue();
-    static TimeValue GetTimeValue(clockid_t ClockID);
-};
-
-extern ostream& operator << (ostream& str, const TimeValue& TV);
-
-} /* End namespace ESMC */
-
-#endif /* ESMC_TIME_VALUE_HPP_ */
+#endif /* ESMC_LTS_CHECKER_UTILS_HPP_ */
 
 //
-// TimeValue.hpp ends here
+// LTSCheckerUtils.hpp ends here

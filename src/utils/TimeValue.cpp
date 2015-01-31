@@ -41,126 +41,126 @@
 
 namespace ESMC {
 
-    void TimeValue::Initialize(const TimeValue& Other)
-    {
-        Value = Other.Value;
-    }
+void TimeValue::Initialize(const TimeValue& Other)
+{
+    Value = Other.Value;
+}
 
-    TimeValue::TimeValue(const struct timespec& Value)
-        : Value(Value)
-    {
-        // Nothing here
-    }
+TimeValue::TimeValue(const struct timespec& Value)
+    : Value(Value)
+{
+    // Nothing here
+}
 
-    TimeValue::TimeValue(time_t sec, long nsec)
-    {
-        Value.tv_sec = sec;
-        Value.tv_nsec = nsec;
-    }
+TimeValue::TimeValue(time_t sec, long nsec)
+{
+    Value.tv_sec = sec;
+    Value.tv_nsec = nsec;
+}
 
-    TimeValue::TimeValue()
-    {
-        Value.tv_sec = 0;
-        Value.tv_nsec = 0;
-    }
+TimeValue::TimeValue()
+{
+    Value.tv_sec = 0;
+    Value.tv_nsec = 0;
+}
 
-    TimeValue& TimeValue::operator = (const TimeValue& Other)
-    {
-        if(&Other == this) {
-            return *this;
-        }
-        Initialize(Other);
+TimeValue& TimeValue::operator = (const TimeValue& Other)
+{
+    if(&Other == this) {
         return *this;
     }
+    Initialize(Other);
+    return *this;
+}
 
-    TimeValue TimeValue::operator - (const TimeValue& Other) const
-    {
-        time_t sec;
-        long nsec;
-        struct timespec tv = Value;
+TimeValue TimeValue::operator - (const TimeValue& Other) const
+{
+    time_t sec;
+    long nsec;
+    struct timespec tv = Value;
 
-        if (tv.tv_nsec < Other.Value.tv_nsec) {
-            tv.tv_nsec += 1000000000LL;
-            tv.tv_sec--;
-        }
-
-        nsec = tv.tv_nsec - Other.Value.tv_nsec;
-        sec = tv.tv_sec - Other.Value.tv_sec;
-
-        return TimeValue(sec, nsec);
+    if (tv.tv_nsec < Other.Value.tv_nsec) {
+        tv.tv_nsec += 1000000000LL;
+        tv.tv_sec--;
     }
 
-    TimeValue TimeValue::operator + (const TimeValue& Other) const
-    {
-        time_t sec;
-        long nsec;
+    nsec = tv.tv_nsec - Other.Value.tv_nsec;
+    sec = tv.tv_sec - Other.Value.tv_sec;
 
-        sec = 0;
-        nsec = 0;
+    return TimeValue(sec, nsec);
+}
 
-        nsec = this->Value.tv_nsec + Other.Value.tv_nsec;
-        if(nsec > 1000000000LL) {
-            nsec -= 1000000000LL;
-            sec += 1;
-        }
-        sec += (this->Value.tv_sec + Other.Value.tv_sec);
-        return TimeValue(sec, nsec);
+TimeValue TimeValue::operator + (const TimeValue& Other) const
+{
+    time_t sec;
+    long nsec;
+
+    sec = 0;
+    nsec = 0;
+
+    nsec = this->Value.tv_nsec + Other.Value.tv_nsec;
+    if(nsec > 1000000000LL) {
+        nsec -= 1000000000LL;
+        sec += 1;
     }
+    sec += (this->Value.tv_sec + Other.Value.tv_sec);
+    return TimeValue(sec, nsec);
+}
 
-    TimeValue TimeValue::operator += (const TimeValue& Other)
-    {
-        this->Value.tv_nsec += Other.Value.tv_nsec;
-        if(this->Value.tv_nsec > 1000000000LL) {
-            this->Value.tv_nsec -= 1000000000LL;
-            this->Value.tv_sec += 1;
-        }
-        this->Value.tv_sec += Other.Value.tv_sec;
-        return *this;
+TimeValue TimeValue::operator += (const TimeValue& Other)
+{
+    this->Value.tv_nsec += Other.Value.tv_nsec;
+    if(this->Value.tv_nsec > 1000000000LL) {
+        this->Value.tv_nsec -= 1000000000LL;
+        this->Value.tv_sec += 1;
     }
+    this->Value.tv_sec += Other.Value.tv_sec;
+    return *this;
+}
 
-    u64 TimeValue::InMicroSeconds() const
-    {
-        return ((u64)Value.tv_sec * (u64)1000000 + ((u64)Value.tv_nsec) / 1000);
-    }
+u64 TimeValue::InMicroSeconds() const
+{
+    return ((u64)Value.tv_sec * (u64)1000000 + ((u64)Value.tv_nsec) / 1000);
+}
 
-    string TimeValue::ToString(u32 Verbosity) const
-    {
-        ostringstream sstr;
-        sstr << ((double)Value.tv_sec + ((double)Value.tv_nsec / 1000000000.0));
-        return sstr.str();
-    }
+string TimeValue::ToString(u32 Verbosity) const
+{
+    ostringstream sstr;
+    sstr << ((double)Value.tv_sec + ((double)Value.tv_nsec / 1000000000.0));
+    return sstr.str();
+}
 
-    TimeValue TimeValue::GetTimeValue(clockid_t ClockID)
-    {
-        struct timespec tv;
+TimeValue TimeValue::GetTimeValue(clockid_t ClockID)
+{
+    struct timespec tv;
 #ifndef __APPLE__
-        clock_gettime(ClockID, &tv);
+    clock_gettime(ClockID, &tv);
 #endif
-        return TimeValue(tv);
-    }
+    return TimeValue(tv);
+}
 
-    TimeValue TimeValue::GetTimeValue()
-    {
+TimeValue TimeValue::GetTimeValue()
+{
 #ifdef __APPLE__
-        struct timespec tv;
-        clock_serv_t cclock;
-        mach_timespec_t mts;
-        host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
-        clock_get_time(cclock, &mts);
-        mach_port_deallocate(mach_task_self(), cclock);
-        tv.tv_sec = mts.tv_sec;
-        tv.tv_nsec = mts.tv_nsec;
-        return TimeValue(tv);
+    struct timespec tv;
+    clock_serv_t cclock;
+    mach_timespec_t mts;
+    host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
+    clock_get_time(cclock, &mts);
+    mach_port_deallocate(mach_task_self(), cclock);
+    tv.tv_sec = mts.tv_sec;
+    tv.tv_nsec = mts.tv_nsec;
+    return TimeValue(tv);
 #else
-        return TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
+    return TimeValue::GetTimeValue(CLOCK_THREAD_CPUTIME_ID);
 #endif
-    }
+}
 
-    ostream& operator << (ostream& str, const TimeValue& TV)
-    {
-        str << TV.ToString();
-        return str;
-    }
+ostream& operator << (ostream& str, const TimeValue& TV)
+{
+    str << TV.ToString();
+    return str;
+}
 
 } /* End namespace ESMC */
 

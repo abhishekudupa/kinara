@@ -49,133 +49,133 @@
 #include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
-    namespace MC {
+namespace MC {
 
-        using LTS::TypeRef;
-        using LTS::ExpT;
-        using LTS::LabelledTS;
-        using Symm::PermutationSet;
-        using LTS::EFSMBase;
+using LTS::TypeRef;
+using LTS::ExpT;
+using LTS::LabelledTS;
+using Symm::PermutationSet;
+using LTS::EFSMBase;
 
-        class IndexSet;
+class IndexSet;
 
-        class IndexVector
-        {
-        private:
-            u08* TheIndexVector;
-            u32 Size;
+class IndexVector
+{
+private:
+    u08* TheIndexVector;
+    u32 Size;
 
-        public:
-            IndexVector(u08* TheIndexVector, u32 Size);
-            ~IndexVector();
+public:
+    IndexVector(u08* TheIndexVector, u32 Size);
+    ~IndexVector();
 
-            u32 GetSize() const;
-            i32 Compare(const IndexVector* Other) const;
-            u64 Hash() const;
-            u08& operator [] (u32 Index);
-            u08 operator [] (u32 Index) const;
-            IndexVector* Clone() const;
+    u32 GetSize() const;
+    i32 Compare(const IndexVector* Other) const;
+    u64 Hash() const;
+    u08& operator [] (u32 Index);
+    u08 operator [] (u32 Index) const;
+    IndexVector* Clone() const;
 
-            u08* GetVector();
-            const u08* GetVector() const;
-        };
+    u08* GetVector();
+    const u08* GetVector() const;
+};
 
-        namespace Detail {
+namespace Detail {
 
-            class IndexVectorPtrHasher
-            {
-            public:
-                inline u64 operator () (const IndexVector* IndexVec) const
-                {
-                    return IndexVec->Hash();
-                }
-            };
+class IndexVectorPtrHasher
+{
+public:
+    inline u64 operator () (const IndexVector* IndexVec) const
+    {
+        return IndexVec->Hash();
+    }
+};
 
-            class IndexVectorPtrEquals
-            {
-            public:
-                inline bool operator () (const IndexVector* IndexVec1,
-                                         const IndexVector* IndexVec2) const
-                {
-                    return (IndexVec1->Compare(IndexVec2) == 0);
-                }
-            };
+class IndexVectorPtrEquals
+{
+public:
+    inline bool operator () (const IndexVector* IndexVec1,
+                             const IndexVector* IndexVec2) const
+    {
+        return (IndexVec1->Compare(IndexVec2) == 0);
+    }
+};
 
-            class IndexVectorPtrLessThan
-            {
-            public:
-                inline bool operator () (const IndexVector* IndexVec1,
-                                         const IndexVector* IndexVec2) const
-                {
-                    return (IndexVec1->Compare(IndexVec2) < 0);
-                }
-            };
+class IndexVectorPtrLessThan
+{
+public:
+    inline bool operator () (const IndexVector* IndexVec1,
+                             const IndexVector* IndexVec2) const
+    {
+        return (IndexVec1->Compare(IndexVec2) < 0);
+    }
+};
 
-        } /* end namespace Detail */
+} /* end namespace Detail */
 
-        // Manages the index vectors
-        // for ONE process, which could be
-        // parametrized by multiple symmetric types
-        class ProcessIndexSet
-        {
-        private:
-            vector<u32> TypeOffsets;
-            u32 IndexVectorSize;
-            u32 NumIndexVectors;
-            i32 ClassID;
-            // scratchpad for permutations
-            mutable IndexVector* WorkingIV;
-            map<vector<ExpT>, IndexVector*> ParamVecToIndexVec;
-            unordered_map<IndexVector*, vector<ExpT>,
-                          Detail::IndexVectorPtrHasher,
-                          Detail::IndexVectorPtrEquals> IndexVecToParamVec;
+// Manages the index vectors
+// for ONE process, which could be
+// parametrized by multiple symmetric types
+class ProcessIndexSet
+{
+private:
+    vector<u32> TypeOffsets;
+    u32 IndexVectorSize;
+    u32 NumIndexVectors;
+    i32 ClassID;
+    // scratchpad for permutations
+    mutable IndexVector* WorkingIV;
+    map<vector<ExpT>, IndexVector*> ParamVecToIndexVec;
+    unordered_map<IndexVector*, vector<ExpT>,
+                  Detail::IndexVectorPtrHasher,
+                  Detail::IndexVectorPtrEquals> IndexVecToParamVec;
 
-            vector<IndexVector*> IDToIndexVec;
-            unordered_map<IndexVector*, u32,
-                          Detail::IndexVectorPtrHasher,
-                          Detail::IndexVectorPtrEquals> IndexVecToID;
+    vector<IndexVector*> IDToIndexVec;
+    unordered_map<IndexVector*, u32,
+                  Detail::IndexVectorPtrHasher,
+                  Detail::IndexVectorPtrEquals> IndexVecToID;
 
-        public:
-            ProcessIndexSet(const vector<vector<ExpT>>& ParamInsts, i32 ClassID = -1);
-            ~ProcessIndexSet();
+public:
+    ProcessIndexSet(const vector<vector<ExpT>>& ParamInsts, i32 ClassID = -1);
+    ~ProcessIndexSet();
 
-            i32 GetClassID() const;
-            u32 Permute(u32 IndexID, const vector<u08>& Permutation) const;
-            u32 GetNumIndexVectors() const;
-            const IndexVector* GetIndexVector(u32 IndexID) const;
-            u32 GetIndexID(const IndexVector* IndexVec) const;
-            const vector<ExpT>& GetParamVecForIndexID(u32 IndexID) const;
-            const vector<ExpT>& GetParamVecForIndexVec(const IndexVector* IndexVec) const;
-            u32 GetIndexIDForParamVec(const vector<ExpT>& ParamVec) const;
-            const IndexVector* GetIndexVecForParamVec(const vector<ExpT>& ParamVec) const;
-        };
+    i32 GetClassID() const;
+    u32 Permute(u32 IndexID, const vector<u08>& Permutation) const;
+    u32 GetNumIndexVectors() const;
+    const IndexVector* GetIndexVector(u32 IndexID) const;
+    u32 GetIndexID(const IndexVector* IndexVec) const;
+    const vector<ExpT>& GetParamVecForIndexID(u32 IndexID) const;
+    const vector<ExpT>& GetParamVecForIndexVec(const IndexVector* IndexVec) const;
+    u32 GetIndexIDForParamVec(const vector<ExpT>& ParamVec) const;
+    const IndexVector* GetIndexVecForParamVec(const vector<ExpT>& ParamVec) const;
+};
 
-        // At any point of time, one index from the set of
-        // all process indices is tracked. Used in threaded
-        // graph construction/simulation
-        class SystemIndexSet
-        {
-        private:
-            vector<ProcessIndexSet*> ProcessIdxSets;
-            vector<u32> DomainSizes;
-            u32 NumTrackedIndices;
-            vector<pair<ProcessIndexSet*, u32>> IndexToPIdx;
-            // Low, High for a class id
-            vector<pair<u32, u32>> ClassIDBounds;
+// At any point of time, one index from the set of
+// all process indices is tracked. Used in threaded
+// graph construction/simulation
+class SystemIndexSet
+{
+private:
+    vector<ProcessIndexSet*> ProcessIdxSets;
+    vector<u32> DomainSizes;
+    u32 NumTrackedIndices;
+    vector<pair<ProcessIndexSet*, u32>> IndexToPIdx;
+    // Low, High for a class id
+    vector<pair<u32, u32>> ClassIDBounds;
 
-        public:
-            SystemIndexSet(const vector<vector<vector<ExpT>>>& ProcessParamInsts);
-            ~SystemIndexSet();
+public:
+    SystemIndexSet(const vector<vector<vector<ExpT>>>& ProcessParamInsts);
+    ~SystemIndexSet();
 
-            u32 Permute(u32 IndexID, const vector<u08>& Permutation) const;
-            u32 GetNumTrackedIndices() const;
+    u32 Permute(u32 IndexID, const vector<u08>& Permutation) const;
+    u32 GetNumTrackedIndices() const;
 
-            u32 GetClassID(u32 IndexID) const;
-            i32 GetIndexForClassID(u32 IndexID, u32 ClassID) const;
-            i32 GetIndexIDForClassIndex(u32 ClassIndex, u32 ClassID) const;
-        };
+    u32 GetClassID(u32 IndexID) const;
+    i32 GetIndexForClassID(u32 IndexID, u32 ClassID) const;
+    i32 GetIndexIDForClassIndex(u32 ClassIndex, u32 ClassID) const;
+};
 
-    } /* end namespace MC */
+} /* end namespace MC */
 } /* end namespace ESMC */
 
 #endif /* ESMC_INDEX_SET_HPP_ */

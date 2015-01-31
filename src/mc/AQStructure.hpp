@@ -55,503 +55,503 @@
 #include "StateVec.hpp"
 
 namespace ESMC {
-    namespace MC {
+namespace MC {
 
-        using google::sparse_hash_set;
-        using google::sparse_hash_map;
-        using LTS::LabelledTS;
-        using LTS::GCmdRef;
+using google::sparse_hash_set;
+using google::sparse_hash_map;
+using LTS::LabelledTS;
+using LTS::GCmdRef;
 
-        namespace Detail {
+namespace Detail {
 
-            class StateVecPtrHasher
-            {
-            public:
-                inline u64 operator () (const StateVec* Ptr) const
-                {
-                    return Ptr->Hash();
-                }
-            };
+class StateVecPtrHasher
+{
+public:
+    inline u64 operator () (const StateVec* Ptr) const
+    {
+        return Ptr->Hash();
+    }
+};
 
-            class StateVecPtrEquals
-            {
-            public:
-                inline bool operator () (const StateVec* Ptr1,
-                                         const StateVec* Ptr2) const
-                {
-                    return Ptr1->Equals(*Ptr2);
-                }
-            };
+class StateVecPtrEquals
+{
+public:
+    inline bool operator () (const StateVec* Ptr1,
+                             const StateVec* Ptr2) const
+    {
+        return Ptr1->Equals(*Ptr2);
+    }
+};
 
-        } /* end namespace Detail */
-
-
-        template <typename STATETYPE>
-        class AnnotatedEdge
-        {
-        private:
-            const STATETYPE* Target;
-            u32 Permutation;
-            u32 GCmdIndex;
-
-        public:
-            inline AnnotatedEdge()
-                : Target(nullptr), Permutation(0), GCmdIndex(0)
-            {
-                // Nothing here
-            }
-
-            inline AnnotatedEdge(const STATETYPE* Target, u32 Permutation,
-                                 u32 GCmdIndex)
-                : Target(Target), Permutation(Permutation),
-                  GCmdIndex(GCmdIndex)
-            {
-                // Nothing here
-            }
-
-            inline AnnotatedEdge(const AnnotatedEdge& Other)
-                : Target(Other.Target), Permutation(Other.Permutation),
-                  GCmdIndex(Other.GCmdIndex)
-            {
-                // Nothing here
-            }
-
-            inline ~AnnotatedEdge()
-            {
-                // Nothing here
-            }
-
-            inline AnnotatedEdge& operator = (const AnnotatedEdge& Other)
-            {
-                if (&Other == this) {
-                    return *this;
-                }
-                Target = Other.Target;
-                Permutation = Other.Permutation;
-                GCmdIndex = Other.GCmdIndex;
-                return *this;
-            }
-
-            inline bool operator == (const AnnotatedEdge& Other) const
-            {
-                return (Target == Other.Target &&
-                        Permutation == Other.Permutation &&
-                        GCmdIndex == Other.GCmdIndex);
-            }
-
-            inline const STATETYPE* GetTarget() const
-            {
-                return Target;
-            }
-
-            inline u32 GetPermutation() const
-            {
-                return Permutation;
-            }
-
-            inline u32 GetGCmdIndex() const
-            {
-                return GCmdIndex;
-            }
-
-            inline u64 Hash() const
-            {
-                u64 Retval = 0;
-                boost::hash_combine(Retval, Target->Hash());
-                boost::hash_combine(Retval, Permutation);
-                boost::hash_combine(Retval, GCmdIndex);
-                return Retval;
-            }
-        };
+} /* end namespace Detail */
 
 
-        namespace Detail {
+template <typename STATETYPE>
+class AnnotatedEdge
+{
+private:
+    const STATETYPE* Target;
+    u32 Permutation;
+    u32 GCmdIndex;
 
-            template <typename STATETYPE>
-            class AnnotatedEdgeHash
-            {
-            public:
-                inline u64 operator () (const AnnotatedEdge<STATETYPE>& Edge) const
-                {
-                    return Edge.Hash();
-                }
-            };
+public:
+    inline AnnotatedEdge()
+        : Target(nullptr), Permutation(0), GCmdIndex(0)
+    {
+        // Nothing here
+    }
 
-            template <typename STATETYPE>
-            class AnnotatedEdgePtrHasher
-            {
-            public:
-                inline u64 operator () (const AnnotatedEdge<STATETYPE>* Edge) const
-                {
-                    return Edge->Hash();
-                }
-            };
+    inline AnnotatedEdge(const STATETYPE* Target, u32 Permutation,
+                         u32 GCmdIndex)
+        : Target(Target), Permutation(Permutation),
+          GCmdIndex(GCmdIndex)
+    {
+        // Nothing here
+    }
 
-            template <typename STATETYPE>
-            class AnnotatedEdgePtrEquals
-            {
-            public:
-                inline bool operator () (const AnnotatedEdge<STATETYPE>* Ptr1,
-                                         const AnnotatedEdge<STATETYPE>* Ptr2) const
-                {
-                    return (*Ptr1 == *Ptr2);
-                }
-            };
+    inline AnnotatedEdge(const AnnotatedEdge& Other)
+        : Target(Other.Target), Permutation(Other.Permutation),
+          GCmdIndex(Other.GCmdIndex)
+    {
+        // Nothing here
+    }
 
-            typedef AnnotatedEdgePtrEquals<StateVec> AQSEdgePtrEquals;
-            typedef AnnotatedEdgePtrHasher<StateVec> AQSEdgePtrHasher;
+    inline ~AnnotatedEdge()
+    {
+        // Nothing here
+    }
 
-            // Fibonacci heap data structure
-            struct AQSFibDataT
-            {
-                const StateVec* StateVector;
-                u64 DistanceFromOrigin;
+    inline AnnotatedEdge& operator = (const AnnotatedEdge& Other)
+    {
+        if (&Other == this) {
+            return *this;
+        }
+        Target = Other.Target;
+        Permutation = Other.Permutation;
+        GCmdIndex = Other.GCmdIndex;
+        return *this;
+    }
 
-                inline AQSFibDataT(const StateVec* SV, u64 DistanceFromOrigin)
-                    : StateVector(SV), DistanceFromOrigin(DistanceFromOrigin)
-                {
-                    // Nothing here
-                }
-            };
+    inline bool operator == (const AnnotatedEdge& Other) const
+    {
+        return (Target == Other.Target &&
+                Permutation == Other.Permutation &&
+                GCmdIndex == Other.GCmdIndex);
+    }
 
-            struct AQSFibDataCompare
-            {
-                // Use a > comparator, since boost fib heaps are max-heaps
-                // rather than the text-book min-heaps.
-                inline bool operator () (const AQSFibDataT& Data1,
-                                         const AQSFibDataT& Data2) const
-                {
-                    return (Data1.DistanceFromOrigin > Data2.DistanceFromOrigin);
-                }
-            };
+    inline const STATETYPE* GetTarget() const
+    {
+        return Target;
+    }
 
-        } /* end namespace Detail */
+    inline u32 GetPermutation() const
+    {
+        return Permutation;
+    }
 
-        typedef AnnotatedEdge<StateVec> AQSEdge;
-        typedef sparse_hash_set<AQSEdge*,
-                                Detail::AQSEdgePtrHasher,
-                                Detail::AQSEdgePtrEquals> AQSEdgeHashSetT;
+    inline u32 GetGCmdIndex() const
+    {
+        return GCmdIndex;
+    }
 
-        typedef sparse_hash_set<AQSEdge*> AQSEdgeSetT;
+    inline u64 Hash() const
+    {
+        u64 Retval = 0;
+        boost::hash_combine(Retval, Target->Hash());
+        boost::hash_combine(Retval, Permutation);
+        boost::hash_combine(Retval, GCmdIndex);
+        return Retval;
+    }
+};
 
-        typedef sparse_hash_map<StateVec*, AQSEdgeSetT,
-                                Detail::StateVecPtrHasher,
-                                Detail::StateVecPtrEquals> SVHashSetT;
 
-        class AQStructure
-        {
-        private:
-            SVHashSetT StateHashSet;
-            AQSEdgeHashSetT EdgeHashSet;
-            vector<StateVec*> InitStates;
-            AQSEdgeSetT EmptyEdgeSet;
-            boost::pool<>* EdgePool;
-            LabelledTS* TheLTS;
+namespace Detail {
 
-        public:
-            AQStructure(LabelledTS* TheLTS);
-            virtual ~AQStructure();
+template <typename STATETYPE>
+class AnnotatedEdgeHash
+{
+public:
+    inline u64 operator () (const AnnotatedEdge<STATETYPE>& Edge) const
+    {
+        return Edge.Hash();
+    }
+};
 
-            StateVec* Find(StateVec* SV) const;
-            void Insert(StateVec* SV);
-            void InsertInitState(StateVec* SV);
-            void AddEdge(StateVec* Source, StateVec* Target,
-                         u32 Permutation, u32 GCmdIndex);
-            u64 GetNumStates() const;
-            u64 GetNumEdges() const;
-            const AQSEdgeSetT& GetEdges(const StateVec* SV) const;
-            const vector<StateVec*>& GetInitStates() const;
+template <typename STATETYPE>
+class AnnotatedEdgePtrHasher
+{
+public:
+    inline u64 operator () (const AnnotatedEdge<STATETYPE>* Edge) const
+    {
+        return Edge->Hash();
+    }
+};
 
-            LabelledTS* GetLTS() const;
+template <typename STATETYPE>
+class AnnotatedEdgePtrEquals
+{
+public:
+    inline bool operator () (const AnnotatedEdge<STATETYPE>* Ptr1,
+                             const AnnotatedEdge<STATETYPE>* Ptr2) const
+    {
+        return (*Ptr1 == *Ptr2);
+    }
+};
 
-            // Path finding methods
-            AQSPermPath* FindPath(const vector<const StateVec*>& Origins,
-                                  const StateVec* Target) const;
-            AQSPermPath* FindPath(const vector<const StateVec*>& Origins,
-                                  const function<bool(const StateVec*)>& TargetPred) const;
-            // On edges
-            AQSPermPath* FindPath(const vector<const StateVec*>& Origins,
+typedef AnnotatedEdgePtrEquals<StateVec> AQSEdgePtrEquals;
+typedef AnnotatedEdgePtrHasher<StateVec> AQSEdgePtrHasher;
+
+// Fibonacci heap data structure
+struct AQSFibDataT
+{
+    const StateVec* StateVector;
+    u64 DistanceFromOrigin;
+
+    inline AQSFibDataT(const StateVec* SV, u64 DistanceFromOrigin)
+        : StateVector(SV), DistanceFromOrigin(DistanceFromOrigin)
+    {
+        // Nothing here
+    }
+};
+
+struct AQSFibDataCompare
+{
+    // Use a > comparator, since boost fib heaps are max-heaps
+    // rather than the text-book min-heaps.
+    inline bool operator () (const AQSFibDataT& Data1,
+                             const AQSFibDataT& Data2) const
+    {
+        return (Data1.DistanceFromOrigin > Data2.DistanceFromOrigin);
+    }
+};
+
+} /* end namespace Detail */
+
+typedef AnnotatedEdge<StateVec> AQSEdge;
+typedef sparse_hash_set<AQSEdge*,
+                        Detail::AQSEdgePtrHasher,
+                        Detail::AQSEdgePtrEquals> AQSEdgeHashSetT;
+
+typedef sparse_hash_set<AQSEdge*> AQSEdgeSetT;
+
+typedef sparse_hash_map<StateVec*, AQSEdgeSetT,
+                        Detail::StateVecPtrHasher,
+                        Detail::StateVecPtrEquals> SVHashSetT;
+
+class AQStructure
+{
+private:
+    SVHashSetT StateHashSet;
+    AQSEdgeHashSetT EdgeHashSet;
+    vector<StateVec*> InitStates;
+    AQSEdgeSetT EmptyEdgeSet;
+    boost::pool<>* EdgePool;
+    LabelledTS* TheLTS;
+
+public:
+    AQStructure(LabelledTS* TheLTS);
+    virtual ~AQStructure();
+
+    StateVec* Find(StateVec* SV) const;
+    void Insert(StateVec* SV);
+    void InsertInitState(StateVec* SV);
+    void AddEdge(StateVec* Source, StateVec* Target,
+                 u32 Permutation, u32 GCmdIndex);
+    u64 GetNumStates() const;
+    u64 GetNumEdges() const;
+    const AQSEdgeSetT& GetEdges(const StateVec* SV) const;
+    const vector<StateVec*>& GetInitStates() const;
+
+    LabelledTS* GetLTS() const;
+
+    // Path finding methods
+    AQSPermPath* FindPath(const vector<const StateVec*>& Origins,
+                          const StateVec* Target) const;
+    AQSPermPath* FindPath(const vector<const StateVec*>& Origins,
+                          const function<bool(const StateVec*)>& TargetPred) const;
+    // On edges
+    AQSPermPath* FindPath(const vector<const StateVec*>& Origins,
+                          const function<const StateVec*(const StateVec*,
+                                                         const AQSEdge*)>&
+                          TargetEdgePred) const;
+
+    // Find a path from one of the initial states
+    AQSPermPath* FindPath(const StateVec* Target) const;
+    AQSPermPath* FindPath(const function<bool(const StateVec*)>& TargetPred) const;
+    AQSPermPath* FindPath(const function<const StateVec*(const StateVec*,
+                                                         const AQSEdge*)>&
+                          TargetEdgePred) const;
+
+    // Shortest paths with cost functions
+    AQSPermPath* FindShortestPath(const vector<const StateVec*>& Origins,
+                                  const StateVec* Target,
+                                  const function<u64(const StateVec*, const AQSEdge*)>&
+                                  CostFunction) const;
+
+    AQSPermPath* FindShortestPath(const vector<const StateVec*>& Origins,
+                                  const function<bool(const StateVec*)>& TargetPred,
+                                  const function<u64(const StateVec*, const AQSEdge*)>&
+                                  CostFunction) const;
+
+    AQSPermPath* FindShortestPath(const vector<const StateVec*>& Origins,
                                   const function<const StateVec*(const StateVec*,
                                                                  const AQSEdge*)>&
-                                  TargetEdgePred) const;
+                                  TargetEdgePred,
+                                  const function<u64(const StateVec*, const AQSEdge*)>&
+                                  CostFunction) const;
 
-            // Find a path from one of the initial states
-            AQSPermPath* FindPath(const StateVec* Target) const;
-            AQSPermPath* FindPath(const function<bool(const StateVec*)>& TargetPred) const;
-            AQSPermPath* FindPath(const function<const StateVec*(const StateVec*,
+    // Find a shortest path from one of the initial states
+    AQSPermPath* FindShortestPath(const StateVec* Target,
+                                  const function<u64(const StateVec*, const AQSEdge*)>&
+                                  CostFunction) const;
+    AQSPermPath* FindShortestPath(const function<bool(const StateVec*)>& TargetPred,
+                                  const function<u64(const StateVec*, const AQSEdge*)>&
+                                  CostFunction) const;
+    AQSPermPath* FindShortestPath(const function<const StateVec*(const StateVec*,
                                                                  const AQSEdge*)>&
-                                  TargetEdgePred) const;
+                                  TargetEdgePred,
+                                  const function<u64(const StateVec*, const AQSEdge*)>&
+                                  CostFunction) const;
+};
 
-            // Shortest paths with cost functions
-            AQSPermPath* FindShortestPath(const vector<const StateVec*>& Origins,
-                                          const StateVec* Target,
-                                          const function<u64(const StateVec*, const AQSEdge*)>&
-                                          CostFunction) const;
+// A bitfield structure for the status bits
+// in the product state
+struct ThreadedGraphStatusT
+{
+    bool OnStack : 1;
+    bool Accepting : 1;
+    bool Deleted : 1;
+    bool Singular : 1;
+    i32 InSCC : 28;
 
-            AQSPermPath* FindShortestPath(const vector<const StateVec*>& Origins,
-                                          const function<bool(const StateVec*)>& TargetPred,
-                                          const function<u64(const StateVec*, const AQSEdge*)>&
-                                          CostFunction) const;
+    inline ThreadedGraphStatusT()
+        : OnStack(false), Accepting(false), Deleted(false),
+          Singular(false), InSCC(-1)
+    {
+        // Nothing here
+    }
+};
 
-            AQSPermPath* FindShortestPath(const vector<const StateVec*>& Origins,
-                                          const function<const StateVec*(const StateVec*,
-                                                                         const AQSEdge*)>&
-                                          TargetEdgePred,
-                                          const function<u64(const StateVec*, const AQSEdge*)>&
-                                          CostFunction) const;
+class ProductState
+{
+private:
+    const StateVec* SVPtr;
+    u32 MonitorState;
+    u32 IndexID;
 
-            // Find a shortest path from one of the initial states
-            AQSPermPath* FindShortestPath(const StateVec* Target,
-                                          const function<u64(const StateVec*, const AQSEdge*)>&
-                                          CostFunction) const;
-            AQSPermPath* FindShortestPath(const function<bool(const StateVec*)>& TargetPred,
-                                          const function<u64(const StateVec*, const AQSEdge*)>&
-                                          CostFunction) const;
-            AQSPermPath* FindShortestPath(const function<const StateVec*(const StateVec*,
-                                                                         const AQSEdge*)>&
-                                          TargetEdgePred,
-                                          const function<u64(const StateVec*, const AQSEdge*)>&
-                                          CostFunction) const;
-        };
+public:
+    // Status variables that do not affect the
+    // identity of this node
+    mutable ThreadedGraphStatusT Status;
 
-        // A bitfield structure for the status bits
-        // in the product state
-        struct ThreadedGraphStatusT
-        {
-            bool OnStack : 1;
-            bool Accepting : 1;
-            bool Deleted : 1;
-            bool Singular : 1;
-            i32 InSCC : 28;
+    mutable i32 DFSNum;
+    mutable i32 LowLink;
+    mutable BitSet TrackingBits;
 
-            inline ThreadedGraphStatusT()
-                : OnStack(false), Accepting(false), Deleted(false),
-                  Singular(false), InSCC(-1)
-            {
-                // Nothing here
-            }
-        };
+public:
+    ProductState(const StateVec* SVPtr, u32 MonitorState,
+                 u32 IndexID, u32 NumTrackingBits);
+    ~ProductState();
 
-        class ProductState
-        {
-        private:
-            const StateVec* SVPtr;
-            u32 MonitorState;
-            u32 IndexID;
+    const StateVec* GetSVPtr() const;
+    u32 GetMonitorState() const;
+    u32 GetIndexID() const;
+    u64 Hash() const;
+    bool operator == (const ProductState& Other) const;
+    bool Equals(const ProductState* Other) const;
 
-        public:
-            // Status variables that do not affect the
-            // identity of this node
-            mutable ThreadedGraphStatusT Status;
+    void ClearAllMarkings() const;
+    void ClearSCCMarkings() const;
 
-            mutable i32 DFSNum;
-            mutable i32 LowLink;
-            mutable BitSet TrackingBits;
+    void MarkOnStack() const;
+    void MarkNotOnStack() const;
+    bool IsOnStack() const;
 
-        public:
-            ProductState(const StateVec* SVPtr, u32 MonitorState,
-                         u32 IndexID, u32 NumTrackingBits);
-            ~ProductState();
+    void MarkAccepting() const;
+    void MarkNotAccepting() const;
+    bool IsAccepting() const;
 
-            const StateVec* GetSVPtr() const;
-            u32 GetMonitorState() const;
-            u32 GetIndexID() const;
-            u64 Hash() const;
-            bool operator == (const ProductState& Other) const;
-            bool Equals(const ProductState* Other) const;
+    void MarkDeleted() const;
+    void MarkNotDeleted() const;
+    bool IsDeleted() const;
 
-            void ClearAllMarkings() const;
-            void ClearSCCMarkings() const;
+    void MarkSingular() const;
+    void MarkNotSingular() const;
+    bool IsSingular() const;
 
-            void MarkOnStack() const;
-            void MarkNotOnStack() const;
-            bool IsOnStack() const;
+    void MarkInSCC(u32 SCCID) const;
+    void MarkNotInSCC() const;
+    bool IsInSCC(u32 SCCID) const;
+    i32 GetSCCID() const;
 
-            void MarkAccepting() const;
-            void MarkNotAccepting() const;
-            bool IsAccepting() const;
+    void MarkTracked(u32 BitNum) const;
+    void MarkNotTracked(u32 BitNum) const;
+    void ClearAllTracked() const;
+    bool IsTracked(u32 BitNum) const;
+};
 
-            void MarkDeleted() const;
-            void MarkNotDeleted() const;
-            bool IsDeleted() const;
+namespace Detail {
 
-            void MarkSingular() const;
-            void MarkNotSingular() const;
-            bool IsSingular() const;
+typedef AnnotatedEdgePtrHasher<ProductState> ProductEdgePtrHasher;
+typedef AnnotatedEdgePtrEquals<ProductState> ProductEdgePtrEquals;
 
-            void MarkInSCC(u32 SCCID) const;
-            void MarkNotInSCC() const;
-            bool IsInSCC(u32 SCCID) const;
-            i32 GetSCCID() const;
+class ProductStatePtrHasher
+{
+public:
+    inline u64 operator () (const ProductState* Ptr) const
+    {
+        return Ptr->Hash();
+    }
+};
 
-            void MarkTracked(u32 BitNum) const;
-            void MarkNotTracked(u32 BitNum) const;
-            void ClearAllTracked() const;
-            bool IsTracked(u32 BitNum) const;
-        };
+class ProductStatePtrEquals
+{
+public:
+    inline bool operator () (const ProductState* Ptr1,
+                             const ProductState* Ptr2) const
+    {
+        return (*Ptr1 == *Ptr2);
+    }
+};
 
-        namespace Detail {
+class ProductStatePtrFullEquals
+{
+    inline bool operator () (const ProductState* Ptr1,
+                             const ProductState* Ptr2) const
+    {
+        return (Ptr1->GetMonitorState() == Ptr2->GetMonitorState() &&
+                Ptr1->GetIndexID() == Ptr2->GetIndexID() &&
+                Ptr1->GetSVPtr()->Equals(*(Ptr2->GetSVPtr())));
+    }
+};
 
-            typedef AnnotatedEdgePtrHasher<ProductState> ProductEdgePtrHasher;
-            typedef AnnotatedEdgePtrEquals<ProductState> ProductEdgePtrEquals;
+struct PSFibDataT
+{
+    const ProductState* State;
+    u32 DistanceFromOrigin;
 
-            class ProductStatePtrHasher
-            {
-            public:
-                inline u64 operator () (const ProductState* Ptr) const
-                {
-                    return Ptr->Hash();
-                }
-            };
+    inline PSFibDataT(const ProductState* State, u32 DistanceFromOrigin)
+        : State(State), DistanceFromOrigin(DistanceFromOrigin)
+    {
+        // Nothing here
+    }
+};
 
-            class ProductStatePtrEquals
-            {
-            public:
-                inline bool operator () (const ProductState* Ptr1,
-                                         const ProductState* Ptr2) const
-                {
-                    return (*Ptr1 == *Ptr2);
-                }
-            };
+struct PSFibDataCompare
+{
+    // Use a > comparator, since boost fib heaps are max-heaps
+    // rather than the text-book min-heaps.
+    inline bool operator () (const PSFibDataT& Data1,
+                             const PSFibDataT& Data2) const
+    {
+        return (Data1.DistanceFromOrigin > Data2.DistanceFromOrigin);
+    }
+};
 
-            class ProductStatePtrFullEquals
-            {
-                inline bool operator () (const ProductState* Ptr1,
-                                         const ProductState* Ptr2) const
-                {
-                    return (Ptr1->GetMonitorState() == Ptr2->GetMonitorState() &&
-                            Ptr1->GetIndexID() == Ptr2->GetIndexID() &&
-                            Ptr1->GetSVPtr()->Equals(*(Ptr2->GetSVPtr())));
-                }
-            };
+} /* end namespace Detail */
 
-            struct PSFibDataT
-            {
-                const ProductState* State;
-                u32 DistanceFromOrigin;
+typedef AnnotatedEdge<ProductState> ProductEdge;
+typedef sparse_hash_set<ProductEdge*,
+                        Detail::ProductEdgePtrHasher,
+                        Detail::ProductEdgePtrEquals> ProductEdgeHashSetT;
 
-                inline PSFibDataT(const ProductState* State, u32 DistanceFromOrigin)
-                    : State(State), DistanceFromOrigin(DistanceFromOrigin)
-                {
-                    // Nothing here
-                }
-            };
+typedef sparse_hash_set<ProductEdge*> ProductEdgeSetT;
 
-            struct PSFibDataCompare
-            {
-                // Use a > comparator, since boost fib heaps are max-heaps
-                // rather than the text-book min-heaps.
-                inline bool operator () (const PSFibDataT& Data1,
-                                         const PSFibDataT& Data2) const
-                {
-                    return (Data1.DistanceFromOrigin > Data2.DistanceFromOrigin);
-                }
-            };
+typedef sparse_hash_map<ProductState*, ProductEdgeSetT,
+                        Detail::ProductStatePtrHasher,
+                        Detail::ProductStatePtrEquals> ProductStateHashSetT;
 
-        } /* end namespace Detail */
+class ProductStructure
+{
+private:
+    u32 NumTrackingBits;
+    ProductStateHashSetT PSHashSet;
+    ProductEdgeHashSetT EdgeHashSet;
+    vector<ProductState*> InitialStates;
+    ProductEdgeSetT EmptyEdgeSet;
+    boost::object_pool<ProductState>* PSPool;
+    boost::pool<>* PEPool;
+    BuchiAutomatonBase* Monitor;
 
-        typedef AnnotatedEdge<ProductState> ProductEdge;
-        typedef sparse_hash_set<ProductEdge*,
-                                Detail::ProductEdgePtrHasher,
-                                Detail::ProductEdgePtrEquals> ProductEdgeHashSetT;
+public:
+    ProductStructure(u32 NumTrackingBits, BuchiAutomatonBase* Monitor);
+    ~ProductStructure();
 
-        typedef sparse_hash_set<ProductEdge*> ProductEdgeSetT;
+    ProductState* AddInitialState(const StateVec* SVPtr,
+                                  u32 MonitorState,
+                                  u32 IndexID);
 
-        typedef sparse_hash_map<ProductState*, ProductEdgeSetT,
-                                Detail::ProductStatePtrHasher,
-                                Detail::ProductStatePtrEquals> ProductStateHashSetT;
+    ProductState* AddState(const StateVec* SVPtr, u32 MonitorState,
+                           u32 IndexID, bool& New);
+    void AddEdge(ProductState* Source, ProductState* Target,
+                 u32 Permutation, u32 GCmdIndex);
 
-        class ProductStructure
-        {
-        private:
-            u32 NumTrackingBits;
-            ProductStateHashSetT PSHashSet;
-            ProductEdgeHashSetT EdgeHashSet;
-            vector<ProductState*> InitialStates;
-            ProductEdgeSetT EmptyEdgeSet;
-            boost::object_pool<ProductState>* PSPool;
-            boost::pool<>* PEPool;
-            BuchiAutomatonBase* Monitor;
+    BuchiAutomatonBase* GetMonitor() const;
 
-        public:
-            ProductStructure(u32 NumTrackingBits, BuchiAutomatonBase* Monitor);
-            ~ProductStructure();
+    const vector<ProductState*>& GetInitialStates() const;
+    const ProductStateHashSetT& GetAllStates() const;
+    const ProductEdgeSetT& GetEdges(ProductState* State) const;
 
-            ProductState* AddInitialState(const StateVec* SVPtr,
-                                          u32 MonitorState,
-                                          u32 IndexID);
+    u32 GetNumStates() const;
+    u32 GetNumEdges() const;
+    void ClearAllMarkings() const;
+    void ClearSCCMarkings() const;
+    u32 GetNumTrackingBits() const;
 
-            ProductState* AddState(const StateVec* SVPtr, u32 MonitorState,
-                                   u32 IndexID, bool& New);
-            void AddEdge(ProductState* Source, ProductState* Target,
-                         u32 Permutation, u32 GCmdIndex);
+    void ApplyToAllStates(const function<void(const ProductState*)>& Func) const;
 
-            BuchiAutomatonBase* GetMonitor() const;
+    // Paths and shortest paths
+    PSPermPath* FindPath(const vector<const ProductState*>& Origins,
+                         const ProductState* Target) const;
+    PSPermPath* FindPath(const vector<const ProductState*>& Origins,
+                         const function<bool(const ProductState*)>& TargetPred) const;
+    PSPermPath* FindPath(const vector<const ProductState*>& Origins,
+                         const function<const ProductState*(const ProductState*,
+                                                            const ProductEdge*)>&
+                         TargetEdgePred) const;
+    // From the initial states
+    PSPermPath* FindPath(const ProductState* Target) const;
+    PSPermPath* FindPath(const function<bool(const ProductState*)>& TargetPred) const;
+    PSPermPath* FindPath(const function<const ProductState*(const ProductState*,
+                                                            const ProductEdge*)>&
+                         TargetEdgePred) const;
 
-            const vector<ProductState*>& GetInitialStates() const;
-            const ProductStateHashSetT& GetAllStates() const;
-            const ProductEdgeSetT& GetEdges(ProductState* State) const;
-
-            u32 GetNumStates() const;
-            u32 GetNumEdges() const;
-            void ClearAllMarkings() const;
-            void ClearSCCMarkings() const;
-            u32 GetNumTrackingBits() const;
-
-            void ApplyToAllStates(const function<void(const ProductState*)>& Func) const;
-
-            // Paths and shortest paths
-            PSPermPath* FindPath(const vector<const ProductState*>& Origins,
-                                 const ProductState* Target) const;
-            PSPermPath* FindPath(const vector<const ProductState*>& Origins,
-                                 const function<bool(const ProductState*)>& TargetPred) const;
-            PSPermPath* FindPath(const vector<const ProductState*>& Origins,
+    // Actual shortest paths with cost functions
+    PSPermPath* FindShortestPath(const vector<const ProductState*>& Origins,
+                                 const ProductState* Target,
+                                 const function<u64(const ProductState*,
+                                                    const ProductEdge*)>&
+                                 CostFunction) const;
+    PSPermPath* FindShortestPath(const vector<const ProductState*>& Origins,
+                                 const function<bool(const ProductState*)>& TargetPred,
+                                 const function<u64(const ProductState*,
+                                                    const ProductEdge*)>&
+                                 CostFunction) const;
+    PSPermPath* FindShortestPath(const vector<const ProductState*>& Origins,
                                  const function<const ProductState*(const ProductState*,
                                                                     const ProductEdge*)>&
-                                 TargetEdgePred) const;
-            // From the initial states
-            PSPermPath* FindPath(const ProductState* Target) const;
-            PSPermPath* FindPath(const function<bool(const ProductState*)>& TargetPred) const;
-            PSPermPath* FindPath(const function<const ProductState*(const ProductState*,
+                                 TargetEdgePred,
+                                 const function<u64(const ProductState*,
+                                                    const ProductEdge*)>&
+                                 CostFunction) const;
+    // From the initial states
+    PSPermPath* FindShortestPath(const ProductState* Target,
+                                 const function<u64(const ProductState*,
+                                                    const ProductEdge*)>&
+                                 CostFunction) const;
+    PSPermPath* FindShortestPath(const function<bool(const ProductState*)>& TargetPred,
+                                 const function<u64(const ProductState*,
+                                                    const ProductEdge*)>&
+                                 CostFunction) const;
+    PSPermPath* FindShortestPath(const function<const ProductState*(const ProductState*,
                                                                     const ProductEdge*)>&
-                                 TargetEdgePred) const;
+                                 TargetEdgePred,
+                                 const function<u64(const ProductState*,
+                                                    const ProductEdge*)>&
+                                 CostFunction) const;
+};
 
-            // Actual shortest paths with cost functions
-            PSPermPath* FindShortestPath(const vector<const ProductState*>& Origins,
-                                         const ProductState* Target,
-                                         const function<u64(const ProductState*,
-                                                            const ProductEdge*)>&
-                                         CostFunction) const;
-            PSPermPath* FindShortestPath(const vector<const ProductState*>& Origins,
-                                         const function<bool(const ProductState*)>& TargetPred,
-                                         const function<u64(const ProductState*,
-                                                            const ProductEdge*)>&
-                                         CostFunction) const;
-            PSPermPath* FindShortestPath(const vector<const ProductState*>& Origins,
-                                         const function<const ProductState*(const ProductState*,
-                                                                            const ProductEdge*)>&
-                                         TargetEdgePred,
-                                         const function<u64(const ProductState*,
-                                                            const ProductEdge*)>&
-                                         CostFunction) const;
-            // From the initial states
-            PSPermPath* FindShortestPath(const ProductState* Target,
-                                         const function<u64(const ProductState*,
-                                                            const ProductEdge*)>&
-                                         CostFunction) const;
-            PSPermPath* FindShortestPath(const function<bool(const ProductState*)>& TargetPred,
-                                         const function<u64(const ProductState*,
-                                                            const ProductEdge*)>&
-                                         CostFunction) const;
-            PSPermPath* FindShortestPath(const function<const ProductState*(const ProductState*,
-                                                                            const ProductEdge*)>&
-                                         TargetEdgePred,
-                                         const function<u64(const ProductState*,
-                                                            const ProductEdge*)>&
-                                         CostFunction) const;
-        };
-
-    } /* end namespace MC */
+} /* end namespace MC */
 } /* end namespace ESMC */
 
 #endif /* ESMC_AQ_STRUCTURE_HPP_ */

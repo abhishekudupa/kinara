@@ -47,227 +47,229 @@
 
 namespace ESMC {
 
-    // SmartPtrs and such
-    class RefCountable;
-    template <typename T> class SmartPtr;
-    template <typename T> class CSmartPtr;
+// SmartPtrs and such
+class RefCountable;
+template <typename T> class SmartPtr;
+template <typename T> class CSmartPtr;
 
-    // Compression technique for logging
-    enum class LogFileCompressionTechniqueT {
-        COMPRESS_NONE, COMPRESS_BZIP2, COMPRESS_GZIP
-    };
+// Compression technique for logging
+enum class LogFileCompressionTechniqueT
+{
+    COMPRESS_NONE, COMPRESS_BZIP2, COMPRESS_GZIP
+};
 
-    // Expression managers
-    // and semanticizers
-    namespace Exprs {
+// Expression managers
+// and semanticizers
+namespace Exprs {
 
-        template <typename ExtType, template <typename> class SemType> class ExprMgr;
-        template <typename ExtType, template <typename> class SemType> class ExpressionBase;
-        template <typename ExtType, template <typename> class SemType> class ConstExpression;
-        template <typename ExtType, template <typename> class SemType> class VarExpression;
-        template <typename ExtType, template <typename> class SemType> class BoundVarExpression;
-        template <typename ExtType, template <typename> class SemType> class OpExpression;
-        template <typename ExtType,
-                  template <typename> class SemType> class QuantifiedExpressionBase;
-        template <typename ExtType, template <typename> class SemType> class AQuantifiedExpression;
-        template <typename ExtType, template <typename> class SemType> class EQuantifiedExpression;
+template <typename ExtType, template <typename> class SemType> class ExprMgr;
+template <typename ExtType, template <typename> class SemType> class ExpressionBase;
+template <typename ExtType, template <typename> class SemType> class ConstExpression;
+template <typename ExtType, template <typename> class SemType> class VarExpression;
+template <typename ExtType, template <typename> class SemType> class BoundVarExpression;
+template <typename ExtType, template <typename> class SemType> class OpExpression;
+template <typename ExtType,
+          template <typename> class SemType> class QuantifiedExpressionBase;
+template <typename ExtType, template <typename> class SemType> class AQuantifiedExpression;
+template <typename ExtType, template <typename> class SemType> class EQuantifiedExpression;
 
-        class ExtListExtBase;
-        typedef SmartPtr<ExtListExtBase> ExtListExtRef;
-        typedef CSmartPtr<ExtListExtBase> ExtListExtCRef;
-        typedef list<ExtListExtRef> ExtListT;
+class ExtListExtBase;
+typedef SmartPtr<ExtListExtBase> ExtListExtRef;
+typedef CSmartPtr<ExtListExtBase> ExtListExtCRef;
+typedef list<ExtListExtRef> ExtListT;
 
-        // Smart ptr types for expressions
-        template <typename E, template <typename> class S>
-        using Expr = CSmartPtr<ExpressionBase<E, S>>;
-        template <typename E, template <typename> class S>
-        using ExprI = SmartPtr<ExpressionBase<E, S>>;
+// Smart ptr types for expressions
+template <typename E, template <typename> class S>
+using Expr = CSmartPtr<ExpressionBase<E, S>>;
+template <typename E, template <typename> class S>
+using ExprI = SmartPtr<ExpressionBase<E, S>>;
 
-        class ExpressionPtrHasher;
-        class FastExpressionPtrEquals;
-        class ExpressionPtrEquals;
-        class ExpressionPtrCompare;
+class ExpressionPtrHasher;
+class FastExpressionPtrEquals;
+class ExpressionPtrEquals;
+class ExpressionPtrCompare;
 
-        template <template <typename> class S>
-        using ExtListExprMgr = ExprMgr<ExtListT, S>;
+template <template <typename> class S>
+using ExtListExprMgr = ExprMgr<ExtListT, S>;
 
-        // Expression Visitors
-        template <typename E, template <typename> class S> class ExpressionVisitorBase;
+// Expression Visitors
+template <typename E, template <typename> class S> class ExpressionVisitorBase;
 
-    } /* end namespace Exprs */
+} /* end namespace Exprs */
 
-    namespace Decls {
+namespace Decls {
 
-        class SymbolTable;
-        class SymtabScope;
+class SymbolTable;
+class SymtabScope;
 
-        typedef SmartPtr<SymtabScope> ScopeRef;
+typedef SmartPtr<SymtabScope> ScopeRef;
 
-    } /* end namespace Decls */
+} /* end namespace Decls */
 
-    namespace LTS {
+namespace LTS {
 
-        class TypeBase;
-        class FuncType;
-        class ScalarType;
-        class BoolType;
-        class IntType;
-        class RangeType;
-        class EnumType;
-        class SymmetricType;
-        class RecordType;
-        class ArrayType;
-        class UnionType;
-        class ParametricType;
-        class FieldAccessType;
+class TypeBase;
+class FuncType;
+class ScalarType;
+class BoolType;
+class IntType;
+class RangeType;
+class EnumType;
+class SymmetricType;
+class RecordType;
+class ArrayType;
+class UnionType;
+class ParametricType;
+class FieldAccessType;
 
-        typedef CSmartPtr<TypeBase> TypeRef;
-
-
-        class LabelledTS;
-        class EFSMBase;
-        class AutomatonBase;
-        class ChannelEFSM;
-        class GeneralEFSM;
-        class DetEFSM;
-
-        class SymmetricMessageDecl;
-
-        typedef CSmartPtr<SymmetricMessageDecl> SymmMsgDeclRef;
-
-        template <typename E> class LTSTermSemantizer;
-        class LTSLoweredContext;
-        typedef CSmartPtr<LTSLoweredContext> LTSLCRef;
-
-        class LTSAssignBase;
-        class LTSAssignSimple;
-        class LTSAssignParam;
-
-        typedef CSmartPtr<LTSAssignBase> LTSAssignRef;
-
-        class AutomatonTransitionBase;
-        class LTSTransitionBase;
-        class LTSTransitionInput;
-        class LTSTransitionOutput;
-        class LTSTransitionInternal;
-        class LTSInitState;
-        class LTSInitStateGenerator;
-
-        typedef CSmartPtr<LTSTransitionBase> LTSTransRef;
-        typedef CSmartPtr<LTSInitState> InitStateRef;
-        typedef CSmartPtr<LTSInitStateGenerator> ISGenRef;
-
-        class LTSSymbTransitionBase;
-        class LTSSymbIOTransitionBase;
-        class LTSSymbInputTransition;
-        class LTSSymbOutputTransition;
-        class LTSSymbInternalTransition;
-
-        typedef CSmartPtr<LTSSymbTransitionBase> LTSSymbTransRef;
-
-        class LTSGuardedCommand;
-        typedef CSmartPtr<LTSGuardedCommand> GCmdRef;
-
-    } /* end namespace LTS */
-
-    namespace MC {
-
-        enum class AQSConstructionMethod {
-            BreadthFirst, DepthFirst
-        };
-
-        class StateVec;
-        class StateFactory;
-        class LTSChecker;
-        class LTSCompiler;
-        class StateVecPrinter;
-
-        class RValueInterpreter;
-        class LValueInterpreter;
-        class UFInterpreter;
-        class AQStructure;
-        template <typename STATETYPE>
-        class AnnotatedEdge;
+typedef CSmartPtr<TypeBase> TypeRef;
 
 
-        typedef AnnotatedEdge<StateVec> AQSEdge;
+class LabelledTS;
+class EFSMBase;
+class AutomatonBase;
+class ChannelEFSM;
+class GeneralEFSM;
+class DetEFSM;
 
-        class ProductStructure;
-        class ProductState;
-        class StateVecPrinter;
+class SymmetricMessageDecl;
 
-        typedef AnnotatedEdge<ProductState> ProductEdge;
+typedef CSmartPtr<SymmetricMessageDecl> SymmMsgDeclRef;
 
-        class BuchiAutomatonBase;
-        class StateBuchiAutomaton;
-        class MsgBuchiAutomaton;
+template <typename E> class LTSTermSemantizer;
+class LTSLoweredContext;
+typedef CSmartPtr<LTSLoweredContext> LTSLCRef;
 
-        class IndexVector;
-        class ProcessIndexSet;
-        class SystemIndexSet;
+class LTSAssignBase;
+class LTSAssignSimple;
+class LTSAssignParam;
 
-        // Traces
-        typedef pair<LTS::GCmdRef, const StateVec*> TraceElemT;
-        typedef pair<LTS::GCmdRef, const ProductState*> PSTraceElemT;
+typedef CSmartPtr<LTSAssignBase> LTSAssignRef;
 
-        template <typename STATETYPE> class PermutedPath;
-        // A permuted path through the annotated quotient structure
-        typedef PermutedPath<StateVec> AQSPermPath;
-        // A permuted path through the (annotated) product structure
-        typedef PermutedPath<ProductState> PSPermPath;
+class AutomatonTransitionBase;
+class LTSTransitionBase;
+class LTSTransitionInput;
+class LTSTransitionOutput;
+class LTSTransitionInternal;
+class LTSInitState;
+class LTSInitStateGenerator;
 
-        class TraceBase;
-        class SafetyViolation;
-        class DeadlockViolation;
-        class LivenessViolation;
-        class MCExceptionTrace;
+typedef CSmartPtr<LTSTransitionBase> LTSTransRef;
+typedef CSmartPtr<LTSInitState> InitStateRef;
+typedef CSmartPtr<LTSInitStateGenerator> ISGenRef;
 
-    } /* end namespace MC */
+class LTSSymbTransitionBase;
+class LTSSymbIOTransitionBase;
+class LTSSymbInputTransition;
+class LTSSymbOutputTransition;
+class LTSSymbInternalTransition;
 
-    namespace Symm {
+typedef CSmartPtr<LTSSymbTransitionBase> LTSSymbTransRef;
 
-        class PermutationSet;
-        class Canonicalizer;
-        class PermuterBase;
-        class ArrayPermuter;
-        class RecordPermuter;
-        class SymmTypePermuter;
-        class NoOpPermuter;
+class LTSGuardedCommand;
+typedef CSmartPtr<LTSGuardedCommand> GCmdRef;
 
-    } /* end namespace Symm */
+} /* end namespace LTS */
 
-    namespace TP {
+namespace MC {
 
-        class Z3Object;
-        class Z3CtxWrapper;
-        class Z3Expr;
-        class Z3Sort;
-        class Z3Model;
-        class Z3Solver;
+enum class AQSConstructionMethod
+{
+    BreadthFirst, DepthFirst
+};
 
-        typedef CSmartPtr<Z3CtxWrapper> Z3Ctx;
+class StateVec;
+class StateFactory;
+class LTSChecker;
+class LTSCompiler;
+class StateVecPrinter;
 
-        class Z3TheoremProver;
-        typedef SmartPtr<Z3TheoremProver> Z3TPRef;
+class RValueInterpreter;
+class LValueInterpreter;
+class UFInterpreter;
+class AQStructure;
+template <typename STATETYPE>
+class AnnotatedEdge;
 
-    } /* end namespace TP */
 
-    namespace Synth {
-        class Solver;
-    } /* end namespace Synth */
+typedef AnnotatedEdge<StateVec> AQSEdge;
 
-    namespace Analyses {
-        class TraceAnalyses;
-    }
+class ProductStructure;
+class ProductState;
+class StateVecPrinter;
 
-    // UID Generators
-    class UIDGenerator;
+typedef AnnotatedEdge<ProductState> ProductEdge;
 
-    template <typename... ArgTypes>
-    constexpr bool TruePred(ArgTypes&&... Args) { return true; }
+class BuchiAutomatonBase;
+class StateBuchiAutomaton;
+class MsgBuchiAutomaton;
 
-    template <typename... ArgTypes>
-    constexpr bool FalsePred(ArgTypes&&... Args) { return false; }
+class IndexVector;
+class ProcessIndexSet;
+class SystemIndexSet;
+
+// Traces
+typedef pair<LTS::GCmdRef, const StateVec*> TraceElemT;
+typedef pair<LTS::GCmdRef, const ProductState*> PSTraceElemT;
+
+template <typename STATETYPE> class PermutedPath;
+// A permuted path through the annotated quotient structure
+typedef PermutedPath<StateVec> AQSPermPath;
+// A permuted path through the (annotated) product structure
+typedef PermutedPath<ProductState> PSPermPath;
+
+class TraceBase;
+class SafetyViolation;
+class DeadlockViolation;
+class LivenessViolation;
+class MCExceptionTrace;
+
+} /* end namespace MC */
+
+namespace Symm {
+
+class PermutationSet;
+class Canonicalizer;
+class PermuterBase;
+class ArrayPermuter;
+class RecordPermuter;
+class SymmTypePermuter;
+class NoOpPermuter;
+
+} /* end namespace Symm */
+
+namespace TP {
+
+class Z3Object;
+class Z3CtxWrapper;
+class Z3Expr;
+class Z3Sort;
+class Z3Model;
+class Z3Solver;
+
+typedef CSmartPtr<Z3CtxWrapper> Z3Ctx;
+
+class Z3TheoremProver;
+typedef SmartPtr<Z3TheoremProver> Z3TPRef;
+
+} /* end namespace TP */
+
+namespace Synth {
+class Solver;
+} /* end namespace Synth */
+
+namespace Analyses {
+class TraceAnalyses;
+}
+
+// UID Generators
+class UIDGenerator;
+
+template <typename... ArgTypes>
+constexpr bool TruePred(ArgTypes&&... Args) { return true; }
+
+template <typename... ArgTypes>
+constexpr bool FalsePred(ArgTypes&&... Args) { return false; }
 
 } /* end namespace */
 

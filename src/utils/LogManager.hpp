@@ -47,50 +47,50 @@
 #include "../lib/ESMCLib.hpp"
 
 namespace ESMC {
-    namespace Logging {
+namespace Logging {
 
-        class LogManager
-        {
-        private:
-            // Accessors for static member variables
-            static unordered_set<string>& EnabledLogOptions();
-            static ostream*& LogStream();
-            static const map<string, string> LogOptionDescriptions;
-            static bool& NoLoggingEnabled();
+class LogManager
+{
+private:
+    // Accessors for static member variables
+    static unordered_set<string>& EnabledLogOptions();
+    static ostream*& LogStream();
+    static const map<string, string> LogOptionDescriptions;
+    static bool& NoLoggingEnabled();
 
-            LogManager();
-            LogManager(const LogManager& Other) = delete;
-            LogManager(LogManager&& Other) = delete;
+    LogManager();
+    LogManager(const LogManager& Other) = delete;
+    LogManager(LogManager&& Other) = delete;
 
-        public:
-            static void Initialize(const string& LogStreamName = "",
-                                   LogFileCompressionTechniqueT LogCompressionTechnique =
-                                   LogFileCompressionTechniqueT::COMPRESS_NONE);
-            static void Finalize();
+public:
+    static void Initialize(const string& LogStreamName = "",
+                           LogFileCompressionTechniqueT LogCompressionTechnique =
+                           LogFileCompressionTechniqueT::COMPRESS_NONE);
+    static void Finalize();
 
-            static ostream& GetLogStream();
-            static void EnableLogOption(const string& OptionName);
-            static void EnableLogOptions(const vector<string>& OptionNames);
-            template <typename ForwardIterator>
-            static inline void EnableLogOptions(const ForwardIterator& First,
-                                                const ForwardIterator& Last);
-            static void DisableLogOption(const string& OptionName);
-            static const unordered_set<string>& GetEnabledLogOptions();
-            static bool IsOptionEnabled(const string& OptionName);
-            static bool IsLoggingDisabled();
-            static string GetLogOptions();
-        };
+    static ostream& GetLogStream();
+    static void EnableLogOption(const string& OptionName);
+    static void EnableLogOptions(const vector<string>& OptionNames);
+    template <typename ForwardIterator>
+    static inline void EnableLogOptions(const ForwardIterator& First,
+                                        const ForwardIterator& Last);
+    static void DisableLogOption(const string& OptionName);
+    static const unordered_set<string>& GetEnabledLogOptions();
+    static bool IsOptionEnabled(const string& OptionName);
+    static bool IsLoggingDisabled();
+    static string GetLogOptions();
+};
 
-        template <typename ForwardIterator>
-        inline void LogManager::EnableLogOptions(const ForwardIterator& First,
-                                                 const ForwardIterator& Last)
-        {
-            for (auto it = First; it != Last; ++it) {
-                EnableLogOption(*it);
-            }
-        }
+template <typename ForwardIterator>
+inline void LogManager::EnableLogOptions(const ForwardIterator& First,
+                                         const ForwardIterator& Last)
+{
+    for (auto it = First; it != Last; ++it) {
+        EnableLogOption(*it);
+    }
+}
 
-    } /* end namespace Logging */
+} /* end namespace Logging */
 } /* end namespace ESMC */
 
 
@@ -102,77 +102,77 @@ namespace ESMC {
 #define ESMC_LOG_CODE(CODE_) ((void)0)
 #endif /* ESMC_ENABLE_TRACING_ */
 
-#define ESMC_LOG_FULL(TAG_, CODE_) \
+#define ESMC_LOG_FULL(TAG_, CODE_)                                      \
     ESMC_LOG_CODE(if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_)) { \
-        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
-        Out_ << "------------- [" << TAG_ << "], at " << __FUNCTION__ << ", "\
-             << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
-        CODE_ \
-        Out_ << "-----------------------------------------------------------" \
-             << "--------------------" << endl;                         \
-        Out_.flush(); \
-    })
-
-#define ESMC_LOG_SHORT(TAG_, CODE_) \
-    ESMC_LOG_CODE(\
-    if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_)) {\
-        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();  \
-        CODE_ \
-        ESMC::Logging::LogManager::GetLogStream().flush(); \
-    })
-
-#define ESMC_LOG_COND_FULL(TAG_, CODE_, COND_) \
-    ESMC_LOG_CODE(\
-    if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_) && (COND_)) {\
-        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
-        Out_ << "------------- [" << TAG_ << "], at " << __FUNCTION__ << ", "\
-             << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
-        CODE_ \
-        Out_ << "-----------------------------------------------------------" \
-             << "--------------------" << endl;                         \
-        Out_.flush(); \
-    })
-
-#define ESMC_LOG_COND_SHORT(TAG_, CODE_, COND_)      \
-    ESMC_LOG_CODE(\
-    if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_) && (COND_)) {  \
-        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
-        CODE_ \
-        Out_.flush(); \
-    })
-
-#define ESMC_LOG_MIN_FULL(CODE_) \
-    if (!ESMC::Logging::LogManager::IsLoggingDisabled()) {\
-        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
-        Out_ << "------------- [ESMC.Minimal], at " << __FUNCTION__ << ", "\
-             << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
-        CODE_ \
-        Out_ << "-----------------------------------------------------------" \
-             << "--------------------" << endl;                         \
-        Out_.flush(); \
-        if (&Out_ != &cout) { \
-            ostream& Out_ = cout; \
-            Out_ << "------------- [ESMC.Minimal], at " << __FUNCTION__ << ", "\
+            ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();  \
+            Out_ << "------------- [" << TAG_ << "], at " << __FUNCTION__ << ", " \
                  << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
-            CODE_ \
+            CODE_                                                       \
+                Out_ << "-----------------------------------------------------------" \
+                     << "--------------------" << endl;                 \
+            Out_.flush();                                               \
+        })
+
+#define ESMC_LOG_SHORT(TAG_, CODE_)                                     \
+    ESMC_LOG_CODE(                                                      \
+                  if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_)) { \
+                                                                         ostream& Out_ = ESMC::Logging::LogManager::GetLogStream(); \
+                                                                         CODE_ \
+                                                                         ESMC::Logging::LogManager::GetLogStream().flush(); \
+                                                                         })
+
+#define ESMC_LOG_COND_FULL(TAG_, CODE_, COND_)                          \
+    ESMC_LOG_CODE(                                                      \
+                  if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_) && (COND_)) { \
+                      ostream& Out_ = ESMC::Logging::LogManager::GetLogStream(); \
+                      Out_ << "------------- [" << TAG_ << "], at " << __FUNCTION__ << ", " \
+                           << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
+                      CODE_                                             \
+                          Out_ << "-----------------------------------------------------------" \
+                               << "--------------------" << endl;       \
+                      Out_.flush();                                     \
+                  })
+
+#define ESMC_LOG_COND_SHORT(TAG_, CODE_, COND_)                         \
+    ESMC_LOG_CODE(                                                      \
+                  if (ESMC::Logging::LogManager::IsOptionEnabled(TAG_) && (COND_)) { \
+                      ostream& Out_ = ESMC::Logging::LogManager::GetLogStream(); \
+                      CODE_                                             \
+                          Out_.flush();                                 \
+                  })
+
+#define ESMC_LOG_MIN_FULL(CODE_)                                        \
+    if (!ESMC::Logging::LogManager::IsLoggingDisabled()) {              \
+        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();      \
+        Out_ << "------------- [ESMC.Minimal], at " << __FUNCTION__ << ", " \
+             << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
+        CODE_                                                           \
             Out_ << "-----------------------------------------------------------" \
-                 << "--------------------" << endl;                         \
-            Out_.flush(); \
-        } \
-    }\
+                 << "--------------------" << endl;                     \
+        Out_.flush();                                                   \
+        if (&Out_ != &cout) {                                           \
+            ostream& Out_ = cout;                                       \
+            Out_ << "------------- [ESMC.Minimal], at " << __FUNCTION__ << ", " \
+                 << __FILE__ << ":" << __LINE__ << " -------------" << endl; \
+            CODE_                                                       \
+                Out_ << "-----------------------------------------------------------" \
+                     << "--------------------" << endl;                 \
+            Out_.flush();                                               \
+        }                                                               \
+    }                                                                   \
     ((void)0)
 
-#define ESMC_LOG_MIN_SHORT(CODE_) \
-    if (!ESMC::Logging::LogManager::IsLoggingDisabled()) {\
-        ostream& Out_ = ESMC::Logging::LogManager::GetLogStream();\
-        CODE_ \
-        Out_.flush(); \
-        if (&Out_ != &cout) { \
-            ostream& Out_ = cout; \
-            CODE_             \
-            Out_.flush();     \
-        } \
-    }\
+#define ESMC_LOG_MIN_SHORT(CODE_)                                       \
+    if (!ESMC::Logging::LogManager::IsLoggingDisabled()) {              \
+                                                          ostream& Out_ = ESMC::Logging::LogManager::GetLogStream(); \
+                                                          CODE_         \
+                                                          Out_.flush(); \
+                                                          if (&Out_ != &cout) { \
+                                                                               ostream& Out_ = cout; \
+                                                                               CODE_ \
+                                                                               Out_.flush(); \
+                                                                               } \
+                                                          }             \
     ((void)0)
 
 

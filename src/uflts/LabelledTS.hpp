@@ -46,224 +46,224 @@
 #include "../decls/SymbolTable.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        using namespace Decls;
+using namespace Decls;
 
-        class LabelledTS
-        {
-        private:
-            friend class ChannelEFSM;
-            friend class AutomatonBase;
-            friend class EFSMBase;
-            friend class DetEFSM;
-            friend class IncompleteEFSM;
-            friend class MC::LTSChecker;
-            friend class MC::LTSCompiler;
-            friend class MC::StateVecPrinter;
-            friend class MC::BuchiAutomatonBase;
-            friend class MC::StateBuchiAutomaton;
-            friend class Synth::Solver;
-            friend class ESMC::Analyses::TraceAnalyses;
-            friend class ESMC::MC::TraceBase;
+class LabelledTS
+{
+private:
+    friend class ChannelEFSM;
+    friend class AutomatonBase;
+    friend class EFSMBase;
+    friend class DetEFSM;
+    friend class IncompleteEFSM;
+    friend class MC::LTSChecker;
+    friend class MC::LTSCompiler;
+    friend class MC::StateVecPrinter;
+    friend class MC::BuchiAutomatonBase;
+    friend class MC::StateBuchiAutomaton;
+    friend class Synth::Solver;
+    friend class ESMC::Analyses::TraceAnalyses;
+    friend class ESMC::MC::TraceBase;
 
-            static const string ProductMsgName;
+    static const string ProductMsgName;
 
-            MgrT* Mgr;
-            bool Frozen;
-            bool MsgsFrozen;
-            bool AutomataFrozen;
+    MgrT* Mgr;
+    bool Frozen;
+    bool MsgsFrozen;
+    bool AutomataFrozen;
 
-            unordered_map<string, TypeRef> NamedTypes;
-            map<string, TypeRef> SymmTypes;
-            map<string, TypeRef> MsgTypes;
-            map<string, TypeRef> ParametricMsgTypes;
-            WellOrderedTypeMapT<TypeRef> TypeToPrimed;
-            TypeRef UnifiedMsgType;
-            map<string, EFSMBase*> AllEFSMs;
-            map<string, EFSMBase*> ActualEFSMs;
-            map<string, ChannelEFSM*> ChannelEFSMs;
-            WellOrderedTypeSetT UsedSymmTypes;
-            WellOrderedTypeMapT<u32> SymmTypeOffsets;
+    unordered_map<string, TypeRef> NamedTypes;
+    map<string, TypeRef> SymmTypes;
+    map<string, TypeRef> MsgTypes;
+    map<string, TypeRef> ParametricMsgTypes;
+    WellOrderedTypeMapT<TypeRef> TypeToPrimed;
+    TypeRef UnifiedMsgType;
+    map<string, EFSMBase*> AllEFSMs;
+    map<string, EFSMBase*> ActualEFSMs;
+    map<string, ChannelEFSM*> ChannelEFSMs;
+    WellOrderedTypeSetT UsedSymmTypes;
+    WellOrderedTypeMapT<u32> SymmTypeOffsets;
 
-            WellOrderedTypeMapT<vector<TypeRef>> ParamTypeInsts;
-            WellOrderedTypeMapT<vector<ExpT>> PInstToParams;
-            WellOrderedTypeMapT<TypeRef> PInstToParamType;
-            // MsgID -> Permutation -> MsgID
-            vector<vector<u32>> MsgCanonMap;
-            // MsgID -> TypeName
-            vector<string> MsgTypeMap;
+    WellOrderedTypeMapT<vector<TypeRef>> ParamTypeInsts;
+    WellOrderedTypeMapT<vector<ExpT>> PInstToParams;
+    WellOrderedTypeMapT<TypeRef> PInstToParamType;
+    // MsgID -> Permutation -> MsgID
+    vector<vector<u32>> MsgCanonMap;
+    // MsgID -> TypeName
+    vector<string> MsgTypeMap;
 
-            vector<ExpT> StateVectorVars;
+    vector<ExpT> StateVectorVars;
 
-            // Channel buffers that need to be sorted
-            // on every transition
-            // The actual channel, the expression and the instance id
-            vector<tuple<ChannelEFSM*, ExpT, u32>> ChanBuffersToSort;
+    // Channel buffers that need to be sorted
+    // on every transition
+    // The actual channel, the expression and the instance id
+    vector<tuple<ChannelEFSM*, ExpT, u32>> ChanBuffersToSort;
 
-            u32 StateVectorSize;
-            vector<ISGenRef> InitStateGenerators;
-            vector<GCmdRef> GuardedCommands;
+    u32 StateVectorSize;
+    vector<ISGenRef> InitStateGenerators;
+    vector<GCmdRef> GuardedCommands;
 
-            SymbolTable SymTab;
-            UIDGenerator AutomatonClassIDGen;
+    SymbolTable SymTab;
+    UIDGenerator AutomatonClassIDGen;
 
-            void AssertFrozen() const;
-            void AssertNotFrozen() const;
-            void AssertMsgsFrozen() const;
-            void AssertMsgsNotFrozen() const;
-            void AssertAutomataFrozen() const;
-            void AssertAutomataNotFrozen() const;
+    void AssertFrozen() const;
+    void AssertNotFrozen() const;
+    void AssertMsgsFrozen() const;
+    void AssertMsgsNotFrozen() const;
+    void AssertAutomataFrozen() const;
+    void AssertAutomataNotFrozen() const;
 
-            void CheckTypeName(const string& Name) const;
+    void CheckTypeName(const string& Name) const;
 
-            void CheckConsistency() const;
-            GCmdRef MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const;
-            MgrT::SubstMapT ApplyPerm(const vector<vector<ExpT>>& ParamElems,
-                                             const vector<u08>& Perm);
-            void MakeMsgCanonMap();
-            void InstantiateInitState(const InitStateRef& InitState);
-            u32 GetAutomataClassUID();
-            bool HasMsgLValue(const ExpT& Exp) const;
-            vector<GCmdRef> ElimMsgFromCommands(const vector<GCmdRef>& Commands) const;
+    void CheckConsistency() const;
+    GCmdRef MakeGuardedCommand(const vector<LTSTransRef>& ProductTrans) const;
+    MgrT::SubstMapT ApplyPerm(const vector<vector<ExpT>>& ParamElems,
+                              const vector<u08>& Perm);
+    void MakeMsgCanonMap();
+    void InstantiateInitState(const InitStateRef& InitState);
+    u32 GetAutomataClassUID();
+    bool HasMsgLValue(const ExpT& Exp) const;
+    vector<GCmdRef> ElimMsgFromCommands(const vector<GCmdRef>& Commands) const;
 
-            ExpT InvariantExp;
-            ExpT FinalCondExp;
+    ExpT InvariantExp;
+    ExpT FinalCondExp;
 
-            unordered_map<i64, pair<ExpT, ExpT>> UpdateOpToUpdateLValue;
+    unordered_map<i64, pair<ExpT, ExpT>> UpdateOpToUpdateLValue;
 
-            unordered_map<i64, ExpT> GuardOpToExp;
-            unordered_map<i64, WellOrderedExpSetT> GuardSymmetryConstraints;
-            unordered_map<i64, WellOrderedExpSetT> GuardMutualExclusiveSets;
-            unordered_map<i64, WellOrderedExpSetT> GuardOpToUpdates;
-            unordered_map<i64, WellOrderedExpSetT> GuardOpToUpdateSymmetryConstraints;
-            unordered_map<i64, ExpT> StateUpdateOpToExp;
-            unordered_map<i64, ExpT> AllOpToExp;
+    unordered_map<i64, ExpT> GuardOpToExp;
+    unordered_map<i64, WellOrderedExpSetT> GuardSymmetryConstraints;
+    unordered_map<i64, WellOrderedExpSetT> GuardMutualExclusiveSets;
+    unordered_map<i64, WellOrderedExpSetT> GuardOpToUpdates;
+    unordered_map<i64, WellOrderedExpSetT> GuardOpToUpdateSymmetryConstraints;
+    unordered_map<i64, ExpT> StateUpdateOpToExp;
+    unordered_map<i64, ExpT> AllOpToExp;
 
-            // Interface only for friends
-            MgrT* GetMgr() const;
+    // Interface only for friends
+    MgrT* GetMgr() const;
 
-        public:
-            LabelledTS();
-            virtual ~LabelledTS();
+public:
+    LabelledTS();
+    virtual ~LabelledTS();
 
-            // typestate functions
-            void FreezeMsgs();
-            void FreezeAutomata();
-            void Freeze();
+    // typestate functions
+    void FreezeMsgs();
+    void FreezeAutomata();
+    void Freeze();
 
-            const string& GetProductMsgName() const;
-            const vector<vector<u32>>& GetMsgCanonMap() const;
-            const vector<string>& GetMsgTypeMap() const;
+    const string& GetProductMsgName() const;
+    const vector<vector<u32>>& GetMsgCanonMap() const;
+    const vector<string>& GetMsgTypeMap() const;
 
-            // Accessors
-            const vector<ISGenRef>& GetInitStateGenerators() const;
-            const vector<GCmdRef>& GetGuardedCmds() const;
-            const vector<ExpT>& GetStateVectorVars() const;
-            const WellOrderedTypeSetT& GetUsedSymmTypes() const;
-            const WellOrderedTypeMapT<u32>& GetSymmTypeOffsets() const;
-            u32 GetStateVectorSize() const;
+    // Accessors
+    const vector<ISGenRef>& GetInitStateGenerators() const;
+    const vector<GCmdRef>& GetGuardedCmds() const;
+    const vector<ExpT>& GetStateVectorVars() const;
+    const WellOrderedTypeSetT& GetUsedSymmTypes() const;
+    const WellOrderedTypeMapT<u32>& GetSymmTypeOffsets() const;
+    u32 GetStateVectorSize() const;
 
-            // methods for creating expressions
-            // and types.
-            // we create all expressions VIA the LTS,
-            // this avoids us from having to check expressions,
-            // etc.
-            TypeRef MakeBoolType();
-            TypeRef MakeRangeType(i64 Low, i64 High);
-            TypeRef MakeRecordType(const string& Name,
-                                       const vector<pair<string, TypeRef>>& Members);
-            TypeRef MakeArrayType(const TypeRef& IndexType,
-                                      const TypeRef& ValueType);
-            TypeRef MakeEnumType(const string& Name, const set<string>& Members);
-            TypeRef MakeFieldAccessType();
-            // All symmetric types must be declared here
-            const TypeRef& MakeSymmType(const string& Name, u32 Size);
-            // All message types must be declared here
-            const TypeRef& MakeMsgType(const string& Name,
-                                           const vector<pair<string, TypeRef>>& Members,
-                                           bool IncludePrimed = false);
-            // All parametric message types must be declared here
-            const TypeRef& MakeMsgTypes(const vector<ExpT>& Params,
-                                            const ExpT& Constraint,
-                                            const string& Name,
-                                            const vector<pair<string, TypeRef>>& Members,
-                                            bool IncludePrimed = false);
-            const TypeRef& GetNamedType(const string& TypeName) const;
+    // methods for creating expressions
+    // and types.
+    // we create all expressions VIA the LTS,
+    // this avoids us from having to check expressions,
+    // etc.
+    TypeRef MakeBoolType();
+    TypeRef MakeRangeType(i64 Low, i64 High);
+    TypeRef MakeRecordType(const string& Name,
+                           const vector<pair<string, TypeRef>>& Members);
+    TypeRef MakeArrayType(const TypeRef& IndexType,
+                          const TypeRef& ValueType);
+    TypeRef MakeEnumType(const string& Name, const set<string>& Members);
+    TypeRef MakeFieldAccessType();
+    // All symmetric types must be declared here
+    const TypeRef& MakeSymmType(const string& Name, u32 Size);
+    // All message types must be declared here
+    const TypeRef& MakeMsgType(const string& Name,
+                               const vector<pair<string, TypeRef>>& Members,
+                               bool IncludePrimed = false);
+    // All parametric message types must be declared here
+    const TypeRef& MakeMsgTypes(const vector<ExpT>& Params,
+                                const ExpT& Constraint,
+                                const string& Name,
+                                const vector<pair<string, TypeRef>>& Members,
+                                bool IncludePrimed = false);
+    const TypeRef& GetNamedType(const string& TypeName) const;
 
-            // Get state var type for a named EFSM
-            const TypeRef& GetEFSMType(const string& EFSMName) const;
+    // Get state var type for a named EFSM
+    const TypeRef& GetEFSMType(const string& EFSMName) const;
 
-            // Expressions
-            ExpT MakeTrue();
-            ExpT MakeFalse();
-            ExpT MakeVar(const string& Name, const TypeRef& Type);
-            ExpT MakeBoundVar(i64 Idx, const TypeRef& Type);
-            ExpT MakeVal(const string& Value, const TypeRef& Type);
-            ExpT MakeOp(i64 OpCode, const vector<ExpT>& Operands);
-            ExpT MakeOp(i64 OpCode, const ExpT& Operand1);
-            ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2);
-            ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
-                        const ExpT& Operand3);
-            ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
-                        const ExpT& Operand3, const ExpT& Operand4);
+    // Expressions
+    ExpT MakeTrue();
+    ExpT MakeFalse();
+    ExpT MakeVar(const string& Name, const TypeRef& Type);
+    ExpT MakeBoundVar(i64 Idx, const TypeRef& Type);
+    ExpT MakeVal(const string& Value, const TypeRef& Type);
+    ExpT MakeOp(i64 OpCode, const vector<ExpT>& Operands);
+    ExpT MakeOp(i64 OpCode, const ExpT& Operand1);
+    ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2);
+    ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
+                const ExpT& Operand3);
+    ExpT MakeOp(i64 OpCode, const ExpT& Operand1, const ExpT& Operand2,
+                const ExpT& Operand3, const ExpT& Operand4);
 
-            ExpT MakeExists(const vector<TypeRef>& QVarTypes, const ExpT& Body);
-            ExpT MakeForAll(const vector<TypeRef>& QVarTypes, const ExpT& Body);
-            i64 MakeUF(const string& Name, const vector<TypeRef>& Domain,
-                       const TypeRef& Range);
+    ExpT MakeExists(const vector<TypeRef>& QVarTypes, const ExpT& Body);
+    ExpT MakeForAll(const vector<TypeRef>& QVarTypes, const ExpT& Body);
+    i64 MakeUF(const string& Name, const vector<TypeRef>& Domain,
+               const TypeRef& Range);
 
 
-            bool CheckMessageType(const TypeRef& MsgType) const;
-            const TypeRef& GetUnifiedMType() const;
+    bool CheckMessageType(const TypeRef& MsgType) const;
+    const TypeRef& GetUnifiedMType() const;
 
-            const TypeRef& GetPrimedType(const TypeRef& Type) const;
+    const TypeRef& GetPrimedType(const TypeRef& Type) const;
 
-            template <typename T, typename... ArgTypes>
-            inline T*
-            MakeEFSM(const string& Name, const vector<ExpT>& Params,
-                     const ExpT& Constraint, LTSFairnessType Fairness,
-                     ArgTypes&&... Args)
-            {
-                AssertMsgsFrozen();
-                AssertAutomataNotFrozen();
-                if (AllEFSMs.find(Name) != AllEFSMs.end()) {
-                    throw ESMCError((string)"A machine named \"" + Name + "\" has already " +
-                                    "been created in the LTS");
-                }
+    template <typename T, typename... ArgTypes>
+    inline T*
+    MakeEFSM(const string& Name, const vector<ExpT>& Params,
+             const ExpT& Constraint, LTSFairnessType Fairness,
+             ArgTypes&&... Args)
+    {
+        AssertMsgsFrozen();
+        AssertAutomataNotFrozen();
+        if (AllEFSMs.find(Name) != AllEFSMs.end()) {
+            throw ESMCError((string)"A machine named \"" + Name + "\" has already " +
+                            "been created in the LTS");
+        }
 
-                auto Retval = new T(this, Name, Params, Constraint, Fairness);
-                AllEFSMs[Name] = Retval;
-                ActualEFSMs[Name] = Retval;
-                return Retval;
-            }
+        auto Retval = new T(this, Name, Params, Constraint, Fairness);
+        AllEFSMs[Name] = Retval;
+        ActualEFSMs[Name] = Retval;
+        return Retval;
+    }
 
-            GeneralEFSM* MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
-                                     const ExpT& Constraint, LTSFairnessType Fairness);
-            DetEFSM* MakeDetEFSM(const string& Name, const vector<ExpT>& Params,
-                                  const ExpT& Constraint, LTSFairnessType Fairness);
-            vector<EFSMBase*> GetEFSMs(const function<bool(const EFSMBase*)>& MatchPred) const;
+    GeneralEFSM* MakeGenEFSM(const string& Name, const vector<ExpT>& Params,
+                             const ExpT& Constraint, LTSFairnessType Fairness);
+    DetEFSM* MakeDetEFSM(const string& Name, const vector<ExpT>& Params,
+                         const ExpT& Constraint, LTSFairnessType Fairness);
+    vector<EFSMBase*> GetEFSMs(const function<bool(const EFSMBase*)>& MatchPred) const;
 
-            ChannelEFSM* MakeChannel(const string& Name, const vector<ExpT>& Params,
-                                     const ExpT& Constraint, u32 Capacity,
-                                     bool Lossy, bool Ordered, bool Duplicating,
-                                     bool Blocking, LTSFairnessType Fairness);
+    ChannelEFSM* MakeChannel(const string& Name, const vector<ExpT>& Params,
+                             const ExpT& Constraint, u32 Capacity,
+                             bool Lossy, bool Ordered, bool Duplicating,
+                             bool Blocking, LTSFairnessType Fairness);
 
-            void AddInitStates(const vector<InitStateRef>& InitStates);
-            void AddInvariant(const ExpT& Invariant);
+    void AddInitStates(const vector<InitStateRef>& InitStates);
+    void AddInvariant(const ExpT& Invariant);
 
-            void AddToAllOpToExp(i64 Op, ExpT Exp);
-            void AddToGuardOpToExp(i64 GuardOp, ExpT GuardExp);
-            void AddToGuardOpToUpdates(i64 GuardOp, ExpT UpdateExp);
-            void AddToUpdateOpToLValue(i64 UpdateOp, ExpT UpdateExp, ExpT LValue);
+    void AddToAllOpToExp(i64 Op, ExpT Exp);
+    void AddToGuardOpToExp(i64 GuardOp, ExpT GuardExp);
+    void AddToGuardOpToUpdates(i64 GuardOp, ExpT UpdateExp);
+    void AddToUpdateOpToLValue(i64 UpdateOp, ExpT UpdateExp, ExpT LValue);
 
-            const ExpT& GetInvariant() const;
-            const ExpT& GetFinalCond() const;
+    const ExpT& GetInvariant() const;
+    const ExpT& GetFinalCond() const;
 
-            const vector<tuple<ChannelEFSM*, ExpT, u32>>& GetChanBuffersToSort() const;
-        };
+    const vector<tuple<ChannelEFSM*, ExpT, u32>>& GetChanBuffersToSort() const;
+};
 
-    } /* end namespace LTS */
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LABELLED_TS_HPP_ */

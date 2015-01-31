@@ -47,43 +47,43 @@
 // header file to eliminate circular deps.
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        using ESMC::LTS::TypeExtensionBase;
-        using ESMC::MC::RValueInterpreter;
-        using ESMC::MC::LValueInterpreter;
+using ESMC::LTS::TypeExtensionBase;
+using ESMC::MC::RValueInterpreter;
+using ESMC::MC::LValueInterpreter;
 
-        class LTSExtensionT
-        {
-        public:
-            // Offset != -1 ==> Fixed offset
-            i32 Offset;
-            // info about constants
-            bool ConstCompiled;
-            i64 ConstVal;
-            // Info for record accesses
-            u32 FieldOffset;
-            // Interpreter for whatever
-            // cannot be compiled in
-            RValueInterpreter* Interp;
+class LTSExtensionT
+{
+public:
+    // Offset != -1 ==> Fixed offset
+    i32 Offset;
+    // info about constants
+    bool ConstCompiled;
+    i64 ConstVal;
+    // Info for record accesses
+    u32 FieldOffset;
+    // Interpreter for whatever
+    // cannot be compiled in
+    RValueInterpreter* Interp;
 
-            LTSExtensionT();
-            ~LTSExtensionT();
-        };
+    LTSExtensionT();
+    ~LTSExtensionT();
+};
 
-        class LTSTypeExtensionT : public TypeExtensionBase
-        {
-        public:
-            // Offset in the permutation vector
-            i32 TypeOffset;
-            // ID of the type
-            i32 TypeID;
+class LTSTypeExtensionT : public TypeExtensionBase
+{
+public:
+    // Offset in the permutation vector
+    i32 TypeOffset;
+    // ID of the type
+    i32 TypeID;
 
-            LTSTypeExtensionT();
-            virtual ~LTSTypeExtensionT();
-        };
+    LTSTypeExtensionT();
+    virtual ~LTSTypeExtensionT();
+};
 
-    } /* end namespace LTS */
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LTS_EXTENSIONS_HPP_ */

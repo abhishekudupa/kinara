@@ -48,190 +48,190 @@
 #include <vector>
 
 namespace ESMC {
-    namespace Decls {
+namespace Decls {
 
-        using namespace LTS;
+using namespace LTS;
 
-        class STDeclBase : public RefCountable
-        {
-        private:
-            string DeclName;
+class STDeclBase : public RefCountable
+{
+private:
+    string DeclName;
 
-        protected:
-            mutable u64 HashCode;
-            mutable bool HashValid;
+protected:
+    mutable u64 HashCode;
+    mutable bool HashValid;
 
-            virtual void ComputeHashValue() const = 0;
+    virtual void ComputeHashValue() const = 0;
 
-        public:
-            STDeclBase(const string& DeclName);
-            virtual ~STDeclBase();
+public:
+    STDeclBase(const string& DeclName);
+    virtual ~STDeclBase();
 
-            const string& GetDeclName() const;
+    const string& GetDeclName() const;
 
-            u64 Hash() const;
+    u64 Hash() const;
 
-            virtual bool Equals(const STDeclBase& Other) const = 0;
-            virtual const TypeRef& GetType() const = 0;
+    virtual bool Equals(const STDeclBase& Other) const = 0;
+    virtual const TypeRef& GetType() const = 0;
 
-            template <typename T>
-            inline T* As()
-            {
-                return dynamic_cast<T*>(this);
-            }
+    template <typename T>
+    inline T* As()
+    {
+        return dynamic_cast<T*>(this);
+    }
 
-            template <typename T>
-            inline const T* As() const
-            {
-                return dynamic_cast<const T*>(this);
-            }
+    template <typename T>
+    inline const T* As() const
+    {
+        return dynamic_cast<const T*>(this);
+    }
 
-            template <typename T>
-            inline T* SAs()
-            {
-                return static_cast<T*>(this);
-            }
+    template <typename T>
+    inline T* SAs()
+    {
+        return static_cast<T*>(this);
+    }
 
-            template <typename T>
-            inline const T* SAs() const
-            {
-                return static_cast<const T*>(this);
-            }
+    template <typename T>
+    inline const T* SAs() const
+    {
+        return static_cast<const T*>(this);
+    }
 
-            template <typename T>
-            inline bool Is() const
-            {
-                return (dynamic_cast<const T*>(this) != nullptr);
-            }
-        };
+    template <typename T>
+    inline bool Is() const
+    {
+        return (dynamic_cast<const T*>(this) != nullptr);
+    }
+};
 
-        typedef CSmartPtr<STDeclBase> DeclRef;
+typedef CSmartPtr<STDeclBase> DeclRef;
 
-        class ParamDecl : public STDeclBase
-        {
-        private:
-            TypeRef ParamType;
+class ParamDecl : public STDeclBase
+{
+private:
+    TypeRef ParamType;
 
-        protected:
-            virtual void ComputeHashValue() const override;
+protected:
+    virtual void ComputeHashValue() const override;
 
-        public:
-            ParamDecl(const string& Name, const TypeRef& Type);
-            virtual ~ParamDecl();
+public:
+    ParamDecl(const string& Name, const TypeRef& Type);
+    virtual ~ParamDecl();
 
-            virtual bool Equals(const STDeclBase& Other) const override;
-            virtual const TypeRef& GetType() const override;
-        };
+    virtual bool Equals(const STDeclBase& Other) const override;
+    virtual const TypeRef& GetType() const override;
+};
 
-        class MsgSTDeclBase : public STDeclBase
-        {
-        private:
-            TypeRef MsgType;
+class MsgSTDeclBase : public STDeclBase
+{
+private:
+    TypeRef MsgType;
 
-        protected:
-            virtual void ComputeHashValue() const override;
+protected:
+    virtual void ComputeHashValue() const override;
 
-        public:
-            MsgSTDeclBase(const string& Name, const TypeRef& Type);
-            virtual ~MsgSTDeclBase();
+public:
+    MsgSTDeclBase(const string& Name, const TypeRef& Type);
+    virtual ~MsgSTDeclBase();
 
-            virtual bool Equals(const STDeclBase& Other) const override;
-            virtual const TypeRef& GetType() const override;
-            virtual bool IsInput() const = 0;
-            virtual bool IsOutput() const = 0;
-        };
+    virtual bool Equals(const STDeclBase& Other) const override;
+    virtual const TypeRef& GetType() const override;
+    virtual bool IsInput() const = 0;
+    virtual bool IsOutput() const = 0;
+};
 
-        class InMsgDecl : public MsgSTDeclBase
-        {
-            using MsgSTDeclBase::MsgSTDeclBase;
-            virtual ~InMsgDecl();
+class InMsgDecl : public MsgSTDeclBase
+{
+    using MsgSTDeclBase::MsgSTDeclBase;
+    virtual ~InMsgDecl();
 
-            virtual bool IsInput() const override;
-            virtual bool IsOutput() const override;
-        };
+    virtual bool IsInput() const override;
+    virtual bool IsOutput() const override;
+};
 
-        class OutMsgDecl : public MsgSTDeclBase
-        {
-            using MsgSTDeclBase::MsgSTDeclBase;
-            virtual ~OutMsgDecl();
+class OutMsgDecl : public MsgSTDeclBase
+{
+    using MsgSTDeclBase::MsgSTDeclBase;
+    virtual ~OutMsgDecl();
 
-            virtual bool IsInput() const override;
-            virtual bool IsOutput() const override;
-        };
+    virtual bool IsInput() const override;
+    virtual bool IsOutput() const override;
+};
 
-        class VarDecl : public STDeclBase
-        {
-        private:
-            TypeRef VarType;
+class VarDecl : public STDeclBase
+{
+private:
+    TypeRef VarType;
 
-        protected:
-            virtual void ComputeHashValue() const override;
+protected:
+    virtual void ComputeHashValue() const override;
 
-        public:
-            VarDecl(const string& Name, const TypeRef& Type);
-            virtual ~VarDecl();
+public:
+    VarDecl(const string& Name, const TypeRef& Type);
+    virtual ~VarDecl();
 
-            virtual bool Equals(const STDeclBase& Other) const override;
-            virtual const TypeRef& GetType() const override;
-        };
+    virtual bool Equals(const STDeclBase& Other) const override;
+    virtual const TypeRef& GetType() const override;
+};
 
-        class StateDecl : public STDeclBase
-        {
-        private:
-            TypeRef Type;
+class StateDecl : public STDeclBase
+{
+private:
+    TypeRef Type;
 
-        protected:
-            virtual void ComputeHashValue() const override;
+protected:
+    virtual void ComputeHashValue() const override;
 
-        public:
-            StateDecl(const TypeRef& Type);
-            virtual ~StateDecl();
+public:
+    StateDecl(const TypeRef& Type);
+    virtual ~StateDecl();
 
-            virtual bool Equals(const STDeclBase& Other) const override;
-            virtual const TypeRef& GetType() const override;
-        };
+    virtual bool Equals(const STDeclBase& Other) const override;
+    virtual const TypeRef& GetType() const override;
+};
 
-        class SymtabScope : public RefCountable
-        {
-        private:
-            unordered_map<string, DeclRef> DeclMap;
+class SymtabScope : public RefCountable
+{
+private:
+    unordered_map<string, DeclRef> DeclMap;
 
-        public:
-            SymtabScope();
-            virtual ~SymtabScope();
+public:
+    SymtabScope();
+    virtual ~SymtabScope();
 
-            const unordered_map<string, DeclRef>& GetDeclMap() const;
-            void Bind(const string& Name, const DeclRef& Decl);
-            const DeclRef& Lookup(const string& Name) const;
-        };
+    const unordered_map<string, DeclRef>& GetDeclMap() const;
+    void Bind(const string& Name, const DeclRef& Decl);
+    const DeclRef& Lookup(const string& Name) const;
+};
 
-        typedef SmartPtr<SymtabScope> ScopeRef;
+typedef SmartPtr<SymtabScope> ScopeRef;
 
-        class SymbolTable
-        {
-        private:
-            vector<ScopeRef> ScopeStack;
+class SymbolTable
+{
+private:
+    vector<ScopeRef> ScopeStack;
 
-        public:
-            SymbolTable();
-            SymbolTable(const SymbolTable& Other);
-            ~SymbolTable();
+public:
+    SymbolTable();
+    SymbolTable(const SymbolTable& Other);
+    ~SymbolTable();
 
-            void Push();
-            void Push(const ScopeRef& Scope);
+    void Push();
+    void Push(const ScopeRef& Scope);
 
-            ScopeRef Pop();
-            ScopeRef Top() const;
-            ScopeRef Bot() const;
+    ScopeRef Pop();
+    ScopeRef Top() const;
+    ScopeRef Bot() const;
 
-            void Bind(const string& Name, const DeclRef& Decl);
-            const DeclRef& Lookup(const string& Name) const;
-            const DeclRef& LookupTop(const string& Name) const;
+    void Bind(const string& Name, const DeclRef& Decl);
+    const DeclRef& Lookup(const string& Name) const;
+    const DeclRef& LookupTop(const string& Name) const;
 
-            SymbolTable& operator = (const SymbolTable& Other);
-        };
+    SymbolTable& operator = (const SymbolTable& Other);
+};
 
-    } /* end namespace Decls */
+} /* end namespace Decls */
 } /* end namespace ESMC */
 
 #endif /* ESMC_SYMBOL_TABLE_HPP_ */

@@ -45,102 +45,102 @@
 #include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
-    namespace MC {
+namespace MC {
 
-        class StateFactory;
+class StateFactory;
 
-        namespace Detail {
-            struct StateVecHashStructT
-            {
-                bool HashValid : 1;
-                u64 HashCode : 63;
+namespace Detail {
+struct StateVecHashStructT
+{
+    bool HashValid : 1;
+    u64 HashCode : 63;
 
-                inline StateVecHashStructT()
-                    : HashValid(false), HashCode(0)
-                {
-                    // Nothing here
-                }
+    inline StateVecHashStructT()
+        : HashValid(false), HashCode(0)
+    {
+        // Nothing here
+    }
 
-                inline StateVecHashStructT(u64 HashCode)
-                    : HashValid(true), HashCode(HashCode)
-                {
-                    // Nothing here
-                }
+    inline StateVecHashStructT(u64 HashCode)
+        : HashValid(true), HashCode(HashCode)
+    {
+        // Nothing here
+    }
 
-                inline StateVecHashStructT(const StateVecHashStructT& Other)
-                    : HashValid(Other.HashValid), HashCode(Other.HashCode)
-                {
-                    // Nothing here
-                }
+    inline StateVecHashStructT(const StateVecHashStructT& Other)
+        : HashValid(Other.HashValid), HashCode(Other.HashCode)
+    {
+        // Nothing here
+    }
 
-                inline ~StateVecHashStructT()
-                {
-                    // Nothing here
-                }
-            };
-        } /* end namespace Detail */
+    inline ~StateVecHashStructT()
+    {
+        // Nothing here
+    }
+};
+} /* end namespace Detail */
 
-        class StateVec
-        {
-            friend class StateFactory;
+class StateVec
+{
+    friend class StateFactory;
 
-        private:
-            u08* StateBuffer;
-            StateFactory* Factory;
-            mutable Detail::StateVecHashStructT HashFields;
+private:
+    u08* StateBuffer;
+    StateFactory* Factory;
+    mutable Detail::StateVecHashStructT HashFields;
 
-            inline StateVec(const StateVec* Other);
+    inline StateVec(const StateVec* Other);
 
-        public:
-            StateVec(StateFactory* Factory);
-            ~StateVec();
+public:
+    StateVec(StateFactory* Factory);
+    ~StateVec();
 
-            u08 ReadByte(u32 Offset) const;
-            void WriteByte(u32 Offset, u08 Value);
+    u08 ReadByte(u32 Offset) const;
+    void WriteByte(u32 Offset, u08 Value);
 
-            u16 ReadShort(u32 Offset) const;
-            void WriteShort(u32 Offset, u16 Value);
+    u16 ReadShort(u32 Offset) const;
+    void WriteShort(u32 Offset, u16 Value);
 
-            u32 ReadWord(u32 Offset) const;
-            void WriteWord(u32 Offset, u32 Value);
+    u32 ReadWord(u32 Offset) const;
+    void WriteWord(u32 Offset, u32 Value);
 
-            u32 GetSize() const;
-            bool Equals(const StateVec& Other) const;
-            i32 Compare(const StateVec& Other) const;
-            u64 Hash() const;
-            StateVec* Clone() const;
-            u08* GetStateBuffer();
-            const u08* GetStateBuffer() const;
-            StateFactory* GetFactory() const;
-            void Set(const StateVec& Other);
-            void Recycle() const;
-            void MarkDirty() const;
-        };
+    u32 GetSize() const;
+    bool Equals(const StateVec& Other) const;
+    i32 Compare(const StateVec& Other) const;
+    u64 Hash() const;
+    StateVec* Clone() const;
+    u08* GetStateBuffer();
+    const u08* GetStateBuffer() const;
+    StateFactory* GetFactory() const;
+    void Set(const StateVec& Other);
+    void Recycle() const;
+    void MarkDirty() const;
+};
 
-        class StateFactory
-        {
-            friend class StateVec;
+class StateFactory
+{
+    friend class StateVec;
 
-        private:
-            const u32 StateSize;
-            boost::pool<>* StateVecPool;
-            boost::pool<>* StateVecBufferPool;
-            u32 NumActiveStates;
+private:
+    const u32 StateSize;
+    boost::pool<>* StateVecPool;
+    boost::pool<>* StateVecBufferPool;
+    u32 NumActiveStates;
 
-            u08* GetStateBuffer(bool Clear = true);
-            void ReleaseStateBuffer(u08* BufferPtr);
-            StateVec* MakeState(const StateVec* Other);
+    u08* GetStateBuffer(bool Clear = true);
+    void ReleaseStateBuffer(u08* BufferPtr);
+    StateVec* MakeState(const StateVec* Other);
 
-        public:
-            StateFactory(u32 StateSize);
-            ~StateFactory();
-            StateVec* MakeState();
-            void TakeState(const StateVec* StatePtr);
-            u32 GetSize() const;
-            u32 GetNumActiveStates() const;
-        };
+public:
+    StateFactory(u32 StateSize);
+    ~StateFactory();
+    StateVec* MakeState();
+    void TakeState(const StateVec* StatePtr);
+    u32 GetSize() const;
+    u32 GetNumActiveStates() const;
+};
 
-    } /* end namespace MC */
+} /* end namespace MC */
 } /* end namespace ESMC */
 
 #endif /* ESMC_STATE_VEC_HPP_ */

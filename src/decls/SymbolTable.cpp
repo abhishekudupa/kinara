@@ -43,319 +43,319 @@
 #include "SymbolTable.hpp"
 
 namespace ESMC {
-    namespace Decls {
+namespace Decls {
 
-        STDeclBase::STDeclBase(const string& DeclName)
-            : DeclName(DeclName),
-              HashCode(0), HashValid(false)
-        {
-            // Nothing here
+STDeclBase::STDeclBase(const string& DeclName)
+    : DeclName(DeclName),
+      HashCode(0), HashValid(false)
+{
+    // Nothing here
+}
+
+STDeclBase::~STDeclBase()
+{
+    // Nothing here
+}
+
+const string& STDeclBase::GetDeclName() const
+{
+    return DeclName;
+}
+
+u64 STDeclBase::Hash() const
+{
+    if (!HashValid) {
+        ComputeHashValue();
+        HashValid = true;
+    }
+    return HashCode;
+}
+
+ParamDecl::ParamDecl(const string& Name, const TypeRef& Type)
+    : STDeclBase(Name), ParamType(Type)
+{
+    if (!(Type->Is<SymmetricType>() ||
+          Type->Is<RangeType>())) {
+        throw ESMCError("Parameters can only be range or symmetric types");
+    }
+}
+
+ParamDecl::~ParamDecl()
+{
+    // Nothing here
+}
+
+void ParamDecl::ComputeHashValue() const
+{
+    HashCode = 0;
+    boost::hash_combine(HashCode, "Param");
+    boost::hash_combine(HashCode, GetDeclName());
+    boost::hash_combine(HashCode, ParamType->Hash());
+}
+
+const TypeRef& ParamDecl::GetType() const
+{
+    return ParamType;
+}
+
+bool ParamDecl::Equals(const STDeclBase& Other) const
+{
+    if (!Other.Is<ParamDecl>()) {
+        return false;
+    }
+    auto OtherPtr = Other.As<ParamDecl>();
+    return (OtherPtr->GetDeclName() == GetDeclName() &&
+            OtherPtr->GetType() == ParamType);
+}
+
+MsgSTDeclBase::MsgSTDeclBase(const string& Name, const TypeRef& Type)
+    : STDeclBase(Name), MsgType(Type)
+{
+    if (!Type->Is<RecordType>()) {
+        throw ESMCError((string)"Message decls must be record types");
+    }
+}
+
+MsgSTDeclBase::~MsgSTDeclBase()
+{
+    // Nothing here
+}
+
+void MsgSTDeclBase::ComputeHashValue() const
+{
+    HashCode = 0;
+    boost::hash_combine(HashCode, "Msg");
+    boost::hash_combine(HashCode, GetDeclName());
+    boost::hash_combine(HashCode, MsgType->Hash());
+    boost::hash_combine(HashCode, IsInput());
+    boost::hash_combine(HashCode, IsOutput());
+}
+
+const TypeRef& MsgSTDeclBase::GetType() const
+{
+    return MsgType;
+}
+
+bool MsgSTDeclBase::Equals(const STDeclBase& Other) const
+{
+    if (!Other.Is<MsgSTDeclBase>()) {
+        return false;
+    }
+
+    auto OtherPtr = Other.As<MsgSTDeclBase>();
+    return (OtherPtr->GetDeclName() == GetDeclName() &&
+            OtherPtr->GetType() == MsgType &&
+            OtherPtr->IsInput() == IsInput() &&
+            OtherPtr->IsOutput() == IsOutput());
+}
+
+InMsgDecl::~InMsgDecl()
+{
+    // Nothing here
+}
+
+bool InMsgDecl::IsInput() const
+{
+    return true;
+}
+
+bool InMsgDecl::IsOutput() const
+{
+    return false;
+}
+
+OutMsgDecl::~OutMsgDecl()
+{
+    // Nothing here
+}
+
+bool OutMsgDecl::IsInput() const
+{
+    return false;
+}
+
+bool OutMsgDecl::IsOutput() const
+{
+    return true;
+}
+
+VarDecl::VarDecl(const string& Name, const TypeRef& Type)
+    : STDeclBase(Name), VarType(Type)
+{
+    // Nothing here
+}
+
+VarDecl::~VarDecl()
+{
+    // Nothing here
+}
+
+void VarDecl::ComputeHashValue() const
+{
+    HashCode = 0;
+    boost::hash_combine(HashCode, "Var");
+    boost::hash_combine(HashCode, GetDeclName());
+    boost::hash_combine(HashCode, VarType->Hash());
+}
+
+bool VarDecl::Equals(const STDeclBase& Other) const
+{
+    if (!Other.Is<VarDecl>()) {
+        return false;
+    }
+    auto OtherPtr = Other.As<VarDecl>();
+    return (OtherPtr->GetDeclName() == GetDeclName() &&
+            OtherPtr->GetType() == VarType);
+}
+
+const TypeRef& VarDecl::GetType() const
+{
+    return VarType;
+}
+
+StateDecl::StateDecl(const TypeRef& Type)
+    : STDeclBase("state"), Type(Type)
+{
+    if (!Type->Is<EnumType>()) {
+        throw ESMCError((string)"State variable must be of enumerated type");
+    }
+}
+
+StateDecl::~StateDecl()
+{
+    // Nothing here
+}
+
+void StateDecl::ComputeHashValue() const
+{
+    HashCode = 0;
+    boost::hash_combine(HashCode, "state");
+    boost::hash_combine(HashCode, Type->Hash());
+}
+
+bool StateDecl::Equals(const STDeclBase& Other) const
+{
+    if (!Other.Is<StateDecl>()) {
+        return false;
+    }
+
+    auto OtherPtr = Other.As<StateDecl>();
+    return (OtherPtr->Type == Type);
+}
+
+const TypeRef& StateDecl::GetType() const
+{
+    return Type;
+}
+
+SymtabScope::SymtabScope()
+{
+    // Nothing here
+}
+
+SymtabScope::~SymtabScope()
+{
+    // Nothing here
+}
+
+const unordered_map<string, DeclRef>& SymtabScope::GetDeclMap() const
+{
+    return DeclMap;
+}
+
+void SymtabScope::Bind(const string& Name, const DeclRef& Decl)
+{
+    auto it = DeclMap.find(Name);
+    if (it != DeclMap.end()) {
+        throw ESMCError((string)"Redeclaration of name \"" + Name + "\"");
+    }
+    DeclMap[Name] = Decl;
+}
+
+const DeclRef& SymtabScope::Lookup(const string& Name) const
+{
+    auto it = DeclMap.find(Name);
+    if (it == DeclMap.end()) {
+        return DeclRef::NullPtr;
+    } else {
+        return it->second;
+    }
+}
+
+SymbolTable::SymbolTable()
+{
+    ScopeStack.push_back(new SymtabScope());
+}
+
+SymbolTable::SymbolTable(const SymbolTable& Other)
+    : ScopeStack(Other.ScopeStack)
+{
+    // Nothing here
+}
+
+SymbolTable::~SymbolTable()
+{
+    // Nothing here
+}
+
+void SymbolTable::Push()
+{
+    ScopeStack.push_back(new SymtabScope());
+}
+
+void SymbolTable::Push(const ScopeRef& Scope)
+{
+    ScopeStack.push_back(Scope);
+}
+
+ScopeRef SymbolTable::Pop()
+{
+    auto Retval = ScopeStack.back();
+    ScopeStack.pop_back();
+    return Retval;
+}
+
+ScopeRef SymbolTable::Top() const
+{
+    return ScopeStack.back();
+}
+
+ScopeRef SymbolTable::Bot() const
+{
+    return ScopeStack[0];
+}
+
+void SymbolTable::Bind(const string& Name, const DeclRef& Decl)
+{
+    ScopeStack.back()->Bind(Name, Decl);
+}
+
+const DeclRef& SymbolTable::Lookup(const string& Name) const
+{
+    for (auto it = ScopeStack.rbegin(); it != ScopeStack.rend(); ++it) {
+        auto const& Res = (*it)->Lookup(Name);
+        if (Res != DeclRef::NullPtr) {
+            return Res;
         }
+    }
+    return DeclRef::NullPtr;
+}
 
-        STDeclBase::~STDeclBase()
-        {
-            // Nothing here
-        }
+const DeclRef& SymbolTable::LookupTop(const string& Name) const
+{
+    return ScopeStack.back()->Lookup(Name);
+}
 
-        const string& STDeclBase::GetDeclName() const
-        {
-            return DeclName;
-        }
+SymbolTable& SymbolTable::operator = (const SymbolTable& Other)
+{
+    if (&Other == this) {
+        return *this;
+    }
+    ScopeStack = Other.ScopeStack;
+    return *this;
+}
 
-        u64 STDeclBase::Hash() const
-        {
-            if (!HashValid) {
-                ComputeHashValue();
-                HashValid = true;
-            }
-            return HashCode;
-        }
-
-        ParamDecl::ParamDecl(const string& Name, const TypeRef& Type)
-            : STDeclBase(Name), ParamType(Type)
-        {
-            if (!(Type->Is<SymmetricType>() ||
-                  Type->Is<RangeType>())) {
-                throw ESMCError("Parameters can only be range or symmetric types");
-            }
-        }
-
-        ParamDecl::~ParamDecl()
-        {
-            // Nothing here
-        }
-
-        void ParamDecl::ComputeHashValue() const
-        {
-            HashCode = 0;
-            boost::hash_combine(HashCode, "Param");
-            boost::hash_combine(HashCode, GetDeclName());
-            boost::hash_combine(HashCode, ParamType->Hash());
-        }
-
-        const TypeRef& ParamDecl::GetType() const
-        {
-            return ParamType;
-        }
-
-        bool ParamDecl::Equals(const STDeclBase& Other) const
-        {
-            if (!Other.Is<ParamDecl>()) {
-                return false;
-            }
-            auto OtherPtr = Other.As<ParamDecl>();
-            return (OtherPtr->GetDeclName() == GetDeclName() &&
-                    OtherPtr->GetType() == ParamType);
-        }
-
-        MsgSTDeclBase::MsgSTDeclBase(const string& Name, const TypeRef& Type)
-            : STDeclBase(Name), MsgType(Type)
-        {
-            if (!Type->Is<RecordType>()) {
-                throw ESMCError((string)"Message decls must be record types");
-            }
-        }
-
-        MsgSTDeclBase::~MsgSTDeclBase()
-        {
-            // Nothing here
-        }
-
-        void MsgSTDeclBase::ComputeHashValue() const
-        {
-            HashCode = 0;
-            boost::hash_combine(HashCode, "Msg");
-            boost::hash_combine(HashCode, GetDeclName());
-            boost::hash_combine(HashCode, MsgType->Hash());
-            boost::hash_combine(HashCode, IsInput());
-            boost::hash_combine(HashCode, IsOutput());
-        }
-
-        const TypeRef& MsgSTDeclBase::GetType() const
-        {
-            return MsgType;
-        }
-
-        bool MsgSTDeclBase::Equals(const STDeclBase& Other) const
-        {
-            if (!Other.Is<MsgSTDeclBase>()) {
-                return false;
-            }
-
-            auto OtherPtr = Other.As<MsgSTDeclBase>();
-            return (OtherPtr->GetDeclName() == GetDeclName() &&
-                    OtherPtr->GetType() == MsgType &&
-                    OtherPtr->IsInput() == IsInput() &&
-                    OtherPtr->IsOutput() == IsOutput());
-        }
-
-        InMsgDecl::~InMsgDecl()
-        {
-            // Nothing here
-        }
-
-        bool InMsgDecl::IsInput() const
-        {
-            return true;
-        }
-
-        bool InMsgDecl::IsOutput() const
-        {
-            return false;
-        }
-
-        OutMsgDecl::~OutMsgDecl()
-        {
-            // Nothing here
-        }
-
-        bool OutMsgDecl::IsInput() const
-        {
-            return false;
-        }
-
-        bool OutMsgDecl::IsOutput() const
-        {
-            return true;
-        }
-
-        VarDecl::VarDecl(const string& Name, const TypeRef& Type)
-            : STDeclBase(Name), VarType(Type)
-        {
-            // Nothing here
-        }
-
-        VarDecl::~VarDecl()
-        {
-            // Nothing here
-        }
-
-        void VarDecl::ComputeHashValue() const
-        {
-            HashCode = 0;
-            boost::hash_combine(HashCode, "Var");
-            boost::hash_combine(HashCode, GetDeclName());
-            boost::hash_combine(HashCode, VarType->Hash());
-        }
-
-        bool VarDecl::Equals(const STDeclBase& Other) const
-        {
-            if (!Other.Is<VarDecl>()) {
-                return false;
-            }
-            auto OtherPtr = Other.As<VarDecl>();
-            return (OtherPtr->GetDeclName() == GetDeclName() &&
-                    OtherPtr->GetType() == VarType);
-        }
-
-        const TypeRef& VarDecl::GetType() const
-        {
-            return VarType;
-        }
-
-        StateDecl::StateDecl(const TypeRef& Type)
-            : STDeclBase("state"), Type(Type)
-        {
-            if (!Type->Is<EnumType>()) {
-                throw ESMCError((string)"State variable must be of enumerated type");
-            }
-        }
-
-        StateDecl::~StateDecl()
-        {
-            // Nothing here
-        }
-
-        void StateDecl::ComputeHashValue() const
-        {
-            HashCode = 0;
-            boost::hash_combine(HashCode, "state");
-            boost::hash_combine(HashCode, Type->Hash());
-        }
-
-        bool StateDecl::Equals(const STDeclBase& Other) const
-        {
-            if (!Other.Is<StateDecl>()) {
-                return false;
-            }
-
-            auto OtherPtr = Other.As<StateDecl>();
-            return (OtherPtr->Type == Type);
-        }
-
-        const TypeRef& StateDecl::GetType() const
-        {
-            return Type;
-        }
-
-        SymtabScope::SymtabScope()
-        {
-            // Nothing here
-        }
-
-        SymtabScope::~SymtabScope()
-        {
-            // Nothing here
-        }
-
-        const unordered_map<string, DeclRef>& SymtabScope::GetDeclMap() const
-        {
-            return DeclMap;
-        }
-
-        void SymtabScope::Bind(const string& Name, const DeclRef& Decl)
-        {
-            auto it = DeclMap.find(Name);
-            if (it != DeclMap.end()) {
-                throw ESMCError((string)"Redeclaration of name \"" + Name + "\"");
-            }
-            DeclMap[Name] = Decl;
-        }
-
-        const DeclRef& SymtabScope::Lookup(const string& Name) const
-        {
-            auto it = DeclMap.find(Name);
-            if (it == DeclMap.end()) {
-                return DeclRef::NullPtr;
-            } else {
-                return it->second;
-            }
-        }
-
-        SymbolTable::SymbolTable()
-        {
-            ScopeStack.push_back(new SymtabScope());
-        }
-
-        SymbolTable::SymbolTable(const SymbolTable& Other)
-            : ScopeStack(Other.ScopeStack)
-        {
-            // Nothing here
-        }
-
-        SymbolTable::~SymbolTable()
-        {
-            // Nothing here
-        }
-
-        void SymbolTable::Push()
-        {
-            ScopeStack.push_back(new SymtabScope());
-        }
-
-        void SymbolTable::Push(const ScopeRef& Scope)
-        {
-            ScopeStack.push_back(Scope);
-        }
-
-        ScopeRef SymbolTable::Pop()
-        {
-            auto Retval = ScopeStack.back();
-            ScopeStack.pop_back();
-            return Retval;
-        }
-
-        ScopeRef SymbolTable::Top() const
-        {
-            return ScopeStack.back();
-        }
-
-        ScopeRef SymbolTable::Bot() const
-        {
-            return ScopeStack[0];
-        }
-
-        void SymbolTable::Bind(const string& Name, const DeclRef& Decl)
-        {
-            ScopeStack.back()->Bind(Name, Decl);
-        }
-
-        const DeclRef& SymbolTable::Lookup(const string& Name) const
-        {
-            for (auto it = ScopeStack.rbegin(); it != ScopeStack.rend(); ++it) {
-                auto const& Res = (*it)->Lookup(Name);
-                if (Res != DeclRef::NullPtr) {
-                    return Res;
-                }
-            }
-            return DeclRef::NullPtr;
-        }
-
-        const DeclRef& SymbolTable::LookupTop(const string& Name) const
-        {
-            return ScopeStack.back()->Lookup(Name);
-        }
-
-        SymbolTable& SymbolTable::operator = (const SymbolTable& Other)
-        {
-            if (&Other == this) {
-                return *this;
-            }
-            ScopeStack = Other.ScopeStack;
-            return *this;
-        }
-
-    } /* end namespace Decls */
+} /* end namespace Decls */
 } /* end namespace ESMC */
 
 //

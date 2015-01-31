@@ -42,200 +42,200 @@
 #include "LTSTermSemanticizer.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        const i64 LTSOps::OpEQ;
-        const i64 LTSOps::OpNOT;
-        const i64 LTSOps::OpITE;
-        const i64 LTSOps::OpOR;
-        const i64 LTSOps::OpAND;
-        const i64 LTSOps::OpIMPLIES;
-        const i64 LTSOps::OpIFF;
-        const i64 LTSOps::OpXOR;
+const i64 LTSOps::OpEQ;
+const i64 LTSOps::OpNOT;
+const i64 LTSOps::OpITE;
+const i64 LTSOps::OpOR;
+const i64 LTSOps::OpAND;
+const i64 LTSOps::OpIMPLIES;
+const i64 LTSOps::OpIFF;
+const i64 LTSOps::OpXOR;
 
-        // Arithmetic
-        const i64 LTSOps::OpADD;
-        const i64 LTSOps::OpSUB;
-        const i64 LTSOps::OpMINUS;
-        const i64 LTSOps::OpMUL;
-        const i64 LTSOps::OpDIV;
-        const i64 LTSOps::OpMOD;
-        const i64 LTSOps::OpGT;
-        const i64 LTSOps::OpGE;
-        const i64 LTSOps::OpLT;
-        const i64 LTSOps::OpLE;
+// Arithmetic
+const i64 LTSOps::OpADD;
+const i64 LTSOps::OpSUB;
+const i64 LTSOps::OpMINUS;
+const i64 LTSOps::OpMUL;
+const i64 LTSOps::OpDIV;
+const i64 LTSOps::OpMOD;
+const i64 LTSOps::OpGT;
+const i64 LTSOps::OpGE;
+const i64 LTSOps::OpLT;
+const i64 LTSOps::OpLE;
 
-        // Syntactic operators for symmetry, etc
-        const i64 LTSOps::OpIndex;
-        const i64 LTSOps::OpField;
+// Syntactic operators for symmetry, etc
+const i64 LTSOps::OpIndex;
+const i64 LTSOps::OpField;
 
-        // Syntactic operators for symbolic execution
-        const i64 LTSOps::OpSelect;
-        const i64 LTSOps::OpProject;
-        const i64 LTSOps::OpStore;
-        const i64 LTSOps::OpUpdate;
+// Syntactic operators for symbolic execution
+const i64 LTSOps::OpSelect;
+const i64 LTSOps::OpProject;
+const i64 LTSOps::OpStore;
+const i64 LTSOps::OpUpdate;
 
-        const i64 LTSOps::UFOffset;
+const i64 LTSOps::UFOffset;
 
-        namespace Detail {
+namespace Detail {
 
-            const TypeRef InvalidType = TypeRef::NullPtr;
+const TypeRef InvalidType = TypeRef::NullPtr;
 
-            const string BoundVarPrefix = "dbvar";
+const string BoundVarPrefix = "dbvar";
 
-            const unordered_map<i64, string> OpCodeToNameMap =
-                { { LTSOps::OpEQ, "=" },
-                  { LTSOps::OpNOT, "not" },
-                  { LTSOps::OpITE, "ite" },
-                  { LTSOps::OpOR, "or" },
-                  { LTSOps::OpAND, "and" },
-                  { LTSOps::OpIMPLIES, "implies" },
-                  { LTSOps::OpIFF, "iff" },
-                  { LTSOps::OpXOR, "xor" },
-                  { LTSOps::OpADD, "+" },
-                  { LTSOps::OpSUB, "-" },
-                  { LTSOps::OpMINUS, "-" },
-                  { LTSOps::OpMUL, "*" },
-                  { LTSOps::OpDIV, "div" },
-                  { LTSOps::OpMOD, "mod" },
-                  { LTSOps::OpGT, ">" },
-                  { LTSOps::OpGE, ">=" },
-                  { LTSOps::OpLT, "<" },
-                  { LTSOps::OpLE, "<=" },
-                  { LTSOps::OpSelect, "select" },
-                  { LTSOps::OpProject, "project" },
-                  { LTSOps::OpStore, "store" },
-                  { LTSOps::OpUpdate, "update" } };
+const unordered_map<i64, string> OpCodeToNameMap =
+    { { LTSOps::OpEQ, "=" },
+      { LTSOps::OpNOT, "not" },
+      { LTSOps::OpITE, "ite" },
+      { LTSOps::OpOR, "or" },
+      { LTSOps::OpAND, "and" },
+      { LTSOps::OpIMPLIES, "implies" },
+      { LTSOps::OpIFF, "iff" },
+      { LTSOps::OpXOR, "xor" },
+      { LTSOps::OpADD, "+" },
+      { LTSOps::OpSUB, "-" },
+      { LTSOps::OpMINUS, "-" },
+      { LTSOps::OpMUL, "*" },
+      { LTSOps::OpDIV, "div" },
+      { LTSOps::OpMOD, "mod" },
+      { LTSOps::OpGT, ">" },
+      { LTSOps::OpGE, ">=" },
+      { LTSOps::OpLT, "<" },
+      { LTSOps::OpLE, "<=" },
+      { LTSOps::OpSelect, "select" },
+      { LTSOps::OpProject, "project" },
+      { LTSOps::OpStore, "store" },
+      { LTSOps::OpUpdate, "update" } };
 
-            const unordered_set<i64> LTSReservedOps =
-                { { LTSOps::OpEQ, LTSOps::OpNOT, LTSOps::OpITE, LTSOps::OpOR,
-                    LTSOps::OpAND, LTSOps::OpIMPLIES, LTSOps::OpIFF, LTSOps::OpXOR,
-                    LTSOps::OpADD, LTSOps::OpSUB, LTSOps::OpMINUS, LTSOps::OpMUL,
-                    LTSOps::OpDIV, LTSOps::OpMOD, LTSOps::OpGT, LTSOps::OpGE,
-                    LTSOps::OpLE, LTSOps::OpLT, LTSOps::OpIndex, LTSOps::OpField,
-                    LTSOps::OpSelect, LTSOps::OpProject, LTSOps::OpUpdate,
-                    LTSOps::OpStore } };
+const unordered_set<i64> LTSReservedOps =
+    { { LTSOps::OpEQ, LTSOps::OpNOT, LTSOps::OpITE, LTSOps::OpOR,
+        LTSOps::OpAND, LTSOps::OpIMPLIES, LTSOps::OpIFF, LTSOps::OpXOR,
+        LTSOps::OpADD, LTSOps::OpSUB, LTSOps::OpMINUS, LTSOps::OpMUL,
+        LTSOps::OpDIV, LTSOps::OpMOD, LTSOps::OpGT, LTSOps::OpGE,
+        LTSOps::OpLE, LTSOps::OpLT, LTSOps::OpIndex, LTSOps::OpField,
+        LTSOps::OpSelect, LTSOps::OpProject, LTSOps::OpUpdate,
+        LTSOps::OpStore } };
 
-        } /* end namespace Detail */
+} /* end namespace Detail */
 
-        // The LTSLoweredContext implementation
+// The LTSLoweredContext implementation
 
-        using namespace Detail;
-        using namespace TP;
+using namespace Detail;
+using namespace TP;
 
-        LTSLoweredContext::LTSLoweredContext()
-            : Ctx(new Z3CtxWrapper())
-        {
-            Assumptions.push_back(AssumptionSetT());
-        }
+LTSLoweredContext::LTSLoweredContext()
+    : Ctx(new Z3CtxWrapper())
+{
+    Assumptions.push_back(AssumptionSetT());
+}
 
-        LTSLoweredContext::LTSLoweredContext(const Z3Ctx& Ctx)
-            : Ctx(Ctx)
-        {
-            Assumptions.push_back(AssumptionSetT());
-        }
+LTSLoweredContext::LTSLoweredContext(const Z3Ctx& Ctx)
+    : Ctx(Ctx)
+{
+    Assumptions.push_back(AssumptionSetT());
+}
 
-        LTSLoweredContext::~LTSLoweredContext()
-        {
-            // Nothing here
-        }
+LTSLoweredContext::~LTSLoweredContext()
+{
+    // Nothing here
+}
 
-        const Z3Sort& LTSLoweredContext::GetZ3Sort(const TypeRef& LTSType) const
-        {
-            auto it = LTSTypeToSort.find(LTSType);
-            if (it == LTSTypeToSort.end()) {
-                return Z3Sort::NullSort;
-            } else {
-                return it->second;
-            }
-        }
+const Z3Sort& LTSLoweredContext::GetZ3Sort(const TypeRef& LTSType) const
+{
+    auto it = LTSTypeToSort.find(LTSType);
+    if (it == LTSTypeToSort.end()) {
+        return Z3Sort::NullSort;
+    } else {
+        return it->second;
+    }
+}
 
-        void LTSLoweredContext::AddZ3Sort(const TypeRef& LTSType,
-                                          const Z3Sort& Sort) const
-        {
-            if (GetZ3Sort(LTSType) != Z3Sort::NullSort) {
-                throw ExprTypeError((string)"Z3 sort for type \"" + LTSType->ToString() +
-                                    "\" already exists");
-            }
-            LTSTypeToSort[LTSType] = Sort;
-        }
+void LTSLoweredContext::AddZ3Sort(const TypeRef& LTSType,
+                                  const Z3Sort& Sort) const
+{
+    if (GetZ3Sort(LTSType) != Z3Sort::NullSort) {
+        throw ExprTypeError((string)"Z3 sort for type \"" + LTSType->ToString() +
+                            "\" already exists");
+    }
+    LTSTypeToSort[LTSType] = Sort;
+}
 
-        const TypeRef& LTSLoweredContext::GetLTSType(const string& VarName) const
-        {
-            auto it = VarNameToLTSType.find(VarName);
-            if (it == VarNameToLTSType.end()) {
-                return TypeRef::NullPtr;
-            } else {
-                return it->second;
-            }
-        }
+const TypeRef& LTSLoweredContext::GetLTSType(const string& VarName) const
+{
+    auto it = VarNameToLTSType.find(VarName);
+    if (it == VarNameToLTSType.end()) {
+        return TypeRef::NullPtr;
+    } else {
+        return it->second;
+    }
+}
 
-        void LTSLoweredContext::AddLTSType(const string& VarName, const TypeRef& LTSType) const
-        {
-            if (GetLTSType(VarName) != TypeRef::NullPtr) {
-                throw ExprTypeError((string)"Error, variable named \"" + VarName + "\"" +
-                                    " has already been registed with a type in the context!");
-            }
-            VarNameToLTSType[VarName] = LTSType;
-        }
+void LTSLoweredContext::AddLTSType(const string& VarName, const TypeRef& LTSType) const
+{
+    if (GetLTSType(VarName) != TypeRef::NullPtr) {
+        throw ExprTypeError((string)"Error, variable named \"" + VarName + "\"" +
+                            " has already been registed with a type in the context!");
+    }
+    VarNameToLTSType[VarName] = LTSType;
+}
 
-        void LTSLoweredContext::AddAssumption(const Z3Expr& Assumption) const
-        {
-            Assumptions.back().insert(Assumption);
-        }
+void LTSLoweredContext::AddAssumption(const Z3Expr& Assumption) const
+{
+    Assumptions.back().insert(Assumption);
+}
 
-        void LTSLoweredContext::AddAssumptionGlobal(const Z3Expr &Assumption) const
-        {
-            Assumptions.front().insert(Assumption);
-        }
+void LTSLoweredContext::AddAssumptionGlobal(const Z3Expr &Assumption) const
+{
+    Assumptions.front().insert(Assumption);
+}
 
-        void LTSLoweredContext::PushAssumptionScope() const
-        {
-            Assumptions.push_back(AssumptionSetT());
-        }
+void LTSLoweredContext::PushAssumptionScope() const
+{
+    Assumptions.push_back(AssumptionSetT());
+}
 
-        LTSLoweredContext::AssumptionSetT
-        LTSLoweredContext::PopAssumptionScope() const
-        {
-            auto Scope = Assumptions.back();
-            Assumptions.pop_back();
-            return Scope;
-        }
+LTSLoweredContext::AssumptionSetT
+LTSLoweredContext::PopAssumptionScope() const
+{
+    auto Scope = Assumptions.back();
+    Assumptions.pop_back();
+    return Scope;
+}
 
-        const LTSLoweredContext::AssumptionSetT& LTSLoweredContext::GetAssumptions() const
-        {
-            return Assumptions.back();
-        }
+const LTSLoweredContext::AssumptionSetT& LTSLoweredContext::GetAssumptions() const
+{
+    return Assumptions.back();
+}
 
-        const vector<LTSLoweredContext::AssumptionSetT>&
-        LTSLoweredContext::GetAllAssumptions() const
-        {
-            return Assumptions;
-        }
+const vector<LTSLoweredContext::AssumptionSetT>&
+LTSLoweredContext::GetAllAssumptions() const
+{
+    return Assumptions;
+}
 
-        void LTSLoweredContext::ClearAssumptions() const
-        {
-            Assumptions.clear();
-        }
+void LTSLoweredContext::ClearAssumptions() const
+{
+    Assumptions.clear();
+}
 
-        const Z3Ctx& LTSLoweredContext::GetZ3Ctx() const
-        {
-            return Ctx;
-        }
+const Z3Ctx& LTSLoweredContext::GetZ3Ctx() const
+{
+    return Ctx;
+}
 
-        ostream& operator << (const Z3Expr& Expr, ostream& Out)
-        {
-            Out << Expr.ToString();
-            return Out;
-        }
+ostream& operator << (const Z3Expr& Expr, ostream& Out)
+{
+    Out << Expr.ToString();
+    return Out;
+}
 
-        ostream& operator << (const Z3Sort& Sort, ostream& Out)
-        {
-            Out << Sort.ToString();
-            return Out;
-        }
+ostream& operator << (const Z3Sort& Sort, ostream& Out)
+{
+    Out << Sort.ToString();
+    return Out;
+}
 
-    } /* end namespace LTS */
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 

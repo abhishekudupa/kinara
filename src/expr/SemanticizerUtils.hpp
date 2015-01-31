@@ -44,62 +44,62 @@
 #include <vector>
 
 namespace ESMC {
-    namespace Exprs {
-        namespace SemUtils {
+namespace Exprs {
+namespace SemUtils {
 
-            // Type invalidator: Invalidates any previously
-            // computed type tags on an expression
-            template <typename E, template <typename> class S>
-            class TypeInvalidator : public ExpressionVisitorBase<E, S>
-            {
-            public:
-                TypeInvalidator()
-                    : ExpressionVisitorBase<E, S>("TypeInvalidator") {}
-                virtual ~TypeInvalidator() {}
-                inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override
-                {
-                    Exp->SetType(S<E>::InvalidType);
-                }
+// Type invalidator: Invalidates any previously
+// computed type tags on an expression
+template <typename E, template <typename> class S>
+class TypeInvalidator : public ExpressionVisitorBase<E, S>
+{
+public:
+    TypeInvalidator()
+        : ExpressionVisitorBase<E, S>("TypeInvalidator") {}
+    virtual ~TypeInvalidator() {}
+    inline virtual void VisitVarExpression(const VarExpression<E, S>* Exp) override
+    {
+        Exp->SetType(S<E>::InvalidType);
+    }
 
-                inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override
-                {
-                    Exp->SetType(S<E>::InvalidType);
-                }
-
-
-                inline virtual void
-                VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) override
-                {
-                    Exp->SetType(S<E>::InvalidType);
-                }
-
-                inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override
-                {
-                    ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
-                    Exp->SetType(S<E>::InvalidType);
-                }
-
-                inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
-                {
-                    Exp->GetQExpression()->Accept(this);
-                }
-
-                inline virtual void
-                VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) override
-                {
-                    VisitQuantifiedExpression(Exp);
-                }
-
-                inline virtual void
-                VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override
-                {
-                    VisitQuantifiedExpression(Exp);
-                }
-            };
+    inline virtual void VisitConstExpression(const ConstExpression<E, S>* Exp) override
+    {
+        Exp->SetType(S<E>::InvalidType);
+    }
 
 
-        } /* end namespace SemUtils */
-    } /* end namespace Exprs */
+    inline virtual void
+    VisitBoundVarExpression(const BoundVarExpression<E, S>* Exp) override
+    {
+        Exp->SetType(S<E>::InvalidType);
+    }
+
+    inline virtual void VisitOpExpression(const OpExpression<E, S>* Exp) override
+    {
+        ExpressionVisitorBase<E, S>::VisitOpExpression(Exp);
+        Exp->SetType(S<E>::InvalidType);
+    }
+
+    inline void VisitQuantifiedExpression(const QuantifiedExpressionBase<E, S>* Exp)
+    {
+        Exp->GetQExpression()->Accept(this);
+    }
+
+    inline virtual void
+    VisitEQuantifiedExpression(const EQuantifiedExpression<E, S>* Exp) override
+    {
+        VisitQuantifiedExpression(Exp);
+    }
+
+    inline virtual void
+    VisitAQuantifiedExpression(const AQuantifiedExpression<E, S>* Exp) override
+    {
+        VisitQuantifiedExpression(Exp);
+    }
+};
+
+
+} /* end namespace SemUtils */
+} /* end namespace Exprs */
 } /* end namespace ESMC */
 
 #endif /* ESMC_SEMANTICIZER_UTILS_HPP_ */

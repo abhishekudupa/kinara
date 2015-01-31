@@ -44,37 +44,37 @@
 
 namespace ESMC {
 
-    class ESMCLibOptionsT
-    {
-    public:
-        string LogFileName;
-        LogFileCompressionTechniqueT LogCompressionTechnique;
-        set<string> LoggingOptions;
+class ESMCLibOptionsT
+{
+public:
+    string LogFileName;
+    LogFileCompressionTechniqueT LogCompressionTechnique;
+    set<string> LoggingOptions;
 
-        ESMCLibOptionsT();
-        virtual ~ESMCLibOptionsT();
+    ESMCLibOptionsT();
+    virtual ~ESMCLibOptionsT();
 
-        ESMCLibOptionsT(const ESMCLibOptionsT& Other);
-        ESMCLibOptionsT& operator = (const ESMCLibOptionsT& Other);
-    };
+    ESMCLibOptionsT(const ESMCLibOptionsT& Other);
+    ESMCLibOptionsT& operator = (const ESMCLibOptionsT& Other);
+};
 
-    class ESMCLib
-    {
-    private:
-        static ESMCLibOptionsT& ESMCLibOptions();
+class ESMCLib
+{
+private:
+    static ESMCLibOptionsT& ESMCLibOptions();
 
-        ESMCLib();
-        ESMCLib(const ESMCLib& Other) = delete;
-        ESMCLib(ESMCLib&& Other) = delete;
+    ESMCLib();
+    ESMCLib(const ESMCLib& Other) = delete;
+    ESMCLib(ESMCLib&& Other) = delete;
 
-    public:
-        static void Initialize();
-        static void Initialize(const ESMCLibOptionsT& LibOptions);
-        static void Finalize();
-    };
+public:
+    static void Initialize();
+    static void Initialize(const ESMCLibOptionsT& LibOptions);
+    static void Finalize();
+};
 
-    __attribute__((constructor)) extern void ESMCLibInitialize_();
-    __attribute__((destructor)) extern void ESMCLibFinalize_();
+__attribute__((constructor)) extern void ESMCLibInitialize_();
+__attribute__((destructor)) extern void ESMCLibFinalize_();
 
 } /* end namespace ESMC */
 

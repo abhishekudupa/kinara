@@ -45,54 +45,54 @@
 #include "../uflts/LTSDecls.hpp"
 
 namespace ESMC {
-    namespace Analyses {
+namespace Analyses {
 
-        using namespace LTS;
-        using namespace MC;
-        using namespace Synth;
+using namespace LTS;
+using namespace MC;
+using namespace Synth;
 
-        class TraceAnalyses
-        {
-        public:
-            static vector<ExpT> GetAllScalarLeaves(const ExpT& InitialExp);
-            static FairObjSetT GetLTSFairnessObjects(LabelledTS* TheLTS);
+class TraceAnalyses
+{
+public:
+    static vector<ExpT> GetAllScalarLeaves(const ExpT& InitialExp);
+    static FairObjSetT GetLTSFairnessObjects(LabelledTS* TheLTS);
 
-            static FairObjSetT
-            GetLoopFairnessObjects(LabelledTS* TheLTS,
-                                   const LivenessViolation* LivenessViolation);
+    static FairObjSetT
+    GetLoopFairnessObjects(LabelledTS* TheLTS,
+                           const LivenessViolation* LivenessViolation);
 
-            static FairObjSetT
-            TriviallySatisfiedFairnessObjectsInLoop(LabelledTS* TheLTS,
-                                                    const LivenessViolation* LivenessViolation);
+    static FairObjSetT
+    TriviallySatisfiedFairnessObjectsInLoop(LabelledTS* TheLTS,
+                                            const LivenessViolation* LivenessViolation);
 
-            static ExpT
-            WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
-                                           StateBuchiAutomaton* Monitor,
-                                           const MgrT::SubstMapT& InitialStateSubstMap,
-                                           const LivenessViolation* Trace,
-                                           const ExpT& InitialCondition,
-                                           int StartIndexInLoop);
+    static ExpT
+    WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
+                                   StateBuchiAutomaton* Monitor,
+                                   const MgrT::SubstMapT& InitialStateSubstMap,
+                                   const LivenessViolation* Trace,
+                                   const ExpT& InitialCondition,
+                                   int StartIndexInLoop);
 
-            static ExpT
-            EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
-                                        StateBuchiAutomaton* Monitor,
-                                        const MgrT::SubstMapT& InitialStateSubstMap,
-                                        const LivenessViolation* LivenessViolation,
-                                        const FairObjSetT& FairnessObjects);
+    static ExpT
+    EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
+                                StateBuchiAutomaton* Monitor,
+                                const MgrT::SubstMapT& InitialStateSubstMap,
+                                const LivenessViolation* LivenessViolation,
+                                const FairObjSetT& FairnessObjects);
 
-            static ExpT
-            AutomataStatesCondition(LabelledTS* TheLTS, const StateVec* StateVector);
+    static ExpT
+    AutomataStatesCondition(LabelledTS* TheLTS, const StateVec* StateVector);
 
-            static vector<ExpT> WeakestPrecondition(Solver* TheSolver,
-                                                    SafetyViolation* Trace,
-                                                    const ExpT& InitialPredicate);
+    static vector<ExpT> WeakestPrecondition(Solver* TheSolver,
+                                            SafetyViolation* Trace,
+                                            const ExpT& InitialPredicate);
 
-            static FastExpSetT
-            WeakestPreconditionForLiveness(Solver* TheSolver,
-                                           StateBuchiAutomaton* Monitor,
-                                           const LivenessViolation* Trace);
-        };
-    } /* end namespace Analyses */
+    static FastExpSetT
+    WeakestPreconditionForLiveness(Solver* TheSolver,
+                                   StateBuchiAutomaton* Monitor,
+                                   const LivenessViolation* Trace);
+};
+} /* end namespace Analyses */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LTS_ANALYSES_HPP_ */

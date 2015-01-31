@@ -43,47 +43,47 @@
 #include "../common/ESMCFwdDecls.hpp"
 
 namespace ESMC {
-    namespace LTS {
+namespace LTS {
 
-        class LTSState : public Stringifiable
-        {
-            friend class AutomatonBase;
-        private:
-            string StateName;
-            bool Accepting;
-            bool Final;
-            bool Error;
-            bool Initial;
+class LTSState : public Stringifiable
+{
+    friend class AutomatonBase;
+private:
+    string StateName;
+    bool Accepting;
+    bool Final;
+    bool Error;
+    bool Initial;
 
-        private:
-            LTSState(const string& StateName, bool Initial,
-                     bool Final, bool Accepting, bool Error);
+private:
+    LTSState(const string& StateName, bool Initial,
+             bool Final, bool Accepting, bool Error);
 
-        public:
-            LTSState(const LTSState& Other);
-            LTSState();
-            ~LTSState();
+public:
+    LTSState(const LTSState& Other);
+    LTSState();
+    ~LTSState();
 
-            LTSState& operator = (const LTSState& Other);
+    LTSState& operator = (const LTSState& Other);
 
-            string GetName() const;
-            bool IsAccepting() const;
-            bool IsFinal() const;
-            bool IsError() const;
-            bool IsInitial() const;
-            virtual string ToString(u32 Verbosity = 0) const override;
+    string GetName() const;
+    bool IsAccepting() const;
+    bool IsFinal() const;
+    bool IsError() const;
+    bool IsInitial() const;
+    virtual string ToString(u32 Verbosity = 0) const override;
 
-            static LTSState MakeEFSMState(const string& StateName,
-                                          bool Initial = false,
-                                          bool Final = false,
-                                          bool Error = false);
+    static LTSState MakeEFSMState(const string& StateName,
+                                  bool Initial = false,
+                                  bool Final = false,
+                                  bool Error = false);
 
-            static LTSState MakeMonitorState(const string& StateName,
-                                             bool Initial = false,
-                                             bool Accepting = false);
-        };
+    static LTSState MakeMonitorState(const string& StateName,
+                                     bool Initial = false,
+                                     bool Accepting = false);
+};
 
-    } /* end namespace LTS */
+} /* end namespace LTS */
 } /* end namespace ESMC */
 
 #endif /* ESMC_LTS_STATE_HPP_ */
