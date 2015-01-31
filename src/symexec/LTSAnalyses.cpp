@@ -168,7 +168,6 @@ TraceAnalyses::TriviallySatisfiedFairnessObjectsInLoop(LabelledTS* TheLTS,
     for (auto FairnessObject : LoopFairnessObjects) {
         Retval.erase(FairnessObject);
     }
-    // Retval.erase(LoopFairnessObjects.begin(), LoopFairnessObjects.end());
     return Retval;
 }
 
@@ -205,26 +204,29 @@ TraceAnalyses::WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
         auto MonitorGuard = Monitor->GetGuardForTransition(PreviousMonitorState,
                                                            ProductState->GetMonitorState(),
                                                            ProductState->GetIndexID());
-        auto Pair = make_pair(GuardedCommand, MonitorGuard);
+        auto LoweredMonitorGuard = Mgr->ApplyTransform<LTS::Detail::ArrayRValueTransformer>(MonitorGuard);
+        LoweredMonitorGuard = Mgr->SimplifyFP(LoweredMonitorGuard);
+        auto Pair = make_pair(GuardedCommand, LoweredMonitorGuard);
         StemGuardedCommandsAndMonitorGuards.push_back(Pair);
         PreviousMonitorState = ProductState->GetMonitorState();
     }
-    auto Phi = InitialCondition;
+    auto Phi = Mgr->ApplyTransform<LTS::Detail::ArrayRValueTransformer>(InitialCondition);
+    Phi = Mgr->SimplifyFP(Phi);
 
     for (auto it = LoopGuardedCommandsAndMonitorGuards.begin() + StartIndexInLoop;
          it != LoopGuardedCommandsAndMonitorGuards.begin();
          --it) {
         GCmdRef GuardedCommand = it->first;
-        const vector<LTSAssignRef>& updates = GuardedCommand->GetLoweredUpdates();
+        const vector<LTSAssignRef>& Updates = GuardedCommand->GetLoweredUpdates();
 
         MgrT::SubstMapT SubstMapForTransition;
-        for (auto it = updates.rbegin();
-             it != updates.rend(); ++it) {
+        for (auto it = Updates.rbegin();
+             it != Updates.rend(); ++it) {
             auto it2 = SubstMapForTransition.find((*it)->GetLHS());
             if (it2 != SubstMapForTransition.end()) {
                 MgrT::SubstMapT LocalSubst;
                 LocalSubst[(*it)->GetLHS()] = (*it)->GetRHS();
-                auto NewSubst = Mgr->TermSubstitute(LocalSubst, it2->second);
+                auto NewSubst = Mgr->Substitute(LocalSubst, it2->second);
                 SubstMapForTransition[it2->first] = NewSubst;
             } else {
                 SubstMapForTransition[(*it)->GetLHS()] = (*it)->GetRHS();
@@ -234,9 +236,11 @@ TraceAnalyses::WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
         ExpT ProductGuard = TheLTS->MakeOp(LTSOps::OpAND,
                                            Guard,
                                            it->second);
-        Phi = Mgr->TermSubstitute(SubstMapForTransition, Phi);
+
+        Phi = Mgr->Substitute(SubstMapForTransition, Phi);
+
         Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
-        Phi = Mgr->Simplify(Phi);
+        Phi = Mgr->SimplifyFP(Phi);
     }
 
     MgrT::SubstMapT StemSortMap;
@@ -244,7 +248,7 @@ TraceAnalyses::WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
     for (auto SortAssignment : StemSortAssignments) {
         StemSortMap[SortAssignment->GetLHS()] = SortAssignment->GetRHS();
     }
-    Phi = Mgr->TermSubstitute(StemSortMap, Phi);
+    Phi = Mgr->Substitute(StemSortMap, Phi);
 
     for (auto it = StemGuardedCommandsAndMonitorGuards.rbegin();
          it != StemGuardedCommandsAndMonitorGuards.rend();
@@ -270,12 +274,14 @@ TraceAnalyses::WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
         ExpT ProductGuard = TheLTS->MakeOp(LTSOps::OpAND,
                                            Guard,
                                            it->second);
+
+        Phi = Mgr->Substitute(SubstMapForTransition, Phi);
         Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
-        Phi = Mgr->Simplify(Phi);
+        Phi = Mgr->SimplifyFP(Phi);
 
     }
-
-    return Mgr->TermSubstitute(InitialStateSubstMap, Phi);
+    auto Result = Mgr->Substitute(InitialStateSubstMap, Phi);
+    return Mgr->SimplifyFP(Result);
 }
 
 ExpT
@@ -315,8 +321,10 @@ TraceAnalyses::EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
             LoopIndex++;
         }
     }
+    auto Mgr = TheLTS->MakeTrue()->GetMgr();
 
-    return MakeDisjunction(EnableConditions, TheLTS->GetMgr());
+    auto Disjunction = MakeDisjunction(EnableConditions, TheLTS->GetMgr());
+    return Mgr->SimplifyFP(Disjunction);
 }
 
 ExpT
@@ -610,8 +618,23 @@ TraceAnalyses::WeakestPreconditionForLiveness(Solver* TheSolver,
             auto RHS = Update->GetRHS();
             InitStateSubstMap[LHS] = RHS;
         }
+
+        auto FairnessConstraint = EnableFairnessObjectsInLoop(TheLTS,
+                                                              Monitor,
+                                                              InitStateSubstMap,
+                                                              Trace,
+                                                              TrivialFairObjs);
+        ESMC_LOG_FULL(
+                      "Analyses.Detailed",
+                      Out_ << "Fairness constraint is:" << endl
+                      << FairnessConstraint << endl;
+                      );
+
         auto NewPhi = Mgr->Substitute(InitStateSubstMap, Phi);
+
         NewPhi = Mgr->SimplifyFP(NewPhi);
+
+        NewPhi = TheLTS->MakeOp(LTSOps::OpOR, NewPhi, FairnessConstraint);
         if (NewPhi != TheLTS->MakeTrue()) {
             Retval.insert(NewPhi);
         }
