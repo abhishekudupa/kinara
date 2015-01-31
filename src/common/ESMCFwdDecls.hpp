@@ -172,6 +172,13 @@ typedef CSmartPtr<LTSGuardedCommand> GCmdRef;
 } /* end namespace LTS */
 
 namespace MC {
+namespace Detail {
+class FairnessChecker;
+class BFSQueueT;
+class DFSStackEntry;
+class StateVecPtrHasher;
+class StateVecPtrEquals;
+} /* end namespace Detail */
 
 enum class AQSConstructionMethod
 {
@@ -183,6 +190,7 @@ class StateFactory;
 class LTSChecker;
 class LTSCompiler;
 class StateVecPrinter;
+
 
 class RValueInterpreter;
 class LValueInterpreter;

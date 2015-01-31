@@ -60,6 +60,7 @@ libesmc_OBJS= \
 	LTSAutomaton.o \
 	LTSChannelEFSM.o \
 	LTSChecker.o \
+	LTSCheckerUtils.o \
 	LTSEFSM.o \
 	LTSEFSMBase.o \
 	LTSExtensions.o \

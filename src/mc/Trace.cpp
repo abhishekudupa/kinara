@@ -55,6 +55,7 @@
 #include "Trace.hpp"
 #include "AQStructure.hpp"
 #include "LTSChecker.hpp"
+#include "LTSCheckerUtils.hpp"
 #include "StateVecPrinter.hpp"
 #include "IndexSet.hpp"
 #include "OmegaAutomaton.hpp"
