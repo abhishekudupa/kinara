@@ -232,7 +232,7 @@ public:
                             "been created in the LTS");
         }
 
-        auto Retval = new T(this, Name, Params, Constraint, Fairness);
+        auto Retval = new T(this, Name, Params, Constraint, Fairness, Args...);
         AllEFSMs[Name] = Retval;
         ActualEFSMs[Name] = Retval;
         return Retval;

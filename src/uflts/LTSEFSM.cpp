@@ -70,8 +70,8 @@ namespace ESMC {
 
         DetEFSM::DetEFSM(LabelledTS* TheLTS, const string& Name,
                          const vector<ExpT>& Params, const ExpT& Constraint,
-                         LTSFairnessType Fairness)
-            : EFSMBase(TheLTS, Name, Params, Constraint, Fairness)
+                         LTSFairnessType Fairness, bool CheckDeterminism)
+            : EFSMBase(TheLTS, Name, Params, Constraint, Fairness), CheckDeterminism(CheckDeterminism)
         {
             // Nothing here
         }
@@ -136,13 +136,15 @@ namespace ESMC {
                     }
                 }
 
-                auto Disjoint =
-                    CheckDisjoint(Trans->GetGuard(), OtherTrans->GetGuard(), TP);
+                if (CheckDeterminism) {
+                    auto Disjoint =
+                        CheckDisjoint(Trans->GetGuard(), OtherTrans->GetGuard(), TP);
 
-                if (!Disjoint) {
-                    throw ESMCError((string)"Determinism Check failed on EFSM \"" +
-                                    Name + "\"\nOn Transitions:\n" + Trans->ToString() +
-                                    "\n\nand:\n\n" + OtherTrans->ToString());
+                    if (!Disjoint) {
+                        throw ESMCError((string)"Determinism Check failed on EFSM \"" +
+                                        Name + "\"\nOn Transitions:\n" + Trans->ToString() +
+                                        "\n\nand:\n\n" + OtherTrans->ToString());
+                    }
                 }
             }
         }
@@ -174,8 +176,9 @@ namespace ESMC {
         IncompleteEFSM::IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
                                        const vector<ExpT>& Params,
                                        const ExpT& Constraint,
-                                       LTSFairnessType Fairness)
-            : DetEFSM(TheLTS, Name, Params, Constraint, Fairness)
+                                       LTSFairnessType Fairness,
+                                       bool CheckDeterminism)
+            : DetEFSM(TheLTS, Name, Params, Constraint, Fairness, CheckDeterminism)
         {
             // Nothing here
         }

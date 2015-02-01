@@ -55,9 +55,10 @@ struct PetersonSynthOptionsT {
     UpdateBoundingMethodT UBoundMethod;
     StateUpdateBoundingMethodT SBoundMethod;
     bool UnrollQuantifiers;
+    ESMC::MC::BFSPrioMethodT BFSPrioMethod;
     u64 CPULimit;
     u64 MemLimit;
-    u32 NumCExToProcess;
+    float CoverageDesired;
     u32 BoundLimit;
     string LogFileName;
     vector<string> LogOptions;
@@ -70,7 +71,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], PetersonSynthOptionsT& O
     string GBoundMethodStr, UBoundMethodStr, SBoundMethodStr;
     u64 CPULimit;
     u64 MemLimit;
-    u32 CExToProcess;
+    float CoverageDesired;
+    string BFSPrioMethodStr;
     u32 BoundLimit;
     auto&& LogOptionsDesc = ESMC::Logging::LogManager::GetLogOptions();
     vector<string> LogOptions;
@@ -88,8 +90,12 @@ static inline void ParseOptions(int Argc, char* ArgV[], PetersonSynthOptionsT& O
          "Method for bounding location updates; one of: none, allsame, vardep")
         ("narrow,n", "Use narrow domains for functions to be synthesized")
         ("quants,q", "Unroll Quantifiers before handing off to Z3")
-        ("cex,c", po::value<u32>(&CExToProcess)->default_value(8),
-         "Number of counterexamples to process on each model checking run")
+        ("prioritization-method,p", po::value<string>(&BFSPrioMethodStr)->default_value("none"),
+         "Prioritization method used in model checking, one of: none, simple, coverage")
+        ("coverage,c", po::value<float>(&CoverageDesired)->default_value(1.0f),
+         ((string)"Amount of coverage to give each tentative edge, if prioritization mode " +
+          "is set to \"coverage\", otherwise, number of counterexamples to process in each run.").c_str())
+
         ("bound,b", po::value<u32>(&BoundLimit)->default_value(256),
          "Max limit on bound")
         ("cpu-limit,t", po::value<u64>(&CPULimit)->default_value(UINT64_MAX),
@@ -170,7 +176,6 @@ static inline void ParseOptions(int Argc, char* ArgV[], PetersonSynthOptionsT& O
     Options.LogOptions = LogOptions;
     Options.CPULimit = CPULimit;
     Options.MemLimit = MemLimit;
-    Options.NumCExToProcess = CExToProcess;
     Options.BoundLimit = BoundLimit;
 
     return;
@@ -185,7 +190,7 @@ static inline void OptsToSolverOpts(const PetersonSynthOptionsT& Opts,
     SolverOpts.UnrollQuantifiers = Opts.UnrollQuantifiers;
     SolverOpts.CPULimitInSeconds = Opts.CPULimit;
     SolverOpts.MemLimitInMB = Opts.MemLimit;
-    SolverOpts.NumCExToProcess = Opts.NumCExToProcess;
+    SolverOpts.DesiredCoverage = Opts.CoverageDesired;
     SolverOpts.BoundLimit = Opts.BoundLimit;
 }
 

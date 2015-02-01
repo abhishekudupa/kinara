@@ -67,11 +67,12 @@ private:
     inline void
     CheckTransition(const Z3TPRef& TP, u32 TransIndex,
                     const vector<LTSSymbTransRef>& CandTrans) const;
-
+    bool CheckDeterminism;
 public:
     DetEFSM(LabelledTS* TheLTS, const string& Name,
             const vector<ExpT>& Params, const ExpT& Constraint,
-            LTSFairnessType Fairness = LTSFairnessType::None);
+            LTSFairnessType Fairness = LTSFairnessType::None,
+            bool CheckDeterminism = true);
 
     virtual ~DetEFSM();
 
@@ -190,7 +191,8 @@ private:
 public:
     IncompleteEFSM(LabelledTS* TheLTS, const string& Name,
                    const vector<ExpT>& Params, const ExpT& Constraint,
-                   LTSFairnessType Fairness = LTSFairnessType::None);
+                   LTSFairnessType Fairness = LTSFairnessType::None,
+                   bool CheckDeterminism = true);
 
     virtual ~IncompleteEFSM();
     // overrides to remember variables

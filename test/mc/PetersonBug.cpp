@@ -44,48 +44,23 @@
 #include "../../src/uflts/LTSChannelEFSM.hpp"
 #include "../../src/uflts/LTSAssign.hpp"
 #include "../../src/uflts/LTSTransitions.hpp"
-#include "../../src/mc/Compiler.hpp"
 #include "../../src/mc/LTSChecker.hpp"
 #include "../../src/mc/OmegaAutomaton.hpp"
 #include "../../src/mc/Trace.hpp"
-#include "../../src/synth/Solver.hpp"
-#include "../../src/symexec/LTSAnalyses.hpp"
-#include "../../src/tpinterface/TheoremProver.hpp"
 #include "../../src/utils/LogManager.hpp"
-
-#include "PetersonSynthOptions.hpp"
-
-PetersonSynthOptionsT Options;
 
 using namespace ESMC;
 using namespace LTS;
 using namespace Exprs;
 using namespace MC;
-using namespace Synth;
-using namespace Analyses;
-using namespace Logging;
 
-int main(int argc, char* argv[])
+int main()
 {
-    ParseOptions(argc, argv, Options);
-    ESMCLibOptionsT LibOptions;
-    OptsToLibOpts(Options, LibOptions);
-    ESMCLib::Initialize(LibOptions);
-    SolverOptionsT SolverOptions;
-    OptsToSolverOpts(Options, SolverOptions);
-
     Logging::LogManager::Initialize();
-    // Logging::LogManager::EnableLogOption("Canonicalizer.Best");
-    // ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
-    // ESMC::Logging::LogManager::EnableLogOption("Trace.Generation");
-    // ESMC::Logging::LogManager::EnableLogOption("Checker.AQSDetailed");
-    ESMC::Logging::LogManager::EnableLogOption("Solver.Models");
-    ESMC::Logging::LogManager::EnableLogOption("Solver.Duplicates");
-    ESMC::Logging::LogManager::EnableLogOption("Solver.CEXAssertions");
-    ESMC::Logging::LogManager::EnableLogOption("Solver.Traces");
-    ESMC::Logging::LogManager::EnableLogOption("Solver.OtherAssertions");
-    ESMC::Logging::LogManager::EnableLogOption("Analyses.Detailed");
-
+    Logging::LogManager::EnableLogOption("Canonicalizer.Best");
+    ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
+    ESMC::Logging::LogManager::EnableLogOption("Trace.Generation");
+    ESMC::Logging::LogManager::EnableLogOption("Checker.AQSDetailed");
 
     auto TheLTS = new LabelledTS();
 
@@ -121,17 +96,13 @@ int main(int argc, char* argv[])
 
     TheLTS->FreezeMsgs();
 
-    auto ProcessEFSM = TheLTS->MakeEFSM<IncompleteEFSM>("Process",
-                                                        {PidParam},
-                                                        TrueExp,
-                                                        LTSFairnessType::None,
-                                                        false);
+    auto ProcessEFSM = TheLTS->MakeGenEFSM("Process",
+                                           {PidParam},
+                                           TrueExp, LTSFairnessType::None);
     ProcessEFSM->AddState("L1");
     ProcessEFSM->AddState("L2");
     ProcessEFSM->AddState("L3");
     ProcessEFSM->AddState("Critical");
-    // Adding a dummy state with a self looop reading the alpha message to bypass possible bug.
-    ProcessEFSM->AddState("Dummy");
     ProcessEFSM->FreezeStates();
 
     auto FlagArrayType = TheLTS->MakeArrayType(PidType, TheLTS->MakeBoolType());
@@ -160,7 +131,7 @@ int main(int argc, char* argv[])
                               {PidParam1});
     ProcessEFSM->AddOutputMsg(SetTurnType, {PidParam});
 
-    auto AlphaMsgDecl = ProcessEFSM->AddInputMsg(AlphaType, {PidParam});
+    ProcessEFSM->AddInputMsg(AlphaType, {PidParam});
 
     // Transitions
     vector<LTSAssignRef> Updates;
@@ -177,8 +148,6 @@ int main(int argc, char* argv[])
     auto SetTurnMsgVar = TheLTS->MakeVar("InMsg", SetTurnType);
     // auto SetTurnDotData = TheLTS->MakeOp(LTSOps::OpField, SetTurnMsgVar,
     //                                      TheLTS->MakeVar("TurnData", FAType));
-
-    ProcessEFSM->AddInternalTransition("L1", "L1", TrueExp, {});
 
     // Broadcast shared memory self loops
     for (auto StateName : {"L1", "L2", "L3", "Critical"}) {
@@ -203,16 +172,12 @@ int main(int argc, char* argv[])
                                             TheLTS->MakeVar("FlagData", FAType));
     Updates.push_back(new LTSAssignSimple(SetFlagOutDotData, TrueExp));
 
-    // fairness versus self loop
     ProcessEFSM->AddFairnessSet("FlagFairnessL1",
                                 FairSetFairnessType::Strong);
     ProcessEFSM->AddOutputTransition("L1", "L2", TrueExp,
                                      Updates, "OutMsg", SetFlagType,
-                                     {PidParam, PidParam}, {"FlagFairnessL1"});
-    // ProcessEFSM->AddOutputTransition("L1", "L2", TrueExp,
-    //                                  Updates, "OutMsg", SetFlagType,
-    //                                  {PidParam, PidParam});
-
+                                     {PidParam, PidParam},
+                                     {"FlagFairnessL1"});
     Updates.clear();
 
     // setting my own turn variable
@@ -231,14 +196,13 @@ int main(int argc, char* argv[])
                                 FlagIndexParam1Exp,
                                 TheLTS->MakeOp(LTSOps::OpEQ, TurnExp, PidParam1));
     auto NotGuard = TheLTS->MakeOp(LTSOps::OpNOT, Guard);
-
     // ProcessEFSM->AddInputTransitions({PidParam1}, PidParamNEQPidParam1,
     //                                  "L3", "Critical", NotGuard, {},
     //                                  "InMsg", AlphaType, {PidParam});
 
-    // ProcessEFSM->AddInputTransitions({PidParam1}, PidParamNEQPidParam1,
-    //                                  "L3", "L3", Guard, {},
-    //                                  "InMsg", AlphaType, {PidParam});
+    ProcessEFSM->AddInputTransitions({PidParam1}, PidParamNEQPidParam1,
+                                     "L3", "L3", TrueExp, {},
+                                     "InMsg", AlphaType, {PidParam});
 
     // setting my own flag variable
     Updates.push_back(new LTSAssignSimple(FlagIndexPidParamExp, FalseExp));
@@ -252,17 +216,6 @@ int main(int argc, char* argv[])
                                      {"FlagFairnessCritical"});
     Updates.clear();
 
-    ProcessEFSM->AddInputTransition("Dummy", "Dummy", TrueExp, {},
-                                    "InMsg", AlphaType, {PidParam});
-
-    auto ProcessAsIncomplete = ProcessEFSM->SAs<IncompleteEFSM>();
-
-    ProcessAsIncomplete->MarkAllStatesComplete();
-    ProcessAsIncomplete->MarkStateIncomplete("L3");
-    ProcessAsIncomplete->IgnoreAllMsgsOnState("L3");
-    ProcessAsIncomplete->HandleMsgOnState(AlphaMsgDecl, "L3");
-    ProcessAsIncomplete->MarkVariableReadOnly("Turn");
-    ProcessAsIncomplete->MarkVariableReadOnly("FlagArray");
 
     // Alpha Automaton
     auto AlphaEFSM = TheLTS->MakeGenEFSM("Alpha",
@@ -305,7 +258,6 @@ int main(int argc, char* argv[])
     auto AlphaDotLocation = TheLTS->MakeOp(LTSOps::OpField,
                                            AlphaStateVar,
                                            TheLTS->MakeVar("state", FAType));
-
     InitUpdates.push_back(new LTSAssignParam({ PidParam }, TrueExp,
                                              ProcessDotLocation,
                                              TheLTS->MakeVal("L1",
@@ -384,10 +336,11 @@ int main(int argc, char* argv[])
     //     cout << InitStateGen->ToString() << endl;
     // }
 
-    Checker->BuildAQS(AQSConstructionMethod::BreadthFirst);
+    bool Status = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst);
 
     cout << "Invariant:" << endl;
     cout << TheLTS->GetInvariant() << endl;
+
 
     // Create the liveness monitors
 
@@ -421,52 +374,25 @@ int main(int argc, char* argv[])
     Monitor->Freeze();
 
 
-    // // I think it has to be forall i : Pid . G F (Process[i].flag[i] -> Process[i].state = Critical)
+    if (!Status) {
+        cout << "Bug in AQS" << endl;
 
-    // auto Monitor = Checker->MakeStateBuchiMonitor("GFCritical", {PidParam}, TrueExp);
-    // Monitor->AddState("Initial", true, false);
-    // Monitor->AddState("Accepting", false, true);
-    // Monitor->AddState("Final", false, false);
+        auto const& ErrorStates = Checker->GetAllErrorStates();
+        for (auto const& ErrorState : ErrorStates) {
+            auto Trace = Checker->MakeTraceToError(ErrorState.first);
+            cout << Trace->ToString(1) << endl;
+            delete Trace;
+        }
 
-    // Monitor->FreezeStates();
+        delete Checker;
+        exit(1);
+    }
 
-    // auto MonProcessState = Monitor->MakeOp(LTSOps::OpIndex,
-    //                                        Monitor->MakeVar("Process", ProcessEFSMType),
-    //                                        PidParam);
-    // auto MonProcessStateDotLocation = Monitor->MakeOp(LTSOps::OpField, MonProcessState,
-    //                                              TheLTS->MakeVar("state", FAType));
+    cout << "Checking Liveness Property GFCritical" << endl;
+    auto LiveTrace = Checker->CheckLiveness("GFCritical");
 
-    // auto MonProcessStateDotFlagArray = Monitor->MakeOp(LTSOps::OpField, MonProcessState,
-    //                                                    TheLTS->MakeVar("FlagArray", FAType));
-
-    // auto MonProcessStateDotFlagArrayDotIndex = TheLTS->MakeOp(LTSOps::OpIndex,
-    //                                                           MonProcessStateDotFlagArray,
-    //                                                           PidParam);
-
-    // auto MonProcessDotStateEQCritical = Monitor->MakeOp(LTSOps::OpEQ,
-    //                                                     MonProcessStateDotLocation,
-    //                                                     Monitor->MakeVal("Critical",
-    //                                                                      MonProcessStateDotLocation->GetType()));
-
-    // auto MonProcessDotStateEQL2 = Monitor->MakeOp(LTSOps::OpEQ,
-    //                                               MonProcessStateDotLocation,
-    //                                               Monitor->MakeVal("L2",
-    //                                                                MonProcessStateDotLocation->GetType()));
-    // auto MonProcessDotStateNEQCritical = Monitor->MakeOp(LTSOps::OpNOT,
-    //                                                      MonProcessDotStateEQCritical);
-    // Monitor->AddTransition("Initial", "Initial", TrueExp);
-    // Monitor->AddTransition("Initial", "Accepting", MonProcessDotStateEQL2);
-    // Monitor->AddTransition("Accepting", "Accepting",
-    //                        MonProcessDotStateNEQCritical);
-    // Monitor->AddTransition("Accepting", "Final", MonProcessDotStateEQCritical);
-    // Monitor->AddTransition("Final", "Final", TrueExp);
-    // Monitor->Freeze();
-
-
-    auto TheSolver = new Solver(Checker, SolverOptions);
-
-    TheSolver->Solve();
-
-    delete Checker;
-    delete TheSolver;
+    if (LiveTrace != nullptr) {
+        cout << LiveTrace->ToString(1) << endl << endl;
+        delete LiveTrace;
+    }
 }

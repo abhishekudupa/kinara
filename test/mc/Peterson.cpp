@@ -337,7 +337,7 @@ int main()
     //     cout << InitStateGen->ToString() << endl;
     // }
 
-    bool Status = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, 1);
+    bool Status = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst);
 
     cout << "Invariant:" << endl;
     cout << TheLTS->GetInvariant() << endl;
