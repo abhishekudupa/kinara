@@ -1298,10 +1298,18 @@ inline void Solver::HandleTPReset()
     auto OldCtx = Ctx;
     auto NewCtx = TP->GetCtx();
     deque<Z3Expr> NewAssumptions;
+    vector<Z3Expr> NewAllBoundsAssumptions;
+    for (auto const& Assumption : AllBoundsAssumptions) {
+        Z3Expr NewAssumption(NewCtx, Z3_translate(*OldCtx, Assumption, *NewCtx));
+        NewAllBoundsAssumptions.push_back(NewAssumption);
+    }
+    AllBoundsAssumptions = NewAllBoundsAssumptions;
+
     for (auto const& Assumption : CurrentAssumptions) {
         Z3Expr NewAssumption(NewCtx, Z3_translate(*OldCtx, Assumption, *NewCtx));
         NewAssumptions.push_back(NewAssumption);
     }
+
     Ctx = NewCtx;
     CurrentAssumptions = NewAssumptions;
 }
@@ -1481,14 +1489,25 @@ void Solver::Solve()
         }
 
         if (TPRes == TPResult::UNSATISFIABLE) {
-            ++Bound;
+
+            if (Bound == 0) {
+                CurrentAssumptions.pop_front();
+                ++Bound;
+            } else {
+                auto NewBound = Bound;
+                for(u32 i = 0; i < Bound; ++i) {
+                    if (CurrentAssumptions.size() > 0) {
+                        CurrentAssumptions.pop_front();
+                        ++NewBound;
+                    }
+                }
+
+                Bound = NewBound;
+            }
             ESMC_LOG_MIN_SHORT(
                                Out_ << "UNSAT! Relaxed bound to " << Bound << endl;
                                );
 
-            if (CurrentAssumptions.size() > 0) {
-                CurrentAssumptions.pop_front();
-            }
 
             // Reset z3 on bounds bump
             if (DoneOneMCIteration && Options.ResetTPOnBoundsBump) {

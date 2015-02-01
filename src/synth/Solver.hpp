@@ -216,6 +216,7 @@ private:
     // Barring the cost bounds assertions, which are in the
     // assumptions queue here:
     deque<Z3Expr> CurrentAssumptions;
+    vector<Z3Expr> AllBoundsAssumptions;
     Z3TPRef TP;
     LabelledTS* TheLTS;
     LTSCompiler* Compiler;
