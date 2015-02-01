@@ -84,13 +84,14 @@ StateVecPrinter* TraceBase::GetPrinter() const
     return Printer;
 }
 
-inline tuple<GCmdRef, StateVec*, u32>
-TraceBase::FindCommandForTransition(const vector<GCmdRef>& Commands,
-                                    Canonicalizer* TheCanonicalizer,
-                                    const StateVec* UnwoundFromState,
-                                    const StateVec* UnwoundToState,
-                                    bool RememberSortPermIdx)
+inline vector<tuple<GCmdRef, StateVec*, u32>>
+TraceBase::FindCommandsForTransition(const vector<GCmdRef>& Commands,
+                                     Canonicalizer* TheCanonicalizer,
+                                     const StateVec* UnwoundFromState,
+                                     const StateVec* UnwoundToState,
+                                     bool RememberSortPermIdx)
 {
+    vector<tuple<GCmdRef, StateVec*, u32>> Retval;
     for (auto const& Cmd : Commands) {
         bool Exception = false;
         ExpT NEPred;
@@ -105,15 +106,14 @@ TraceBase::FindCommandForTransition(const vector<GCmdRef>& Commands,
             TheCanonicalizer->SortChans(CandidateSV, RememberSortPermIdx, SortPermIdx);
         if (SortedCandidateSV->Equals(*UnwoundToState)) {
             SortedCandidateSV->Recycle();
-            return make_tuple(Cmd, CandidateSV, SortPermIdx);
+            Retval.push_back(make_tuple(Cmd, CandidateSV, SortPermIdx));
         } else {
             SortedCandidateSV->Recycle();
             CandidateSV->Recycle();
         }
     }
 
-    // We couldn't find a command!
-    return make_tuple(GCmdRef::NullPtr, nullptr, 0);
+    return Retval;
 }
 
 inline const StateVec*
@@ -165,11 +165,11 @@ TraceBase::UnwindPermPath(AQSPermPath* PermPath,
 
         // Now find out which command takes us from the current
         // unwound state to the next unwound state
-        auto&& CmdNextUnsortedState =
-            FindCommandForTransition(GuardedCommands, TheCanonicalizer,
-                                     CurUnwoundState, NextUnwoundState);
-        auto const& TransitionCmd = get<0>(CmdNextUnsortedState);
-        auto NextUnsortedState = get<1>(CmdNextUnsortedState);
+        auto&& CmdNextUnsortedStateList =
+            FindCommandsForTransition(GuardedCommands, TheCanonicalizer,
+                                      CurUnwoundState, NextUnwoundState);
+        auto const& TransitionCmd = get<0>(CmdNextUnsortedStateList.front());
+        auto NextUnsortedState = get<1>(CmdNextUnsortedStateList.front());
 
         if (TransitionCmd == GCmdRef::NullPtr) {
             ostringstream sstr;
@@ -239,12 +239,12 @@ TraceBase::UnwindPermPath(PSPermPath* PermPath, LTSChecker* Checker,
         ProductState* NextUnsortedPS = nullptr;
 
         // find out which command takes us here
-        auto&& CmdNextUnsortedSV =
-            FindCommandForTransition(GuardedCommands, TheCanonicalizer,
-                                     CurUnwoundState->GetSVPtr(),
-                                     NextUnwoundPS->GetSVPtr());
-        auto const& TransitionCmd = get<0>(CmdNextUnsortedSV);
-        auto NextUnsortedSV = get<1>(CmdNextUnsortedSV);
+        auto&& CmdNextUnsortedSVList =
+            FindCommandsForTransition(GuardedCommands, TheCanonicalizer,
+                                      CurUnwoundState->GetSVPtr(),
+                                      NextUnwoundPS->GetSVPtr());
+        auto const& TransitionCmd = get<0>(CmdNextUnsortedSVList.front());
+        auto NextUnsortedSV = get<1>(CmdNextUnsortedSVList.front());
 
         if (TransitionCmd == GCmdRef::NullPtr) {
             throw InternalError((string)"Unable to find a command to compute next " +
@@ -348,65 +348,74 @@ TraceBase::DoUnwoundBFS(const ProductState* CanonicalRoot,
             auto NextSortedSV = TheCanonicalizer->SortChans(NextUnwoundPS->GetSVPtr(),
                                                             false, Unused);
 
-            // Find out which command takes us from the current unwound
+            // Find out which commands take us from the current unwound
             // product state to the next unwound product state
 
-            auto&& CmdNextSVSortPerm =
-                FindCommandForTransition(GuardedCmds, TheCanonicalizer,
-                                         CurUnsortedPS->GetSVPtr(),
-                                         NextSortedSV, true);
-            auto const& TransitionCmd = get<0>(CmdNextSVSortPerm);
-            auto TransitionCmdID = TransitionCmd->GetCmdID();
-            auto NextUnsortedSV = get<1>(CmdNextSVSortPerm);
-            auto SortPermIdx = get<2>(CmdNextSVSortPerm);
+            auto&& CmdNextSVSortPermList =
+                FindCommandsForTransition(GuardedCmds, TheCanonicalizer,
+                                          CurUnsortedPS->GetSVPtr(),
+                                          NextSortedSV, true);
 
-            if (TransitionCmd == GCmdRef::NullPtr) {
-                throw InternalError((string)"Unable to find a command to compute next " +
-                                    "unwound product state.\nAt: " + __FILE__ + ":" +
-                                    to_string(__LINE__));
-            }
+            for (auto const& CmdNextSVSortPerm : CmdNextSVSortPermList) {
+                auto const& TransitionCmd = get<0>(CmdNextSVSortPerm);
+                auto TransitionCmdID = TransitionCmd->GetCmdID();
+                auto NextUnsortedSV = get<1>(CmdNextSVSortPerm);
+                auto SortPermIdx = get<2>(CmdNextSVSortPerm);
 
-            auto InvSortPermIdx =
-                SortPermSet->GetIteratorForInv(SortPermIdx).GetIndex();
-            auto NextUnsortedPS = new ProductState(NextUnsortedSV,
-                                                   NextUnwoundPS->GetMonitorState(),
-                                                   NextUnwoundPS->GetIndexID(), 0);
-            auto NextTuple = make_tuple(NextPermPS, NextPermIndex, InvSortPermIdx);
+                if (TransitionCmd == GCmdRef::NullPtr) {
+                    throw InternalError((string)"Unable to find a command to compute next " +
+                                        "unwound product state.\nAt: " + __FILE__ + ":" +
+                                        to_string(__LINE__));
+                }
 
-            if (!RevisitingOrigin) {
-                BFSQueue.push_back(NextTuple);
-                PredMap[NextTuple] = make_pair(TransitionCmdID, CurTuple);
-            }
+                auto InvSortPermIdx =
+                    SortPermSet->GetIteratorForInv(SortPermIdx).GetIndex();
+                auto NextUnsortedPS = new ProductState(NextUnsortedSV,
+                                                       NextUnwoundPS->GetMonitorState(),
+                                                       NextUnwoundPS->GetIndexID(), 0);
+                auto NextTuple = make_tuple(NextPermPS, NextPermIndex, InvSortPermIdx);
 
-            if (FChecker != nullptr) {
-                auto FairnessSat =
-                    FChecker->CheckInstanceSatisfaction(FairnessInstance,
-                                                        TransitionCmdID,
-                                                        NextUnsortedPS);
-                if (FairnessSat) {
-                    ReachedTarget = true;
-                    TargetPSPerm = NextTuple;
-                    if (RevisitingOrigin) {
-                        OriginPredecessor = make_pair(TransitionCmdID, CurTuple);
-                        PathEndsAtOrigin = true;
+                if (!RevisitingOrigin) {
+                    BFSQueue.push_back(NextTuple);
+                    PredMap[NextTuple] = make_pair(TransitionCmdID, CurTuple);
+                }
+
+                if (FChecker != nullptr) {
+                    auto FairnessSat =
+                        FChecker->CheckInstanceSatisfaction(FairnessInstance,
+                                                            TransitionCmdID,
+                                                            NextUnsortedPS);
+                    if (FairnessSat) {
+                        ReachedTarget = true;
+                        TargetPSPerm = NextTuple;
+                        if (RevisitingOrigin) {
+                            OriginPredecessor = make_pair(TransitionCmdID, CurTuple);
+                            PathEndsAtOrigin = true;
+                        }
+                        break;
+                    }
+                } else {
+                    // MatchPred must be something valid
+                    if (MatchPred(TransitionCmdID, NextUnsortedPS)) {
+                        ReachedTarget = true;
+                        TargetPSPerm = NextTuple;
+                        if (RevisitingOrigin) {
+                            OriginPredecessor = make_pair(TransitionCmdID, CurTuple);
+                            PathEndsAtOrigin = true;
+                        }
+                        break;
                     }
                 }
-            } else {
-                // MatchPred must be something valid
-                if (MatchPred(TransitionCmdID, NextUnsortedPS)) {
-                    ReachedTarget = true;
-                    TargetPSPerm = NextTuple;
-                    if (RevisitingOrigin) {
-                        OriginPredecessor = make_pair(TransitionCmdID, CurTuple);
-                        PathEndsAtOrigin = true;
-                    }
-                }
-            }
 
-            NextUnsortedPS->GetSVPtr()->Recycle();
-            delete NextUnsortedPS;
-            NextUnwoundPS->GetSVPtr()->Recycle();
-            delete NextUnwoundPS;
+                NextUnsortedPS->GetSVPtr()->Recycle();
+                delete NextUnsortedPS;
+                NextUnwoundPS->GetSVPtr()->Recycle();
+                delete NextUnwoundPS;
+            } // end iterating over the commands that take us to the next state
+            // don't iterate over the rest of the edges if target already reached
+            if (ReachedTarget) {
+                break;
+            }
         } // End iterating over edges
 
         // Delete the current unwound product state as well

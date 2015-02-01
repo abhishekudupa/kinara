@@ -989,6 +989,7 @@ inline bool LTSChecker::CheckSCCFairness(const ProductState *SCCRoot,
     for (auto FCheckers : FairnessCheckers) {
         for (auto FChecker : FCheckers) {
             FChecker->InitializeForNewSCC();
+            FChecker->ClearTraceSatisfactionBits();
         }
     }
 

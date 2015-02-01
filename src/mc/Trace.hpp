@@ -182,12 +182,12 @@ public:
     }
 
 private:
-    static inline tuple<GCmdRef, StateVec*, u32>
-    FindCommandForTransition(const vector<GCmdRef>& Commands,
-                             Canonicalizer* TheCanonicalizer,
-                             const StateVec* UnwoundFromState,
-                             const StateVec* UnwoundToState,
-                             bool RememberSortPermIdx = false);
+    static inline vector<tuple<GCmdRef, StateVec*, u32>>
+    FindCommandsForTransition(const vector<GCmdRef>& Commands,
+                              Canonicalizer* TheCanonicalizer,
+                              const StateVec* UnwoundFromState,
+                              const StateVec* UnwoundToState,
+                              bool RememberSortPermIdx = false);
 
     static inline const StateVec*
     UnwindPermPath(AQSPermPath* PermPath,
