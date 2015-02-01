@@ -111,6 +111,7 @@ Solver::Solver(LTSChecker* Checker, const SolverOptionsT& Options)
                                                       BoundsVariable,
                                                       CurBoundsVal)));
             AllBoundsAssumptions.push_back(LoweredProp);
+            CurrentAssumptions.push_back(LoweredProp);
         }
     }
 }
