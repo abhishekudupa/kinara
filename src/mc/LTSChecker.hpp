@@ -73,6 +73,7 @@ private:
     ProductStructure* ThePS;
     vector<GCmdRef> GuardedCommands;
     u32 NumGuardedCmds;
+    u32 NumTentativeCmds;
     // Total number of fairness objects
     u32 NumFairnessObjects;
     // Total number of fairness sets
@@ -102,6 +103,12 @@ private:
     // have a model supporting them
     set<u32> InterpretedCommands;
 
+    // Fields that are reset on each call to BuildAQS
+    float DesiredCoverage;
+    u32 MaxNumErrors;
+    BFSPrioMethodT PrioMethod;
+    AQSConstructionMethod AQSConstMethod;
+
     // returns <Cmd, false> if successful
     // returns <null, false> if no more commands
     // returns <null, true> if exception
@@ -109,13 +116,23 @@ private:
                                             bool& Exception, ExpT& NEPred);
 
     inline bool RecordErrorState(const StateVec* ErrorState,
+                                 const ExpT& BlownInvariant);
+    inline bool RecordErrorState(const StateVec* ErrorState,
                                  const ExpT& BlownInvariant,
-                                 u32 MaxErrors);
+                                 const Detail::PathFingerprint* FP,
+                                 Detail::PathFPPrioritizer* Prioritizer);
 
-    inline void DoDFS(StateVec* Root, u32 NumErrors);
+    inline bool BFSRecordErrorState(const StateVec* ErrorState,
+                                    const ExpT& BlownInvariant,
+                                    const Detail::PathFingerprint* FP,
+                                    Detail::PathFPPrioritizer* Prioritizer);
+    inline bool BFSCheckedRecordErrorState(const StateVec* ErrorState,
+                                           const Detail::PathFingerprint* FP,
+                                           Detail::PathFPPrioritizer* Prioritizer);
 
-    inline void DoBFS(const vector<StateVec*>& Roots, u32 NumErrors,
-                      bool PrioritizeNonTentative = false);
+
+    inline void DoDFS(StateVec* Root);
+    inline void DoBFS(const vector<StateVec*>& Roots);
 
     inline void ConstructProduct(StateBuchiAutomaton* Monitor);
     inline vector<const ProductState*>
@@ -139,9 +156,8 @@ public:
     // false otherwise
     bool BuildAQS(AQSConstructionMethod Method =
                   AQSConstructionMethod::BreadthFirst,
-                  bool PrioritizeNonTentative = false,
-                  u32 NumErrors = UINT32_MAX);
-
+                  BFSPrioMethodT PrioMethod = BFSPrioMethodT::None,
+                  float DesiredCoverage = FLT_MAX);
 
     void ClearAQS();
 

@@ -41,6 +41,8 @@
 #include <deque>
 #include <vector>
 
+#include <boost/pool/object_pool.hpp>
+
 #include "../uflts/LTSDecls.hpp"
 #include "../utils/BitSet.hpp"
 #include "../hash/SpookyHash.hpp"
@@ -79,30 +81,186 @@ public:
     void SetLastFired(i64 NewLastFired);
 };
 
+
+class PathFingerprint;
+class PathFingerprintSet;
+
+class PathFingerprint : public Stringifiable
+{
+private:
+    unordered_set<u32> CommandsAlongPath;
+    vector<u32> CommandsAlongPathVec;
+    BitSet CommandsAlongPathBS;
+    PathFingerprintSet* PathFPSet;
+    u64 HashCode;
+
+    inline i32 Compare(const PathFingerprint& Other) const;
+
+public:
+    PathFingerprint();
+    template <typename ForwardIterator>
+    inline PathFingerprint(const ForwardIterator& Begin,
+                           const ForwardIterator& End,
+                           u32 TotalNumCommands,
+                           PathFingerprintSet* PathFPSet)
+        : CommandsAlongPath(Begin, End),
+          CommandsAlongPathVec(Begin, End),
+          CommandsAlongPathBS(TotalNumCommands),
+          PathFPSet(PathFPSet)
+    {
+        sort(CommandsAlongPathVec.begin(), CommandsAlongPathVec.end());
+        for (auto const& CommandID : CommandsAlongPathVec) {
+            CommandsAlongPathBS.Set(CommandID);
+        }
+        HashCode =
+            SpookyHash::SpookyHash::Hash64(CommandsAlongPathVec.data(),
+                                           sizeof(u32) * CommandsAlongPathVec.size(),
+                                           0xDEEDBEADBEEFFEEDULL);
+    }
+
+    PathFingerprint(const PathFingerprint& Other);
+    PathFingerprint(PathFingerprint&& Other);
+
+    PathFingerprint& operator = (const PathFingerprint& Other);
+    PathFingerprint& operator = (PathFingerprint&& Other);
+
+    bool operator == (const PathFingerprint& Other) const;
+    bool operator < (const PathFingerprint& Other) const;
+
+    virtual ~PathFingerprint();
+    // accessors
+    const unordered_set<u32>& GetCommandsAlongPath() const;
+    const vector<u32>& GetCommandsAlongPathVec() const;
+    bool IsCommandAlongPath(u32 CommandID) const;
+    const PathFingerprint* GetPathFPForAddedCommand(u32 CommandID, bool& IsFPNew) const;
+    float GetCoverageForCommand(u32 CommandID) const;
+    u32 GetNumCommandsAlongPath() const;
+    u64 Hash() const;
+    virtual string ToString(u32 Verbosity = 0) const override;
+};
+
+class PathFingerprintPtrHasher
+{
+public:
+    inline u64 operator () (const PathFingerprint* FP) const
+    {
+        return FP->Hash();
+    }
+};
+
+class PathFingerprintPtrEquals
+{
+public:
+    inline bool operator () (const PathFingerprint* FP1,
+                             const PathFingerprint* FP2) const
+    {
+        return (*FP1 == *FP2);
+    }
+};
+
+class PathFingerprintPtrCompare
+{
+public:
+    inline bool operator () (const PathFingerprint* FP1,
+                             const PathFingerprint* FP2) const
+    {
+        return (*FP1 < *FP2);
+    }
+};
+
+
+class PathFingerprintSet
+{
+private:
+    typedef unordered_set<PathFingerprint*,
+                          PathFingerprintPtrHasher,
+                          PathFingerprintPtrEquals> PathFPSetT;
+    PathFPSetT PathFPSet;
+    boost::object_pool<PathFingerprint> PathFPPool;
+    u32 TotalNumCommands;
+
+public:
+    PathFingerprintSet(u32 TotalNumCommands);
+    ~PathFingerprintSet();
+
+    template <typename ForwardIterator>
+    inline const PathFingerprint* MakeFP(const ForwardIterator& Begin,
+                                         const ForwardIterator& End,
+                                         bool& IsFPNew)
+    {
+        auto NewFP = new (PathFPPool.malloc()) PathFingerprint(Begin, End, TotalNumCommands, this);
+        auto it = PathFPSet.find(NewFP);
+        if (it == PathFPSet.end()) {
+            PathFPSet.insert(NewFP);
+            IsFPNew = true;
+            return NewFP;
+        } else {
+            PathFPPool.destroy(NewFP);
+            IsFPNew = false;
+            return *it;
+        }
+    }
+
+    u32 GetTotalNumCommands() const;
+};
+
+class PathFPPrioritizer : public Stringifiable
+{
+private:
+    unordered_map<u32, float> CommandCoverage;
+    vector<const PathFingerprint*> FPPriorities;
+    unordered_set<const PathFingerprint*> KnownPathFPs;
+    float DesiredCoverage;
+    const PathFingerprint* ZeroFP;
+
+    inline void RedoFPPriorities();
+
+public:
+    PathFPPrioritizer(const vector<GCmdRef>& GuardedCommands,
+                      const PathFingerprint* ZeroFP,
+                      float DesiredCoverage);
+    ~PathFPPrioritizer();
+
+    void NotifyNewPathFP(const PathFingerprint* PathFP);
+    void UpdatePriorities(const PathFingerprint* PathFPToError);
+    const vector<const PathFingerprint*>& GetPriorities() const;
+    bool IsCompletelyCovered() const;
+    virtual string ToString(u32 Verbosity = 0) const override;
+};
+
 // A configurable BFS queue that can use a prio queue
 // or a normal deque. Used to prioritize searches along
 // minimally tainted paths
 class BFSQueueT
 {
 private:
+    typedef unordered_map<const PathFingerprint*, deque<StateVec*>*> CoveragePrioQueueT;
+
     deque<StateVec*>* BFSDeque;
-    vector<deque<StateVec*>*>* PrioQueues;
+    vector<deque<StateVec*>*>* SimplePrioQueues;
+    CoveragePrioQueueT* CoveragePrioQueues;
+    const PathFPPrioritizer* Prioritizer;
     static const u32 MaxNumBuckets;
     u32 NumElems;
 
 public:
-    BFSQueueT(bool UsePrioQueue = false);
+    BFSQueueT(BFSPrioMethodT PrioMethod,
+              const PathFPPrioritizer* Prioritizer);
     ~BFSQueueT();
-    void Push(StateVec* State, u32 TaintLevel = 0);
+    void Push(StateVec* State);
+    void Push(StateVec* State, u32 TaintLevel);
+    void Push(StateVec* State, const PathFingerprint* FP);
+    StateVec* Pop();
     StateVec* Pop(u32& TaintLevel);
+    StateVec* Pop(const PathFingerprint*& FP);
     u32 Size() const;
 
-    template <typename ForwardIterator>
+    template <typename ForwardIterator, typename... ArgTypes>
     inline void Push(const ForwardIterator& Begin,
-                     const ForwardIterator& End, u32 TaintLevel)
+                     const ForwardIterator& End, ArgTypes&&... Args)
     {
         for (auto it = Begin; it != End; ++it) {
-            Push(*it, TaintLevel);
+            Push(*it, forward<ArgTypes>(Args)...);
         }
     }
 };

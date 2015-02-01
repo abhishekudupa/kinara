@@ -1546,7 +1546,7 @@ int main()
     Monitor->AddTransition("Accepting", "Accepting", MonEnvDotStateNEQInitial);
     Monitor->Freeze();
 
-    bool Status = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst, 1);
+    bool Status = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst);
 
     if (!Status) {
         cout << "Bug in AQS" << endl;

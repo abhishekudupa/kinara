@@ -1491,7 +1491,7 @@ void Solver::Solve()
             }
 
             // Reset z3 on bounds bump
-            if (DoneOneMCIteration) {
+            if (DoneOneMCIteration && Options.ResetTPOnBoundsBump) {
                 TP->Reset();
                 HandleTPReset();
                 DoneOneMCIteration = false;
@@ -1519,15 +1519,15 @@ void Solver::Solve()
 
         // Okay, we're good to model check now
         Checker->ClearAQS();
-        u32 CExBound = 0;
+        float CoverageBound = 0;
         if (FirstIteration) {
-            CExBound = UINT32_MAX;
+            CoverageBound = FLT_MAX;
             FirstIteration = false;
         } else {
-            CExBound = Options.NumCExToProcess;
+            CoverageBound = Options.DesiredCoverage;
         }
         auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst,
-                                      Options.PrioritizeNonTentative, CExBound);
+                                      Options.BFSPrioMethod, CoverageBound);
         DoneOneMCIteration = true;
 
         if (!Safe) {

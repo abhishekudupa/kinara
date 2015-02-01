@@ -57,7 +57,7 @@ struct ElevatorSynthOptionsT {
     bool UnrollQuantifiers;
     u64 CPULimit;
     u64 MemLimit;
-    u32 NumCExToProcess;
+    float CoverageDesired;
     u32 BoundLimit;
     u32 NumMissingTransitions;
     bool RemoveUpGuard;
@@ -77,7 +77,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], ElevatorSynthOptionsT& O
     string GBoundMethodStr, UBoundMethodStr, SBoundMethodStr;
     u64 CPULimit;
     u64 MemLimit;
-    u32 CExToProcess;
+    float CoverageDesired;
     u32 BoundLimit;
     u32 TopFloor;
     auto&& LogOptionsDesc = ESMC::Logging::LogManager::GetLogOptions();
@@ -96,8 +96,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], ElevatorSynthOptionsT& O
          "Method for bounding location updates; one of: none, allsame, vardep")
         ("narrow,n", "Use narrow domains for functions to be synthesized")
         ("quants,q", "Unroll Quantifiers before handing off to Z3")
-        ("cex,c", po::value<u32>(&CExToProcess)->default_value(8),
-         "Number of counterexamples to process on each model checking run")
+        ("coverage,c", po::value<float>(&CoverageDesired)->default_value(1.0f),
+         "Number of counterexamples to process in each model checking run")
         ("bound,b", po::value<u32>(&BoundLimit)->default_value(256),
          "Max limit on bound")
         ("cpu-limit,t", po::value<u64>(&CPULimit)->default_value(UINT64_MAX),
@@ -192,7 +192,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], ElevatorSynthOptionsT& O
     Options.LogOptions = LogOptions;
     Options.CPULimit = CPULimit;
     Options.MemLimit = MemLimit;
-    Options.NumCExToProcess = CExToProcess;
+    Options.CoverageDesired = CoverageDesired;
     Options.BoundLimit = BoundLimit;
 
     return;
@@ -207,7 +207,7 @@ static inline void OptsToSolverOpts(const ElevatorSynthOptionsT& Opts,
     SolverOpts.UnrollQuantifiers = Opts.UnrollQuantifiers;
     SolverOpts.CPULimitInSeconds = Opts.CPULimit;
     SolverOpts.MemLimitInMB = Opts.MemLimit;
-    SolverOpts.NumCExToProcess = Opts.NumCExToProcess;
+    SolverOpts.DesiredCoverage = Opts.CoverageDesired;
     SolverOpts.BoundLimit = Opts.BoundLimit;
 }
 

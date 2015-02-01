@@ -50,6 +50,7 @@
 #include <sstream>
 #include <string>
 #include <inttypes.h>
+#include <float.h>
 #include <exception>
 #include <functional>
 

@@ -137,15 +137,57 @@ StateVec* TryExecuteCommand(const GCmdRef& Cmd,
 }
 
 inline bool LTSChecker::RecordErrorState(const StateVec* ErrorState,
-                                         const ExpT& BlownInvariant,
-                                         u32 MaxErrors)
+                                         const ExpT& BlownInvariant)
 {
     if (ErrorStateSet.find(ErrorState) != ErrorStateSet.end()) {
         return true;
     } else {
         ErrorStateSet[ErrorState] = BlownInvariant;
         ErrorStates.push_back(make_pair(ErrorState, BlownInvariant));
-        return (ErrorStates.size() < MaxErrors);
+        return (ErrorStates.size() < MaxNumErrors);
+    }
+}
+
+inline bool LTSChecker::RecordErrorState(const StateVec* ErrorState,
+                                         const ExpT& BlownInvariant,
+                                         const Detail::PathFingerprint* FP,
+                                         Detail::PathFPPrioritizer* Prioritizer)
+{
+    if (ErrorStateSet.find(ErrorState) == ErrorStateSet.end()) {
+        ErrorStateSet[ErrorState] = BlownInvariant;
+        ErrorStates.push_back(make_pair(ErrorState, BlownInvariant));
+    }
+
+    // Notify the prioritizer
+    Prioritizer->UpdatePriorities(FP);
+    return (!(Prioritizer->IsCompletelyCovered()) && ErrorStates.size() < MaxNumErrors);
+}
+
+inline bool LTSChecker::BFSRecordErrorState(const StateVec* ErrorState,
+                                            const ExpT& BlownInvariant,
+                                            const Detail::PathFingerprint* FP,
+                                            Detail::PathFPPrioritizer* Prioritizer)
+{
+    if (PrioMethod != BFSPrioMethodT::Coverage) {
+        return RecordErrorState(ErrorState, BlownInvariant);
+    } else {
+        return RecordErrorState(ErrorState, BlownInvariant, FP, Prioritizer);
+    }
+}
+
+inline bool LTSChecker::BFSCheckedRecordErrorState(const StateVec* ErrorState,
+                                                   const Detail::PathFingerprint* FP,
+                                                   Detail::PathFPPrioritizer* Prioritizer)
+{
+    if (PrioMethod != BFSPrioMethodT::Coverage) {
+        return true;
+    } else {
+        if (ErrorStateSet.find(ErrorState) != ErrorStateSet.end()) {
+            Prioritizer->UpdatePriorities(FP);
+            return (!(Prioritizer->IsCompletelyCovered()));
+        } else {
+            return true;
+        }
     }
 }
 
@@ -162,6 +204,15 @@ LTSChecker::LTSChecker(LabelledTS* TheLTS)
     GuardedCommands = TheLTS->GetGuardedCmds();
     ZeroState = Factory->MakeState();
     NumGuardedCmds = GuardedCommands.size();
+    NumTentativeCmds = 0;
+
+    for_each(GuardedCommands.begin(), GuardedCommands.end(),
+             [&] (const GCmdRef& Cmd) -> void
+             {
+                 if (Cmd->IsTentative()) {
+                     ++NumTentativeCmds;
+                 }
+             });
 
     ESMC_LOG_FULL("Checker.GuardedCommands",
                   Out_ << "Guarded Commands:" << endl;
@@ -286,7 +337,7 @@ inline const GCmdRef& LTSChecker::GetNextEnabledCmd(StateVec* State, i64& LastFi
     return GCmdRef::NullPtr;
 }
 
-inline void LTSChecker::DoDFS(StateVec *Root, u32 NumErrors)
+inline void LTSChecker::DoDFS(StateVec *Root)
 {
     stack<DFSStackEntry> DFSStack;
     AQS->InsertInitState(Root);
@@ -316,12 +367,12 @@ inline void LTSChecker::DoDFS(StateVec *Root, u32 NumErrors)
         auto const& Cmd = GetNextEnabledCmd(State, LastFired, Exception, NEPred);
 
         if (Exception) {
-            if (!RecordErrorState(State, NEPred, NumErrors)) {
+            if (!RecordErrorState(State, NEPred)) {
                 return;
             }
         } else if (Cmd == GCmdRef::NullPtr) {
             if (Deadlocked) {
-                if (!RecordErrorState(State, LoweredDLFInvariant, NumErrors)) {
+                if (!RecordErrorState(State, LoweredDLFInvariant)) {
                     return;
                 }
             }
@@ -344,7 +395,7 @@ inline void LTSChecker::DoDFS(StateVec *Root, u32 NumErrors)
             // command on the State. Store it, and pop from
             // stack, since only one error is remembered
             // per state
-            if (!RecordErrorState(State, NEPred, NumErrors)) {
+            if (!RecordErrorState(State, NEPred)) {
                 return;
             }
             DFSStack.pop();
@@ -403,13 +454,12 @@ inline void LTSChecker::DoDFS(StateVec *Root, u32 NumErrors)
             auto Interp = Invar->ExtensionData.Interp;
             auto InvarRes = Interp->Evaluate(CanonState);
             if (InvarRes == ExceptionValue) {
-                if (!RecordErrorState(CanonState, Interp->GetNoExceptionPredicate(),
-                                      NumErrors)) {
+                if (!RecordErrorState(CanonState, Interp->GetNoExceptionPredicate())) {
                     return;
                 }
                 DFSStack.pop();
             } else if (InvarRes == 0) {
-                if (!RecordErrorState(CanonState, LoweredInvariant, NumErrors)) {
+                if (!RecordErrorState(CanonState, LoweredInvariant)) {
                     return;
                 }
                 DFSStack.pop();
@@ -431,11 +481,35 @@ inline void LTSChecker::DoDFS(StateVec *Root, u32 NumErrors)
     }
 }
 
-inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots, u32 NumErrors,
-                              bool PrioritizeNonTentative)
+inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots)
 {
-    BFSQueueT BFSQueue(PrioritizeNonTentative);
-    BFSQueue.Push(Roots.begin(), Roots.end(), 0);
+    Detail::PathFingerprintSet* PathFPSet = nullptr;
+    Detail::PathFPPrioritizer* Prioritizer = nullptr;
+    const Detail::PathFingerprint* ZeroFP = nullptr;
+    const Detail::PathFingerprint* CurrentPathFP = nullptr;
+    u32 CurrentTaintLevel = 0;
+    bool NextPathFPIsNew = false;
+
+
+    if (PrioMethod == BFSPrioMethodT::Coverage) {
+        PathFPSet = new Detail::PathFingerprintSet(GuardedCommands.size());
+        vector<u32> EmptyVec;
+        bool Dummy;
+        ZeroFP = PathFPSet->MakeFP(EmptyVec.begin(), EmptyVec.end(), Dummy);
+        Prioritizer = new PathFPPrioritizer(GuardedCommands, ZeroFP, DesiredCoverage);
+    }
+
+    BFSQueueT BFSQueue(PrioMethod, Prioritizer);
+
+    if (PrioMethod == BFSPrioMethodT::None) {
+        BFSQueue.Push(Roots.begin(), Roots.end());
+    } else if (PrioMethod == BFSPrioMethodT::Simple) {
+        BFSQueue.Push(Roots.begin(), Roots.end(), CurrentTaintLevel);
+    } else if (PrioMethod == BFSPrioMethodT::Coverage) {
+        BFSQueue.Push(Roots.begin(), Roots.end(), ZeroFP);
+    } else {
+        throw InternalError((string)"Unknown prioritization method!");
+    }
 
     auto const& Invar = TheLTS->GetInvariant();
 
@@ -444,8 +518,14 @@ inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots, u32 NumErrors,
     }
 
     while (BFSQueue.Size() > 0) {
-        u32 CurrentTaintLevel;
-        auto CurState = BFSQueue.Pop(CurrentTaintLevel);
+        StateVec* CurState = nullptr;
+        if (PrioMethod == BFSPrioMethodT::None) {
+            CurState = BFSQueue.Pop();
+        } else if (PrioMethod == BFSPrioMethodT::Simple) {
+            CurState = BFSQueue.Pop(CurrentTaintLevel);
+        } else {
+            CurState = BFSQueue.Pop(CurrentPathFP);
+        }
 
         ESMC_LOG_FULL(
                       "Checker.AQSDetailed",
@@ -470,8 +550,8 @@ inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots, u32 NumErrors,
             NextState = TryExecuteCommand(Cmd, CurState, Exception, NEPred);
             if (Exception) {
                 Deadlocked = false;
-                if (!RecordErrorState(CurState, NEPred, NumErrors)) {
-                    return;
+                if (!BFSRecordErrorState(CurState, NEPred, CurrentPathFP, Prioritizer)) {
+                    goto label_cleanup_and_return;
                 }
                 // Already an error. Don't try any more commands
                 break;
@@ -480,6 +560,16 @@ inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots, u32 NumErrors,
             }
 
             // valid next state
+            // compute the next path fp
+            const PathFingerprint* NextPathFP = nullptr;
+            if (Cmd->IsTentative() && PrioMethod == BFSPrioMethodT::Coverage) {
+                NextPathFP = CurrentPathFP->GetPathFPForAddedCommand(i, NextPathFPIsNew);
+                if (NextPathFPIsNew) {
+                    Prioritizer->NotifyNewPathFP(NextPathFP);
+                }
+            } else {
+                NextPathFP = CurrentPathFP;
+            }
 
             u32 PermID = 0;
             Deadlocked = false;
@@ -524,6 +614,8 @@ inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots, u32 NumErrors,
                                Out_ << "Successor has been previously encountered."
                                << endl;
                                );
+                BFSCheckedRecordErrorState(ExistingState, NextPathFP, Prioritizer);
+
             } else {
 
                 ESMC_LOG_SHORT(
@@ -539,48 +631,87 @@ inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots, u32 NumErrors,
                 auto Interp = Invar->ExtensionData.Interp;
                 auto InvarRes = Interp->Evaluate(CanonNextState);
                 if (InvarRes == ExceptionValue) {
-                    if (!RecordErrorState(CanonNextState,
-                                          LoweredInvariant,
-                                          NumErrors)) {
-                        return;
+                    auto MustContinue =
+                        BFSRecordErrorState(CanonNextState,
+                                            Interp->GetNoExceptionPredicate(),
+                                            NextPathFP, Prioritizer);
+                    if (!MustContinue) {
+                        goto label_cleanup_and_return;
                     }
+
                 } else if (InvarRes == 0) {
-                    // Again, remember this state, but continue
-                    // on with the AQS construction
-                    if (!RecordErrorState(CanonNextState,
-                                          LoweredInvariant,
-                                          NumErrors)) {
-                        return;
+                    auto MustContinue =
+                        BFSRecordErrorState(CanonNextState,
+                                            LoweredInvariant,
+                                            NextPathFP, Prioritizer);
+
+                    if (!MustContinue) {
+                        goto label_cleanup_and_return;
                     }
                 } else {
                     // We're good to consider successors of this state
-                    BFSQueue.Push(CanonNextState,
-                                  (Cmd->IsTentative() ?
-                                   CurrentTaintLevel + 1 :
-                                   CurrentTaintLevel));
+                    if (PrioMethod == BFSPrioMethodT::None) {
+                        BFSQueue.Push(CanonNextState);
+                    } else if (PrioMethod == BFSPrioMethodT::Simple) {
+                        BFSQueue.Push(CanonNextState,
+                                      (Cmd->IsTentative() ?
+                                       CurrentTaintLevel + 1 :
+                                       CurrentTaintLevel));
+                    } else if (PrioMethod == BFSPrioMethodT::Coverage) {
+                        BFSQueue.Push(CanonNextState, NextPathFP);
+                    }
                 }
             } // end if (ExistingState != nullptr), else
 
         } // end iterating over commands
 
         if (Deadlocked) {
-            if (!RecordErrorState(CurState, LoweredDLFInvariant, NumErrors)) {
-                return;
+            auto MustContinue =
+                BFSRecordErrorState(CurState, LoweredDLFInvariant,
+                                    CurrentPathFP, Prioritizer);
+            if (!MustContinue) {
+                goto label_cleanup_and_return;
             }
         }
+    } // end iterating over the BFS Queue
+
+label_cleanup_and_return:
+    if (PathFPSet != nullptr) {
+        delete PathFPSet;
     }
+    if (Prioritizer != nullptr) {
+        delete Prioritizer;
+    }
+    return;
 }
 
 bool LTSChecker::BuildAQS(AQSConstructionMethod Method,
-                          bool PrioritizeNonTentative,
-                          u32 NumErrors)
+                          BFSPrioMethodT PrioMethod,
+                          float DesiredCoverage)
 {
     vector<TraceBase*> Retval;
+    this->DesiredCoverage = DesiredCoverage;
+    this->PrioMethod = PrioMethod;
+    if (PrioMethod == BFSPrioMethodT::None || PrioMethod == BFSPrioMethodT::Simple) {
+        if (DesiredCoverage >= (float)((u32)1 << 31)) {
+            MaxNumErrors = UINT32_MAX;
+        } else {
+            MaxNumErrors = (u32)ceil(DesiredCoverage);
+        }
+    } else {
+        if (NumTentativeCmds * 2 * DesiredCoverage >= (float)UINT32_MAX) {
+            MaxNumErrors = UINT32_MAX;
+        } else {
+            MaxNumErrors = (u32)ceil(NumTentativeCmds * DesiredCoverage);
+        }
+    }
+    this->AQSConstMethod = Method;
 
     if (Method != AQSConstructionMethod::BreadthFirst &&
-        PrioritizeNonTentative) {
-        throw ESMCError((string)"Non tentative edges can be prioritized only " +
-                        "if construction method is breadth-first");
+        PrioMethod != BFSPrioMethodT::None) {
+        throw ESMCError((string)"Prioritization methods can only be applied " +
+                        "if construction method is breadth-first. In call to " +
+                        "LTSChecker::BuildAQS()");
     }
 
     if (AQS != nullptr) {
@@ -644,13 +775,13 @@ bool LTSChecker::BuildAQS(AQSConstructionMethod Method,
         for (auto InitState : InitStates) {
             auto ExistingState = AQS->Find(InitState);
             if (ExistingState == nullptr) {
-                DoDFS(InitState, NumErrors);
+                DoDFS(InitState);
             } else if (ExistingState != InitState) {
                 InitState->Recycle();
             }
         }
     } else {
-        DoBFS(InitStates, NumErrors, PrioritizeNonTentative);
+        DoBFS(InitStates);
     }
 
     ESMC_LOG_MIN_SHORT(

@@ -59,10 +59,11 @@ struct MSISynthOptionsT {
     bool UnrollQuantifiers;
     bool NarrowDomains;
     bool GeneralFixForDL;
-    bool PrioritizeNonTentative;
+    bool ResetTPOnBoundsBump;
+    ESMC::MC::BFSPrioMethodT BFSPrioMethod;
     u64 CPULimit;
     u64 MemLimit;
-    u32 NumCExToProcess;
+    float CoverageDesired;
     u32 BoundLimit;
     u32 NumMissingTransitions;
     u32 IncSolverTimeout;
@@ -78,7 +79,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     string GBoundMethodStr, UBoundMethodStr, SBoundMethodStr;
     u64 CPULimit;
     u64 MemLimit;
-    u32 CExToProcess;
+    float CoverageDesired;
+    string BFSPrioMethodStr;
     u32 BoundLimit;
     u32 NumMissingTransitions;
     auto&& LogOptionsDesc = ESMC::Logging::LogManager::GetLogOptions();
@@ -98,17 +100,20 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
          "Method for bounding location updates; one of: none, allsame, vardep")
         ("narrow,n", "Use narrow domains for functions to be synthesized")
         ("quants,q", "Unroll Quantifiers before handing off to Z3")
-        ("cex,c", po::value<u32>(&CExToProcess)->default_value(8),
-         "Number of counterexamples to process on each model checking run")
+        ("prioritization-method,p", po::value<string>(&BFSPrioMethodStr)->default_value("none"),
+         "Prioritization method used in model checking, one of: none, simple, coverage")
+        ("coverage,c", po::value<float>(&CoverageDesired)->default_value(1.0f),
+         ((string)"Amount of coverage to give each tentative edge, if prioritization mode " +
+          "is set to \"coverage\", otherwise, number of counterexamples to process in each run.").c_str())
         ("bound,b", po::value<u32>(&BoundLimit)->default_value(256),
          "Max limit on bound")
+        ("reset-tp-on-bounds-bump,r",
+         "Reset the theorem prover every time the bounds are bumped.")
         ("cpu-limit,t", po::value<u64>(&CPULimit)->default_value(UINT64_MAX),
          "CPU Time limit in seconds")
         ("mem-limit,m", po::value<u64>(&MemLimit)->default_value(UINT64_MAX),
          "Memory limit in MB")
         ("gen-dl-fix", "Use general fixes for deadlocks")
-        ("prioritize-non-tentative",
-         "Prioritize the most non-tentative paths first during model checking")
         ("num-missing-transitions", po::value<u32>(&NumMissingTransitions)->default_value(2),
          "Number of missing transitions, can be 2, 4 or 5")
         ("inc-solver-timeout", po::value<u32>(&IncSolverTimeout)->default_value(UINT32_MAX),
@@ -167,6 +172,17 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
         exit(1);
     }
 
+    if (BFSPrioMethodStr == "none") {
+        Options.BFSPrioMethod = ESMC::MC::BFSPrioMethodT::None;
+    } else if (BFSPrioMethodStr == "simple") {
+        Options.BFSPrioMethod = ESMC::MC::BFSPrioMethodT::Simple;
+    } else if (BFSPrioMethodStr == "coverage") {
+        Options.BFSPrioMethod = ESMC::MC::BFSPrioMethodT::Coverage;
+    } else {
+        cout << Desc << endl;
+        exit(1);
+    }
+
     if (NumMissingTransitions != 2 &&
         NumMissingTransitions != 4 &&
         NumMissingTransitions != 5) {
@@ -190,13 +206,13 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     Options.UnrollQuantifiers = (vm.count("quants") > 0);
     Options.NarrowDomains = (vm.count("narrow") > 0);
     Options.GeneralFixForDL = (vm.count("gen-dl-fix") > 0);
-    Options.PrioritizeNonTentative = (vm.count("prioritize-non-tentative") > 0);
+    Options.ResetTPOnBoundsBump = (vm.count("reset-tp-on-bounds-bump") > 0);
     Options.NoState = (vm.count("no-state") > 0);
     Options.LogFileName = LogFileName;
     Options.LogOptions = LogOptions;
     Options.CPULimit = CPULimit;
     Options.MemLimit = MemLimit;
-    Options.NumCExToProcess = CExToProcess;
+    Options.CoverageDesired = CoverageDesired;
     Options.BoundLimit = BoundLimit;
     Options.NumMissingTransitions = NumMissingTransitions;
     Options.IncSolverTimeout =
@@ -215,10 +231,11 @@ static inline void OptsToSolverOpts(const MSISynthOptionsT& Opts,
     SolverOpts.GeneralFixForDL = Opts.GeneralFixForDL;
     SolverOpts.CPULimitInSeconds = Opts.CPULimit;
     SolverOpts.MemLimitInMB = Opts.MemLimit;
-    SolverOpts.NumCExToProcess = Opts.NumCExToProcess;
+    SolverOpts.DesiredCoverage = Opts.CoverageDesired;
     SolverOpts.BoundLimit = Opts.BoundLimit;
-    SolverOpts.PrioritizeNonTentative = Opts.PrioritizeNonTentative;
+    SolverOpts.BFSPrioMethod = Opts.BFSPrioMethod;
     SolverOpts.IncSolverTimeout = Opts.IncSolverTimeout;
+    SolverOpts.ResetTPOnBoundsBump = Opts.ResetTPOnBoundsBump;
 }
 
 static inline void OptsToLibOpts(const MSISynthOptionsT& Opts,

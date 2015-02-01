@@ -82,10 +82,11 @@ public:
     bool UnrollQuantifiers;
     u64 CPULimitInSeconds;
     u64 MemLimitInMB;
-    u32 NumCExToProcess;
+    float DesiredCoverage;
     u32 BoundLimit;
     bool GeneralFixForDL;
-    bool PrioritizeNonTentative;
+    bool ResetTPOnBoundsBump;
+    BFSPrioMethodT BFSPrioMethod;
     u32 IncSolverTimeout;
 
     inline SolverOptionsT()
@@ -93,9 +94,10 @@ public:
           UBoundMethod(UpdateBoundingMethodT::NoBounding),
           SBoundMethod(StateUpdateBoundingMethodT::NoBounding),
           UnrollQuantifiers(false), CPULimitInSeconds(UINT64_MAX),
-          MemLimitInMB(UINT64_MAX), NumCExToProcess(8),
+          MemLimitInMB(UINT64_MAX), DesiredCoverage(1),
           BoundLimit(256), GeneralFixForDL(false),
-          PrioritizeNonTentative(false), IncSolverTimeout(UINT32_MAX)
+          ResetTPOnBoundsBump(false),
+          BFSPrioMethod(BFSPrioMethodT::None), IncSolverTimeout(UINT32_MAX)
     {
         // Nothing here
     }
@@ -107,12 +109,13 @@ public:
           UnrollQuantifiers(Other.UnrollQuantifiers),
           CPULimitInSeconds(Other.CPULimitInSeconds),
           MemLimitInMB(Other.MemLimitInMB),
-          NumCExToProcess(Other.NumCExToProcess == 0 ?
-                          UINT32_MAX : Other.NumCExToProcess),
+          DesiredCoverage(Other.DesiredCoverage == 0.0 ?
+                          FLT_MAX : Other.DesiredCoverage),
           BoundLimit(Other.BoundLimit == 0 ? 256 : Other.BoundLimit),
-        GeneralFixForDL(Other.GeneralFixForDL),
-        PrioritizeNonTentative(Other.PrioritizeNonTentative),
-        IncSolverTimeout(Other.IncSolverTimeout)
+          GeneralFixForDL(Other.GeneralFixForDL),
+          ResetTPOnBoundsBump(Other.ResetTPOnBoundsBump),
+          BFSPrioMethod(Other.BFSPrioMethod),
+          IncSolverTimeout(Other.IncSolverTimeout)
     {
         // Nothing here
     }
@@ -129,11 +132,12 @@ public:
         UnrollQuantifiers = Other.UnrollQuantifiers;
         CPULimitInSeconds = Other.CPULimitInSeconds;
         MemLimitInMB = Other.MemLimitInMB;
-        NumCExToProcess =
-            Other.NumCExToProcess == 0 ? UINT32_MAX : Other.NumCExToProcess;
+        DesiredCoverage =
+            Other.DesiredCoverage == 0.0 ? FLT_MAX : Other.DesiredCoverage;
         BoundLimit = Other.BoundLimit == 0 ? 256 : Other.BoundLimit;
         GeneralFixForDL = Other.GeneralFixForDL;
-        PrioritizeNonTentative = Other.PrioritizeNonTentative;
+        ResetTPOnBoundsBump = Other.ResetTPOnBoundsBump;
+        BFSPrioMethod = Other.BFSPrioMethod;
         IncSolverTimeout = Other.IncSolverTimeout;
         return *this;
     }

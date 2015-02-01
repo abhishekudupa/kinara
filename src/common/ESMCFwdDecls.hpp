@@ -178,11 +178,19 @@ class BFSQueueT;
 class DFSStackEntry;
 class StateVecPtrHasher;
 class StateVecPtrEquals;
+class PathFingerprint;
+class PathFingerprintSet;
+class PathFPPrioritizer;
 } /* end namespace Detail */
 
 enum class AQSConstructionMethod
 {
     BreadthFirst, DepthFirst
+};
+
+enum class BFSPrioMethodT
+{
+    None, Simple, Coverage
 };
 
 class StateVec;

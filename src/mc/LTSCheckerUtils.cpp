@@ -37,10 +37,12 @@
 
 #include "../uflts/LTSTransitions.hpp"
 #include "../uflts/LTSEFSMBase.hpp"
+#include "../symmetry/SymmCanonicalizer.hpp"
 
 #include "LTSChecker.hpp"
 #include "LTSCheckerUtils.hpp"
 #include "IndexSet.hpp"
+#include "StateVecPrinter.hpp"
 
 namespace ESMC {
 namespace MC {
@@ -118,74 +120,107 @@ void DFSStackEntry::SetLastFired(i64 NewLastFired)
 // BFSQueueT implementation
 const u32 BFSQueueT::MaxNumBuckets = 32;
 
-BFSQueueT::BFSQueueT(bool UsePrioQueue)
-    : BFSDeque(UsePrioQueue ? nullptr : new deque<StateVec*>()),
-      PrioQueues(UsePrioQueue ?
-                 new vector<deque<StateVec*>*>(MaxNumBuckets, nullptr) :
-                 nullptr),
-      NumElems(0)
+BFSQueueT::BFSQueueT(BFSPrioMethodT PrioMethod, const PathFPPrioritizer* Prioritizer)
+    : BFSDeque(nullptr), SimplePrioQueues(nullptr), CoveragePrioQueues(nullptr),
+      Prioritizer(nullptr), NumElems(0)
 {
-    // Nothing here
+    if (PrioMethod == BFSPrioMethodT::None) {
+        BFSDeque = new deque<StateVec*>();
+    } else if (PrioMethod == BFSPrioMethodT::Simple) {
+        SimplePrioQueues = new vector<deque<StateVec*>*>(MaxNumBuckets, nullptr);
+    } else if (PrioMethod == BFSPrioMethodT::Coverage) {
+        if (Prioritizer == nullptr) {
+            throw InternalError((string)"Attempted to create a coverage based " +
+                                "BFS priority queue without a prioritizer.\nAt: " +
+                                __FUNCTION__ + ", " + __FILE__ + ":" +
+                                to_string(__LINE__));
+        }
+        this->Prioritizer = Prioritizer;
+        CoveragePrioQueues = new CoveragePrioQueueT();
+    }
 }
 
 BFSQueueT::~BFSQueueT()
 {
     if (BFSDeque != nullptr) {
         delete BFSDeque;
-    }
-    if (PrioQueues != nullptr) {
-        for (auto const& Queue : *PrioQueues) {
+    } else if (SimplePrioQueues != nullptr) {
+        for (auto Queue : *SimplePrioQueues) {
             if (Queue != nullptr) {
                 delete Queue;
             }
         }
-        delete PrioQueues;
+        delete SimplePrioQueues;
+    } else if (CoveragePrioQueues != nullptr) {
+        for (auto const& FPQueuePair : *CoveragePrioQueues) {
+            if (FPQueuePair.second != nullptr) {
+                delete FPQueuePair.second;
+            }
+        }
+        delete CoveragePrioQueues;
     }
+}
+
+void BFSQueueT::Push(StateVec* State)
+{
+    BFSDeque->push_back(State);
+    ++NumElems;
 }
 
 void BFSQueueT::Push(StateVec* State, u32 TaintLevel)
 {
-    if (BFSDeque != nullptr) {
-        BFSDeque->push_back(State);
-    } else {
-        auto PrioIndex = min(MaxNumBuckets - 1, TaintLevel);
-        if ((*PrioQueues)[PrioIndex] == nullptr) {
-            (*PrioQueues)[PrioIndex] = new deque<StateVec*>();
-        }
-        (*PrioQueues)[PrioIndex]->push_back(State);
+    u32 PrioIndex = min(TaintLevel, MaxNumBuckets - 1);
+    auto TheQueue = (*SimplePrioQueues)[PrioIndex];
+    if (TheQueue == nullptr) {
+        TheQueue = new deque<StateVec*>();
+        (*SimplePrioQueues)[PrioIndex] = TheQueue;
     }
+    TheQueue->push_back(State);
     ++NumElems;
+}
+
+void BFSQueueT::Push(StateVec* State, const PathFingerprint* FP)
+{
+    deque<StateVec*>* TheQueue = nullptr;
+    auto it = CoveragePrioQueues->find(FP);
+
+    if (it == CoveragePrioQueues->end()) {
+        TheQueue = new deque<StateVec*>();
+        (*CoveragePrioQueues)[FP] = TheQueue;
+    } else {
+        TheQueue = it->second;
+    }
+    TheQueue->push_back(State);
+    ++NumElems;
+}
+
+StateVec* BFSQueueT::Pop()
+{
+    StateVec* Retval = BFSDeque->front();
+    BFSDeque->pop_front();
+    --NumElems;
+    return Retval;
 }
 
 StateVec* BFSQueueT::Pop(u32& TaintLevel)
 {
     StateVec* Retval = nullptr;
-    if (BFSDeque != nullptr) {
-        Retval = BFSDeque->front();
-        BFSDeque->pop_front();
+    if ((*SimplePrioQueues)[1] != nullptr &&
+        (*SimplePrioQueues)[1]->size() > 0) {
+        TaintLevel = 1;
+        Retval = (*SimplePrioQueues)[1]->front();
+        (*SimplePrioQueues)[1]->pop_front();
+    } else if ((*SimplePrioQueues)[0] != nullptr &&
+        (*SimplePrioQueues)[0]->size() > 0) {
         TaintLevel = 0;
+        Retval = (*SimplePrioQueues)[0]->front();
+        (*SimplePrioQueues)[0]->pop_front();
     } else {
-        // look for a node with taint level one first
-        if ((*PrioQueues)[1] != nullptr && (*PrioQueues)[1]->size() > 0) {
-            TaintLevel = 1;
-            Retval = (*PrioQueues)[1]->front();
-            (*PrioQueues)[1]->pop_front();
-            --NumElems;
-            return Retval;
-        }
-        // No? Okay, let's try to get a node with taint level 0
-        if ((*PrioQueues)[0] != nullptr && (*PrioQueues)[0]->size() > 0) {
-            TaintLevel = 0;
-            Retval = (*PrioQueues)[0]->front();
-            (*PrioQueues)[0]->pop_front();
-            --NumElems;
-            return Retval;
-        }
-        // No? Okay, traverse down the rest of the buckets
         for (u32 i = 2; i < MaxNumBuckets; ++i) {
-            if ((*PrioQueues)[i] != nullptr && (*PrioQueues)[i]->size() > 0) {
-                Retval = (*PrioQueues)[i]->front();
-                (*PrioQueues)[i]->pop_front();
+            if ((*SimplePrioQueues)[i] != nullptr &&
+                (*SimplePrioQueues)[i]->size() > 0) {
+                Retval = (*SimplePrioQueues)[i]->front();
+                (*SimplePrioQueues)[i]->pop_front();
                 TaintLevel = i;
                 break;
             }
@@ -195,9 +230,307 @@ StateVec* BFSQueueT::Pop(u32& TaintLevel)
     return Retval;
 }
 
+StateVec* BFSQueueT::Pop(const PathFingerprint*& RetFP)
+{
+    StateVec* Retval = nullptr;
+    RetFP = nullptr;
+    auto const& FPPriorities = Prioritizer->GetPriorities();
+    for (auto const& FP : FPPriorities) {
+        auto it = CoveragePrioQueues->find(FP);
+        if (it != CoveragePrioQueues->end() && it->second != nullptr &&
+            it->second->size() > 0) {
+            Retval = it->second->front();
+            RetFP = FP;
+            it->second->pop_front();
+            break;
+        }
+    }
+    --NumElems;
+    return Retval;
+}
+
 u32 BFSQueueT::Size() const
 {
     return NumElems;
+}
+
+// PathFingerprint implementation
+PathFingerprint::PathFingerprint()
+    : PathFPSet(nullptr), HashCode(0)
+{
+    // Nothing here
+}
+
+PathFingerprint::~PathFingerprint()
+{
+    // Nothing here
+}
+
+inline i32 PathFingerprint::Compare(const PathFingerprint& Other) const
+{
+    auto Diff = CommandsAlongPathVec.size() - Other.CommandsAlongPathVec.size();
+    if (Diff != 0) {
+        return Diff;
+    }
+    for (u32 i = 0; i < CommandsAlongPathVec.size(); ++i) {
+        Diff = CommandsAlongPathVec[i] - Other.CommandsAlongPathVec[i];
+        if (Diff != 0) {
+            return Diff;
+        }
+    }
+    return 0;
+}
+
+PathFingerprint::PathFingerprint(const PathFingerprint& Other)
+    : CommandsAlongPath(Other.CommandsAlongPath),
+      CommandsAlongPathVec(Other.CommandsAlongPathVec),
+      CommandsAlongPathBS(Other.CommandsAlongPathBS),
+      PathFPSet(Other.PathFPSet), HashCode(Other.HashCode)
+{
+    // Nothing here
+}
+
+PathFingerprint::PathFingerprint(PathFingerprint&& Other)
+    : CommandsAlongPath(move(Other.CommandsAlongPath)),
+      CommandsAlongPathVec(move(Other.CommandsAlongPathVec)),
+      CommandsAlongPathBS(move(Other.CommandsAlongPathBS)),
+      PathFPSet(Other.PathFPSet), HashCode(Other.HashCode)
+{
+    // Nothing here
+}
+
+PathFingerprint& PathFingerprint::operator = (const PathFingerprint& Other)
+{
+    if (&Other == this) {
+        return *this;
+    }
+    CommandsAlongPath = Other.CommandsAlongPath;
+    CommandsAlongPathVec = Other.CommandsAlongPathVec;
+    PathFPSet = Other.PathFPSet;
+    HashCode = Other.HashCode;
+    return *this;
+}
+
+PathFingerprint& PathFingerprint::operator = (PathFingerprint&& Other)
+{
+    if (&Other == this) {
+        return *this;
+    }
+    swap(CommandsAlongPath, Other.CommandsAlongPath);
+    swap(CommandsAlongPathVec, Other.CommandsAlongPathVec);
+    swap(CommandsAlongPathBS, Other.CommandsAlongPathBS);
+    swap(PathFPSet, Other.PathFPSet);
+    swap(HashCode, Other.HashCode);
+    return *this;
+}
+
+bool PathFingerprint::operator == (const PathFingerprint& Other) const
+{
+    if (HashCode != Other.HashCode) {
+        return false;
+    }
+    return (Compare(Other) == 0);
+}
+
+bool PathFingerprint::operator < (const PathFingerprint& Other) const
+{
+    return (Compare(Other) < 0);
+}
+
+const unordered_set<u32>& PathFingerprint::GetCommandsAlongPath() const
+{
+    return CommandsAlongPath;
+}
+
+const vector<u32>& PathFingerprint::GetCommandsAlongPathVec() const
+{
+    return CommandsAlongPathVec;
+}
+
+bool PathFingerprint::IsCommandAlongPath(u32 CommandID) const
+{
+    return CommandsAlongPathBS.Test(CommandID);
+}
+
+const PathFingerprint* PathFingerprint::GetPathFPForAddedCommand(u32 CommandID,
+                                                                 bool& IsNew) const
+{
+    if (IsCommandAlongPath(CommandID)) {
+        return this;
+    }
+    auto NewCommandsAlongPath = CommandsAlongPath;
+    NewCommandsAlongPath.insert(CommandID);
+    return PathFPSet->MakeFP(NewCommandsAlongPath.begin(), NewCommandsAlongPath.end(), IsNew);
+}
+
+float PathFingerprint::GetCoverageForCommand(u32 CommandID) const
+{
+    if (CommandsAlongPath.find(CommandID) == CommandsAlongPath.end()) {
+        return 0.0f;
+    } else if (CommandsAlongPathVec.size() == 0) {
+        return 1.0f;
+    } else {
+        return (1.0f / CommandsAlongPathVec.size());
+    }
+}
+
+u32 PathFingerprint::GetNumCommandsAlongPath() const
+{
+    return CommandsAlongPathVec.size();
+}
+
+u64 PathFingerprint::Hash() const
+{
+    return HashCode;
+}
+
+string PathFingerprint::ToString(u32 Verbosity) const
+{
+    string Retval("Pathfingerprint: <");
+    bool First = true;
+    for (auto const& CommandID : CommandsAlongPathVec) {
+        Retval += (First ? "" : " ");
+        Retval += to_string(CommandID);
+        First = false;
+    }
+    Retval += ">";
+    return Retval;
+}
+
+PathFingerprintSet::PathFingerprintSet(u32 TotalNumCommands)
+    : TotalNumCommands(TotalNumCommands)
+{
+    // Nothing here
+}
+
+PathFingerprintSet::~PathFingerprintSet()
+{
+    PathFPSet.clear();
+}
+
+u32 PathFingerprintSet::GetTotalNumCommands() const
+{
+    return TotalNumCommands;
+}
+
+
+// Implementation of PathFPPrioritizer
+PathFPPrioritizer::PathFPPrioritizer(const vector<GCmdRef>& GuardedCommands,
+                                     const PathFingerprint* ZeroFP,
+                                     float DesiredCoverage)
+    : DesiredCoverage(DesiredCoverage), ZeroFP(ZeroFP)
+{
+    for (auto const& Cmd : GuardedCommands) {
+        if (!Cmd->IsTentative()) {
+            continue;
+        }
+        CommandCoverage[Cmd->GetCmdID()] = 0.0f;
+    }
+    KnownPathFPs.insert(ZeroFP);
+    FPPriorities.push_back(ZeroFP);
+}
+
+PathFPPrioritizer::~PathFPPrioritizer()
+{
+    // Nothing here
+}
+
+inline void PathFPPrioritizer::RedoFPPriorities()
+{
+    auto Comparator =
+        [&] (const PathFingerprint* FP1, const PathFingerprint* FP2) -> bool
+        {
+            if (FP1 == ZeroFP && FP2 != ZeroFP) {
+                // The ZeroFP beats everyone else
+                return true;
+            }
+            if (FP2 == ZeroFP && FP1 != ZeroFP) {
+                return false;
+            }
+            // Both are now sure not to be the zero fingerprint
+            auto const& Cmds1 = FP1->GetCommandsAlongPathVec();
+            auto const& Cmds2 = FP2->GetCommandsAlongPathVec();
+
+            // The fingerprint with more edges goes to the back!
+            if (Cmds1.size() < Cmds2.size()) {
+                return true;
+            } else if (Cmds2.size() < Cmds1.size()) {
+                return false;
+            }
+
+            // The number of commands in each is now guaranteed to
+            // be the same
+            double Benefit1 = 0;
+            for (auto const& Cmd : Cmds1) {
+                double PendingCoverage = max(0.0f, DesiredCoverage - CommandCoverage[Cmd]);
+                Benefit1 += (FP1->GetCoverageForCommand(Cmd) *
+                             (PendingCoverage / DesiredCoverage));
+            }
+
+            double Benefit2 = 0;
+            for (auto const& Cmd : Cmds2) {
+                double PendingCoverage = max(0.0f, DesiredCoverage - CommandCoverage[Cmd]);
+                Benefit2 += (FP2->GetCoverageForCommand(Cmd) *
+                             (PendingCoverage / DesiredCoverage));
+            }
+            return (Benefit1 > Benefit2);
+        };
+
+    sort(FPPriorities.begin(), FPPriorities.end(), Comparator);
+}
+
+void PathFPPrioritizer::UpdatePriorities(const PathFingerprint* PathFPToError)
+{
+    auto const& CommandIDs = PathFPToError->GetCommandsAlongPathVec();
+    const u32 NumCommandsSatisfied = CommandIDs.size();
+    for (auto const& CommandID : CommandIDs) {
+        CommandCoverage[CommandID] += 1.0f / NumCommandsSatisfied;
+        // clamp at the desired coverage
+        if (CommandCoverage[CommandID] >= DesiredCoverage) {
+            CommandCoverage[CommandID] = DesiredCoverage;
+        }
+    }
+    RedoFPPriorities();
+}
+
+string PathFPPrioritizer::ToString(u32 Verbosity) const
+{
+    ostringstream sstr;
+    sstr << "Path FP Prioritizer:" << endl;
+    sstr << "Path Fingerprint Priorities:" << endl;
+    for (auto const& FP : FPPriorities) {
+        sstr << FP->ToString(Verbosity) << endl;
+    }
+    sstr << "Command Coverage:" << endl;
+    for (auto const& CmdCoveragePair : CommandCoverage) {
+        sstr << CmdCoveragePair.first << " : " << CmdCoveragePair.second << endl;
+    }
+    return sstr.str();
+}
+
+void PathFPPrioritizer::NotifyNewPathFP(const PathFingerprint* PathFP)
+{
+    if (KnownPathFPs.find(PathFP) != KnownPathFPs.end()) {
+        return;
+    }
+    KnownPathFPs.insert(PathFP);
+    FPPriorities.push_back(PathFP);
+    RedoFPPriorities();
+}
+
+const vector<const PathFingerprint*>& PathFPPrioritizer::GetPriorities() const
+{
+    return FPPriorities;
+}
+
+bool PathFPPrioritizer::IsCompletelyCovered() const
+{
+    for (auto const& CmdCoveragePair : CommandCoverage) {
+        if (CmdCoveragePair.second < DesiredCoverage) {
+            return false;
+        }
+    }
+    return true;
 }
 
 // Fairness Checker implementation
