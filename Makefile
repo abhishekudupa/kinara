@@ -19,6 +19,11 @@ ifneq "x$(Z3_VERSION_TO_USE)" "x4.3.1"
 CXXFLAGS+=-DUSE_Z3_4_3_2
 endif
 
+# # Uncomment the next line to use google containers
+# # this has impact on speed and repeatability, but
+# # can end up reducing memory requirements by a lot
+# CXXFLAGS+=-DESMC_USE_GOOGLE_CONTAINERS_
+
 ifeq "x$(CXX)" "xg++"
 CXXFLAGS+=-Wno-unused-local-typedefs -Wno-overflow -fopenmp
 else

@@ -79,12 +79,12 @@ int main(int argc, char* argv[])
     // ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
     // ESMC::Logging::LogManager::EnableLogOption("Trace.Generation");
     // ESMC::Logging::LogManager::EnableLogOption("Checker.AQSDetailed");
-    ESMC::Logging::LogManager::EnableLogOption("Solver.Models");
-    ESMC::Logging::LogManager::EnableLogOption("Solver.Duplicates");
-    ESMC::Logging::LogManager::EnableLogOption("Solver.CEXAssertions");
-    ESMC::Logging::LogManager::EnableLogOption("Solver.Traces");
-    ESMC::Logging::LogManager::EnableLogOption("Solver.OtherAssertions");
-    ESMC::Logging::LogManager::EnableLogOption("Analyses.Detailed");
+    // ESMC::Logging::LogManager::EnableLogOption("Solver.Models");
+    // ESMC::Logging::LogManager::EnableLogOption("Solver.Duplicates");
+    // ESMC::Logging::LogManager::EnableLogOption("Solver.CEXAssertions");
+    // ESMC::Logging::LogManager::EnableLogOption("Solver.Traces");
+    // ESMC::Logging::LogManager::EnableLogOption("Solver.OtherAssertions");
+    // ESMC::Logging::LogManager::EnableLogOption("Analyses.Detailed");
 
 
     auto TheLTS = new LabelledTS();

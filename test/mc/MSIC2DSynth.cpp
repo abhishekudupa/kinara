@@ -681,7 +681,7 @@ int main(int argc, char* argv[])
                                   CacheParams);
     Updates.clear();
 
-    if (Options.NumMissingTransitions < 2) {
+    if (Options.MissingTransitions.find("C_IM_FWD") == Options.MissingTransitions.end()) {
         Updates.push_back(new LTSAssignSimple(CacheFwdToCacheExp,
                                               TheLTS->MakeVal("clear", CacheIDType)));
         Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheFwdToCacheExp, CacheParam1);
@@ -743,7 +743,7 @@ int main(int argc, char* argv[])
                                   TheLTS->GetNamedType("FwdGetXMsgType'"), CacheParams);
     Updates.clear();
 
-    if (Options.NumMissingTransitions < 4) {
+    if (Options.MissingTransitions.find("C_SM_FWD") == Options.MissingTransitions.end()) {
         Updates.push_back(new LTSAssignSimple(CacheFwdToCacheExp,
                                               TheLTS->MakeVal("clear", CacheIDType)));
         Updates.push_back(new LTSAssignSimple(CacheDataExp, TheLTS->MakeVal("clear", ValueType)));
@@ -794,7 +794,7 @@ int main(int argc, char* argv[])
                                   CacheParams);
     Updates.clear();
 
-    if (Options.NumMissingTransitions < 4) {
+    if (Options.MissingTransitions.find("C_IS_FWD") == Options.MissingTransitions.end()) {
         Updates.push_back(new LTSAssignSimple(CacheFwdToCacheExp,
                                               TheLTS->MakeVal("clear", CacheIDType)));
         Guard = TheLTS->MakeOp(LTSOps::OpEQ, CacheFwdToCacheExp, CacheParam1);
@@ -842,14 +842,14 @@ int main(int argc, char* argv[])
     CacheEFSM->AddInputTransition("C_II", "C_II_SENDACK", TrueExp, Updates, "InMsg",
                                   TheLTS->GetNamedType("FwdGetSMsgType'"), CacheParams);
 
-    if (Options.NumMissingTransitions < 5) {
+    if (Options.MissingTransitions.find("C_II_SENDACK") == Options.MissingTransitions.end()) {
         CacheEFSM->AddOutputTransition("C_II_SENDACK", "C_I", TrueExp, Updates,
                                        "OutMsg", EVAckMsgType, CacheParams);
     }
 
     auto CacheAsInc = CacheEFSM->SAs<IncompleteEFSM>();
     CacheAsInc->MarkAllStatesComplete();
-    if (Options.NumMissingTransitions >= 2) {
+    if (Options.MissingTransitions.find("C_IM_FWD") != Options.MissingTransitions.end()) {
         CacheAsInc->MarkStateIncomplete("C_IM_FWD");
         CacheAsInc->IgnoreAllMsgsOnState("C_IM_FWD");
         CacheAsInc->HandleMsgOnState(InvAckMsgDecl, "C_IM_FWD");
@@ -867,23 +867,41 @@ int main(int argc, char* argv[])
         }
     }
 
-    if (Options.NumMissingTransitions >= 4) {
+    if (Options.MissingTransitions.find("C_SM_FWD") != Options.MissingTransitions.end()) {
 
         CacheAsInc->MarkStateIncomplete("C_SM_FWD");
         CacheAsInc->IgnoreAllMsgsOnState("C_SM_FWD");
         CacheAsInc->HandleMsgOnState(InvAckMsgDecl, "C_SM_FWD");
 
+        if (Options.NoState) {
+            CacheAsInc->SetNextStatesOnTransition("C_SM_FWD", InvAckMsgDecl, { "C_IM" });
+        }
+
+        if (Options.NarrowDomains) {
+            CacheAsInc->SetVariableDepsOnMsg("Data", InvAckMsgDecl, { "Data" }, {});
+            CacheAsInc->SetVariableDepsOnMsg("FwdToCache", InvAckMsgDecl, { "FwdToCache" }, {});
+            CacheAsInc->SetVariableDepsOnMsg("PendingWrite", InvAckMsgDecl, { "PendingWrite" }, {});
+            CacheAsInc->SetVariableDepsOnMsg("AckCounter", InvAckMsgDecl, { "AckCounter" }, {});
+        }
+    }
+
+    if (Options.MissingTransitions.find("C_IS_FWD") != Options.MissingTransitions.end()) {
         CacheAsInc->MarkStateIncomplete("C_IS_FWD");
         CacheAsInc->IgnoreAllMsgsOnState("C_IS_FWD");
         CacheAsInc->HandleMsgOnState(InvAckMsgDecl, "C_IS_FWD");
 
         if (Options.NoState) {
             CacheAsInc->SetNextStatesOnTransition("C_IS_FWD", InvAckMsgDecl, { "C_IS" });
-            CacheAsInc->SetNextStatesOnTransition("C_SM_FWD", InvAckMsgDecl, { "C_IM" });
+        }
+        if (Options.NarrowDomains) {
+            CacheAsInc->SetVariableDepsOnMsg("Data", InvAckMsgDecl, { "Data" }, {});
+            CacheAsInc->SetVariableDepsOnMsg("FwdToCache", InvAckMsgDecl, { "FwdToCache" }, {});
+            CacheAsInc->SetVariableDepsOnMsg("PendingWrite", InvAckMsgDecl, { "PendingWrite" }, {});
+            CacheAsInc->SetVariableDepsOnMsg("AckCounter", InvAckMsgDecl, { "AckCounter" }, {});
         }
     }
 
-    if (Options.NumMissingTransitions >= 5) {
+    if (Options.MissingTransitions.find("C_II_SENDACK") != Options.MissingTransitions.end()) {
 
         CacheAsInc->MarkStateIncomplete("C_II_SENDACK");
         CacheAsInc->IgnoreAllMsgsOnState("C_II_SENDACK");
@@ -1158,7 +1176,7 @@ int main(int argc, char* argv[])
                                  CacheParams);
     Updates.clear();
 
-    if (Options.NumMissingTransitions < 2) {
+    if (Options.MissingTransitions.find("D_BUSY_WB") == Options.MissingTransitions.end()) {
         Updates.push_back(new LTSAssignSimple(DataMsgD2COutDotData, DirDataExp));
         Updates.push_back(new LTSAssignSimple(DataMsgD2COutDotNumAcks, TheLTS->MakeVal("0", AckType)));
         Updates.push_back(new LTSAssignSimple(DirNumSharersExp, TheLTS->MakeVal("0", NumSharersType)));
@@ -1269,7 +1287,7 @@ int main(int argc, char* argv[])
     Updates.clear();
 
 
-    if (Options.NumMissingTransitions >= 2) {
+    if (Options.MissingTransitions.find("D_BUSY_WB") != Options.MissingTransitions.end()) {
         auto DirAsInc = DirEFSM->SAs<IncompleteEFSM>();
         DirAsInc->MarkAllStatesComplete();
         DirAsInc->MarkStateIncomplete("D_BUSY_WB");

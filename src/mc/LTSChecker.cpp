@@ -1039,7 +1039,7 @@ LTSChecker::GetAcceptingSCCs()
 
     auto const& AllStates = ThePS->GetAllStates();
     for (auto it = AllStates.begin(); it != AllStates.end(); ++it) {
-        auto const& PS = it->first;
+        auto PS = it->first;
         if (PS->DFSNum == -1 && !PS->IsDeleted()) {
             auto&& CurSCCRoots = GetAcceptingSCCsFromInitState(PS, CurIndex, CurSCCID);
             Retval.insert(Retval.end(), CurSCCRoots.begin(), CurSCCRoots.end());

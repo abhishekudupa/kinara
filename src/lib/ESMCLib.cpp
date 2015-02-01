@@ -37,6 +37,7 @@
 
 #include <stdlib.h>
 #include <string.h>
+#include <z3.h>
 
 #include "../utils/LogManager.hpp"
 
@@ -104,6 +105,7 @@ void ESMCLib::Initialize(const ESMCLibOptionsT& LibOptions)
 void ESMCLib::Finalize()
 {
     Logging::LogManager::Finalize();
+    Z3_reset_memory();
 }
 
 // The library initializer

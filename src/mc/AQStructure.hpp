@@ -43,6 +43,8 @@
 #include <new>
 #include <sparse_hash_set>
 #include <sparse_hash_map>
+#include <unordered_set>
+#include <unordered_map>
 #include <set>
 
 #include <boost/pool/pool.hpp>
@@ -228,6 +230,8 @@ struct AQSFibDataCompare
 } /* end namespace Detail */
 
 typedef AnnotatedEdge<StateVec> AQSEdge;
+
+#ifdef ESMC_USE_GOOGLE_CONTAINERS_
 typedef sparse_hash_set<AQSEdge*,
                         Detail::AQSEdgePtrHasher,
                         Detail::AQSEdgePtrEquals> AQSEdgeHashSetT;
@@ -237,6 +241,17 @@ typedef sparse_hash_set<AQSEdge*> AQSEdgeSetT;
 typedef sparse_hash_map<StateVec*, AQSEdgeSetT,
                         Detail::StateVecPtrHasher,
                         Detail::StateVecPtrEquals> SVHashSetT;
+#else /* !ESMC_USE_GOOGLE_CONTAINERS_ */
+typedef unordered_set<AQSEdge*,
+                      Detail::AQSEdgePtrHasher,
+                      Detail::AQSEdgePtrEquals> AQSEdgeHashSetT;
+
+typedef unordered_set<AQSEdge*> AQSEdgeSetT;
+
+typedef unordered_map<StateVec*, AQSEdgeSetT,
+                        Detail::StateVecPtrHasher,
+                        Detail::StateVecPtrEquals> SVHashSetT;
+#endif /* ESMC_USE_GOOGLE_CONTAINERS_ */
 
 class AQStructure
 {
@@ -359,6 +374,7 @@ public:
     u64 Hash() const;
     bool operator == (const ProductState& Other) const;
     bool Equals(const ProductState* Other) const;
+    bool LT(const ProductState* Other) const;
 
     void ClearAllMarkings() const;
     void ClearSCCMarkings() const;
@@ -451,6 +467,8 @@ struct PSFibDataCompare
 } /* end namespace Detail */
 
 typedef AnnotatedEdge<ProductState> ProductEdge;
+
+#ifdef ESMC_USE_GOOGLE_CONTAINERS_
 typedef sparse_hash_set<ProductEdge*,
                         Detail::ProductEdgePtrHasher,
                         Detail::ProductEdgePtrEquals> ProductEdgeHashSetT;
@@ -460,6 +478,17 @@ typedef sparse_hash_set<ProductEdge*> ProductEdgeSetT;
 typedef sparse_hash_map<ProductState*, ProductEdgeSetT,
                         Detail::ProductStatePtrHasher,
                         Detail::ProductStatePtrEquals> ProductStateHashSetT;
+#else /* !ESMC_USE_GOOGLE_CONTAINERS_ */
+typedef unordered_set<ProductEdge*,
+                      Detail::ProductEdgePtrHasher,
+                      Detail::ProductEdgePtrEquals> ProductEdgeHashSetT;
+
+typedef unordered_set<ProductEdge*> ProductEdgeSetT;
+
+typedef unordered_map<ProductState*, ProductEdgeSetT,
+                      Detail::ProductStatePtrHasher,
+                      Detail::ProductStatePtrEquals> ProductStateHashSetT;
+#endif /* ESMC_USE_GOOGLE_CONTAINERS_ */
 
 class ProductStructure
 {

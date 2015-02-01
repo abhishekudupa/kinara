@@ -11,7 +11,9 @@ Z3_VERSION_TO_USE?=4.3.2
 CXX?=g++
 
 ifeq "x$(CXX)" "xg++"
-CXXFLAGS+=-Wno-unused-local-typedefs
+CXXFLAGS+=-Wno-unused-local-typedefs -Wno-overflow -fopenmp
+else
+CXXFLAGS+=-Wno-gnu-folding-constant -openmp
 endif
 
 CXXFLAGS+=-std=c++11 -Wall -pedantic -fopenmp -pipe

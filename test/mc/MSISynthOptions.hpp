@@ -52,6 +52,12 @@ using ESMC::LogFileCompressionTechniqueT;
 using ESMC::u64;
 using ESMC::u32;
 
+static const unordered_set<string> AllowedMissingTransitions = { "C_II_SEND_ACK",
+                                                                 "C_IM_FWD",
+                                                                 "C_IS_FWD",
+                                                                 "C_SM_FWD",
+                                                                 "D_BUSY_WB" };
+
 struct MSISynthOptionsT {
     GuardBoundingMethodT GBoundMethod;
     UpdateBoundingMethodT UBoundMethod;
@@ -65,7 +71,7 @@ struct MSISynthOptionsT {
     u64 MemLimit;
     float CoverageDesired;
     u32 BoundLimit;
-    u32 NumMissingTransitions;
+    set<string> MissingTransitions;
     u32 IncSolverTimeout;
     bool NoState;
     string LogFileName;
@@ -82,7 +88,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     float CoverageDesired;
     string BFSPrioMethodStr;
     u32 BoundLimit;
-    u32 NumMissingTransitions;
+    vector<string> MissingTransitions;
     auto&& LogOptionsDesc = ESMC::Logging::LogManager::GetLogOptions();
     vector<string> LogOptions;
     string LogFileName;
@@ -114,8 +120,9 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
         ("mem-limit,m", po::value<u64>(&MemLimit)->default_value(UINT64_MAX),
          "Memory limit in MB")
         ("gen-dl-fix", "Use general fixes for deadlocks")
-        ("num-missing-transitions", po::value<u32>(&NumMissingTransitions)->default_value(2),
-         "Number of missing transitions, can be 2, 4 or 5")
+        ("missing-transitions", po::value<vector<string>>(&MissingTransitions)->multitoken(),
+         ((string)"Transitions to delete. Valid options are any combination of: C_II_SEND_ACK, C_IM_FWD, " +
+          "C_IS_FWD, C_SM_FWD, D_BUSY_WB. If nothing is specified, it defaults to { C_IM_FWD, D_BUSY_WB }").c_str())
         ("inc-solver-timeout", po::value<u32>(&IncSolverTimeout)->default_value(UINT32_MAX),
          "Timeout (in seconds) for switching the SMT solver into non-incremental mode")
         ("log-file", po::value<string>(&LogFileName)->default_value(""),
@@ -183,12 +190,17 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
         exit(1);
     }
 
-    if (NumMissingTransitions != 2 &&
-        NumMissingTransitions != 4 &&
-        NumMissingTransitions != 5) {
-        cout << "Invalid value for --num-missing-transitions" << endl;
-        cout << Desc << endl;
-        exit(1);
+    for (auto const& MissingTransition : MissingTransitions) {
+        if (AllowedMissingTransitions.find(MissingTransition) == AllowedMissingTransitions.end()) {
+            cout << Desc << endl;
+            exit(1);
+        }
+        Options.MissingTransitions.insert(MissingTransition);
+    }
+
+    if (Options.MissingTransitions.size() == 0) {
+        Options.MissingTransitions.insert("C_IM_FWD");
+        Options.MissingTransitions.insert("D_BUSY_WB");
     }
 
     if (LogCompressionTechnique == "none") {
@@ -214,7 +226,6 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     Options.MemLimit = MemLimit;
     Options.CoverageDesired = CoverageDesired;
     Options.BoundLimit = BoundLimit;
-    Options.NumMissingTransitions = NumMissingTransitions;
     Options.IncSolverTimeout =
         (IncSolverTimeout == UINT32_MAX ? IncSolverTimeout : IncSolverTimeout * 1000);
 

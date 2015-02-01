@@ -298,8 +298,11 @@ TraceBase::DoUnwoundBFS(const ProductState* CanonicalRoot,
 
     bool ReachedTarget = false;
     Detail::BFSQueueEntryT TargetPSPerm;
-    bool PathEndsAtOrigin = false;
-    pair<u32, BFSQueueEntryT> OriginPredecessor;
+    // Predecessor of the target. This is not in
+    // the predecessor map, because the target could
+    // have looped back into the structure to a
+    // previously visited node
+    pair<u32, BFSQueueEntryT> TargetPredecessor;
 
     while (BFSQueue.size() > 0 && !ReachedTarget) {
         auto CurTuple = BFSQueue.front();
@@ -319,7 +322,7 @@ TraceBase::DoUnwoundBFS(const ProductState* CanonicalRoot,
 
         for (auto Edge : Edges) {
             auto NextPermPS = Edge->GetTarget();
-            bool RevisitingOrigin = false;
+            bool RevisitingNode = false;
 
             if (NextPermPS->GetSCCID() != TheSCCID) {
                 // Not part of the scc, ignore
@@ -333,11 +336,7 @@ TraceBase::DoUnwoundBFS(const ProductState* CanonicalRoot,
             auto NextPair = make_pair(NextPermPS, NextPermIndex);
 
             if (VisitedStates.find(NextPair) != VisitedStates.end()) {
-                if (NextPair == OriginPair) {
-                    RevisitingOrigin = true;
-                } else {
-                    continue;
-                }
+                RevisitingNode = true;
             }
 
             VisitedStates.insert(NextPair);
@@ -375,7 +374,7 @@ TraceBase::DoUnwoundBFS(const ProductState* CanonicalRoot,
                                                        NextUnwoundPS->GetIndexID(), 0);
                 auto NextTuple = make_tuple(NextPermPS, NextPermIndex, InvSortPermIdx);
 
-                if (!RevisitingOrigin) {
+                if (!RevisitingNode) {
                     BFSQueue.push_back(NextTuple);
                     PredMap[NextTuple] = make_pair(TransitionCmdID, CurTuple);
                 }
@@ -388,30 +387,28 @@ TraceBase::DoUnwoundBFS(const ProductState* CanonicalRoot,
                     if (FairnessSat) {
                         ReachedTarget = true;
                         TargetPSPerm = NextTuple;
-                        if (RevisitingOrigin) {
-                            OriginPredecessor = make_pair(TransitionCmdID, CurTuple);
-                            PathEndsAtOrigin = true;
-                        }
-                        break;
+                        TargetPredecessor = make_pair(TransitionCmdID, CurTuple);
                     }
                 } else {
                     // MatchPred must be something valid
                     if (MatchPred(TransitionCmdID, NextUnsortedPS)) {
                         ReachedTarget = true;
                         TargetPSPerm = NextTuple;
-                        if (RevisitingOrigin) {
-                            OriginPredecessor = make_pair(TransitionCmdID, CurTuple);
-                            PathEndsAtOrigin = true;
-                        }
-                        break;
+                        TargetPredecessor = make_pair(TransitionCmdID, CurTuple);
                     }
                 }
 
                 NextUnsortedPS->GetSVPtr()->Recycle();
                 delete NextUnsortedPS;
-                NextUnwoundPS->GetSVPtr()->Recycle();
-                delete NextUnwoundPS;
+                // don't iterate over rest of commands that take us to next
+                // state if target already reached
+                if (ReachedTarget) {
+                    break;
+                }
             } // end iterating over the commands that take us to the next state
+            NextUnwoundPS->GetSVPtr()->Recycle();
+            delete NextUnwoundPS;
+
             // don't iterate over the rest of the edges if target already reached
             if (ReachedTarget) {
                 break;
@@ -443,43 +440,39 @@ TraceBase::DoUnwoundBFS(const ProductState* CanonicalRoot,
 
     vector<PSTraceElemT> RTraceElems;
     UnwoundPredMapT::const_iterator it;
-    if (PathEndsAtOrigin) {
-        auto PredStatePerm = OriginPredecessor.second;
-        auto CmdID = OriginPredecessor.first;
-        auto PredPermPS = get<0>(PredStatePerm);
-        auto PredPerm = get<1>(PredStatePerm);
-        auto PredSortPerm = get<2>(PredStatePerm);
+    auto PredStatePerm = TargetPredecessor.second;
+    auto CmdID = TargetPredecessor.first;
+    auto PredPermPS = get<0>(PredStatePerm);
+    auto PredPerm = get<1>(PredStatePerm);
+    auto PredSortPerm = get<2>(PredStatePerm);
 
-        auto UnsortedPredPS = TheCanonicalizer->ApplyPermutation(PredPermPS,
-                                                                 PredPerm,
-                                                                 ProcIdxSet);
-        TheCanonicalizer->Sort(UnsortedPredPS);
-        TheCanonicalizer->ApplySort(UnsortedPredPS, PredSortPerm);
+    auto UnsortedPredPS = TheCanonicalizer->ApplyPermutation(PredPermPS,
+                                                             PredPerm,
+                                                             ProcIdxSet);
+    TheCanonicalizer->Sort(UnsortedPredPS);
+    TheCanonicalizer->ApplySort(UnsortedPredPS, PredSortPerm);
 
-        RTraceElems.push_back(PSTraceElemT(GuardedCmds[CmdID], CurUnsortedPS)),
-            it = PredMap.find(PredStatePerm);
-        CurUnsortedPS = UnsortedPredPS;
-    } else {
-        it = PredMap.find(CurTuple);
-    }
+    RTraceElems.push_back(PSTraceElemT(GuardedCmds[CmdID], CurUnsortedPS));
+    it = PredMap.find(PredStatePerm);
+    CurUnsortedPS = UnsortedPredPS;
 
     while (it != PredMap.end()) {
         // Unwind the pred state
         auto UnwoundEdge = it->second;
-        auto PredStatePerm = UnwoundEdge.second;
-        auto CmdID = UnwoundEdge.first;
-        auto PredPermPS = get<0>(PredStatePerm);
-        auto PredPerm = get<1>(PredStatePerm);
-        auto PredSortPerm = get<2>(PredStatePerm);
+        PredStatePerm = UnwoundEdge.second;
+        CmdID = UnwoundEdge.first;
+        PredPermPS = get<0>(PredStatePerm);
+        PredPerm = get<1>(PredStatePerm);
+        PredSortPerm = get<2>(PredStatePerm);
 
-        auto UnsortedPredPS = TheCanonicalizer->ApplyPermutation(PredPermPS,
-                                                                 PredPerm,
-                                                                 ProcIdxSet);
+        UnsortedPredPS = TheCanonicalizer->ApplyPermutation(PredPermPS,
+                                                            PredPerm,
+                                                            ProcIdxSet);
         TheCanonicalizer->Sort(UnsortedPredPS);
         TheCanonicalizer->ApplySort(UnsortedPredPS, PredSortPerm);
 
-        RTraceElems.push_back(PSTraceElemT(GuardedCmds[CmdID], CurUnsortedPS)),
-            it = PredMap.find(PredStatePerm);
+        RTraceElems.push_back(PSTraceElemT(GuardedCmds[CmdID], CurUnsortedPS));
+        it = PredMap.find(PredStatePerm);
         CurUnsortedPS = UnsortedPredPS;
     }
 
@@ -626,6 +619,7 @@ LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot,
     vector<PSTraceElemT> StemPath;
     auto InitState = UnwindPermPath(StemPPath, Checker, StemPath, InvPermAlongPath);
 
+    auto InvPermAtEndOfStemIdx = InvPermAlongPath;
     auto InvPermAtEndOfStem = PermSet->GetIterator(InvPermAlongPath).GetPerm();
 
     ESMC_LOG_FULL("Trace.Generation",
@@ -695,8 +689,23 @@ LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot,
                     sstr << endl << "Fairness requirement:" << endl;
                     sstr << FChecker->ToString() << " on instance: "
                          << Instance << endl;
+                    sstr << "Permutation at end of stem: " << endl;
+                    PermSet->Print(InvPermAtEndOfStemIdx, sstr);
+                    sstr << endl;
                     sstr << "At: " << __FUNCTION__ << ", " << __FILE__ << ":"
                          << __LINE__ << endl;
+
+                    // // audupa: debugging code, redo the DoUnwoundBFS,
+                    // //         so we can catch it in the debugger, a poor man's
+                    // //         replay, basically.
+                    // cout << sstr.str();
+                    // cout.flush();
+                    // auto NewEndOfPath = DoUnwoundBFS(CurEndOfPath, Checker, InvPermAlongPath,
+                    //                                  InvSortPermAlongPath, FChecker,
+                    //                                  Instance,
+                    //                                  TruePred<u32, const ProductState*>,
+                    //                                  CurElems);
+
                     throw InternalError(sstr.str());
                 } else {
                     CurEndOfPath = NewEndOfPath;

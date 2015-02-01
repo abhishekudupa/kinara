@@ -508,6 +508,19 @@ bool ProductState::Equals(const ProductState* Other) const
             IndexID == Other->IndexID);
 }
 
+bool ProductState::LT(const ProductState* Other) const
+{
+    auto Diff = SVPtr->Compare(*(Other->SVPtr));
+    if (Diff != 0) {
+        return Diff;
+    }
+    Diff = MonitorState - Other->MonitorState;
+    if (Diff != 0) {
+        return Diff;
+    }
+    return IndexID - Other->IndexID;
+}
+
 void ProductState::ClearAllMarkings() const
 {
     ClearSCCMarkings();
