@@ -86,6 +86,8 @@ public:
     u32 BoundLimit;
     bool GeneralFixForDL;
     bool ResetTPOnBoundsBump;
+    bool BinarySearchBounds;
+    bool FindMinBoundSolution;
     BFSPrioMethodT BFSPrioMethod;
     u32 IncSolverTimeout;
 
@@ -96,8 +98,9 @@ public:
           UnrollQuantifiers(false), CPULimitInSeconds(UINT64_MAX),
           MemLimitInMB(UINT64_MAX), DesiredCoverage(1),
           BoundLimit(256), GeneralFixForDL(false),
-          ResetTPOnBoundsBump(false),
-          BFSPrioMethod(BFSPrioMethodT::None), IncSolverTimeout(UINT32_MAX)
+          ResetTPOnBoundsBump(false), BinarySearchBounds(false),
+          FindMinBoundSolution(true), BFSPrioMethod(BFSPrioMethodT::None),
+          IncSolverTimeout(UINT32_MAX)
     {
         // Nothing here
     }
@@ -114,6 +117,8 @@ public:
           BoundLimit(Other.BoundLimit == 0 ? 256 : Other.BoundLimit),
           GeneralFixForDL(Other.GeneralFixForDL),
           ResetTPOnBoundsBump(Other.ResetTPOnBoundsBump),
+          BinarySearchBounds(Other.BinarySearchBounds),
+          FindMinBoundSolution(Other.FindMinBoundSolution),
           BFSPrioMethod(Other.BFSPrioMethod),
           IncSolverTimeout(Other.IncSolverTimeout)
     {
@@ -137,6 +142,8 @@ public:
         BoundLimit = Other.BoundLimit == 0 ? 256 : Other.BoundLimit;
         GeneralFixForDL = Other.GeneralFixForDL;
         ResetTPOnBoundsBump = Other.ResetTPOnBoundsBump;
+        BinarySearchBounds = Other.BinarySearchBounds;
+        FindMinBoundSolution = Other.FindMinBoundSolution;
         BFSPrioMethod = Other.BFSPrioMethod;
         IncSolverTimeout = Other.IncSolverTimeout;
         return *this;

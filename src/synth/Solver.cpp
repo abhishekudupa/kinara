@@ -110,7 +110,7 @@ Solver::Solver(LTSChecker* Checker, const SolverOptionsT& Options)
                                         Mgr->MakeExpr(LTSOps::OpLE,
                                                       BoundsVariable,
                                                       CurBoundsVal)));
-            CurrentAssumptions.push_back(LoweredProp);
+            AllBoundsAssumptions.push_back(LoweredProp);
         }
     }
 }
@@ -1490,20 +1490,9 @@ void Solver::Solve()
 
         if (TPRes == TPResult::UNSATISFIABLE) {
 
-            if (Bound == 0) {
-                CurrentAssumptions.pop_front();
-                ++Bound;
-            } else {
-                auto NewBound = Bound;
-                for(u32 i = 0; i < Bound; ++i) {
-                    if (CurrentAssumptions.size() > 0) {
-                        CurrentAssumptions.pop_front();
-                        ++NewBound;
-                    }
-                }
+            CurrentAssumptions.pop_front();
+            ++Bound;
 
-                Bound = NewBound;
-            }
             ESMC_LOG_MIN_SHORT(
                                Out_ << "UNSAT! Relaxed bound to " << Bound << endl;
                                );
