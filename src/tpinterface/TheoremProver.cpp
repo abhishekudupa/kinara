@@ -272,6 +272,11 @@ TPResult Z3TheoremProver::CheckSat(const ExpT& Assertion, bool UnrollQuantifiers
     return LastSolveResult;
 }
 
+TPResult Z3TheoremProver::CheckSatWithAssumption(const Z3Expr& Assumption)
+{
+    return CheckSatWithAssumptions(vector<Z3Expr>(1, Assumption));
+}
+
 TPResult Z3TheoremProver::CheckSatWithAssumptions(const vector<Z3Expr>& Assumptions)
 {
     const u32 NumAssumptions = Assumptions.size();

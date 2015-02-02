@@ -111,7 +111,6 @@ Solver::Solver(LTSChecker* Checker, const SolverOptionsT& Options)
                                                       BoundsVariable,
                                                       CurBoundsVal)));
             AllBoundsAssumptions.push_back(LoweredProp);
-            CurrentAssumptions.push_back(LoweredProp);
         }
     }
 }
@@ -1360,14 +1359,7 @@ inline void Solver::HandleTPReset()
         NewAllBoundsAssumptions.push_back(NewAssumption);
     }
     AllBoundsAssumptions = NewAllBoundsAssumptions;
-
-    for (auto const& Assumption : CurrentAssumptions) {
-        Z3Expr NewAssumption(NewCtx, Z3_translate(*OldCtx, Assumption, *NewCtx));
-        NewAssumptions.push_back(NewAssumption);
-    }
-
     Ctx = NewCtx;
-    CurrentAssumptions = NewAssumptions;
 }
 
 inline void Solver::AssertBoundsConstraint(u32 CurrentBound)
@@ -1478,6 +1470,38 @@ inline void Solver::HandleResourceLimit()
     exit(1);
 }
 
+inline bool Solver::AdjustBound(bool AdjustUp)
+{
+    if (Options.BinarySearchBounds) {
+        if (AdjustUp) {
+            if (Bound == Options.BoundLimit) {
+                return false;
+            }
+            auto Range = Options.BoundLimit - Bound;
+            Bound = Bound + ((Range + 1)/ 2);
+        } else {
+            if (Bound == LowerLimit) {
+                return false;
+            }
+            auto Range = Bound - LowerLimit;
+            Bound = Bound - (Range / 2);
+        }
+    } else {
+        if (AdjustUp) {
+            if (Bound == Options.BoundLimit) {
+                return false;
+            }
+            ++Bound;
+        } else {
+            if (Bound == LowerLimit) {
+                return false;
+            }
+            Bound = max(LowerLimit, Bound - 1);
+        }
+    }
+    return true;
+}
+
 // Algorithm:
 // unlocked := {}
 // bound := 0
@@ -1530,7 +1554,7 @@ void Solver::Solve()
         AssertBoundsConstraint(Bound);
 
         auto SMTStartTime = TimeValue::GetTimeValue();
-        auto TPRes = TP->CheckSatWithAssumptions(CurrentAssumptions);
+        auto TPRes = TP->CheckSatWithAssumption(AllBoundsAssumptions[Bound]);
         ++Stats.NumIterations;
         auto SMTEndTime = TimeValue::GetTimeValue();
         auto CurQueryTime = SMTEndTime - SMTStartTime;
@@ -1545,9 +1569,10 @@ void Solver::Solve()
         }
 
         if (TPRes == TPResult::UNSATISFIABLE) {
-
-            CurrentAssumptions.pop_front();
-            ++Bound;
+            LowerLimit = Bound;
+            if (!AdjustBound(true)) {
+                break;
+            }
 
             ESMC_LOG_MIN_SHORT(
                                Out_ << "UNSAT! Relaxed bound to " << Bound << endl;
@@ -1629,7 +1654,16 @@ void Solver::Solve()
                                PrintFinalSolution(Out_);
                                PrintStats();
                                );
-            return;
+            if (Options.FindMinBoundSolution && Options.BinarySearchBounds) {
+                AdjustBound(false);
+                ESMC_LOG_MIN_SHORT(
+                                   Out_ << "Attempting to minimize solution, "
+                                        << "Bound readjusted to " << Bound << "." << endl;
+                                   );
+                continue;
+            } else {
+                return;
+            }
         }
     }
 

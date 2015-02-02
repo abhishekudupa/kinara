@@ -122,6 +122,7 @@ public:
     TPResult CheckSat();
     TPResult CheckSatWithAssumptions(const vector<Z3Expr>& Assumptions);
     TPResult CheckSatWithAssumptions(const deque<Z3Expr>& Assumptions);
+    TPResult CheckSatWithAssumption(const Z3Expr& Assumption);
     TPResult CheckSat(const ExpT& Assertion, bool UnrollQuantifiers);
 
     void Interrupt();

@@ -66,6 +66,8 @@ struct MSISynthOptionsT {
     bool NarrowDomains;
     bool GeneralFixForDL;
     bool ResetTPOnBoundsBump;
+    bool BinarySearch;
+    bool MinimalSolution;
     ESMC::MC::BFSPrioMethodT BFSPrioMethod;
     u64 CPULimit;
     u64 MemLimit;
@@ -115,6 +117,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
         ("coverage,c", po::value<float>(&CoverageDesired)->default_value(1.0f),
          ((string)"Amount of coverage to give each tentative edge, if prioritization mode " +
           "is set to \"coverage\"").c_str())
+        ("binary-search", "Use binary search on the bounds space.")
+        ("minimal-solution", "Get the minimal cost solution.")
         ("cex-to-process,x", po::value<u32>(&NumCExToProcess)->default_value(8),
          "Maximum number of counterexamples to process in each synthesis iteration.")
         ("bound,b", po::value<u32>(&BoundLimit)->default_value(256),
@@ -226,6 +230,8 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     Options.GeneralFixForDL = (vm.count("gen-dl-fix") > 0);
     Options.ResetTPOnBoundsBump = (vm.count("reset-tp-on-bounds-bump") > 0);
     Options.NoState = (vm.count("no-state") > 0);
+    Options.BinarySearch = (vm.count("binary-search") > 0);
+    Options.MinimalSolution = (vm.count("minimal-solution") > 0);
     Options.LogFileName = LogFileName;
     Options.LogOptions = LogOptions;
     Options.NumCExToProcess = NumCExToProcess;
@@ -256,6 +262,8 @@ static inline void OptsToSolverOpts(const MSISynthOptionsT& Opts,
     SolverOpts.ResetTPOnBoundsBump = Opts.ResetTPOnBoundsBump;
     SolverOpts.NumCExToProcess = Opts.NumCExToProcess;
     SolverOpts.PreferAllTrue = Opts.PreferAllTrue;
+    SolverOpts.BinarySearchBounds = Opts.BinarySearch;
+    SolverOpts.FindMinBoundSolution = Opts.MinimalSolution;
 }
 
 static inline void OptsToLibOpts(const MSISynthOptionsT& Opts,

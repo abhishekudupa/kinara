@@ -226,14 +226,14 @@ private:
     // The set of assertions already asserted
     FastExpSetT AssertedConstraintSet;
     vector<ExpT> AssertedConstraints;
-    // Barring the cost bounds assertions, which are in the
-    // assumptions queue here:
-    deque<Z3Expr> CurrentAssumptions;
+    // Barring the cost bounds assertions, which are
+    // in the vector here:
     vector<Z3Expr> AllBoundsAssumptions;
     Z3TPRef TP;
     LabelledTS* TheLTS;
     LTSCompiler* Compiler;
     LTSChecker* Checker;
+    u32 LowerLimit;
     u32 Bound;
     ExpT BoundsVariable;
     vector<GCmdRef> GuardedCommands;
@@ -309,6 +309,7 @@ private:
     inline void MakeCostConstraintsForOp(i64 Op);
     inline void MakeRangeConstraintsForOp(i64 UpdateOp);
     inline void HandleTPReset();
+    inline bool AdjustBound(bool AdjustUp);
 
 public:
     Solver(LTSChecker* Checker, const SolverOptionsT& Options = SolverOptionsT());
