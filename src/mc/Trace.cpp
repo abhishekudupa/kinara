@@ -627,8 +627,14 @@ LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot,
                   << Symm::PermToString(InvPermAtEndOfStem) << endl;
                   );
 
-    auto StemPathBackPair = StemPath.back();
-    auto StartOfLoop = StemPathBackPair.second;
+    const ProductState* StartOfLoop;
+    PSTraceElemT StemPathBackPair;
+    if (StemPath.size() > 0) {
+        StemPathBackPair = StemPath.back();
+        StartOfLoop = StemPathBackPair.second;
+    } else {
+        StartOfLoop = InitState;
+    }
 
     u32 StemPermID;
     auto SortedSOLSV = TheCanonicalizer->SortChans(StartOfLoop->GetSVPtr(), true,
@@ -639,13 +645,20 @@ LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot,
     auto SortedStartOfLoop = new ProductState(SortedSOLSV,
                                               StartOfLoop->GetMonitorState(),
                                               StartOfLoop->GetIndexID(), 0);
-    StemPath.pop_back();
-    StemPath.push_back(PSTraceElemT(StemPathBackPair.first, SortedStartOfLoop));
+    if (StemPath.size() > 0) {
+        StemPath.pop_back();
+        StemPath.push_back(PSTraceElemT(StemPathBackPair.first, SortedStartOfLoop));
+    }
     StartOfLoop->GetSVPtr()->Recycle();
     delete StartOfLoop;
     StartOfLoop = SortedStartOfLoop;
 
-    auto CurEndOfPath = StemPPath->GetPathElems().back()->GetTarget();
+    const ProductState* CurEndOfPath;
+    if (StemPPath->GetPathElems().size() > 0) {
+        CurEndOfPath = StemPPath->GetPathElems().back()->GetTarget();
+    } else {
+        CurEndOfPath = InitState;
+    }
     u32 InvSortPermAlongPath = 0;
 
     delete StemPPath;
