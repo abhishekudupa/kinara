@@ -146,7 +146,8 @@ private:
                                   const PathFingerprint* PathFP);
 
     inline StateVec* BFSExecuteCommand(const StateVec* CurState, u32 TaintLevel,
-                                       const PathFingerprint* PathFP, u32 CmdID);
+                                       const PathFingerprint* PathFP, u32 CmdID,
+                                       bool& Exception);
 
     inline void BFSGetNextTaintLevelAndPathFP(u32 CmdID, u32 CurrentTaintLevel,
                                               u32& NextTaintLevel,

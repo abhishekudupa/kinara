@@ -648,16 +648,19 @@ LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot,
     if (StemPath.size() > 0) {
         StemPath.pop_back();
         StemPath.push_back(PSTraceElemT(StemPathBackPair.first, SortedStartOfLoop));
+        StartOfLoop->GetSVPtr()->Recycle();
+        delete StartOfLoop;
+        StartOfLoop = SortedStartOfLoop;
+    } else {
+        SortedStartOfLoop->GetSVPtr()->Recycle();
+        delete SortedStartOfLoop;
     }
-    StartOfLoop->GetSVPtr()->Recycle();
-    delete StartOfLoop;
-    StartOfLoop = SortedStartOfLoop;
 
     const ProductState* CurEndOfPath;
     if (StemPPath->GetPathElems().size() > 0) {
         CurEndOfPath = StemPPath->GetPathElems().back()->GetTarget();
     } else {
-        CurEndOfPath = InitState;
+        CurEndOfPath = SCCRoot;
     }
     u32 InvSortPermAlongPath = 0;
 

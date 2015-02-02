@@ -528,9 +528,9 @@ inline bool LTSChecker::BFSCheckInvariant(const StateVec* State, u32 TaintLevel,
 }
 
 inline StateVec* LTSChecker::BFSExecuteCommand(const StateVec* CurState, u32 TaintLevel,
-                                               const PathFingerprint* PathFP, u32 CmdID)
+                                               const PathFingerprint* PathFP, u32 CmdID,
+                                               bool& Exception)
 {
-    bool Exception;
     ExpT NEPred;
     auto Retval = TryExecuteCommand(GuardedCommands[CmdID], CurState, Exception, NEPred);
     if (Retval != nullptr) {
@@ -637,8 +637,13 @@ inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots)
         bool Deadlocked = true;
 
         for (auto i : InterpretedCommands) {
-            auto NextState = BFSExecuteCommand(CurState, CurrentTaintLevel, CurrentPathFP, i);
-            if (NextState == nullptr) {
+            bool Exception = false;
+            auto NextState = BFSExecuteCommand(CurState, CurrentTaintLevel,
+                                               CurrentPathFP, i, Exception);
+            if (NextState == nullptr && !Exception) {
+                continue;
+            } else if (NextState == nullptr && Exception) {
+                Deadlocked = false;
                 continue;
             }
 
@@ -651,8 +656,9 @@ inline void LTSChecker::DoBFS(const vector<StateVec*>& Roots)
 
             ESMC_LOG_SHORT(
                            "Checker.AQSDetailed",
+                           auto const& Cmd = GuardedCommands[i];
                            Out_ << "Got Next State (Uncanonicalized), by firing "
-                           << "guarded command:" << endl << Cmd->ToString() << endl;
+                                << "guarded command:" << endl << Cmd->ToString() << endl;
                            Out_ << "--------------------------------------------------------"
                            << endl;
                            Printer->PrintState(NextState, Out_);
