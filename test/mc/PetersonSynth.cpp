@@ -75,16 +75,16 @@ int main(int argc, char* argv[])
     OptsToSolverOpts(Options, SolverOptions);
 
     Logging::LogManager::Initialize();
-    // Logging::LogManager::EnableLogOption("Canonicalizer.Best");
-    // ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
-    // ESMC::Logging::LogManager::EnableLogOption("Trace.Generation");
-    // ESMC::Logging::LogManager::EnableLogOption("Checker.AQSDetailed");
-    // ESMC::Logging::LogManager::EnableLogOption("Solver.Models");
-    // ESMC::Logging::LogManager::EnableLogOption("Solver.Duplicates");
-    // ESMC::Logging::LogManager::EnableLogOption("Solver.CEXAssertions");
-    // ESMC::Logging::LogManager::EnableLogOption("Solver.Traces");
-    // ESMC::Logging::LogManager::EnableLogOption("Solver.OtherAssertions");
-    // ESMC::Logging::LogManager::EnableLogOption("Analyses.Detailed");
+    Logging::LogManager::EnableLogOption("Canonicalizer.Best");
+    ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
+    ESMC::Logging::LogManager::EnableLogOption("Trace.Generation");
+    ESMC::Logging::LogManager::EnableLogOption("Checker.AQSDetailed");
+    ESMC::Logging::LogManager::EnableLogOption("Solver.Models");
+    ESMC::Logging::LogManager::EnableLogOption("Solver.Duplicates");
+    ESMC::Logging::LogManager::EnableLogOption("Solver.CEXAssertions");
+    ESMC::Logging::LogManager::EnableLogOption("Solver.Traces");
+    ESMC::Logging::LogManager::EnableLogOption("Solver.OtherAssertions");
+    ESMC::Logging::LogManager::EnableLogOption("Analyses.Detailed");
 
 
     auto TheLTS = new LabelledTS();
@@ -204,14 +204,14 @@ int main(int argc, char* argv[])
     Updates.push_back(new LTSAssignSimple(SetFlagOutDotData, TrueExp));
 
     // fairness versus self loop
-    ProcessEFSM->AddFairnessSet("FlagFairnessL1",
-                                FairSetFairnessType::Strong);
-    ProcessEFSM->AddOutputTransition("L1", "L2", TrueExp,
-                                     Updates, "OutMsg", SetFlagType,
-                                     {PidParam, PidParam}, {"FlagFairnessL1"});
+    // ProcessEFSM->AddFairnessSet("FlagFairnessL1",
+    //                             FairSetFairnessType::Strong);
     // ProcessEFSM->AddOutputTransition("L1", "L2", TrueExp,
     //                                  Updates, "OutMsg", SetFlagType,
-    //                                  {PidParam, PidParam});
+    //                                  {PidParam, PidParam}, {"FlagFairnessL1"});
+    ProcessEFSM->AddOutputTransition("L1", "L2", TrueExp,
+                                     Updates, "OutMsg", SetFlagType,
+                                     {PidParam, PidParam});
 
     Updates.clear();
 
@@ -393,36 +393,6 @@ int main(int argc, char* argv[])
 
     // I think it has to be forall i : Pid . G F Process[i].state = Critical
 
-    auto Monitor = Checker->MakeStateBuchiMonitor("GFCritical", {PidParam}, TrueExp);
-    Monitor->AddState("Initial", true, false);
-    Monitor->AddState("Accepting", false, true);
-    Monitor->AddState("Final", false, false);
-
-    Monitor->FreezeStates();
-
-    auto MonProcessDotState = Monitor->MakeOp(LTSOps::OpIndex,
-                                              Monitor->MakeVar("Process", ProcessEFSMType),
-                                              PidParam);
-    MonProcessDotState = Monitor->MakeOp(LTSOps::OpField, MonProcessDotState,
-                                         TheLTS->MakeVar("state", FAType));
-
-    auto MonProcessDotStateEQCritical = Monitor->MakeOp(LTSOps::OpEQ,
-                                                        MonProcessDotState,
-                                                        Monitor->MakeVal("Critical",
-                                                                         MonProcessDotState->GetType()));
-    auto MonProcessDotStateNEQCritical = Monitor->MakeOp(LTSOps::OpNOT,
-                                                         MonProcessDotStateEQCritical);
-    Monitor->AddTransition("Initial", "Initial", TrueExp);
-    Monitor->AddTransition("Initial", "Accepting", TrueExp);
-    Monitor->AddTransition("Accepting", "Accepting",
-                           MonProcessDotStateNEQCritical);
-    Monitor->AddTransition("Accepting", "Final", MonProcessDotStateEQCritical);
-    Monitor->AddTransition("Final", "Final", TrueExp);
-    Monitor->Freeze();
-
-
-    // // I think it has to be forall i : Pid . G F (Process[i].flag[i] -> Process[i].state = Critical)
-
     // auto Monitor = Checker->MakeStateBuchiMonitor("GFCritical", {PidParam}, TrueExp);
     // Monitor->AddState("Initial", true, false);
     // Monitor->AddState("Accepting", false, true);
@@ -430,37 +400,67 @@ int main(int argc, char* argv[])
 
     // Monitor->FreezeStates();
 
-    // auto MonProcessState = Monitor->MakeOp(LTSOps::OpIndex,
-    //                                        Monitor->MakeVar("Process", ProcessEFSMType),
-    //                                        PidParam);
-    // auto MonProcessStateDotLocation = Monitor->MakeOp(LTSOps::OpField, MonProcessState,
-    //                                              TheLTS->MakeVar("state", FAType));
-
-    // auto MonProcessStateDotFlagArray = Monitor->MakeOp(LTSOps::OpField, MonProcessState,
-    //                                                    TheLTS->MakeVar("FlagArray", FAType));
-
-    // auto MonProcessStateDotFlagArrayDotIndex = TheLTS->MakeOp(LTSOps::OpIndex,
-    //                                                           MonProcessStateDotFlagArray,
-    //                                                           PidParam);
+    // auto MonProcessDotState = Monitor->MakeOp(LTSOps::OpIndex,
+    //                                           Monitor->MakeVar("Process", ProcessEFSMType),
+    //                                           PidParam);
+    // MonProcessDotState = Monitor->MakeOp(LTSOps::OpField, MonProcessDotState,
+    //                                      TheLTS->MakeVar("state", FAType));
 
     // auto MonProcessDotStateEQCritical = Monitor->MakeOp(LTSOps::OpEQ,
-    //                                                     MonProcessStateDotLocation,
+    //                                                     MonProcessDotState,
     //                                                     Monitor->MakeVal("Critical",
-    //                                                                      MonProcessStateDotLocation->GetType()));
-
-    // auto MonProcessDotStateEQL2 = Monitor->MakeOp(LTSOps::OpEQ,
-    //                                               MonProcessStateDotLocation,
-    //                                               Monitor->MakeVal("L2",
-    //                                                                MonProcessStateDotLocation->GetType()));
+    //                                                                      MonProcessDotState->GetType()));
     // auto MonProcessDotStateNEQCritical = Monitor->MakeOp(LTSOps::OpNOT,
     //                                                      MonProcessDotStateEQCritical);
     // Monitor->AddTransition("Initial", "Initial", TrueExp);
-    // Monitor->AddTransition("Initial", "Accepting", MonProcessDotStateEQL2);
+    // Monitor->AddTransition("Initial", "Accepting", TrueExp);
     // Monitor->AddTransition("Accepting", "Accepting",
     //                        MonProcessDotStateNEQCritical);
     // Monitor->AddTransition("Accepting", "Final", MonProcessDotStateEQCritical);
     // Monitor->AddTransition("Final", "Final", TrueExp);
     // Monitor->Freeze();
+
+
+    // I think it has to be forall i : Pid . G F (Process[i].flag[i] -> Process[i].state = Critical)
+
+    auto Monitor = Checker->MakeStateBuchiMonitor("GFCritical", {PidParam}, TrueExp);
+    Monitor->AddState("Initial", true, false);
+    Monitor->AddState("Accepting", false, true);
+    Monitor->AddState("Final", false, false);
+
+    Monitor->FreezeStates();
+
+    auto MonProcessState = Monitor->MakeOp(LTSOps::OpIndex,
+                                           Monitor->MakeVar("Process", ProcessEFSMType),
+                                           PidParam);
+    auto MonProcessStateDotLocation = Monitor->MakeOp(LTSOps::OpField, MonProcessState,
+                                                 TheLTS->MakeVar("state", FAType));
+
+    auto MonProcessStateDotFlagArray = Monitor->MakeOp(LTSOps::OpField, MonProcessState,
+                                                       TheLTS->MakeVar("FlagArray", FAType));
+
+    auto MonProcessStateDotFlagArrayDotIndex = TheLTS->MakeOp(LTSOps::OpIndex,
+                                                              MonProcessStateDotFlagArray,
+                                                              PidParam);
+
+    auto MonProcessDotStateEQCritical = Monitor->MakeOp(LTSOps::OpEQ,
+                                                        MonProcessStateDotLocation,
+                                                        Monitor->MakeVal("Critical",
+                                                                         MonProcessStateDotLocation->GetType()));
+
+    auto MonProcessDotStateEQL2 = Monitor->MakeOp(LTSOps::OpEQ,
+                                                  MonProcessStateDotLocation,
+                                                  Monitor->MakeVal("L2",
+                                                                   MonProcessStateDotLocation->GetType()));
+    auto MonProcessDotStateNEQCritical = Monitor->MakeOp(LTSOps::OpNOT,
+                                                         MonProcessDotStateEQCritical);
+    Monitor->AddTransition("Initial", "Initial", TrueExp);
+    Monitor->AddTransition("Initial", "Accepting", MonProcessDotStateEQL2);
+    Monitor->AddTransition("Accepting", "Accepting",
+                           MonProcessDotStateNEQCritical);
+    Monitor->AddTransition("Accepting", "Final", MonProcessDotStateEQCritical);
+    Monitor->AddTransition("Final", "Final", TrueExp);
+    Monitor->Freeze();
 
 
     auto TheSolver = new Solver(Checker, SolverOptions);

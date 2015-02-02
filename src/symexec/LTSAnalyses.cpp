@@ -213,35 +213,58 @@ TraceAnalyses::WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
     auto Phi = Mgr->ApplyTransform<LTS::Detail::ArrayRValueTransformer>(InitialCondition);
     Phi = Mgr->SimplifyFP(Phi);
 
-    for (auto it = LoopGuardedCommandsAndMonitorGuards.begin() + StartIndexInLoop;
-         it != LoopGuardedCommandsAndMonitorGuards.begin();
-         --it) {
-        GCmdRef GuardedCommand = it->first;
-        const vector<LTSAssignRef>& Updates = GuardedCommand->GetLoweredUpdates();
+    ESMC_LOG_FULL(
+              "Analyses.Detailed",
+              Out_ << "WP with monitor condition initial condition:" << endl
+                   << Phi << endl;
+              );
 
-        MgrT::SubstMapT SubstMapForTransition;
-        for (auto it = Updates.rbegin();
-             it != Updates.rend(); ++it) {
-            auto it2 = SubstMapForTransition.find((*it)->GetLHS());
-            if (it2 != SubstMapForTransition.end()) {
-                MgrT::SubstMapT LocalSubst;
-                LocalSubst[(*it)->GetLHS()] = (*it)->GetRHS();
-                auto NewSubst = Mgr->Substitute(LocalSubst, it2->second);
-                SubstMapForTransition[it2->first] = NewSubst;
-            } else {
-                SubstMapForTransition[(*it)->GetLHS()] = (*it)->GetRHS();
+    // If start index in loop is 0 then skip the loop
+    if (StartIndexInLoop > 0) {
+        for (auto it = LoopGuardedCommandsAndMonitorGuards.begin() + (StartIndexInLoop - 1); ; --it) {
+            GCmdRef GuardedCommand = it->first;
+            const vector<LTSAssignRef>& Updates = GuardedCommand->GetLoweredUpdates();
+
+            MgrT::SubstMapT SubstMapForTransition;
+            for (auto it = Updates.rbegin();
+                 it != Updates.rend(); ++it) {
+                auto it2 = SubstMapForTransition.find((*it)->GetLHS());
+                if (it2 != SubstMapForTransition.end()) {
+                    MgrT::SubstMapT LocalSubst;
+                    LocalSubst[(*it)->GetLHS()] = (*it)->GetRHS();
+                    auto NewSubst = Mgr->Substitute(LocalSubst, it2->second);
+                    SubstMapForTransition[it2->first] = NewSubst;
+                } else {
+                    SubstMapForTransition[(*it)->GetLHS()] = (*it)->GetRHS();
+                }
+            }
+            const ExpT& Guard = GuardedCommand->GetLoweredGuard();
+            ExpT ProductGuard = TheLTS->MakeOp(LTSOps::OpAND,
+                                               Guard,
+                                               it->second);
+
+            Phi = Mgr->Substitute(SubstMapForTransition, Phi);
+
+            Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
+            Phi = Mgr->SimplifyFP(Phi);
+            ESMC_LOG_FULL(
+                          "Analyses.Detailed",
+                          Out_ << "WP with monitor condition in loop with start loop index: " << StartIndexInLoop << endl
+                          << "with guarded command: " << GuardedCommand << endl
+                          << Phi << endl;
+                          );
+
+            if (it == LoopGuardedCommandsAndMonitorGuards.begin()) {
+                break;
             }
         }
-        const ExpT& Guard = GuardedCommand->GetLoweredGuard();
-        ExpT ProductGuard = TheLTS->MakeOp(LTSOps::OpAND,
-                                           Guard,
-                                           it->second);
-
-        Phi = Mgr->Substitute(SubstMapForTransition, Phi);
-
-        Phi = Mgr->MakeExpr(LTSOps::OpIMPLIES, ProductGuard, Phi);
-        Phi = Mgr->SimplifyFP(Phi);
     }
+
+    ESMC_LOG_FULL(
+                  "Analyses.Detailed",
+                  Out_ << "WP with monitor condition after loop:" << endl
+                       << Phi << endl;
+                  );
 
     MgrT::SubstMapT StemSortMap;
     auto StemSortAssignments = Trace->GetStemSortPermutation();
@@ -315,6 +338,13 @@ TraceAnalyses::EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
                                                        LivenessViolation,
                                                        Cmd->GetGuard(),
                                                        LoopIndex);
+                    ESMC_LOG_FULL(
+                      "Analyses.Detailed",
+                      Out_ << "Condition for fairness object:" << *it << endl
+                           << "with guard " << Cmd->GetGuard() << endl
+                           << Condition << endl ;
+                      );
+
                     EnableConditions.push_back(Condition);
                 }
             }

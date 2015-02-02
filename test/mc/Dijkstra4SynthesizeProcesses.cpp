@@ -141,7 +141,7 @@ void DeclareProc0(LabelledTS* TheLTS)
     auto Mgr = TheLTS->MakeTrue()->GetMgr();
     string ProcName = string("Proc0");
 
-    Proc.push_back(TheLTS->MakeEFSM<IncompleteEFSM>(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
+    Proc.push_back(TheLTS->MakeEFSM<IncompleteEFSM>(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None, false));
     Proc[0]->AddState("TheState");
     Proc[0]->FreezeStates();
 
@@ -505,7 +505,7 @@ void DeclareProcN(LabelledTS* TheLTS)
 
     string ProcName = string("Proc") + to_string(i);
 
-    Proc.push_back(TheLTS->MakeEFSM<IncompleteEFSM>(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
+    Proc.push_back(TheLTS->MakeEFSM<IncompleteEFSM>(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None, false));
     Proc[i]->AddState("TheState");
     Proc[i]->FreezeStates();
 

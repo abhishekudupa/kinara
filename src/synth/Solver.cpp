@@ -1329,6 +1329,12 @@ inline void Solver::HandleSafetyViolations()
 inline void Solver::HandleLivenessViolation(const LivenessViolation* Trace,
                                             StateBuchiAutomaton* Monitor)
 {
+    ESMC_LOG_FULL(
+                  "Solver.Traces",
+                  Out_ << "Liveness Trace:" << endl;
+                  Out_ << Trace->ToString() << endl;
+                  );
+
     auto&& WPConditions =
         TraceAnalyses::WeakestPreconditionForLiveness(this, Monitor, Trace);
     cout << "computed weakest precondition" << endl;
