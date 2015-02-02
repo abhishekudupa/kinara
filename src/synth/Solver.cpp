@@ -1474,10 +1474,10 @@ inline bool Solver::AdjustBound(bool AdjustUp)
 {
     if (Options.BinarySearchBounds) {
         if (AdjustUp) {
-            if (Bound == Options.BoundLimit) {
+            if (Bound == UpperLimit) {
                 return false;
             }
-            auto Range = Options.BoundLimit - Bound;
+            auto Range = UpperLimit - Bound;
             Bound = Bound + ((Range + 1)/ 2);
         } else {
             if (Bound == LowerLimit) {
@@ -1488,7 +1488,7 @@ inline bool Solver::AdjustBound(bool AdjustUp)
         }
     } else {
         if (AdjustUp) {
-            if (Bound == Options.BoundLimit) {
+            if (Bound == UpperLimit) {
                 return false;
             }
             ++Bound;
@@ -1537,6 +1537,8 @@ void Solver::Solve()
     bool FirstIteration = true;
     bool InitialConstraintsCounted = false;
     bool DoneOneMCIteration = false;
+    LowerLimit = 0;
+    UpperLimit = Options.BoundLimit;
     while (Bound <= Options.BoundLimit) {
 
         if (ResourceLimitManager::CheckMemOut() ||
@@ -1655,6 +1657,7 @@ void Solver::Solve()
                                PrintStats();
                                );
             if (Options.FindMinBoundSolution && Options.BinarySearchBounds) {
+                UpperLimit = Bound;
                 AdjustBound(false);
                 ESMC_LOG_MIN_SHORT(
                                    Out_ << "Attempting to minimize solution, "

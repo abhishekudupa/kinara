@@ -234,6 +234,7 @@ private:
     LTSCompiler* Compiler;
     LTSChecker* Checker;
     u32 LowerLimit;
+    u32 UpperLimit;
     u32 Bound;
     ExpT BoundsVariable;
     vector<GCmdRef> GuardedCommands;
