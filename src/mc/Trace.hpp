@@ -149,6 +149,8 @@ public:
     TraceBase(StateVecPrinter* Printer);
     virtual ~TraceBase();
 
+    virtual u32 GetSize() const = 0;
+
     StateVecPrinter* GetPrinter() const;
 
     template <typename T>
@@ -266,6 +268,7 @@ public:
     const StateVec* GetInitialState() const;
     const vector<TraceElemT>& GetTraceElems() const;
     virtual string ToString(u32 Verbosity = 0) const override;
+    virtual u32 GetSize() const override;
     const ExpT& GetInvariantBlown() const;
 };
 
@@ -318,6 +321,7 @@ public:
     virtual string ToString(u32 Verbosity = 0) const override;
     const vector<LTSAssignRef>& GetStemSortPermutation() const;
     const vector<LTSAssignRef>& GetLoopSortPermutation() const;
+    virtual u32 GetSize() const override;
 };
 
 } /* end namespace MC */

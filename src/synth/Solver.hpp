@@ -83,6 +83,7 @@ public:
     u64 CPULimitInSeconds;
     u64 MemLimitInMB;
     float DesiredCoverage;
+    u32 NumCExToProcess;
     u32 BoundLimit;
     bool GeneralFixForDL;
     bool ResetTPOnBoundsBump;
@@ -90,6 +91,7 @@ public:
     bool FindMinBoundSolution;
     BFSPrioMethodT BFSPrioMethod;
     u32 IncSolverTimeout;
+    bool PreferAllTrue;
 
     inline SolverOptionsT()
         : GBoundMethod(GuardBoundingMethodT::NoBounding),
@@ -97,10 +99,10 @@ public:
           SBoundMethod(StateUpdateBoundingMethodT::NoBounding),
           UnrollQuantifiers(false), CPULimitInSeconds(UINT64_MAX),
           MemLimitInMB(UINT64_MAX), DesiredCoverage(1),
-          BoundLimit(256), GeneralFixForDL(false),
+          NumCExToProcess(8), BoundLimit(256), GeneralFixForDL(false),
           ResetTPOnBoundsBump(false), BinarySearchBounds(false),
           FindMinBoundSolution(true), BFSPrioMethod(BFSPrioMethodT::None),
-          IncSolverTimeout(UINT32_MAX)
+          IncSolverTimeout(UINT32_MAX), PreferAllTrue(true)
     {
         // Nothing here
     }
@@ -114,13 +116,15 @@ public:
           MemLimitInMB(Other.MemLimitInMB),
           DesiredCoverage(Other.DesiredCoverage == 0.0 ?
                           FLT_MAX : Other.DesiredCoverage),
+          NumCExToProcess(Other.NumCExToProcess),
           BoundLimit(Other.BoundLimit == 0 ? 256 : Other.BoundLimit),
           GeneralFixForDL(Other.GeneralFixForDL),
           ResetTPOnBoundsBump(Other.ResetTPOnBoundsBump),
           BinarySearchBounds(Other.BinarySearchBounds),
           FindMinBoundSolution(Other.FindMinBoundSolution),
           BFSPrioMethod(Other.BFSPrioMethod),
-          IncSolverTimeout(Other.IncSolverTimeout)
+          IncSolverTimeout(Other.IncSolverTimeout),
+          PreferAllTrue(Other.PreferAllTrue)
     {
         // Nothing here
     }
@@ -139,6 +143,7 @@ public:
         MemLimitInMB = Other.MemLimitInMB;
         DesiredCoverage =
             Other.DesiredCoverage == 0.0 ? FLT_MAX : Other.DesiredCoverage;
+        NumCExToProcess = Other.NumCExToProcess;
         BoundLimit = Other.BoundLimit == 0 ? 256 : Other.BoundLimit;
         GeneralFixForDL = Other.GeneralFixForDL;
         ResetTPOnBoundsBump = Other.ResetTPOnBoundsBump;
@@ -146,6 +151,7 @@ public:
         FindMinBoundSolution = Other.FindMinBoundSolution;
         BFSPrioMethod = Other.BFSPrioMethod;
         IncSolverTimeout = Other.IncSolverTimeout;
+        PreferAllTrue = Other.PreferAllTrue;
         return *this;
     }
 };
@@ -239,6 +245,8 @@ private:
     // Union of the two sets above, maintained
     // for efficiency
     unordered_set<i64> InterpretedOps;
+    // Number of counterexamples to process in this iteration
+    u32 NumCExToProcess;
 
 
     vector<ExpT> GuardFuncCosts;
@@ -255,9 +263,9 @@ private:
                                                 const ExpT& GuardExp2);
     inline void AssertBoundsConstraint(u32 CurrentBound);
     inline void HandleSafetyViolations();
-    inline void HandleOneSafetyViolation(const StateVec* ErrorState,
+    inline void HandleOneSafetyViolation(AQSPermPath* PPath,
                                          const ExpT& BlownInvariant);
-    inline void HandleOneDeadlockViolation(const StateVec* ErrorState);
+    inline void HandleOneDeadlockViolation(AQSPermPath* PPath);
     inline void HandleLivenessViolation(const LivenessViolation* Trace,
                                         StateBuchiAutomaton* Monitor);
     inline void UpdateCommands();

@@ -863,6 +863,11 @@ const vector<TraceElemT>& SafetyViolation::GetTraceElems() const
     return TraceElems;
 }
 
+u32 SafetyViolation::GetSize() const
+{
+    return TraceElems.size();
+}
+
 string SafetyViolation::ToString(u32 Verbosity) const
 {
     ostringstream sstr;
@@ -954,6 +959,11 @@ LivenessViolation::~LivenessViolation()
         LoopElem.second->GetSVPtr()->Recycle();
         delete LoopElem.second;
     }
+}
+
+u32 LivenessViolation::GetSize() const
+{
+    return StemPath.size() + LoopPath.size();
 }
 
 const ProductState* LivenessViolation::GetInitialState() const

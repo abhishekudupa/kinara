@@ -226,6 +226,7 @@ public:
     const vector<const PathFingerprint*>& GetPriorities() const;
     bool IsCompletelyCovered() const;
     virtual string ToString(u32 Verbosity = 0) const override;
+    const PathFingerprint* GetZeroFP() const;
 };
 
 // A configurable BFS queue that can use a prio queue

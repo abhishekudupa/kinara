@@ -52,7 +52,7 @@ using ESMC::LogFileCompressionTechniqueT;
 using ESMC::u64;
 using ESMC::u32;
 
-static const unordered_set<string> AllowedMissingTransitions = { "C_II_SEND_ACK",
+static const unordered_set<string> AllowedMissingTransitions = { "C_II_SENDACK",
                                                                  "C_IM_FWD",
                                                                  "C_IS_FWD",
                                                                  "C_SM_FWD",
@@ -70,6 +70,8 @@ struct MSISynthOptionsT {
     u64 CPULimit;
     u64 MemLimit;
     float CoverageDesired;
+    bool PreferAllTrue;
+    u32 NumCExToProcess;
     u32 BoundLimit;
     set<string> MissingTransitions;
     u32 IncSolverTimeout;
@@ -86,6 +88,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     u64 CPULimit;
     u64 MemLimit;
     float CoverageDesired;
+    u32 NumCExToProcess;
     string BFSPrioMethodStr;
     u32 BoundLimit;
     vector<string> MissingTransitions;
@@ -106,11 +109,14 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
          "Method for bounding location updates; one of: none, allsame, vardep")
         ("narrow,n", "Use narrow domains for functions to be synthesized")
         ("quants,q", "Unroll Quantifiers before handing off to Z3")
+        ("no-prefer-all-true", "Do not prefer all true guard interpretations over others")
         ("prioritization-method,p", po::value<string>(&BFSPrioMethodStr)->default_value("none"),
          "Prioritization method used in model checking, one of: none, simple, coverage")
         ("coverage,c", po::value<float>(&CoverageDesired)->default_value(1.0f),
          ((string)"Amount of coverage to give each tentative edge, if prioritization mode " +
-          "is set to \"coverage\", otherwise, number of counterexamples to process in each run.").c_str())
+          "is set to \"coverage\"").c_str())
+        ("cex-to-process,x", po::value<u32>(&NumCExToProcess)->default_value(8),
+         "Maximum number of counterexamples to process in each synthesis iteration.")
         ("bound,b", po::value<u32>(&BoundLimit)->default_value(256),
          "Max limit on bound")
         ("reset-tp-on-bounds-bump,r",
@@ -121,7 +127,7 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
          "Memory limit in MB")
         ("gen-dl-fix", "Use general fixes for deadlocks")
         ("missing-transitions", po::value<vector<string>>(&MissingTransitions)->multitoken(),
-         ((string)"Transitions to delete. Valid options are any combination of: C_II_SEND_ACK, C_IM_FWD, " +
+         ((string)"Transitions to delete. Valid options are any combination of: C_II_SENDACK, C_IM_FWD, " +
           "C_IS_FWD, C_SM_FWD, D_BUSY_WB. If nothing is specified, it defaults to { C_IM_FWD, D_BUSY_WB }").c_str())
         ("inc-solver-timeout", po::value<u32>(&IncSolverTimeout)->default_value(UINT32_MAX),
          "Timeout (in seconds) for switching the SMT solver into non-incremental mode")
@@ -222,13 +228,14 @@ static inline void ParseOptions(int Argc, char* ArgV[], MSISynthOptionsT& Option
     Options.NoState = (vm.count("no-state") > 0);
     Options.LogFileName = LogFileName;
     Options.LogOptions = LogOptions;
+    Options.NumCExToProcess = NumCExToProcess;
     Options.CPULimit = CPULimit;
     Options.MemLimit = MemLimit;
     Options.CoverageDesired = CoverageDesired;
     Options.BoundLimit = BoundLimit;
     Options.IncSolverTimeout =
         (IncSolverTimeout == UINT32_MAX ? IncSolverTimeout : IncSolverTimeout * 1000);
-
+    Options.PreferAllTrue = (vm.count("no-prefer-all-true") == 0);
     return;
 }
 
@@ -247,6 +254,8 @@ static inline void OptsToSolverOpts(const MSISynthOptionsT& Opts,
     SolverOpts.BFSPrioMethod = Opts.BFSPrioMethod;
     SolverOpts.IncSolverTimeout = Opts.IncSolverTimeout;
     SolverOpts.ResetTPOnBoundsBump = Opts.ResetTPOnBoundsBump;
+    SolverOpts.NumCExToProcess = Opts.NumCExToProcess;
+    SolverOpts.PreferAllTrue = Opts.PreferAllTrue;
 }
 
 static inline void OptsToLibOpts(const MSISynthOptionsT& Opts,

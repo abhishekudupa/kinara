@@ -205,25 +205,13 @@ StateVec* BFSQueueT::Pop()
 StateVec* BFSQueueT::Pop(u32& TaintLevel)
 {
     StateVec* Retval = nullptr;
-    if ((*SimplePrioQueues)[1] != nullptr &&
-        (*SimplePrioQueues)[1]->size() > 0) {
-        TaintLevel = 1;
-        Retval = (*SimplePrioQueues)[1]->front();
-        (*SimplePrioQueues)[1]->pop_front();
-    } else if ((*SimplePrioQueues)[0] != nullptr &&
-        (*SimplePrioQueues)[0]->size() > 0) {
-        TaintLevel = 0;
-        Retval = (*SimplePrioQueues)[0]->front();
-        (*SimplePrioQueues)[0]->pop_front();
-    } else {
-        for (u32 i = 2; i < MaxNumBuckets; ++i) {
-            if ((*SimplePrioQueues)[i] != nullptr &&
-                (*SimplePrioQueues)[i]->size() > 0) {
-                Retval = (*SimplePrioQueues)[i]->front();
-                (*SimplePrioQueues)[i]->pop_front();
-                TaintLevel = i;
-                break;
-            }
+    for (u32 i = 0; i < MaxNumBuckets; ++i) {
+        if ((*SimplePrioQueues)[i] != nullptr &&
+            (*SimplePrioQueues)[i]->size() > 0) {
+            Retval = (*SimplePrioQueues)[i]->front();
+            (*SimplePrioQueues)[i]->pop_front();
+            TaintLevel = i;
+            break;
         }
     }
     --NumElems;
@@ -506,6 +494,11 @@ string PathFPPrioritizer::ToString(u32 Verbosity) const
         sstr << CmdCoveragePair.first << " : " << CmdCoveragePair.second << endl;
     }
     return sstr.str();
+}
+
+const PathFingerprint* PathFPPrioritizer::GetZeroFP() const
+{
+    return ZeroFP;
 }
 
 void PathFPPrioritizer::NotifyNewPathFP(const PathFingerprint* PathFP)

@@ -663,7 +663,8 @@ inline void Solver::MakePointCCForGuard(i64 Op, const ExpT& Exp)
 
     auto&& PointApps = MakePointApplications(Op);
     const u32 NumPoints = PointApps.size();
-    auto CostVarType = Mgr->MakeType<RangeType>(0, NumPoints + 1);
+    // auto CostVarType = Mgr->MakeType<RangeType>(0, NumPoints + 1);
+    auto CostVarType = Mgr->MakeType<RangeType>(0, NumPoints);
     auto CostVar = Mgr->MakeVar(CostVarName, CostVarType);
     auto AFATPair = MakeAllFalseConstraint(Op, Exp, true);
     auto const& AFPred = AFATPair.first;
@@ -699,19 +700,25 @@ inline void Solver::MakePointCCForGuard(i64 Op, const ExpT& Exp)
         PerPointCostVars[i] = CurPointCostVar;
     }
 
-    auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, AFPred, CostEQ0);
-    auto Constraint1 = Mgr->MakeExpr(LTSOps::OpIFF, ATPred, CostEQ1);
-    auto NotAFNotAT = Mgr->MakeExpr(LTSOps::OpAND, NegAFPred, NegATPred);
-    auto PointSum = MakeSum(PerPointCostVars, Mgr, CostVarType);
-    auto OnePlusPointSum = Mgr->MakeExpr(LTSOps::OpADD, PointSum,
-                                         Mgr->MakeVal("1", CostVarType));
-    auto ConstraintN = Mgr->MakeExpr(LTSOps::OpIFF, NotAFNotAT,
-                                     Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
-                                                   OnePlusPointSum));
+    if (Options.PreferAllTrue) {
+        auto Constraint0 = Mgr->MakeExpr(LTSOps::OpIFF, AFPred, CostEQ0);
+        auto Constraint1 = Mgr->MakeExpr(LTSOps::OpIFF, ATPred, CostEQ1);
+        auto NotAFNotAT = Mgr->MakeExpr(LTSOps::OpAND, NegAFPred, NegATPred);
+        auto PointSum = MakeSum(PerPointCostVars, Mgr, CostVarType);
+        auto OnePlusPointSum = Mgr->MakeExpr(LTSOps::OpADD, PointSum,
+                                             Mgr->MakeVal("1", CostVarType));
+        auto ConstraintN = Mgr->MakeExpr(LTSOps::OpIFF, NotAFNotAT,
+                                         Mgr->MakeExpr(LTSOps::OpEQ, CostVar,
+                                                       OnePlusPointSum));
+        CheckedAssert(Constraint0);
+        CheckedAssert(Constraint1);
+        CheckedAssert(ConstraintN);
+    } else {
+        auto PointSum = MakeSum(PerPointCostVars, Mgr, CostVarType);
+        auto ConstraintN = Mgr->MakeExpr(LTSOps::OpEQ, CostVar, PointSum);
+        CheckedAssert(ConstraintN);
+    }
 
-    CheckedAssert(Constraint0);
-    CheckedAssert(Constraint1);
-    CheckedAssert(ConstraintN);
     GuardFuncCosts.push_back(CostVar);
     AllFalsePreds[Op] = AFPred;
     return;
@@ -1135,12 +1142,9 @@ void Solver::MakeAssertion(const ExpT& Pred)
     }
 }
 
-inline void Solver::HandleOneSafetyViolation(const StateVec* ErrorState,
+inline void Solver::HandleOneSafetyViolation(AQSPermPath* PPath,
                                              const ExpT& BlownInvariant)
 {
-    auto AQS = Checker->AQS;
-
-    auto PPath = AQS->FindShortestPath(ErrorState, CostFunction);
     SafetyViolation* Trace;
     if (BlownInvariant == Checker->LoweredInvariant) {
         Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
@@ -1178,13 +1182,9 @@ inline void Solver::HandleOneSafetyViolation(const StateVec* ErrorState,
     delete Trace;
 }
 
-inline void Solver::HandleOneDeadlockViolation(const StateVec* ErrorState)
+inline void Solver::HandleOneDeadlockViolation(AQSPermPath* PPath)
 {
     auto Mgr = TheLTS->GetMgr();
-    auto AQS = Checker->AQS;
-
-    auto PPath = AQS->FindShortestPath(ErrorState, CostFunction);
-
     auto Trace = TraceBase::MakeDeadlockViolation(PPath, Checker);
 
     ESMC_LOG_FULL(
@@ -1250,20 +1250,75 @@ inline void Solver::HandleOneDeadlockViolation(const StateVec* ErrorState)
 
 inline void Solver::HandleSafetyViolations()
 {
-    auto const& ErrorStates = Checker->GetAllErrorStates();
+    vector<pair<AQSPermPath*, ExpT>> AllErrorPPaths;
+    auto AQS = Checker->AQS;
+
+    if (Options.BFSPrioMethod == BFSPrioMethodT::Simple ||
+        Options.BFSPrioMethod == BFSPrioMethodT::None) {
+        auto const& ErrorStates = Checker->GetAllErrorStates();
+        for (auto const& ErrorState : ErrorStates) {
+            auto PPath = AQS->FindShortestPath(ErrorState.first, CostFunction);
+            AllErrorPPaths.push_back(make_pair(PPath, ErrorState.second));
+        }
+
+        sort(AllErrorPPaths.begin(), AllErrorPPaths.end(),
+             [&] (const pair<AQSPermPath*, ExpT>& PPathExpPair1,
+                  const pair<AQSPermPath*, ExpT>& PPathExpPair2) -> bool
+             {
+                 return (PPathExpPair1.first->GetPathElems().size() <
+                         PPathExpPair2.first->GetPathElems().size());
+             });
+        for (u32 i = NumCExToProcess; i < AllErrorPPaths.size(); ++i) {
+            delete AllErrorPPaths[i].first;
+        }
+        if (NumCExToProcess < AllErrorPPaths.size()) {
+            AllErrorPPaths.resize(NumCExToProcess);
+        }
+    } else {
+        auto const& ErrorStatesByCmdID = Checker->GetErrorStatesByCmdID();
+        const u32 NumClasses = ErrorStatesByCmdID.size();
+        vector<vector<pair<AQSPermPath*, ExpT>>> ErrorPPathsByClass(NumClasses);
+        u32 CurrentClass = 0;
+        for (auto const& CmdIDErrorStateVec : ErrorStatesByCmdID) {
+            for (auto const& ErrorState : CmdIDErrorStateVec.second) {
+                auto PPath = AQS->FindShortestPath(ErrorState.first, CostFunction);
+                ErrorPPathsByClass[CurrentClass].push_back(make_pair(PPath, ErrorState.second));
+            }
+
+            sort(ErrorPPathsByClass[CurrentClass].begin(), ErrorPPathsByClass[CurrentClass].end(),
+                 [&] (const pair<AQSPermPath*, ExpT>& PPathExpPair1,
+                      const pair<AQSPermPath*, ExpT>& PPathExpPair2) -> bool
+             {
+                 return (PPathExpPair1.first->GetPathElems().size() <
+                         PPathExpPair2.first->GetPathElems().size());
+             });
+
+            for (u32 i = NumCExToProcess; i < ErrorPPathsByClass[CurrentClass].size(); ++i) {
+                delete ErrorPPathsByClass[CurrentClass][i].first;
+            }
+            if (NumCExToProcess < ErrorPPathsByClass[CurrentClass].size()) {
+                ErrorPPathsByClass[CurrentClass].resize(NumCExToProcess);
+            }
+
+            AllErrorPPaths.insert(AllErrorPPaths.end(), ErrorPPathsByClass[CurrentClass].begin(),
+                                  ErrorPPathsByClass[CurrentClass].end());
+            ++CurrentClass;
+        }
+    }
+
+    // Okay, we have all the error ppaths that we're willing to process now
 
     ESMC_LOG_MIN_SHORT(
                        Out_ << "Building Constraints for "
-                       << ErrorStates.size() << " error(s)...";
+                       << AllErrorPPaths.size() << " error(s)...";
                        );
 
-    for (auto const& ErrorState : ErrorStates) {
-        auto SVPtr = ErrorState.first;
-        auto const& BlownInvariant = ErrorState.second;
-        if (BlownInvariant == Checker->LoweredDLFInvariant) {
-            HandleOneDeadlockViolation(SVPtr);
+    for (auto const& PPathExpPair : AllErrorPPaths) {
+
+        if (PPathExpPair.second == Checker->LoweredDLFInvariant) {
+            HandleOneDeadlockViolation(PPathExpPair.first);
         } else {
-            HandleOneSafetyViolation(SVPtr, BlownInvariant);
+            HandleOneSafetyViolation(PPathExpPair.first, PPathExpPair.second);
         }
     }
 
@@ -1531,12 +1586,16 @@ void Solver::Solve()
         float CoverageBound = 0;
         if (FirstIteration) {
             CoverageBound = FLT_MAX;
-            FirstIteration = false;
+            NumCExToProcess = UINT32_MAX;
         } else {
             CoverageBound = Options.DesiredCoverage;
+            NumCExToProcess = Options.NumCExToProcess;
         }
         auto Safe = Checker->BuildAQS(AQSConstructionMethod::BreadthFirst,
+                                      (FirstIteration ? UINT32_MAX :
+                                       Options.NumCExToProcess),
                                       Options.BFSPrioMethod, CoverageBound);
+        FirstIteration = false;
         DoneOneMCIteration = true;
 
         if (!Safe) {

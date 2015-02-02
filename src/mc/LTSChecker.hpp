@@ -49,6 +49,7 @@ namespace MC {
 
 using namespace ESMC::LTS;
 using ESMC::Symm::Canonicalizer;
+using namespace Detail;
 
 class LTSChecker
 {
@@ -96,6 +97,9 @@ private:
     // invariant expression that was blown
     ErrorStateSetT ErrorStateSet;
     ErrorStateVecT ErrorStates;
+    // A more fine grained classification for coverage
+    // based prioritization
+    unordered_map<u32, ErrorStateVecT> ErrorStateSetsByCmdID;
 
     // A set of commands that need to be tested
     // these are all the commands that are "fully"
@@ -108,6 +112,8 @@ private:
     u32 MaxNumErrors;
     BFSPrioMethodT PrioMethod;
     AQSConstructionMethod AQSConstMethod;
+    PathFPPrioritizer* Prioritizer;
+    PathFingerprintSet* PathFPSet;
 
     // returns <Cmd, false> if successful
     // returns <null, false> if no more commands
@@ -117,18 +123,38 @@ private:
 
     inline bool RecordErrorState(const StateVec* ErrorState,
                                  const ExpT& BlownInvariant);
-    inline bool RecordErrorState(const StateVec* ErrorState,
-                                 const ExpT& BlownInvariant,
-                                 const Detail::PathFingerprint* FP,
-                                 Detail::PathFPPrioritizer* Prioritizer);
 
-    inline bool BFSRecordErrorState(const StateVec* ErrorState,
+    inline void BFSRecordErrorState(const StateVec* ErrorState,
                                     const ExpT& BlownInvariant,
-                                    const Detail::PathFingerprint* FP,
-                                    Detail::PathFPPrioritizer* Prioritizer);
-    inline bool BFSCheckedRecordErrorState(const StateVec* ErrorState,
-                                           const Detail::PathFingerprint* FP,
-                                           Detail::PathFPPrioritizer* Prioritizer);
+                                    u32 TaintLevel,
+                                    const PathFingerprint* FP,
+                                    bool ExistingError);
+
+    // Utilities to avoid complex if-then-else structures in
+    // DoBFS
+    inline void BFSInitQueue(BFSQueueT& Queue, const vector<StateVec*>& Roots,
+                             const PathFingerprint* ZeroFP);
+
+    inline void BFSPushQueue(BFSQueueT& Queue,
+                             StateVec* State, u32 TaintLevel,
+                             const PathFingerprint* PathFP);
+
+    inline StateVec* BFSPopQueue(BFSQueueT& Queue, u32& TaintLevel,
+                                 const PathFingerprint*& PathFP);
+
+    inline bool BFSCheckInvariant(const StateVec* State, u32 TaintLevel,
+                                  const PathFingerprint* PathFP);
+
+    inline StateVec* BFSExecuteCommand(const StateVec* CurState, u32 TaintLevel,
+                                       const PathFingerprint* PathFP, u32 CmdID);
+
+    inline void BFSGetNextTaintLevelAndPathFP(u32 CmdID, u32 CurrentTaintLevel,
+                                              u32& NextTaintLevel,
+                                              const PathFingerprint* CurrentFP,
+                                              const PathFingerprint*& NextFP);
+
+    inline bool BFSIsDone(u32 TaintLevel, const PathFingerprint* PathFP);
+
 
 
     inline void DoDFS(StateVec* Root);
@@ -156,6 +182,7 @@ public:
     // false otherwise
     bool BuildAQS(AQSConstructionMethod Method =
                   AQSConstructionMethod::BreadthFirst,
+                  u32 MaxErrors = UINT32_MAX,
                   BFSPrioMethodT PrioMethod = BFSPrioMethodT::None,
                   float DesiredCoverage = FLT_MAX);
 
@@ -173,6 +200,7 @@ public:
     ProductStructure* GetPS() const;
 
     const ErrorStateVecT& GetAllErrorStates() const;
+    const unordered_map<u32, ErrorStateVecT>& GetErrorStatesByCmdID() const;
     TraceBase* MakeTraceToError(const StateVec* ErrorState);
     const vector<string>& GetBuchiMonitorNames() const;
 };
