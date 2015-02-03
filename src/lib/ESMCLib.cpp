@@ -114,7 +114,7 @@ __attribute__((constructor)) void ESMCLibInitialize_()
     ESMCLib::Initialize();
 }
 
-__attribute__((destructor)) void ESMCLibFinalize_()
+__attribute__((destructor(101))) void ESMCLibFinalize_()
 {
     ESMCLib::Finalize();
 }

@@ -193,6 +193,7 @@ void LogManager::Initialize(const string& LogStreamName,
     } else {
         auto LogStreamFileName = LogStreamName;
         auto LocalLogStream = new boost::iostreams::filtering_ostream();
+        LocalLogStream->set_auto_close(true);
         if (LogCompressionTechnique == LogFileCompressionTechniqueT::COMPRESS_BZIP2) {
             LocalLogStream->push(boost::iostreams::bzip2_compressor(9));
             if (!boost::algorithm::ends_with(LogStreamFileName, ".bz2")) {
@@ -218,8 +219,7 @@ void LogManager::Initialize(const string& LogStreamName,
 void LogManager::Finalize()
 {
     if (LogStream() != nullptr && LogStream() != &cout) {
-        dynamic_cast<ofstream*>(LogStream())->close();
-        delete LogStream();
+        delete dynamic_cast<boost::iostreams::filtering_ostream*>(LogStream());
         LogStream() = nullptr;
     } else if (LogStream() != nullptr) {
         LogStream()->flush();
