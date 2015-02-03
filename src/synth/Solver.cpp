@@ -1562,7 +1562,12 @@ void Solver::Solve()
         AssertBoundsConstraint(Bound);
 
         auto SMTStartTime = TimeValue::GetTimeValue();
-        auto TPRes = TP->CheckSatWithAssumption(AllBoundsAssumptions[Bound]);
+        TPResult TPRes;
+        if (AllBoundsAssumptions.size() > 0) {
+            TPRes = TP->CheckSatWithAssumption(AllBoundsAssumptions[Bound]);
+        } else {
+            TPRes = TP->CheckSat();
+        }
         ++Stats.NumIterations;
         auto SMTEndTime = TimeValue::GetTimeValue();
         auto CurQueryTime = SMTEndTime - SMTStartTime;
