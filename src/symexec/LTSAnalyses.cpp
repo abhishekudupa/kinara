@@ -659,6 +659,7 @@ TraceAnalyses::WeakestPreconditionForLiveness(Solver* TheSolver,
 
     int i = 0;
     for (auto const& InitState : InitStateGenerators) {
+        ++i;
         MgrT::SubstMapT InitStateSubstMap;
         for (auto const& Update : InitState->GetLoweredUpdates()) {
             auto LHS = Update->GetLHS();
@@ -667,7 +668,7 @@ TraceAnalyses::WeakestPreconditionForLiveness(Solver* TheSolver,
         }
         ESMC_LOG_FULL(
                       "Analyses.LivenessDetailed",
-                      Out_ << "Substituting initial state " << ++i << endl;
+                      Out_ << "Substituting initial state " << i << endl;
                       );
 
         auto NewPhi = Mgr->Substitute(InitStateSubstMap, Phi);
