@@ -1678,6 +1678,7 @@ void Solver::Solve()
                                    PrintFinalSolution(Out_);
                                    PrintStats();
                                    );
+                return;
             }
         } else {
             ResourceLimitManager::QueryEnd();
@@ -1690,6 +1691,7 @@ void Solver::Solve()
                                PrintFinalSolution(Out_);
                                PrintStats();
                                );
+            return;
         }
     }
 
