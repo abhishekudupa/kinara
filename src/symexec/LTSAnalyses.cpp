@@ -657,41 +657,78 @@ TraceAnalyses::WeakestPreconditionForLiveness(Solver* TheSolver,
                   );
     FastExpSetT Retval;
 
-    int i = 0;
-    for (auto const& InitState : InitStateGenerators) {
-        ++i;
-        MgrT::SubstMapT InitStateSubstMap;
-        for (auto const& Update : InitState->GetLoweredUpdates()) {
-            auto LHS = Update->GetLHS();
-            auto RHS = Update->GetRHS();
-            InitStateSubstMap[LHS] = RHS;
-        }
-        ESMC_LOG_FULL(
-                      "Analyses.LivenessDetailed",
-                      Out_ << "Substituting initial state " << i << endl;
-                      );
-
-        auto NewPhi = Mgr->Substitute(InitStateSubstMap, Phi);
-        NewPhi = Mgr->SimplifyFP(NewPhi);
-
-        if (TrivialFairObjs.size() > 0) {
-            auto FairnessConstraint = EnableFairnessObjectsInLoop(TheLTS,
-                                                                  Monitor,
-                                                                  InitStateSubstMap,
-                                                                  Trace,
-                                                                  TrivialFairObjs);
-            ESMC_LOG_FULL(
-                          "Analyses.LivenessDetailed",
-                          Out_ << "Fairness constraint is:" << endl
-                          << FairnessConstraint << endl;
-                          );
-            if (FairnessConstraint != TheLTS->MakeFalse()) {
-                NewPhi = TheLTS->MakeOp(LTSOps::OpOR, NewPhi, FairnessConstraint);
+    if (TrivialFairObjs.size() == 0) {
+        auto LivenessInitialState = Trace->GetInitialState();
+        MgrT::SubstMapT InitStateSubstMapFromSingleInitialState;
+        for (auto StateVariable: TheLTS->GetStateVectorVars()) {
+            for (auto Exp: GetAllScalarLeaves(StateVariable)) {
+                auto ExpValue = Exp->ExtensionData.Interp->Evaluate(LivenessInitialState->GetSVPtr());
+                string ExpValueString = Exp->GetType()->As<ScalarType>()->ValToConst(ExpValue);
+                auto Result = TheLTS->MakeVal(ExpValueString, Exp->GetType());
+                auto LoweredExp = Mgr->ApplyTransform<LTS::Detail::ArrayRValueTransformer>(Exp);
+                InitStateSubstMapFromSingleInitialState[LoweredExp] = Result;
             }
         }
+        auto NewPhi = Mgr->TermSubstitute(InitStateSubstMapFromSingleInitialState, Phi);
+        NewPhi = Mgr->SimplifyFP(NewPhi);
+        Retval.insert(NewPhi);
+    } else {
+        int i = 0;
+        for (auto const& InitState : InitStateGenerators) {
+            ++i;
+            if (i > 10) {
+                break;
+            }
+            MgrT::SubstMapT InitStateSubstMap;
+            for (auto const& Update : InitState->GetLoweredUpdates()) {
+                auto LHS = Update->GetLHS();
+                auto RHS = Update->GetRHS();
+                InitStateSubstMap[LHS] = RHS;
+                cout << "LHS: " << Update->GetLHS() << " RHS: " << RHS << endl;
+            }
+            ESMC_LOG_FULL(
+                          "Analyses.LivenessDetailed",
+                          Out_ << "Phi is " << Phi << endl;
+                          );
 
-        if (NewPhi != TheLTS->MakeTrue()) {
-            Retval.insert(NewPhi);
+
+            ESMC_LOG_FULL(
+                          "Analyses.LivenessDetailed",
+                          Out_ << "Substituting initial state " << i << endl;
+                          );
+
+            auto NewPhi = Mgr->Substitute(InitStateSubstMap, Phi);
+
+            ESMC_LOG_FULL(
+                          "Analyses.LivenessDetailed",
+                          Out_ << "Substituted initial state " << i << endl;
+                          );
+            NewPhi = Mgr->SimplifyFP(NewPhi);
+            ESMC_LOG_FULL(
+                          "Analyses.LivenessDetailed",
+                          Out_ << "Simplified formula" << i << endl;
+                          );
+
+
+            if (TrivialFairObjs.size() > 0) {
+                auto FairnessConstraint = EnableFairnessObjectsInLoop(TheLTS,
+                                                                      Monitor,
+                                                                      InitStateSubstMap,
+                                                                      Trace,
+                                                                      TrivialFairObjs);
+                ESMC_LOG_FULL(
+                              "Analyses.LivenessDetailed",
+                              Out_ << "Fairness constraint is:" << endl
+                              << FairnessConstraint << endl;
+                              );
+                if (FairnessConstraint != TheLTS->MakeFalse()) {
+                    NewPhi = TheLTS->MakeOp(LTSOps::OpOR, NewPhi, FairnessConstraint);
+                }
+            }
+
+            if (NewPhi != TheLTS->MakeTrue()) {
+                Retval.insert(NewPhi);
+            }
         }
     }
     return Retval;
