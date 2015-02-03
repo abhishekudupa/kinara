@@ -1125,7 +1125,7 @@ void AddAllGuardsEnabledAtLegitimateStates(LabelledTS* TheLTS, Solver* TheSolver
             }
         }
         ExpT Disjunction = MakeDisjunction(Disjuncts, Mgr);
-        TheSolver->MakeAssertion(Disjunction);
+        TheSolver->MakeAssertion(Disjunction, false);
     }
 }
 
@@ -1137,6 +1137,8 @@ int main(int argc, char* argv[])
     // LogManager::EnableLogOption("Solver.CEXAssertions");
     // LogManager::EnableLogOption("Solver.Purification");
     LogManager::EnableLogOption("Solver.OtherAssertions");
+    LogManager::EnableLogOption("Analyses.LivenessDetailed");
+
 
     DijkstraSynthOptionsT Options;
     ParseOptions(argc, argv, Options);
@@ -1153,6 +1155,9 @@ int main(int argc, char* argv[])
 
     TheLTS->Freeze();
     cout << __LOGSTR__ << "Freezing LTS done." << endl;
+
+    cout << "Invariant:" << endl;
+    cout << TheLTS->GetInvariant() << endl;
 
     auto Checker = new LTSChecker(TheLTS);
 
@@ -1188,7 +1193,6 @@ int main(int argc, char* argv[])
 
     DeclareLegitLivenessMonitor(TheLTS, Checker);
 
-
     if (UseRingMonitorInSynthesis) {
         DeclareRingLivenessMonitor(TheLTS, Checker);
     }
@@ -1216,9 +1220,9 @@ int main(int argc, char* argv[])
                                                                IndicatorConstraints,
                                                                Options.LegitimateStatesBound);
         for (ExpT IndicatorConstraint : IndicatorConstraints) {
-            TheSolver->MakeAssertion(IndicatorConstraint);
+            TheSolver->MakeAssertion(IndicatorConstraint, false);
         }
-        TheSolver->MakeAssertion(BoundConstraint);
+        TheSolver->MakeAssertion(BoundConstraint, false);
     }
 
     AddAllGuardsEnabledAtLegitimateStates(TheLTS, TheSolver);
