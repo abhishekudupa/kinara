@@ -183,8 +183,10 @@ TraceAnalyses::WeakestPreconditionWithMonitor(LabelledTS* TheLTS,
     vector<PSTraceElemT> Loop = Trace->GetLoop();
     vector<PSTraceElemT> Stem = Trace->GetStem();
     // Christos wrote bad code
-    auto LastStem = Stem.back();
-    auto PreviousMonitorState = LastStem.second->GetMonitorState();
+    // auto LastStem = Stem.back();
+    // auto PreviousMonitorState = LastStem.second->GetMonitorState();
+    auto FirstLoop = Loop.front();
+    auto PreviousMonitorState = FirstLoop.second->GetMonitorState();
     vector<pair<LTS::GCmdRef, ExpT>> LoopGuardedCommandsAndMonitorGuards;
     for (auto PSTraceElement: Loop) {
         auto GuardedCommand = PSTraceElement.first;
@@ -537,8 +539,10 @@ TraceAnalyses::WeakestPreconditionForLiveness(Solver* TheSolver,
     vector<PSTraceElemT> Loop = Trace->GetLoop();
     vector<PSTraceElemT> Stem = Trace->GetStem();
     // Christos wrote bad code
-    auto LastStem = Stem.back();
-    auto PreviousMonitorState = LastStem.second->GetMonitorState();
+    auto FirstLoop = Loop.front();
+    auto PreviousMonitorState = FirstLoop.second->GetMonitorState();
+    // auto LastStem = Stem.back();
+    // auto PreviousMonitorState = LastStem.second->GetMonitorState();
     vector<pair<LTS::GCmdRef, ExpT>> LoopGuardedCommandsAndMonitorGuards;
     for (auto PSTraceElement: Loop) {
         auto GuardedCommand = PSTraceElement.first;
