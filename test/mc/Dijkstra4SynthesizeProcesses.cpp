@@ -1125,7 +1125,7 @@ void AddAllGuardsEnabledAtLegitimateStates(LabelledTS* TheLTS, Solver* TheSolver
             }
         }
         ExpT Disjunction = MakeDisjunction(Disjuncts, Mgr);
-        TheSolver->MakeAssertion(Disjunction, false);
+        TheSolver->MakeAssertion(Disjunction);
     }
 }
 
@@ -1220,9 +1220,9 @@ int main(int argc, char* argv[])
                                                                IndicatorConstraints,
                                                                Options.LegitimateStatesBound);
         for (ExpT IndicatorConstraint : IndicatorConstraints) {
-            TheSolver->MakeAssertion(IndicatorConstraint, false);
+            TheSolver->MakeAssertion(IndicatorConstraint);
         }
-        TheSolver->MakeAssertion(BoundConstraint, false);
+        TheSolver->MakeAssertion(BoundConstraint);
     }
 
     AddAllGuardsEnabledAtLegitimateStates(TheLTS, TheSolver);
