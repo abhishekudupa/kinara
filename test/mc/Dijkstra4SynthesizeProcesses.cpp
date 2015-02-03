@@ -707,6 +707,7 @@ void DeclareRingMonitor(LabelledTS* TheLTS)
         RingMonitor->AddVariable("SnapshotUp" + to_string(i), TheLTS->MakeBoolType());
     }
     auto LegitimateAnnouncementDeclaration = RingMonitor->AddInputMsg(LegitimateAnnouncement, {});
+    auto IllegitimateAnnouncementDeclaration = RingMonitor->AddInputMsg(IllegitimateAnnouncement, {});
 
     RingMonitor->FreezeVars();
 
@@ -731,9 +732,13 @@ void DeclareRingMonitor(LabelledTS* TheLTS)
                                         "Write", WriteMsgs[i], {});
 
     }
+    // RingMonitor->AddInputTransition("Initial", "Initial",
+    //                                 TheLTS->MakeTrue(), {},
+    //                                 "Snapshot", LegitimateAnnouncement, {});
     RingMonitor->AddInputTransition("Initial", "Initial",
                                     TheLTS->MakeTrue(), {},
-                                    "Snapshot", LegitimateAnnouncement, {});
+                                    "Snapshot", IllegitimateAnnouncement, {});
+
     vector<ExpT> SnapshotNEQStateDisjuncts;
     vector<ExpT> SnapshotEQStateConjuncts;
     vector<LTSAssignRef> Updates;
@@ -761,11 +766,17 @@ void DeclareRingMonitor(LabelledTS* TheLTS)
                                     SnapshotNEQState, {},
                                     "Ignore", LegitimateAnnouncement, {});
     RingMonitor->AddInputTransition("Snapshot", "Last",
+                                    TheLTS->MakeTrue(), {},
+                                    "Success", IllegitimateAnnouncement, {});
+    RingMonitor->AddInputTransition("Snapshot", "Last",
                                     SnapshotEQState, {},
                                     "Success", LegitimateAnnouncement, {});
     RingMonitor->AddInputTransition("Last", "Last",
                                     TheLTS->MakeTrue(), {},
                                     "Ignore", LegitimateAnnouncement, {});
+    RingMonitor->AddInputTransition("Last", "Last",
+                                    TheLTS->MakeTrue(), {},
+                                    "Ignore", IllegitimateAnnouncement, {});
 }
 
 void DeclareSafetyConcreteMonitor(LabelledTS* TheLTS)
@@ -1138,8 +1149,6 @@ int main(int argc, char* argv[])
     // LogManager::EnableLogOption("Solver.Purification");
     LogManager::EnableLogOption("Checker.Fairness");
     LogManager::EnableLogOption("Solver.OtherAssertions");
-    LogManager::EnableLogOption("Analyses.LivenessDetailed");
-
 
     DijkstraSynthOptionsT Options;
     ParseOptions(argc, argv, Options);
