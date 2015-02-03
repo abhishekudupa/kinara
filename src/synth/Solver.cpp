@@ -1486,7 +1486,7 @@ inline bool Solver::AdjustBound(bool AdjustUp)
             auto Range = UpperLimit - Bound;
             Bound = Bound + ((Range + 1)/ 2);
         } else {
-            if (Bound == LowerLimit) {
+            if (Bound == LowerLimit + 1) {
                 return false;
             }
             auto Range = Bound - LowerLimit;
@@ -1530,15 +1530,17 @@ inline bool Solver::AdjustBound(bool AdjustUp)
 void Solver::Solve()
 {
     ResetStats();
+    Bound = 0;
     Stats.SolveStartTime = TimeValue::GetTimeValue();
     ResourceLimitManager::SetCPULimit(Options.CPULimitInSeconds);
     ResourceLimitManager::SetMemLimit((Options.MemLimitInMB == UINT64_MAX ?
                                        Options.MemLimitInMB : Options.MemLimitInMB << 20));
-    ResourceLimitManager::QueryStart();
     ResourceLimitManager::AddOnLimitHandler([this](bool TimeOut) -> void
                                             {
                                                 TP->Interrupt();
                                             });
+
+    ResourceLimitManager::QueryStart();
 
     bool FirstIteration = true;
     bool InitialConstraintsCounted = false;
@@ -1657,9 +1659,30 @@ void Solver::Solve()
 
         if (!CompletionGood) {
             continue;
+        } else if (Options.FindMinBoundSolution && Options.BinarySearchBounds) {
+            UpperLimit = Bound;
+            if (AdjustBound(false)) {
+                ESMC_LOG_MIN_SHORT(
+                                   Out_ << "Attempting to minimize solution, "
+                                   << "Bound readjusted to " << Bound << "." << endl;
+                                   );
+                continue;
+            } else {
+                ResourceLimitManager::QueryEnd();
+                Stats.SolveEndTime = TimeValue::GetTimeValue();
+
+
+                ESMC_LOG_MIN_SHORT(
+                                   Out_ << "Found Correct Completion!" << endl;
+                                   Out_ << "With Bound = " << Bound << ", Model:" << endl;
+                                   PrintFinalSolution(Out_);
+                                   PrintStats();
+                                   );
+            }
         } else {
             ResourceLimitManager::QueryEnd();
             Stats.SolveEndTime = TimeValue::GetTimeValue();
+
 
             ESMC_LOG_MIN_SHORT(
                                Out_ << "Found Correct Completion!" << endl;
@@ -1667,17 +1690,6 @@ void Solver::Solve()
                                PrintFinalSolution(Out_);
                                PrintStats();
                                );
-            if (Options.FindMinBoundSolution && Options.BinarySearchBounds) {
-                UpperLimit = Bound;
-                AdjustBound(false);
-                ESMC_LOG_MIN_SHORT(
-                                   Out_ << "Attempting to minimize solution, "
-                                        << "Bound readjusted to " << Bound << "." << endl;
-                                   );
-                continue;
-            } else {
-                return;
-            }
         }
     }
 
