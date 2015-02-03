@@ -1137,6 +1137,8 @@ int main(int argc, char* argv[])
     // LogManager::EnableLogOption("Solver.CEXAssertions");
     // LogManager::EnableLogOption("Solver.Purification");
     LogManager::EnableLogOption("Solver.OtherAssertions");
+    LogManager::EnableLogOption("Analyses.LivenessDetailed");
+
 
     DijkstraSynthOptionsT Options;
     ParseOptions(argc, argv, Options);
@@ -1153,6 +1155,9 @@ int main(int argc, char* argv[])
 
     TheLTS->Freeze();
     cout << __LOGSTR__ << "Freezing LTS done." << endl;
+
+    cout << "Invariant:" << endl;
+    cout << TheLTS->GetInvariant() << endl;
 
     auto Checker = new LTSChecker(TheLTS);
 
@@ -1187,7 +1192,6 @@ int main(int argc, char* argv[])
     // }
 
     DeclareLegitLivenessMonitor(TheLTS, Checker);
-
 
     if (UseRingMonitorInSynthesis) {
         DeclareRingLivenessMonitor(TheLTS, Checker);

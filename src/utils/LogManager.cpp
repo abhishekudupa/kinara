@@ -125,6 +125,11 @@ const map<string, string> LogManager::LogOptionDescriptions =
             (string)"Track detailed progress in weakest pre analyses."
         },
         {
+            "Analyses.LivenessDetailed",
+            (string)"Track detailed progress for liveness weakest pre analyses."
+        },
+
+        {
             "Canonicalizer.Detailed",
             (string)"Print detailed information about canonicalization steps."
         },
