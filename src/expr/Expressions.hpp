@@ -562,6 +562,7 @@ private:
     ExpCacheT ExpCache;
     ExpT TrueExp;
     ExpT FalseExp;
+    volatile bool Interrupted;
 
     inline void CheckMgr(const vector<ExpT>& Children) const;
     inline void CheckMgr(const ExpT& Exp) const;
@@ -644,6 +645,8 @@ public:
            const function<bool(const ExpressionBase<E, S>*)>& Pred) const;
 
     inline void GC();
+    inline void Interrupt();
+    inline bool IsInterrupted() const;
 
     static inline ExprMgr* Make();
 };
@@ -2218,6 +2221,7 @@ inline bool AQuantifiedExpression<E, S>::IsExists() const
 template <typename E, template <typename> class S>
 template <typename... ArgTypes>
 inline ExprMgr<E, S>::ExprMgr(ArgTypes&&... Args)
+    : Interrupted(false)
 {
     Sem = new S<E>(this, forward<ArgTypes>(Args)...);
     TrueExp = ExpCache.template Get<ConstExpression<E, S>>(this, "true",
@@ -2537,7 +2541,7 @@ ExprMgr<E, S>::SimplifyFP(const ExpT &Exp)
     do {
         OldExp = SimpExp;
         SimpExp = Simplify(OldExp);
-    } while (SimpExp != OldExp);
+    } while (SimpExp != OldExp && !Interrupted);
     return SimpExp;
 }
 
@@ -2591,6 +2595,18 @@ template <typename E, template <typename> class S>
 inline void ExprMgr<E, S>::GC()
 {
     ExpCache.GC();
+}
+
+template <typename E, template <typename> class S>
+inline void ExprMgr<E, S>::Interrupt()
+{
+    Interrupted = true;
+}
+
+template <typename E, template <typename> class S>
+inline bool ExprMgr<E, S>::IsInterrupted() const
+{
+    return Interrupted;
 }
 
 template <typename E, template <typename> class S>

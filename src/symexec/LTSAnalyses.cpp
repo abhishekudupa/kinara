@@ -402,6 +402,11 @@ TraceAnalyses::WeakestPrecondition(Solver* TheSolver,
     const vector<TraceElemT>& TraceElements = Trace->GetTraceElems();
     for (auto TraceIterator = TraceElements.rbegin();
          TraceIterator != TraceElements.rend(); ++TraceIterator) {
+
+        if (Mgr->IsInterrupted()) {
+            return vector<ExpT>(1, Mgr->MakeTrue());
+        }
+
         auto const& Cmd = TraceIterator->first;
         const vector<LTSAssignRef>& LUpdates = Cmd->GetLoweredUpdates();
 
@@ -462,6 +467,11 @@ TraceAnalyses::WeakestPrecondition(Solver* TheSolver,
     auto InitStateGenerators = TheLTS->GetInitStateGenerators();
 
     for (auto const& InitState : InitStateGenerators) {
+
+        if (Mgr->IsInterrupted()) {
+            return vector<ExpT>(1, Mgr->MakeTrue());
+        }
+
         MgrT::SubstMapT InitStateSubstMap;
         for (auto const& Update : InitState->GetLoweredUpdates()) {
             auto LHS = Update->GetLHS();

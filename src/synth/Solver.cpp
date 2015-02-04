@@ -1538,6 +1538,7 @@ void Solver::Solve()
     ResourceLimitManager::AddOnLimitHandler([this](bool TimeOut) -> void
                                             {
                                                 TP->Interrupt();
+                                                TheLTS->GetMgr()->Interrupt();
                                             });
 
     ResourceLimitManager::QueryStart();
