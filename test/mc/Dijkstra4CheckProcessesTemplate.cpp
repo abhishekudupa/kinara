@@ -145,11 +145,9 @@ void DeclareProc0(LabelledTS* TheLTS)
 {
     assert(TheLTS != nullptr && Proc.size() == 0);
     cout << __LOGSTR__ << "Declaring process 0." << endl;
-    bool SynthesizeProcess = false;
-    auto Mgr = TheLTS->MakeTrue()->GetMgr();
     string ProcName = string("Proc0");
 
-    Proc.push_back(TheLTS->MakeEFSM<IncompleteEFSM>(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
+    Proc.push_back(TheLTS->MakeEFSM<IncompleteEFSM>(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None, false));
     Proc[0]->AddState("TheState");
     Proc[0]->FreezeStates();
 
@@ -199,45 +197,16 @@ void DeclareProc0(LabelledTS* TheLTS)
                                        W0Exp,
                                        U0PayloadAccField);
 
-    if (SynthesizeProcess) {
-        auto Args = {D0Exp, D1Exp, U1Exp};
-        vector<TypeRef> ArgTypes;
-        transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
-                  [&](ExpT Arg) {return Arg->GetType();});
-        auto GuardOp = Mgr->MakeUninterpretedFunction("Guard_" + ProcName,
-                                                      ArgTypes,
-                                                      TheLTS->MakeBoolType());
-        GuardOps.push_back(GuardOp);
-        GuardExp = TheLTS->MakeOp(GuardOp, Args);
-        auto UpdateD0Op = Mgr->MakeUninterpretedFunction("Update_D0_" + ProcName,
-                                                         ArgTypes,
-                                                         TheLTS->MakeBoolType());
+    auto NotD0Exp = TheLTS->MakeOp(LTSOps::OpNOT, D0Exp);
+    auto Data0EqData1 = TheLTS->MakeOp(LTSOps::OpEQ, D0Exp, D1Exp);
+    auto NotU1Exp = TheLTS->MakeOp(LTSOps::OpNOT, U1Exp);
+    GuardExp = TheLTS->MakeOp(LTSOps::OpAND, Data0EqData1, NotU1Exp);
 
-        UpdateOps.push_back(UpdateD0Op);
-        auto UpdateD0Exp = TheLTS->MakeOp(UpdateD0Op, Args);
+    W0Updates.insert(W0Updates.end(),{ new LTSAssignSimple(D0Exp, NotD0Exp),
+                new LTSAssignSimple(W0DataFieldExp, NotD0Exp),
+                new LTSAssignSimple(W0UpFieldExp, TheLTS->MakeTrue()),
+                });
 
-        cout << GuardExp << endl;
-        cout << UpdateD0Exp << endl;
-
-        W0Updates.insert(W0Updates.end(),{ new LTSAssignSimple(D0Exp, UpdateD0Exp),
-                    new LTSAssignSimple(W0DataFieldExp, UpdateD0Exp),
-                    new LTSAssignSimple(W0UpFieldExp, TheLTS->MakeTrue())});
-        auto Proc0AsInc = Proc[0]->As<IncompleteEFSM>();
-        (Proc0AsInc->GuardOpToUpdates[GuardOp]).insert(UpdateD0Exp);
-        Proc0AsInc->GuardOpToExp[GuardOp] = GuardExp;
-        Proc0AsInc->AllOpToExp[GuardOp] = GuardExp;
-        Proc0AsInc->AllOpToExp[UpdateD0Op] = UpdateD0Exp;
-    } else {
-        auto NotD0Exp = TheLTS->MakeOp(LTSOps::OpNOT, D0Exp);
-        auto Data0EqData1 = TheLTS->MakeOp(LTSOps::OpEQ, D0Exp, D1Exp);
-        auto NotU1Exp = TheLTS->MakeOp(LTSOps::OpNOT, U1Exp);
-        GuardExp = TheLTS->MakeOp(LTSOps::OpAND, Data0EqData1, NotU1Exp);
-
-        W0Updates.insert(W0Updates.end(),{ new LTSAssignSimple(D0Exp, NotD0Exp),
-                    new LTSAssignSimple(W0DataFieldExp, NotD0Exp),
-                    new LTSAssignSimple(W0UpFieldExp, TheLTS->MakeTrue()),
-                    });
-    }
     Guards.push_back(GuardExp);
     Proc[0]->AddOutputTransition("TheState", "TheState", GuardExp,
                                  W0Updates,
@@ -257,9 +226,6 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
     assert(TheLTS != nullptr && i > 0 && Proc.size() == i && i + 1 < NumProcesses);
     cout << __LOGSTR__ << "Declaring process " << i << "." << endl;
     string ProcName = string("Proc") + to_string(i);
-    auto Mgr = TheLTS->MakeTrue()->GetMgr();
-
-    bool SynthesizeProcess = false;
 
     Proc.push_back(TheLTS->MakeGenEFSM(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
     Proc[i]->AddState("TheState");
@@ -322,80 +288,16 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
 
     ExpT GuardExp;
 
-    if (SynthesizeProcess) {
-        auto Args = {Dim1Exp, DiExp, Dip1Exp, Uim1Exp, UiExp, Uip1Exp};
-        vector<TypeRef> ArgTypes;
-        transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
-                  [&](ExpT Arg) {return Arg->GetType();});
-        i64 GuardOp;
-        if (MidGuard1Op == -1) {
-            GuardOp = Mgr->MakeUninterpretedFunction("Guard1-" + ProcName,
-                                                     ArgTypes,
-                                                     TheLTS->MakeBoolType());
-            MidGuard1Op = GuardOp;
-        } else {
-            GuardOp = MidGuard1Op;
-        }
-        GuardOps.push_back(GuardOp);
-        GuardExp = TheLTS->MakeOp(GuardOp, Args);
+    GuardExp = Guard1s[i - 1];
 
-        auto UpdateArgs = {DiExp, UiExp};
+    W1iUpdates.clear();
 
-        i64 UpdateDiOp;
-        ArgTypes.clear();
-        transform(UpdateArgs.begin(), UpdateArgs.end(), back_inserter(ArgTypes),
-                  [&](ExpT Arg) {return Arg->GetType();});
+    W1iUpdates.insert(W1iUpdates.end(),
+                      { new LTSAssignSimple(DiExp, UpdateData1s[i - 1]),
+                              new LTSAssignSimple(UiExp, UpdateUp1s[i - 1]),
+                              new LTSAssignSimple(WiDataFieldExp, UpdateData1s[i - 1]),
+                              new LTSAssignSimple(WiUpFieldExp, UpdateUp1s[i - 1]) });
 
-        if (MidUpdateData1Op == -1) {
-            UpdateDiOp = Mgr->MakeUninterpretedFunction("Update1-Di-" + ProcName,
-                                                        ArgTypes,
-                                                        TheLTS->MakeBoolType());
-            MidUpdateData1Op = UpdateDiOp;
-        } else {
-            UpdateDiOp = MidUpdateData1Op;
-        }
-        UpdateOps.push_back(UpdateDiOp);
-
-        auto UpdateDiExp = TheLTS->MakeOp(UpdateDiOp, UpdateArgs);
-
-        i64 UpdateUiOp;
-        if (MidUpdateUp1Op == -1) {
-            UpdateUiOp = Mgr->MakeUninterpretedFunction("Update1-Ui-" + ProcName,
-                                                        ArgTypes,
-                                                        TheLTS->MakeBoolType());
-            MidUpdateUp1Op = UpdateUiOp;
-        } else {
-            UpdateUiOp = MidUpdateUp1Op;
-        }
-        UpdateOps.push_back(UpdateUiOp);
-        auto UpdateUiExp = TheLTS->MakeOp(UpdateUiOp, UpdateArgs);
-        cout << GuardExp << endl;
-        cout << UpdateDiExp << endl;
-        cout << UpdateUiExp << endl;
-        W1iUpdates.insert(W1iUpdates.end(), { new LTSAssignSimple(DiExp, UpdateDiExp),
-                                              new LTSAssignSimple(UiExp, UpdateUiExp),
-                                              new LTSAssignSimple(WiDataFieldExp, UpdateDiExp),
-                                              new LTSAssignSimple(WiUpFieldExp, UpdateUiExp) });
-        TheLTS->AllOpToExp[GuardOp] = GuardExp;
-        TheLTS->AllOpToExp[UpdateDiOp] = UpdateDiExp;
-        TheLTS->AllOpToExp[UpdateUiOp] = UpdateUiExp;
-        TheLTS->GuardOpToExp[GuardOp] = GuardExp;
-        TheLTS->GuardOpToUpdates[GuardOp].insert(UpdateDiExp);
-        TheLTS->GuardOpToUpdates[GuardOp].insert(UpdateUiExp);
-        TheLTS->UpdateOpToUpdateLValue[UpdateDiOp] = make_pair(UpdateDiExp, DiExp);
-        TheLTS->UpdateOpToUpdateLValue[UpdateUiOp] = make_pair(UpdateUiExp, UiExp);
-    } else {
-        GuardExp = Guard1s[i - 1];
-
-        W1iUpdates.clear();
-
-        W1iUpdates.insert(W1iUpdates.end(),
-                          { new LTSAssignSimple(DiExp, UpdateData1s[i - 1]),
-                            new LTSAssignSimple(UiExp, UpdateUp1s[i - 1]),
-                            new LTSAssignSimple(WiDataFieldExp, UpdateData1s[i - 1]),
-                            new LTSAssignSimple(WiUpFieldExp, UpdateUp1s[i - 1]) });
-
-    }
     Guards.push_back(GuardExp);
     Proc[i]->AddOutputTransition("TheState", "TheState", GuardExp,
                                  W1iUpdates,
@@ -412,77 +314,13 @@ void DeclareProcMid(LabelledTS* TheLTS, size_t i)
 
     vector<LTSAssignRef> W2iUpdates;
 
-    if (SynthesizeProcess) {
-        auto Args = {Dim1Exp, DiExp, Dip1Exp, Uim1Exp, UiExp, Uip1Exp};
-        vector<TypeRef> ArgTypes;
-        transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
-                  [&](ExpT Arg) {return Arg->GetType();});
-        i64 GuardOp;
-        if (MidGuard2Op == -1) {
-            GuardOp = Mgr->MakeUninterpretedFunction("Guard2-" + ProcName,
-                                                     ArgTypes,
-                                                     TheLTS->MakeBoolType());
-            MidGuard2Op = GuardOp;
-        } else {
-            GuardOp = MidGuard2Op;
-        }
-        GuardOps.push_back(GuardOp);
-        GuardExp = TheLTS->MakeOp(GuardOp, Args);
-
-        vector<ExpT> UpdateArgs = {DiExp, UiExp};
-        ArgTypes.clear();
-        transform(UpdateArgs.begin(), UpdateArgs.end(), back_inserter(ArgTypes),
-                  [&](ExpT Arg) {return Arg->GetType();});
-
-
-        i64 UpdateDiOp;
-        if (MidUpdateData2Op == -1) {
-            UpdateDiOp = Mgr->MakeUninterpretedFunction("Update2-Di-" + ProcName,
-                                                        ArgTypes,
-                                                        TheLTS->MakeBoolType());
-            MidUpdateData2Op = UpdateDiOp;
-        } else {
-            UpdateDiOp = MidUpdateData2Op;
-        }
-        UpdateOps.push_back(UpdateDiOp);
-        auto UpdateDiExp = TheLTS->MakeOp(UpdateDiOp, UpdateArgs);
-
-        i64 UpdateUiOp;
-        if (MidUpdateUp2Op == -1) {
-            UpdateUiOp = Mgr->MakeUninterpretedFunction("Update2-Ui-" + ProcName,
-                                                        ArgTypes,
-                                                        TheLTS->MakeBoolType());
-            MidUpdateUp2Op = UpdateUiOp;
-        } else {
-            UpdateUiOp = MidUpdateUp2Op;
-        }
-        UpdateOps.push_back(UpdateUiOp);
-        auto UpdateUiExp = TheLTS->MakeOp(UpdateUiOp, UpdateArgs);
-        cout << GuardExp << endl;
-        cout << UpdateDiExp << endl;
-        cout << UpdateUiExp << endl;
-        W2iUpdates.insert(W2iUpdates.end(), { new LTSAssignSimple(DiExp, UpdateDiExp),
-                                              new LTSAssignSimple(UiExp, UpdateUiExp),
-                                              new LTSAssignSimple(WiDataFieldExp, UpdateDiExp),
-                                              new LTSAssignSimple(WiUpFieldExp, UpdateUiExp) });
-        TheLTS->AllOpToExp[GuardOp] = GuardExp;
-        TheLTS->AllOpToExp[UpdateDiOp] = UpdateDiExp;
-        TheLTS->AllOpToExp[UpdateUiOp] = UpdateUiExp;
-        TheLTS->GuardOpToExp[GuardOp] = GuardExp;
-        TheLTS->GuardOpToUpdates[GuardOp].insert(UpdateDiExp);
-        TheLTS->GuardOpToUpdates[GuardOp].insert(UpdateUiExp);
-        TheLTS->UpdateOpToUpdateLValue[UpdateDiOp] = make_pair(UpdateDiExp, DiExp);
-        TheLTS->UpdateOpToUpdateLValue[UpdateUiOp] = make_pair(UpdateUiExp, UiExp);
-
-    } else {
-        GuardExp = Guard2s[i - 1];
-        W2iUpdates.clear();
-        W2iUpdates.insert(W2iUpdates.end(),
-                          { new LTSAssignSimple(DiExp, UpdateData2s[i - 1]),
-                            new LTSAssignSimple(UiExp, UpdateUp2s[i - 1]),
-                            new LTSAssignSimple(WiDataFieldExp, UpdateData2s[i - 1]),
-                            new LTSAssignSimple(WiUpFieldExp, UpdateUp2s[i - 1]) });
-    }
+    GuardExp = Guard2s[i - 1];
+    W2iUpdates.clear();
+    W2iUpdates.insert(W2iUpdates.end(),
+                      { new LTSAssignSimple(DiExp, UpdateData2s[i - 1]),
+                              new LTSAssignSimple(UiExp, UpdateUp2s[i - 1]),
+                              new LTSAssignSimple(WiDataFieldExp, UpdateData2s[i - 1]),
+                              new LTSAssignSimple(WiUpFieldExp, UpdateUp2s[i - 1]) });
     Guards.push_back(GuardExp);
     Proc[i]->AddOutputTransition("TheState", "TheState", GuardExp,
                                  W2iUpdates,
@@ -514,12 +352,10 @@ void DeclareProcN(LabelledTS* TheLTS)
     assert(TheLTS != nullptr && Proc.size() + 1 == NumProcesses);
     size_t i = NumProcesses - 1;
     cout << __LOGSTR__ << "Declaring process " << i << "." << endl;
-    bool SynthesizeProcess = false;
-    auto Mgr = TheLTS->MakeTrue()->GetMgr();
 
     string ProcName = string("Proc") + to_string(i);
 
-    Proc.push_back(TheLTS->MakeEFSM<IncompleteEFSM>(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None));
+    Proc.push_back(TheLTS->MakeEFSM<IncompleteEFSM>(ProcName, {}, TheLTS->MakeTrue(), LTSFairnessType::None, false));
     Proc[i]->AddState("TheState");
     Proc[i]->FreezeStates();
 
@@ -573,48 +409,11 @@ void DeclareProcN(LabelledTS* TheLTS)
                                        UiPayloadAccField);
     vector<LTSAssignRef> WiUpdates;
     ExpT GuardExp;
-    if (SynthesizeProcess) {
-        // auto Args = {Dim1Exp, DiExp, Uim1Exp, UiExp};
-        auto Args = {Dim1Exp, DiExp, UiExp};
-        vector<TypeRef> ArgTypes;
-        transform(Args.begin(), Args.end(), back_inserter(ArgTypes),
-                 [&](ExpT Arg) {return Arg->GetType();});
-        auto GuardOp = Mgr->MakeUninterpretedFunction("Guard_" + ProcName,
-                                                      ArgTypes,
-                                                      TheLTS->MakeBoolType());
-        GuardOps.push_back(GuardOp);
-        GuardExp = TheLTS->MakeOp(GuardOp, Args);
-        auto UpdateDiOp = Mgr->MakeUninterpretedFunction("Update_D" + to_string(i) +"_" + ProcName,
-                                                         ArgTypes,
-                                                         TheLTS->MakeBoolType());
-        UpdateOps.push_back(UpdateDiOp);
-        auto UpdateDiExp = TheLTS->MakeOp(UpdateDiOp, Args);
-        // auto UpdateUiOp = Mgr->MakeUninterpretedFunction("Update_U" + to_string(i) + "_" + ProcName,
-        //                                                  ArgTypes,
-        //                                                  TheLTS->MakeBoolType());
-        // UpdateOps.push_back(UpdateUiOp);
-        // auto UpdateUiExp = TheLTS->MakeOp(UpdateUiOp, Args);
-        cout << GuardExp << endl;
-        cout << UpdateDiExp << endl;
-        // cout << UpdateUiExp << endl;
-        WiUpdates.insert(WiUpdates.end(),{ new LTSAssignSimple(DiExp, UpdateDiExp),
-
-                                           new LTSAssignSimple(WiDataFieldExp, UpdateDiExp),
-                                           new LTSAssignSimple(WiUpFieldExp, TheLTS->MakeFalse()),
-                                           new LTSAssignSimple(WiUpFieldExp, UiExp) });
-        auto ProcNAsInc = Proc[i]->As<IncompleteEFSM>();
-        ProcNAsInc->AllOpToExp[GuardOp] = GuardExp;
-        ProcNAsInc->GuardOpToExp[GuardOp] = GuardExp;
-        ProcNAsInc->AllOpToExp[UpdateDiOp] = UpdateDiExp;
-        ProcNAsInc->GuardOpToUpdates[GuardOp].insert(UpdateDiExp);
-
-    } else {
-        WiUpdates.insert(WiUpdates.end(), { new LTSAssignSimple(DiExp, TheLTS->MakeOp(LTSOps::OpNOT, DiExp)),
-                                            new LTSAssignSimple(UiExp, UiExp),
-                                            new LTSAssignSimple(WiDataFieldExp, TheLTS->MakeOp(LTSOps::OpNOT, DiExp)),
-                                            new LTSAssignSimple(WiUpFieldExp, UiExp) });
-        GuardExp = DataiNeqDataim1;
-    }
+    WiUpdates.insert(WiUpdates.end(), { new LTSAssignSimple(DiExp, TheLTS->MakeOp(LTSOps::OpNOT, DiExp)),
+                new LTSAssignSimple(UiExp, UiExp),
+                new LTSAssignSimple(WiDataFieldExp, TheLTS->MakeOp(LTSOps::OpNOT, DiExp)),
+                new LTSAssignSimple(WiUpFieldExp, UiExp) });
+    GuardExp = DataiNeqDataim1;
     Guards.push_back(GuardExp);
     Proc[i]->AddOutputTransition("TheState", "TheState", GuardExp,
                                  WiUpdates,
@@ -1149,31 +948,6 @@ int main(int argc, char* argv[])
 
     if (!Safe) {
         cout << "It is not safe" << endl;
-
-        auto const& ErrorStates = Checker->GetAllErrorStates();
-        set<ExpT> BlownInvariantsCovered;
-
-        ESMC_LOG_MIN_SHORT(
-                           Out_ << "Building Constraints for errors...";
-                           );
-
-        for (auto const& ErrorState : ErrorStates) {
-            auto SVPtr = ErrorState.first;
-            auto const& BlownInvariant = ErrorState.second;
-            if (BlownInvariant == Checker->LoweredDLFInvariant) {
-                cout << "Deadlock violation!!" << endl;
-                auto PPath = Checker->AQS->FindPath(SVPtr);
-                auto Trace = TraceBase::MakeDeadlockViolation(PPath, Checker);
-                cout << Trace->ToString() << endl;
-            } else {
-                cout << "Safety violation!!" << endl;
-                auto PPath = Checker->AQS->FindPath(SVPtr);
-                auto Trace = TraceBase::MakeSafetyViolation(PPath, Checker, BlownInvariant);
-                cout << Trace->ToString() << endl;
-
-                // HandleOneSafetyViolation(SVPtr, BlownInvariant);
-            }
-        }
     } else {
         cout << "It is safe" << endl;
     }

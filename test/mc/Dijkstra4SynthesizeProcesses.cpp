@@ -1143,12 +1143,14 @@ void AddAllGuardsEnabledAtLegitimateStates(LabelledTS* TheLTS, Solver* TheSolver
 
 int main(int argc, char* argv[])
 {
-    LogManager::Initialize("dikstra4-log");
-    LogManager::EnableLogOption("Solver.Models");
+    // LogManager::Initialize("dikstra4-log");
+    // LogManager::EnableLogOption("Solver.Models");
     // LogManager::EnableLogOption("Solver.CEXAssertions");
     // LogManager::EnableLogOption("Solver.Purification");
-    LogManager::EnableLogOption("Checker.Fairness");
-    LogManager::EnableLogOption("Solver.OtherAssertions");
+    // LogManager::EnableLogOption("Checker.Fairness");
+    // LogManager::EnableLogOption("Solver.OtherAssertions");
+    // LogManager::EnableLogOption("Analyses.LivenessDetailed");
+
 
     DijkstraSynthOptionsT Options;
     ParseOptions(argc, argv, Options);

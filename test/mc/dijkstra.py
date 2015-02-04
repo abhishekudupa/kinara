@@ -256,7 +256,13 @@ def parse_file(filename):
     table_line_to_tuple = lambda line: (tuple([to_bool(e) for e in line[:-2]]), to_bool(line[-1]))
     list_of_tuples = [(e[0], dict([table_line_to_tuple(l) for l in e[1]])) for e in result.asList()]
     results = dict(list_of_tuples)
-
+    new_results = {}
+    for name in results:
+        table = results[name]
+        if name.startswith('Guard'):
+            table = dict([(k,v) for k, v in table.items() if v])
+        new_results[name] = table
+    results = new_results
     return results
 
 
