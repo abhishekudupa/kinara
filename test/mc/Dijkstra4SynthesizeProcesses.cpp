@@ -1143,21 +1143,20 @@ void AddAllGuardsEnabledAtLegitimateStates(LabelledTS* TheLTS, Solver* TheSolver
 
 int main(int argc, char* argv[])
 {
-    // LogManager::Initialize("dikstra4-log");
-    // LogManager::EnableLogOption("Solver.Models");
-    // LogManager::EnableLogOption("Solver.CEXAssertions");
-    // LogManager::EnableLogOption("Solver.Purification");
-    // LogManager::EnableLogOption("Checker.Fairness");
-    // LogManager::EnableLogOption("Solver.OtherAssertions");
-    // LogManager::EnableLogOption("Analyses.LivenessDetailed");
-
-
     DijkstraSynthOptionsT Options;
     ParseOptions(argc, argv, Options);
     SolverOptionsT SolverOpts;
     OptsToSolverOpts(Options, SolverOpts);
+
     NumProcesses = Options.NumberOfProcesses;
     UseRingMonitorInSynthesis = Options.UseRingMonitorInSynthesis;
+
+    ESMCLibOptionsT LibOptions;
+    OptsToLibOpts(Options, LibOptions);
+    ESMCLib::Initialize(LibOptions);
+    SolverOptionsT SolverOptions;
+    OptsToSolverOpts(Options, SolverOptions);
+
 
     cout << __LOGSTR__ << "" << "Compiled on " << __DATE__ << " at " << __TIME__ << "." << endl;
     auto TheLTS = new LabelledTS();

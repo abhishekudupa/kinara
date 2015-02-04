@@ -48,59 +48,103 @@ namespace po = boost::program_options;
 using ESMC::Synth::GuardBoundingMethodT;
 using ESMC::Synth::UpdateBoundingMethodT;
 using ESMC::Synth::StateUpdateBoundingMethodT;
+using ESMC::LogFileCompressionTechniqueT;
 using ESMC::u64;
 using ESMC::u32;
 using ESMC::u08;
-
 
 struct DijkstraSynthOptionsT {
     GuardBoundingMethodT GBoundMethod;
     UpdateBoundingMethodT UBoundMethod;
     StateUpdateBoundingMethodT SBoundMethod;
-    u32 NumberOfProcesses;
-    bool UseRingMonitorInSynthesis;
-    u32 LegitimateStatesBound;
     bool UnrollQuantifiers;
     bool NarrowDomains;
     bool GeneralFixForDL;
+    bool ResetTPOnBoundsBump;
+    bool BinarySearch;
+    bool MinimalSolution;
+    ESMC::MC::BFSPrioMethodT BFSPrioMethod;
     u64 CPULimit;
     u64 MemLimit;
+    float CoverageDesired;
+    bool PreferAllTrue;
+    u32 NumCExToProcess;
     u32 BoundLimit;
+    set<string> MissingTransitions;
+    u32 IncSolverTimeout;
+    bool NoState;
+    string LogFileName;
+    vector<string> LogOptions;
+    LogFileCompressionTechniqueT LogCompressionTechnique;
+    u32 NumberOfProcesses;
+    bool UseRingMonitorInSynthesis;
+    u32 LegitimateStatesBound;
 };
+
 
 static inline void ParseOptions(int Argc, char* ArgV[], DijkstraSynthOptionsT& Options)
 {
     po::options_description Desc("Usage and Allowed Options");
     string GBoundMethodStr, UBoundMethodStr, SBoundMethodStr;
-    u32 NumberOfProcesses;
-    u32 LegitimateStatesBound;
     u64 CPULimit;
     u64 MemLimit;
+    float CoverageDesired;
+    u32 NumCExToProcess;
+    string BFSPrioMethodStr;
     u32 BoundLimit;
+    vector<string> MissingTransitions;
+    auto&& LogOptionsDesc = ESMC::Logging::LogManager::GetLogOptions();
+    vector<string> LogOptions;
+    string LogFileName;
+    string LogCompressionTechnique;
+    u32 IncSolverTimeout;
+    u32 NumberOfProcesses;
+    u32 LegitimateStatesBound;
 
     Desc.add_options()
         ("help", "Produce this help message")
+        ("no-state", "Fix the next control state during synthesis")
         ("gbound,g", po::value<string>(&GBoundMethodStr)->default_value("none"),
          "Method for bounding guards; one of: none, vardep, nonfalse, point")
         ("ubound,u", po::value<string>(&UBoundMethodStr)->default_value("none"),
          "Method for bounding updates; one of: none, vardep, nonid, point")
         ("sbound,s", po::value<string>(&SBoundMethodStr)->default_value("none"),
          "Method for bounding location updates; one of: none, allsame, vardep")
-        ("nump", po::value<u32>(&NumberOfProcesses)->default_value(3),
-         "Number of Processes")
-        ("legitimatebound", po::value<u32>(&LegitimateStatesBound)->default_value(0),
-         "Upper bound on the number of legitimate states")
-        ("ring", "Use ring monitor in synthesis")
         ("narrow,n", "Use narrow domains for functions to be synthesized")
         ("quants,q", "Unroll Quantifiers before handing off to Z3")
+        ("no-prefer-all-true", "Do not prefer all true guard interpretations over others")
+        ("prioritization-method,p", po::value<string>(&BFSPrioMethodStr)->default_value("none"),
+         "Prioritization method used in model checking, one of: none, simple, coverage")
+        ("coverage,c", po::value<float>(&CoverageDesired)->default_value(1.0f),
+         ((string)"Amount of coverage to give each tentative edge, if prioritization mode " +
+          "is set to \"coverage\"").c_str())
+        ("binary-search", "Use binary search on the bounds space.")
+        ("minimal-solution", "Get the minimal cost solution.")
+        ("cex-to-process,x", po::value<u32>(&NumCExToProcess)->default_value(8),
+         "Maximum number of counterexamples to process in each synthesis iteration.")
         ("bound,b", po::value<u32>(&BoundLimit)->default_value(256),
          "Max limit on bound")
+        ("reset-tp-on-bounds-bump,r",
+         "Reset the theorem prover every time the bounds are bumped.")
         ("cpu-limit,t", po::value<u64>(&CPULimit)->default_value(UINT64_MAX),
          "CPU Time limit in seconds")
         ("mem-limit,m", po::value<u64>(&MemLimit)->default_value(UINT64_MAX),
          "Memory limit in MB")
         ("gen-dl-fix", "Use general fixes for deadlocks")
-        ("show-model", "Display model used in each iteration");
+        ("inc-solver-timeout", po::value<u32>(&IncSolverTimeout)->default_value(UINT32_MAX),
+         "Timeout (in seconds) for switching the SMT solver into non-incremental mode")
+        ("log-file", po::value<string>(&LogFileName)->default_value(""),
+         "Name of file to write logging info into, defaults to stdout")
+        ("log-compression", po::value<string>(&LogCompressionTechnique)->default_value("none"),
+         "Compression option for log file; one of: none, gzip, bzip2")
+        ("log-opts", po::value<vector<string>>(&LogOptions)->multitoken(),
+         ((string)"Logging Options to enable\n" + LogOptionsDesc).c_str())
+        ("nump", po::value<u32>(&NumberOfProcesses)->default_value(3),
+         "Number of Processes")
+        ("legitimatebound", po::value<u32>(&LegitimateStatesBound)->default_value(0),
+         "Upper bound on the number of legitimate states")
+        ("ring", "Use ring monitor in synthesis");
+
     po::variables_map vm;
 
     po::store(po::command_line_parser(Argc, ArgV).options(Desc).run(), vm);
@@ -148,18 +192,56 @@ static inline void ParseOptions(int Argc, char* ArgV[], DijkstraSynthOptionsT& O
         exit(1);
     }
 
-    Options.NumberOfProcesses = NumberOfProcesses;
-    Options.LegitimateStatesBound = LegitimateStatesBound;
+    if (BFSPrioMethodStr == "none") {
+        Options.BFSPrioMethod = ESMC::MC::BFSPrioMethodT::None;
+    } else if (BFSPrioMethodStr == "simple") {
+        Options.BFSPrioMethod = ESMC::MC::BFSPrioMethodT::Simple;
+    } else if (BFSPrioMethodStr == "coverage") {
+        Options.BFSPrioMethod = ESMC::MC::BFSPrioMethodT::Coverage;
+    } else {
+        cout << Desc << endl;
+        exit(1);
+    }
+
+    if (LogCompressionTechnique == "none") {
+        Options.LogCompressionTechnique = LogFileCompressionTechniqueT::COMPRESS_NONE;
+    } else if (LogCompressionTechnique == "bzip2") {
+        Options.LogCompressionTechnique = LogFileCompressionTechniqueT::COMPRESS_BZIP2;
+    } else if (LogCompressionTechnique == "gzip") {
+        Options.LogCompressionTechnique = LogFileCompressionTechniqueT::COMPRESS_GZIP;
+    } else {
+        cout << "Invalid log file compression method" << endl;
+        cout << Desc << endl;
+        exit(1);
+    }
+
     Options.UnrollQuantifiers = (vm.count("quants") > 0);
     Options.NarrowDomains = (vm.count("narrow") > 0);
     Options.GeneralFixForDL = (vm.count("gen-dl-fix") > 0);
-    Options.UseRingMonitorInSynthesis = (vm.count("ring") > 0);
+    Options.ResetTPOnBoundsBump = (vm.count("reset-tp-on-bounds-bump") > 0);
+    Options.NoState = (vm.count("no-state") > 0);
+    Options.BinarySearch = (vm.count("binary-search") > 0);
+    Options.MinimalSolution = (vm.count("minimal-solution") > 0);
+    Options.LogFileName = LogFileName;
+    Options.LogOptions = LogOptions;
+    Options.NumCExToProcess = NumCExToProcess;
     Options.CPULimit = CPULimit;
     Options.MemLimit = MemLimit;
+    Options.CoverageDesired = CoverageDesired;
     Options.BoundLimit = BoundLimit;
+
+    Options.IncSolverTimeout =
+        (IncSolverTimeout == UINT32_MAX ? IncSolverTimeout : IncSolverTimeout * 1000);
+    Options.PreferAllTrue = (vm.count("no-prefer-all-true") == 0);
+
+    /* Dijkstra Specific */
+    Options.NumberOfProcesses = NumberOfProcesses;
+    Options.LegitimateStatesBound = LegitimateStatesBound;
+    Options.UseRingMonitorInSynthesis = (vm.count("ring") > 0);
 
     return;
 }
+
 
 static inline void OptsToSolverOpts(const DijkstraSynthOptionsT& Opts,
                                     ESMC::Synth::SolverOptionsT& SolverOpts)
@@ -171,7 +253,25 @@ static inline void OptsToSolverOpts(const DijkstraSynthOptionsT& Opts,
     SolverOpts.GeneralFixForDL = Opts.GeneralFixForDL;
     SolverOpts.CPULimitInSeconds = Opts.CPULimit;
     SolverOpts.MemLimitInMB = Opts.MemLimit;
+    SolverOpts.DesiredCoverage = Opts.CoverageDesired;
     SolverOpts.BoundLimit = Opts.BoundLimit;
+    SolverOpts.BFSPrioMethod = Opts.BFSPrioMethod;
+    SolverOpts.IncSolverTimeout = Opts.IncSolverTimeout;
+    SolverOpts.ResetTPOnBoundsBump = Opts.ResetTPOnBoundsBump;
+    SolverOpts.NumCExToProcess = Opts.NumCExToProcess;
+    SolverOpts.PreferAllTrue = Opts.PreferAllTrue;
+    SolverOpts.BinarySearchBounds = Opts.BinarySearch;
+    SolverOpts.FindMinBoundSolution = Opts.MinimalSolution;
+}
+
+
+static inline void OptsToLibOpts(const DijkstraSynthOptionsT& Opts,
+                                 ESMC::ESMCLibOptionsT& LibOpts)
+{
+    LibOpts.LogFileName = Opts.LogFileName;
+    LibOpts.LogCompressionTechnique = Opts.LogCompressionTechnique;
+    LibOpts.LoggingOptions = set<string>(Opts.LogOptions.begin(),
+                                         Opts.LogOptions.end());
 }
 
 //
