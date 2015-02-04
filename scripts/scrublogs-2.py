@@ -11,6 +11,10 @@ if (len(sys.argv) < 4):
 
 timeout_value = int(sys.argv[3])
 csvfile = open(sys.argv[2], 'w')
+csvfile.write("Guard Heuristic, Guard Do Not Prefer Alltrue, Update Heuristic, " +
+              "Location Update Heuristic, Priority Heuristic, TP Restart, " +
+              "Binary Search, Minimize Solution, Solve Time, Num Iterations, Total SMT Time," +
+              "Min SMT Time, Max SMT Time, Avg SMT Time, #Initial Asserts, #Final Asserts, Log Filename\n")
 
 for log_filename in os.listdir(sys.argv[1]):
     if log_filename.startswith('log') and not log_filename.endswith('.err'):
@@ -38,7 +42,7 @@ for log_filename in os.listdir(sys.argv[1]):
 
         if params:
             params = params.group(1)
-            csvfile.write('%s, %s, %d, %d, %d, %d, %d, %d, %d\n' % (params,
+            csvfile.write('%s, %s, %d, %d, %d, %d, %d, %d, %d, %s\n' % (params,
                                                                     timeout_value if timedout else solve_time,
                                                                     num_iterations,
                                                                     total_smt_time / 1000000,
@@ -46,7 +50,7 @@ for log_filename in os.listdir(sys.argv[1]):
                                                                     max_smt_time / 1000,
                                                                     avg_smt_time / 1000,
                                                                     init_asserts,
-                                                                    final_asserts))
+                                                                    final_asserts, log_filename))
         else:
             # Could not parse parameters
             print('Could not parse log file: %s' % log_filename)
