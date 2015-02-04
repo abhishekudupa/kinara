@@ -612,10 +612,20 @@ LivenessViolation* TraceBase::MakeLivenessViolation(const ProductState* SCCRoot,
     // audupa, 01/25/2015: Changed this to be a path TO the root of the
     // SCC rather than ANY node in the SCC to eliminate a bug in the trace
     // generation.
-    auto StemPPath = ThePS->FindPath([&] (const ProductState* State) -> bool
-                                     {
-                                         return (State == SCCRoot);
-                                     });
+    // but only if there are symmetric types in use
+    PSPermPath* StemPPath = nullptr;
+
+    if (PermSet->GetSize() > 1) {
+        StemPPath = ThePS->FindPath([&] (const ProductState* State) -> bool
+                                    {
+                                        return (State == SCCRoot);
+                                    });
+    } else {
+        StemPPath = ThePS->FindPath([&] (const ProductState* State) -> bool
+                                    {
+                                        return (State->GetSCCID() == SCCRoot->GetSCCID());
+                                    });
+    }
     vector<PSTraceElemT> StemPath;
     auto InitState = UnwindPermPath(StemPPath, Checker, StemPath, InvPermAlongPath);
 

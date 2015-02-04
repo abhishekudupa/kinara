@@ -1302,11 +1302,13 @@ TraceBase* LTSChecker::CheckLiveness(const string& BuchiMonitorName)
                 auto Trace = TraceBase::MakeLivenessViolation(SCCRoot, this);
                 auto TraceSize = Trace->GetStem().size() + Trace->GetLoop().size();
 
-                ESMC_LOG_MIN_SHORT(
+                ESMC_LOG_FULL(
+                              "Checker.Fairness",
                               Out_ << "Constructed trace of with "
                                    << Trace->GetStem().size() << " steps in the stem "
                                    << "and " << Trace->GetLoop().size() << " steps in the "
                                    << "loop." << endl;
+                              Out_ << Trace->ToString() << endl;
                               );
 
                 if (MinLivenessViolation == nullptr) {
