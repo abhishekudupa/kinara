@@ -159,14 +159,17 @@ int main()
     // auto SetTurnDotData = TheLTS->MakeOp(LTSOps::OpField, SetTurnMsgVar,
     //                                      TheLTS->MakeVar("TurnData", FAType));
 
-    vector<TypeRef> ArgTypes = {TheLTS->MakeBoolType(), TheLTS->MakeBoolType(), PidType};
-    auto Args = {FlagIndexParamExp, FlagIndexParam1Exp, TurnExp};
+    vector<TypeRef> ArgTypes = {PidType, PidType, TheLTS->MakeBoolType(), TheLTS->MakeBoolType(), PidType};
+
+    // vector<TypeRef> ArgTypes = {TheLTS->MakeBoolType(), TheLTS->MakeBoolType(), PidType};
+
+    auto Args = {PidParam, PidParam1, FlagIndexParamExp, FlagIndexParam1Exp, TurnExp};
     auto Pid0 = Mgr->MakeVal("PidType::0", PidType);
     auto Pid1 = Mgr->MakeVal("PidType::1", PidType);
     auto FlagIndexPid0Exp = TheLTS->MakeOp(LTSOps::OpIndex, FlagArrayExp, Pid0);
     auto FlagIndexPid1Exp = TheLTS->MakeOp(LTSOps::OpIndex, FlagArrayExp, Pid1);
 
-    auto ConcreteArgs = {FlagIndexPid0Exp, FlagIndexPid1Exp, TurnExp};
+    auto ConcreteArgs = {PidParam, PidParam1, FlagIndexPid0Exp, FlagIndexPid1Exp, TurnExp};
 
     // Broadcast shared memory self loops
     for (auto StateName : {"L1", "L2", "L3", "Critical"}) {
