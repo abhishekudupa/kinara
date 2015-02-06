@@ -241,11 +241,15 @@ private:
     Detail::SynthCostFunction CostFunction;
 
     unordered_set<i64> UnveiledGuardOps;
+public:
     unordered_set<i64> UnveiledUpdateOps;
+private:
     bool UnveiledNewOps;
     // Union of the two sets above, maintained
     // for efficiency
+public:
     unordered_set<i64> InterpretedOps;
+private:
     // Number of counterexamples to process in this iteration
     u32 NumCExToProcess;
 

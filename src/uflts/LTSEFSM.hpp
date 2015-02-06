@@ -132,8 +132,10 @@ private:
                      const vector<ExpT>& SymmArgs,
                      const vector<ExpT>& NonSymmArgs);
 
-    inline vector<ExpT> GetSymmetryConstraints(const ExpT& Exp);
+public:
+    vector<ExpT> GetSymmetryConstraints(const ExpT& Exp);
 
+private:
     // Make symmetry constraints for a group
     inline vector<ExpT>
     GetSymmetryConstraints(const WellOrderedExpSetT& UpdateGroup,

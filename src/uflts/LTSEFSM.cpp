@@ -524,7 +524,7 @@ namespace ESMC {
             }
         }
 
-        inline vector<ExpT> IncompleteEFSM::GetSymmetryConstraints(const ExpT& Exp)
+        vector<ExpT> IncompleteEFSM::GetSymmetryConstraints(const ExpT& Exp)
         {
             vector<ExpT> Retval;
             auto Mgr = TheLTS->GetMgr();
@@ -667,7 +667,7 @@ namespace ESMC {
             return Retval;
         }
 
-        inline vector<ExpT>
+        vector<ExpT>
         IncompleteEFSM::GetSymmetryConstraints(const WellOrderedExpSetT& UpdateGroup,
                                                const WellOrderedExpMapT<ExpT>& UpdateMap)
         {

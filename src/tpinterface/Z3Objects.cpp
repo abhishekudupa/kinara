@@ -61,12 +61,12 @@ Z3CtxWrapper::Z3CtxWrapper()
     u32 SMTSeed;
     u32 SATSeed;
 
-    // random_device rd;
-    // SMTSeed = rd() % (1 << 30);
-    // SATSeed = rd() % (1 << 30);
+    random_device rd;
+    SMTSeed = rd() % (1 << 30);
+    SATSeed = rd() % (1 << 30);
 
-    SMTSeed = 0;
-    SATSeed = 0;
+    // SMTSeed = 0;
+    // SATSeed = 0;
 
     Z3_global_param_set("model_evaluator.completion", "true");
     Z3_global_param_set("smt.random_seed", to_string(SMTSeed).c_str());

@@ -320,6 +320,10 @@ TraceAnalyses::EnableFairnessObjectsInLoop(LabelledTS* TheLTS,
     vector<ExpT> EnableConditions;
     auto Loop = LivenessViolation->GetLoop();
     for (auto FairnessObject : FairnessObjects) {
+        ESMC_LOG_FULL(
+                      "Analyses.Detailed",
+                      Out_ << "Checking trivially satisfied fairness object:" << FairnessObject << endl;
+                      );
         u16 LoopIndex = 0;
         for (PSTraceElemT TraceElement : Loop) {
             // Check if there is any guarded command that conains
@@ -516,6 +520,11 @@ TraceAnalyses::WeakestPreconditionForLiveness(Solver* TheSolver,
 {
     ESMC_LOG_FULL(
                   "Analyses.LivenessDetailed",
+                  Out_ << "trace is " << Trace->ToString() << endl;
+                  );
+
+    ESMC_LOG_FULL(
+                  "Analyses.LivenessDetailed",
                   Out_ << "size of trace is " << Trace->GetLoop().size() + Trace->GetStem().size() << endl;
                   );
 
@@ -663,7 +672,8 @@ TraceAnalyses::WeakestPreconditionForLiveness(Solver* TheSolver,
 
     ESMC_LOG_FULL(
                   "Analyses.LivenessDetailed",
-                  Out_ << "Computed WP, now substituting initial conditions" << endl;
+                  Out_ << "Computed WP, now substituting initial conditions" << endl
+                  << "wp is " << Phi << endl;
                   );
     FastExpSetT Retval;
 
