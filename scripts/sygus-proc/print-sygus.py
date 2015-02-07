@@ -9,7 +9,8 @@ logFile = open(logFile, 'r')
 logFile = logFile.readlines()
 
 def writeSL(funSignature, assigns):
-    print '; %s' % (funSignature[:len(funSignature) - 6])
+    signatureLine = funSignature
+
     funSignature = re.search('\((.*)\) -> {', funSignature)
     funSignature = funSignature.group(1)
     funSignature = funSignature.split()
@@ -17,10 +18,22 @@ def writeSL(funSignature, assigns):
     funName = funSignature[0]
     funArgs = funSignature[1:]
 
+    sygusFile = open(sys.argv[1] + '.' + funName + '.sygus', 'w')
+    print >> sygusFile, '; %s' % (signatureLine[:len(signatureLine) - 6])
+    print >> sygusFile, '(set-logic LIA)'
+    print >> sygusFile
+
+    print >> sygusFile, '(synth-fun %s ((%s)) Type)' % (funName, ') ('.join(funArgs))
+    print >> sygusFile
+
     # print funName, funArgs
     # print assigns
     for assign in assigns:
-        print '(constraint (= (%s %s) %s))' % (funName, ' '.join(assign[0]), assign[1])
+        print >> sygusFile, '(constraint (= (%s %s) %s))' % (funName, ' '.join(assign[0]), assign[1])
+    print >> sygusFile
+
+    print >> sygusFile, "(check-synth)"
+    sygusFile.close()
 
 i = 0
 while i < len(logFile):
@@ -43,5 +56,4 @@ while i < len(logFile):
         assigns.append([args, retVal])
 
     writeSL(funSignature, assigns)
-    print
 
