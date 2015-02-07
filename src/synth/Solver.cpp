@@ -456,6 +456,42 @@ inline vector<ExpT> Solver::MakePointApplications(i64 OpCode)
     return Retval;
 }
 
+inline vector<ExpT> Solver::MakePointApplicationsFromExp(i64 OpCode, ExpT Exp)
+{
+    auto Mgr = TheLTS->GetMgr();
+    auto FunType = Mgr->LookupUninterpretedFunction(OpCode)->As<FuncType>();
+    auto const& ArgTypes = FunType->GetArgTypes();
+    const u32 NumArgs = ArgTypes.size();
+
+    auto const& OpArgs = GetOpArgs(Exp);
+    vector<ExpT> NewOpArgs;
+    vector<TypeRef> NewDomTypes;
+
+    vector<u32> ConstantPoints;
+
+    vector<vector<string>> ArgValues;
+    for (auto OpArg: OpArgs) {
+        if (!OpArg->Is<ConstExpression>()) {
+            ArgValues.push_back(OpArg->GetType()->GetElements());
+        } else {
+            ArgValues.push_back({OpArg->As<ConstExpression>()->GetConstValue()});
+        }
+    }
+    auto&& CPTuples = CrossProduct<string>(ArgValues.begin(), ArgValues.end());
+    const u32 NumPoints = CPTuples.size();
+    vector<ExpT> Retval(NumPoints);
+        for (u32 j = 0; j < NumPoints; ++j) {
+        auto const& Tuple = CPTuples[j];
+        vector<ExpT> AppArgs(NumArgs);
+        for (u32 i = 0; i < NumArgs; ++i) {
+            AppArgs[i] = Mgr->MakeVal(Tuple[i], ArgTypes[i]);
+        }
+        auto AppExp = Mgr->MakeExpr(OpCode, AppArgs);
+        Retval[j] = AppExp;
+    }
+    return Retval;
+}
+
 inline tuple<ExpT, ExpT, ExpT, ExpT>
 Solver::CreateArgDepSubsts(vector<TypeRef>& QVars,
                            const ExpT& UpdateExp,
@@ -751,17 +787,27 @@ Solver::MakeIdentityConstraint(i64 Op, const ExpT& UpdateExp, u32 LValueIndex)
     auto Mgr = TheLTS->GetMgr();
     auto FunType = Mgr->LookupUninterpretedFunction(Op)->As<FuncType>();
     auto const& DomTypes = FunType->GetArgTypes();
-    const u32 NumArgs = DomTypes.size();
     auto const& OpArgs = GetOpArgs(UpdateExp);
+    vector<ExpT> NewOpArgs;
+    vector<TypeRef> NewDomTypes;
+
+    for (u32 i = 0; i < OpArgs.size(); ++i) {
+        auto OpArg = OpArgs[i];
+        if (!OpArg->Is<ConstExpression>()) {
+            NewOpArgs.push_back(OpArg);
+            NewDomTypes.push_back(DomTypes[i]);
+        }
+    }
+
     auto const& LValueExp = OpArgs[LValueIndex];
     auto AppEQLValue = Mgr->MakeExpr(LTSOps::OpEQ, UpdateExp, LValueExp);
 
     MgrT::SubstMapT SubstMap;
-    for (u32 i = 0; i < NumArgs; ++i) {
-        SubstMap[OpArgs[i]] = Mgr->MakeBoundVar(DomTypes[i], NumArgs - i - 1);
+    for (u32 i = 0; i < NewOpArgs.size(); ++i) {
+        SubstMap[NewOpArgs[i]] = Mgr->MakeBoundVar(NewDomTypes[i], NewOpArgs.size() - i - 1);
     }
     auto Body = Mgr->BoundSubstitute(SubstMap, AppEQLValue);
-    auto ForallExp = Mgr->MakeForAll(DomTypes, Body);
+    auto ForallExp = Mgr->MakeForAll(NewDomTypes, Body);
     auto IdentityPred = Mgr->MakeVar("__identity_" + to_string(Op),
                                      Mgr->MakeType<BooleanType>());
     auto Constraint = Mgr->MakeExpr(LTSOps::OpIFF, ForallExp, IdentityPred);
@@ -920,7 +966,7 @@ Solver::MakePointCCForLValUpdate(i64 Op, const ExpT& Exp,
     string CostVarName("__update_func_cost_");
     CostVarName += to_string(Op);
 
-    auto&& PointApps = MakePointApplications(Op);
+    auto&& PointApps = MakePointApplicationsFromExp(Op, Exp);
     const u32 NumPoints = PointApps.size();
     auto CostVarType = Mgr->MakeType<RangeType>(0, NumPoints + 1);
     auto CostVar = Mgr->MakeVar(CostVarName, CostVarType);
@@ -1123,6 +1169,18 @@ void Solver::UnveilNonCompletionOp(i64 Op)
     // perhaps a common unveiled ops set should be added.
     UnveiledGuardOps.insert(Op);
     InterpretedOps.insert(Op);
+    UpdateCommands();
+}
+
+void Solver::UnveilNonCompletionUpdateOp(i64 Op)
+{
+    // TODO putting it in GuardOps,
+    // perhaps a common unveiled ops set should be added.
+    UnveiledUpdateOps.insert(Op);
+    InterpretedOps.insert(Op);
+    MakeCostConstraintsForOp(Op);
+    MakeRangeConstraintsForOp(Op);
+    UnveiledNewOps = true;
     UpdateCommands();
 }
 

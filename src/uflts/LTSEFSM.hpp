@@ -132,9 +132,6 @@ private:
                      const vector<ExpT>& SymmArgs,
                      const vector<ExpT>& NonSymmArgs);
 
-public:
-    vector<ExpT> GetSymmetryConstraints(const ExpT& Exp);
-
 private:
     // Make symmetry constraints for a group
     inline vector<ExpT>
@@ -237,6 +234,8 @@ public:
     // override freeze to add additional transitions
     // and such
     virtual void Freeze() override;
+
+    vector<ExpT> GetSymmetryConstraints(const ExpT& Exp);
 };
 
 } /* end namespace LTS */

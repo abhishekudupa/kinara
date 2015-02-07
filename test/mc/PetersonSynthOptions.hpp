@@ -63,6 +63,9 @@ struct PetersonSynthOptionsT {
     string LogFileName;
     vector<string> LogOptions;
     LogFileCompressionTechniqueT LogCompressionTechnique;
+    bool RemoveL1L2FlagUpdate;
+    bool RemoveCriticalL1FlagUpdate;
+    bool RemoveL3CriticalGuard;
 };
 
 static inline void ParseOptions(int Argc, char* ArgV[], PetersonSynthOptionsT& Options)
@@ -102,15 +105,18 @@ static inline void ParseOptions(int Argc, char* ArgV[], PetersonSynthOptionsT& O
          "CPU Time limit in seconds")
         ("mem-limit,m", po::value<u64>(&MemLimit)->default_value(UINT64_MAX),
          "Memory limit in MB")
-        ("gen-dl-fix", "Use general fixes for deadlocks")
-        ("prioritize-non-tentative",
-         "Prioritize the most non-tentative paths first during model checking")
         ("log-file", po::value<string>(&LogFileName)->default_value(""),
          "Name of file to write logging info into, defaults to stdout")
         ("log-compression", po::value<string>(&LogCompressionTechnique)->default_value("none"),
          "Compression option for log file; one of: none, gzip, bzip2")
         ("log-opts", po::value<vector<string>>(&LogOptions)->multitoken(),
-         ((string)"Logging Options to enable\n" + LogOptionsDesc).c_str());
+         ((string)"Logging Options to enable\n" + LogOptionsDesc).c_str())
+        ("l1l2flag",
+         "Remove update expression of flag[pid] from l1 to l2 transition")
+        ("criticall1flag",
+         "Remove update expression of flag[pid] from critical to l1 transition")
+        ("l3criticalguard",
+         "Remove guards from l3 to critical transition, l3 to l3, but set them to be one the negation of the other");
 
     po::variables_map vm;
 
@@ -177,6 +183,10 @@ static inline void ParseOptions(int Argc, char* ArgV[], PetersonSynthOptionsT& O
     Options.CPULimit = CPULimit;
     Options.MemLimit = MemLimit;
     Options.BoundLimit = BoundLimit;
+
+    Options.RemoveL1L2FlagUpdate = (vm.count("l1l2flag") > 0);
+    Options.RemoveCriticalL1FlagUpdate = (vm.count("criticall1flag") > 0);
+    Options.RemoveL3CriticalGuard = (vm.count("l3criticalguard") > 0);
 
     return;
 }

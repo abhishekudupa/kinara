@@ -12,7 +12,7 @@ CXXFLAGS+=-I/usr/local/Cellar/google-sparsehash/2.0.2/include/sparsehash/ -I/usr
 
 PROJECT_EXECUTABLES=PingPongChan Elevator Flip FlipSimple PingPongChanBug ABP \
 	ABP_generated MSI Fischer LeaderElection Dijkstra4 MSI_no_busy_data_no_pending_unblock_e \
-	MSIC2D PingPongChanSynth MSISynth
+	MSIC2D PingPongChanSynth MSISynth PetersonMoreSynth
 #	WeakestPreconditionTest
 #	WeakestPreconditionArrayTest
 #   ElevatorBug

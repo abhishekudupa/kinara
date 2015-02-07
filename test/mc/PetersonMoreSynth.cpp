@@ -56,14 +56,33 @@ using namespace Exprs;
 using namespace MC;
 using namespace Synth;
 
+#include "PetersonSynthOptions.hpp"
 
-int main()
+bool RemoveL1L2FlagUpdate = true;
+bool RemoveCriticalL1FlagUpdate = true;
+bool RemoveL3CriticalGuard = true;
+
+int main(int argc, char* argv[])
 {
+    PetersonSynthOptionsT Options;
+    ParseOptions(argc, argv, Options);
+    ESMCLibOptionsT LibOptions;
+    OptsToLibOpts(Options, LibOptions);
+    ESMCLib::Initialize(LibOptions);
+    SolverOptionsT SolverOptions;
+    OptsToSolverOpts(Options, SolverOptions);
+
+    bool RemoveL1L2FlagUpdate = Options.RemoveL1L2FlagUpdate;
+    bool RemoveCriticalL1FlagUpdate = Options.RemoveCriticalL1FlagUpdate;
+    bool RemoveL3CriticalGuard = Options.RemoveL3CriticalGuard;
+
     Logging::LogManager::Initialize();
     // Logging::LogManager::EnableLogOption("Canonicalizer.Best");
-    ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
+    // ESMC::Logging::LogManager::EnableLogOption("Checker.Fairness");
     // ESMC::Logging::LogManager::EnableLogOption("Trace.Generation");
     // ESMC::Logging::LogManager::EnableLogOption("Checker.AQSDetailed");
+    ESMC::Logging::LogManager::EnableLogOption("Solver.CEXAssertions");
+
     ESMC::Logging::LogManager::EnableLogOption("Solver.Models");
 
     auto TheLTS = new LabelledTS();
@@ -156,20 +175,13 @@ int main()
     auto TurnExp = TheLTS->MakeVar("Turn", PidType);
 
     auto SetTurnMsgVar = TheLTS->MakeVar("InMsg", SetTurnType);
-    // auto SetTurnDotData = TheLTS->MakeOp(LTSOps::OpField, SetTurnMsgVar,
-    //                                      TheLTS->MakeVar("TurnData", FAType));
-
     vector<TypeRef> ArgTypes = {PidType, PidType, TheLTS->MakeBoolType(), TheLTS->MakeBoolType(), PidType};
-
-    // vector<TypeRef> ArgTypes = {TheLTS->MakeBoolType(), TheLTS->MakeBoolType(), PidType};
-
-    auto Args = {PidParam, PidParam1, FlagIndexParamExp, FlagIndexParam1Exp, TurnExp};
     auto Pid0 = Mgr->MakeVal("PidType::0", PidType);
     auto Pid1 = Mgr->MakeVal("PidType::1", PidType);
     auto FlagIndexPid0Exp = TheLTS->MakeOp(LTSOps::OpIndex, FlagArrayExp, Pid0);
     auto FlagIndexPid1Exp = TheLTS->MakeOp(LTSOps::OpIndex, FlagArrayExp, Pid1);
 
-    auto ConcreteArgs = {PidParam, PidParam1, FlagIndexPid0Exp, FlagIndexPid1Exp, TurnExp};
+    auto Args = {PidParam, PidParam1, FlagIndexPid0Exp, FlagIndexPid1Exp, TurnExp};
 
     // Broadcast shared memory self loops
     for (auto StateName : {"L1", "L2", "L3", "Critical"}) {
@@ -186,8 +198,9 @@ int main()
     }
 
     auto FlagIndexPidParamExp = TheLTS->MakeOp(LTSOps::OpIndex, FlagArrayExp, PidParam);
-    ProcessEFSM->AddInternalTransition("L1", "L1", TrueExp, {});
+    auto FlagIndexPidParam1Exp = TheLTS->MakeOp(LTSOps::OpIndex, FlagArrayExp, PidParam1);
 
+    ProcessEFSM->AddInternalTransition("L1", "L1", TrueExp, {});
     auto SetFlagOutMsgVar = TheLTS->MakeVar("OutMsg", SetFlagType);
     auto SetFlagOutDotData = TheLTS->MakeOp(LTSOps::OpField, SetFlagOutMsgVar,
                                             TheLTS->MakeVar("FlagData", FAType));
@@ -196,25 +209,23 @@ int main()
     auto L1L2FlagOp = Mgr->MakeUninterpretedFunction("L1L2Flag",
                                                      ArgTypes,
                                                      TheLTS->MakeBoolType());
-
     auto L1L2FlagExp = Mgr->MakeExpr(L1L2FlagOp, Args);
-    // Updates.push_back(new LTSAssignSimple(FlagIndexPidParamExp,
-    //                                       L1L2FlagExp));
-    // Updates.push_back(new LTSAssignSimple(SetFlagOutDotData,
-    //                                       L1L2FlagExp));
-    // ProcessEFSM->AddOutputTransitions({PidParam1}, TrueExp,
-    //                                   "L1", "L2", TrueExp,
-    //                                   Updates, "OutMsg", SetFlagType,
-    //                                   {PidParam, PidParam});
-
-    // // setting my own flag variable
-    // Updates.push_back(new LTSAssignSimple(FlagIndexPidParamExp, TrueExp));
-    // // setting the payload
-    Updates.push_back(new LTSAssignSimple(SetFlagOutDotData, TrueExp));
-    ProcessEFSM->AddOutputTransition("L1", "L2", TrueExp,
-                                     Updates, "OutMsg", SetFlagType,
-                                     {PidParam, PidParam});
-
+    if (RemoveL1L2FlagUpdate) {
+        Updates.push_back(new LTSAssignSimple(FlagIndexPidParamExp,
+                                              L1L2FlagExp));
+        Updates.push_back(new LTSAssignSimple(SetFlagOutDotData,
+                                              L1L2FlagExp));
+        ProcessEFSM->AddOutputTransitions({PidParam1}, TrueExp,
+                                          "L1", "L2", TrueExp,
+                                          Updates, "OutMsg", SetFlagType,
+                                          {PidParam, PidParam});
+    } else {
+        Updates.push_back(new LTSAssignSimple(FlagIndexPidParamExp, TrueExp));
+        Updates.push_back(new LTSAssignSimple(SetFlagOutDotData, TrueExp));
+        ProcessEFSM->AddOutputTransition("L1", "L2", TrueExp,
+                                         Updates, "OutMsg", SetFlagType,
+                                         {PidParam, PidParam});
+    }
     Updates.clear();
 
     // setting my own turn variable
@@ -228,58 +239,56 @@ int main()
                                       EmptyStringSet, {"TurnFairness"});
     Updates.clear();
 
-    // Trying to synthesize guard from L3 to Critical
     auto L3CriticalGuardOp = Mgr->MakeUninterpretedFunction("L3CriticalGuard",
                                                             ArgTypes,
                                                             TheLTS->MakeBoolType());
     auto L3CriticalGuardExp = Mgr->MakeExpr(L3CriticalGuardOp,
                                             Args);
-    auto NotGuard = TheLTS->MakeOp(LTSOps::OpNOT, L3CriticalGuardExp);
-
-    ProcessEFSM->AddInputTransitions({PidParam1}, PidParamNEQPidParam1,
-                                     "L3", "Critical", L3CriticalGuardExp, {},
-                                     "InMsg", AlphaType, {PidParam});
-    ProcessEFSM->AddInputTransitions({PidParam1}, PidParamNEQPidParam1,
-                                     "L3", "L3", NotGuard, {},
-                                     "InMsg", AlphaType, {PidParam});
-
-    // auto Guard = TheLTS->MakeOp(LTSOps::OpAND,
-    //                             FlagIndexParam1Exp,
-    //                             TheLTS->MakeOp(LTSOps::OpEQ, TurnExp, PidParam1));
-    // auto NotGuard = TheLTS->MakeOp(LTSOps::OpNOT, Guard);
-    // ProcessEFSM->AddInputTransitions({PidParam1}, PidParamNEQPidParam1,
-    //                                  "L3", "Critical", NotGuard, {},
-    //                                  "InMsg", AlphaType, {PidParam});
-
-    // ProcessEFSM->AddInputTransitions({PidParam1}, PidParamNEQPidParam1,
-    //                                  "L3", "L3", Guard, {},
-    //                                  "InMsg", AlphaType, {PidParam});
+    if (RemoveL3CriticalGuard) {
+        auto NotGuard = TheLTS->MakeOp(LTSOps::OpNOT, L3CriticalGuardExp);
+        ProcessEFSM->AddInputTransitions({PidParam1}, PidParamNEQPidParam1,
+                                         "L3", "Critical", L3CriticalGuardExp, {},
+                                         "InMsg", AlphaType, {PidParam});
+        ProcessEFSM->AddInputTransitions({PidParam1}, PidParamNEQPidParam1,
+                                         "L3", "L3", NotGuard, {},
+                                         "InMsg", AlphaType, {PidParam});
+    } else {
+        auto Guard = TheLTS->MakeOp(LTSOps::OpAND,
+                                    FlagIndexParam1Exp,
+                                    TheLTS->MakeOp(LTSOps::OpEQ, TurnExp, PidParam1));
+        auto NotGuard = TheLTS->MakeOp(LTSOps::OpNOT, Guard);
+        ProcessEFSM->AddInputTransitions({PidParam1}, PidParamNEQPidParam1,
+                                         "L3", "Critical", NotGuard, {},
+                                         "InMsg", AlphaType, {PidParam});
+        ProcessEFSM->AddInputTransitions({PidParam1}, PidParamNEQPidParam1,
+                                         "L3", "L3", Guard, {},
+                                         "InMsg", AlphaType, {PidParam});
+    }
 
     // setting my own flag variable
-
     ProcessEFSM->AddFairnessSet("FlagFairnessCritical",
                                 FairSetFairnessType::Strong);
 
-    // Trying to synthesize update of Flag[Pmine] from Critical to L1
     auto CriticalL1FlagOp = Mgr->MakeUninterpretedFunction("CriticalL1Flag",
                                                            ArgTypes,
                                                            TheLTS->MakeBoolType());
     auto CriticalL1FlagExp = Mgr->MakeExpr(CriticalL1FlagOp, Args);
-    // Updates.push_back(new LTSAssignSimple(FlagIndexPidParamExp, CriticalL1FlagExp));
-    // Updates.push_back(new LTSAssignSimple(SetFlagOutDotData, CriticalL1FlagExp));
-    // ProcessEFSM->AddOutputTransitions({PidParam1}, TrueExp, "Critical", "L1", TrueExp,
-    //                                   Updates, "OutMsg", SetFlagType,
-    //                                   {PidParam, PidParam},
-    //                                   {"FlagFairnessCritical"});
-    // setting my own flag variable
-    Updates.push_back(new LTSAssignSimple(FlagIndexPidParamExp, FalseExp));
-    // setting the payload
-    Updates.push_back(new LTSAssignSimple(SetFlagOutDotData, FalseExp));
-    ProcessEFSM->AddOutputTransition("Critical", "L1", TrueExp,
-                                     Updates, "OutMsg", SetFlagType,
-                                     {PidParam, PidParam},
-                                     {"FlagFairnessCritical"});
 
+    if (RemoveCriticalL1FlagUpdate) {
+        Updates.push_back(new LTSAssignSimple(FlagIndexPidParamExp, CriticalL1FlagExp));
+        Updates.push_back(new LTSAssignSimple(SetFlagOutDotData, CriticalL1FlagExp));
+        ProcessEFSM->AddOutputTransitions({PidParam1}, TrueExp, "Critical", "L1", TrueExp,
+                                          Updates, "OutMsg", SetFlagType,
+                                          {PidParam, PidParam},
+                                          {"FlagFairnessCritical"});
+    } else {
+        Updates.push_back(new LTSAssignSimple(FlagIndexPidParamExp, FalseExp));
+        Updates.push_back(new LTSAssignSimple(SetFlagOutDotData, FalseExp));
+        ProcessEFSM->AddOutputTransition("Critical", "L1", TrueExp,
+                                         Updates, "OutMsg", SetFlagType,
+                                         {PidParam, PidParam},
+                                         {"FlagFairnessCritical"});
+    }
     Updates.clear();
 
 
@@ -381,28 +390,7 @@ int main()
 
     TheLTS->Freeze();
 
-    // auto const& StateVectorVars = TheLTS->GetStateVectorVars();
-
-    // cout << "LTS Vars:" << endl;
-    // for (auto const& Var : StateVectorVars) {
-    //     cout << Var->ToString() << " : " << endl;
-    //     cout << Var->GetType()->ToString() << endl;
-    // }
-
-    // cout << "State vector size is " << TheLTS->GetStateVectorSize() << " bytes." << endl;
     auto Checker = new LTSChecker(TheLTS);
-
-    cout << "Guarded Commands:" << endl;
-    auto const& GCmds = TheLTS->GetGuardedCmds();
-    for (auto const& GCmd : GCmds) {
-        cout << GCmd->ToString() << endl;
-    }
-
-    // cout << "Initial State Generators:" << endl;
-    // auto const& InitStateGens = TheLTS->GetInitStateGenerators();
-    // for (auto const& InitStateGen : InitStateGens) {
-    //     cout << InitStateGen->ToString() << endl;
-    // }
 
     Checker->BuildAQS(AQSConstructionMethod::BreadthFirst);
 
@@ -448,57 +436,43 @@ int main()
     Monitor->AddTransition("Final", "Final", TrueExp);
     Monitor->Freeze();
 
-    SolverOptionsT SolverOpts;
-
-    auto TheSolver = new Solver(Checker, SolverOpts);
+    auto TheSolver = new Solver(Checker, SolverOptions);
 
     // Patch solver
-    // TheLTS->AddToAllOpToExp(CriticalL1FlagOp, CriticalL1FlagExp);
-    // TheSolver->UnveiledUpdateOps.insert(CriticalL1FlagOp);
-    // TheSolver->InterpretedOps.insert(CriticalL1FlagOp);
-
-    // TheLTS->AddToAllOpToExp(L1L2FlagOp, L1L2FlagExp);
-    // TheSolver->UnveiledUpdateOps.insert(L1L2FlagOp);
-    // TheSolver->InterpretedOps.insert(L1L2FlagOp);
-
-    TheLTS->AddToAllOpToExp(L3CriticalGuardOp, L3CriticalGuardExp);
-    TheLTS->AddToGuardOpToExp(L3CriticalGuardOp, L3CriticalGuardExp);
-
-    cout << L3CriticalGuardExp << endl;
-    auto L3CriticalConcreteGuardExp = Mgr->MakeExpr(L3CriticalGuardOp,
-                                                    ConcreteArgs);
-
-    cout << L3CriticalConcreteGuardExp << endl;
-    cout << "Symmetric constraints are: " << endl;
-    for (auto Constraint : ProcessEFSM->As<IncompleteEFSM>()->GetSymmetryConstraints(L3CriticalConcreteGuardExp)) {
-        cout << Constraint << endl;
-        TheSolver->MakeAssertion(Constraint);
+    if (RemoveCriticalL1FlagUpdate) {
+        TheLTS->AddToAllOpToExp(CriticalL1FlagOp, CriticalL1FlagExp);
+        TheLTS->AddToUpdateOpToLValue(CriticalL1FlagOp, CriticalL1FlagExp, FlagIndexPid0Exp);
+        TheSolver->UnveilNonCompletionUpdateOp(CriticalL1FlagOp);
+        for (auto Constraint : ProcessEFSM->As<IncompleteEFSM>()->GetSymmetryConstraints(CriticalL1FlagExp)) {
+            cout << Constraint << endl;
+            TheSolver->MakeAssertion(Constraint);
+        }
+    }
+    if (RemoveL1L2FlagUpdate) {
+        TheLTS->AddToAllOpToExp(L1L2FlagOp, L1L2FlagExp);
+        auto Pid0Args = {Pid0, Pid1, FlagIndexPid0Exp, FlagIndexPid1Exp, TurnExp};
+        auto L1L2FlagPid0Exp = Mgr->MakeExpr(L1L2FlagOp, Pid0Args);
+        TheLTS->AddToUpdateOpToLValue(L1L2FlagOp, L1L2FlagPid0Exp, FlagIndexPid0Exp);
+        // TheLTS->AddToUpdateOpToLValue(L1L2FlagOp, L1L2FlagExp, FlagIndexPid0Exp);
+        TheSolver->UnveilNonCompletionUpdateOp(L1L2FlagOp);
+        for (auto Constraint : ProcessEFSM->As<IncompleteEFSM>()->GetSymmetryConstraints(L1L2FlagExp)) {
+            cout << Constraint << endl;
+            TheSolver->MakeAssertion(Constraint);
+        }
+    }
+    if (RemoveL3CriticalGuard) {
+        TheLTS->AddToAllOpToExp(L3CriticalGuardOp, L3CriticalGuardExp);
+        TheLTS->AddToGuardOpToExp(L3CriticalGuardOp, L3CriticalGuardExp);
+        // TheSolver->UnveilGuardOp(L3CriticalGuardOp);
+        for (auto Constraint : ProcessEFSM->As<IncompleteEFSM>()->GetSymmetryConstraints(L3CriticalGuardExp)) {
+            cout << Constraint << endl;
+            TheSolver->MakeAssertion(Constraint);
+        }
     }
 
     TheSolver->Solve();
-
-    // TheSolver->PrintOneUFFinalSolution({});
-    // if (!Status) {
-    //     cout << "Bug in AQS" << endl;
-
-    //     auto const& ErrorStates = Checker->GetAllErrorStates();
-    //     for (auto const& ErrorState : ErrorStates) {
-    //         auto Trace = Checker->MakeTraceToError(ErrorState.first);
-    //         cout << Trace->ToString(1) << endl;
-    //         delete Trace;
-    //     }
-
-    //     delete Checker;
-    //     exit(1);
-    // }
-
-    // cout << "Checking Liveness Property GFCritical" << endl;
-    // auto LiveTrace = Checker->CheckLiveness("GFCritical");
-
-    // if (LiveTrace != nullptr) {
-    //     cout << LiveTrace->ToString(1) << endl << endl;
-    //     delete LiveTrace;
-    // }
-
+    delete TheSolver;
+    delete Checker;
+    return 0;
 
 }

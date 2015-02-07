@@ -294,6 +294,8 @@ private:
                        const ExpT& CurrentArg);
     inline ExpT MakeArgDepConstraints(i64 OpCode, const ExpT& Exp);
     inline vector<ExpT> MakePointApplications(i64 OpCode);
+    inline vector<ExpT> MakePointApplicationsFromExp(i64 OpCode, ExpT Exp);
+
 
     inline void MakeArgDepCCForGuard(i64 Op, const ExpT& Exp);
     inline void MakeNonFalseCCForGuard(i64 Op, const ExpT& Exp);
@@ -327,6 +329,7 @@ public:
     void UnveilGuardOp(i64 Op);
     void UnveilNonCompletionGuardOp(i64 Op);
     void UnveilNonCompletionOp(i64 Op);
+    void UnveilNonCompletionUpdateOp(i64 Op);
     void Solve();
     ExpT Evaluate(const ExpT& Input);
     void PrintOneUFFinalSolution(const vector<const UFInterpreter*>& Interps,
