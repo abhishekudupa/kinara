@@ -1,0 +1,20 @@
+; (Update1-Ui-Proc1 Data2 Up2)
+
+(set-logic LIA)
+
+(synth-fun Update1-Ui-Proc1 ((Data2 Bool) (Up2 Bool)) Bool
+    ((Start Bool (Data2
+                  Up2
+                  true
+                  false
+                  (not Start)
+                  (and Start Start)
+                  (or Start Start)))))
+
+(constraint (= (Update1-Ui-Proc1 false true) true))
+(constraint (= (Update1-Ui-Proc1 true false) true))
+(constraint (= (Update1-Ui-Proc1 false false) true))
+(constraint (= (Update1-Ui-Proc1 true true) true))
+
+(check-synth)
+

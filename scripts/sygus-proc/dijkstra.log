@@ -1,0 +1,6215 @@
+Dijkstra4SynthesizeProcesses.cpp, 1161: Compiled on Feb  5 2015 at 00:21:51.
+Dijkstra4SynthesizeProcesses.cpp, 111: Declaring messages.
+Dijkstra4SynthesizeProcesses.cpp, 125: Declaring messages done.
+Dijkstra4SynthesizeProcesses.cpp, 841: Declaring automata.
+Dijkstra4SynthesizeProcesses.cpp, 139: Declaring process 0.
+Dijkstra4SynthesizeProcesses.cpp, 148: Declaring variables.
+Dijkstra4SynthesizeProcesses.cpp, 155: Adding transitions.
+Dijkstra4SynthesizeProcesses.cpp, 239: Declaring process 0 done.
+Dijkstra4SynthesizeProcesses.cpp, 245: Declaring process 1.
+Dijkstra4SynthesizeProcesses.cpp, 255: Declaring variables.
+Dijkstra4SynthesizeProcesses.cpp, 264: Adding transitions.
+(Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)
+(Update1-Di-Proc1 Data1 Up1)
+(Update1-Ui-Proc1 Data1 Up1)
+(Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)
+(Update2-Di-Proc1 Data1 Up1)
+(Update2-Ui-Proc1 Data1 Up1)
+Dijkstra4SynthesizeProcesses.cpp, 495: Declaring process 1 done.
+Dijkstra4SynthesizeProcesses.cpp, 245: Declaring process 2.
+Dijkstra4SynthesizeProcesses.cpp, 255: Declaring variables.
+Dijkstra4SynthesizeProcesses.cpp, 264: Adding transitions.
+(Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)
+(Update1-Di-Proc1 Data2 Up2)
+(Update1-Ui-Proc1 Data2 Up2)
+(Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)
+(Update2-Di-Proc1 Data2 Up2)
+(Update2-Ui-Proc1 Data2 Up2)
+Dijkstra4SynthesizeProcesses.cpp, 495: Declaring process 2 done.
+Dijkstra4SynthesizeProcesses.cpp, 502: Declaring process 3.
+Dijkstra4SynthesizeProcesses.cpp, 512: Declaring variables.
+Dijkstra4SynthesizeProcesses.cpp, 520: Adding transitions.
+Dijkstra4SynthesizeProcesses.cpp, 609: Declaring process 3 done.
+Guard
+(and (= Data0 Data1) (not Up1))
+Guard
+(Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)
+Guard
+(Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)
+Guard
+(Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)
+Guard
+(Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)
+Guard
+(not (= Data2 Data3))
+Legitimacy
+(or (and (= Data2 Data3) (not (and (= Data0 Data1) (not Up1))) (not (Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (not (Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (and (= Data2 Data3) (not (and (= Data0 Data1) (not Up1))) (not (Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (not (Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (and (= Data2 Data3) (not (and (= Data0 Data1) (not Up1))) (not (Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (and (= Data2 Data3) (not (and (= Data0 Data1) (not Up1))) (not (Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (not (Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (and (= Data2 Data3) (not (Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (not (Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (and (= Data0 Data1) (not Up1))) (and (not (= Data2 Data3)) (not (and (= Data0 Data1) (not Up1))) (not (Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (not (Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3))))
+Legitimacy guard
+(or (and (= Data2 Data3) (not (and (= Data0 Data1) (not Up1))) (not (Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (not (Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (and (= Data2 Data3) (not (and (= Data0 Data1) (not Up1))) (not (Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (not (Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (and (= Data2 Data3) (not (and (= Data0 Data1) (not Up1))) (not (Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (and (= Data2 Data3) (not (and (= Data0 Data1) (not Up1))) (not (Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (not (Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (and (= Data2 Data3) (not (Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (not (Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (and (= Data0 Data1) (not Up1))) (and (not (= Data2 Data3)) (not (and (= Data0 Data1) (not Up1))) (not (Guard1-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3)) (not (Guard2-Proc1 Data0 Data1 Data2 Up0 Up1 Up2)) (not (Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3))))
+Dijkstra4SynthesizeProcesses.cpp, 855: Freezing automata done.
+Dijkstra4SynthesizeProcesses.cpp, 969: Init states size 64
+Dijkstra4SynthesizeProcesses.cpp, 1168: Freezing LTS done.
+Invariant:
+(not (= Error SafetyMonitor.state))
+Checking SAT with 831 assertions on stack... Done!
+AQS Built, contains 247 states and 292 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 20 error(s)... Done!
+Checking SAT with 911 assertions on stack... Done!
+AQS Built, contains 244 states and 502 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 244 states and 502 edges.
+Getting accepting SCCs... 
+Found 92 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 975 assertions on stack... Done!
+UNSAT! Relaxed bound to 1
+Checking SAT with 975 assertions on stack... Done!
+AQS Built, contains 405 states and 727 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 1087 assertions on stack... Done!
+AQS Built, contains 427 states and 750 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 427 states and 750 edges.
+Getting accepting SCCs... 
+Found 177 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1151 assertions on stack... Done!
+UNSAT! Relaxed bound to 2
+Checking SAT with 1151 assertions on stack... Done!
+AQS Built, contains 475 states and 516 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 8 error(s)... Done!
+Checking SAT with 1263 assertions on stack... Done!
+AQS Built, contains 866 states and 1208 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 866 states and 1208 edges.
+Getting accepting SCCs... 
+Found 60 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1327 assertions on stack... Done!
+AQS Built, contains 968 states and 1268 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 968 states and 1268 edges.
+Getting accepting SCCs... 
+Found 88 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1391 assertions on stack... Done!
+AQS Built, contains 1028 states and 1352 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1028 states and 1352 edges.
+Getting accepting SCCs... 
+Found 88 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1455 assertions on stack... Done!
+UNSAT! Relaxed bound to 3
+Checking SAT with 1455 assertions on stack... Done!
+AQS Built, contains 1346 states and 1495 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1346 states and 1495 edges.
+Getting accepting SCCs... 
+Found 34 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1487 assertions on stack... Done!
+UNSAT! Relaxed bound to 4
+Checking SAT with 1487 assertions on stack... Done!
+AQS Built, contains 1166 states and 1238 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1166 states and 1238 edges.
+Getting accepting SCCs... 
+Found 54 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1503 assertions on stack... Done!
+AQS Built, contains 1163 states and 1517 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1163 states and 1517 edges.
+Getting accepting SCCs... 
+Found 155 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1567 assertions on stack... Done!
+AQS Built, contains 1140 states and 1299 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1140 states and 1299 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1148 states and 1299 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1623 assertions on stack... Done!
+AQS Built, contains 1141 states and 1254 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1141 states and 1254 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1149 states and 1254 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1679 assertions on stack... Done!
+AQS Built, contains 948 states and 974 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 948 states and 974 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 956 states and 974 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1735 assertions on stack... Done!
+AQS Built, contains 1105 states and 1196 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1105 states and 1196 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1113 states and 1196 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1791 assertions on stack... Done!
+AQS Built, contains 1346 states and 1672 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1346 states and 1672 edges.
+Getting accepting SCCs... 
+Found 129 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1855 assertions on stack... Done!
+AQS Built, contains 1101 states and 1269 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1101 states and 1269 edges.
+Getting accepting SCCs... 
+Found 54 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1919 assertions on stack... Done!
+UNSAT! Relaxed bound to 5
+Checking SAT with 1919 assertions on stack... Done!
+AQS Built, contains 1055 states and 1272 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1055 states and 1272 edges.
+Getting accepting SCCs... 
+Found 41 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 1983 assertions on stack... Done!
+AQS Built, contains 1055 states and 1277 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1055 states and 1277 edges.
+Getting accepting SCCs... 
+Found 41 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2047 assertions on stack... Done!
+AQS Built, contains 1742 states and 2062 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1742 states and 2062 edges.
+Getting accepting SCCs... 
+Found 29 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2111 assertions on stack... Done!
+AQS Built, contains 2310 states and 2906 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2310 states and 2906 edges.
+Getting accepting SCCs... 
+Found 93 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2175 assertions on stack... Done!
+AQS Built, contains 2024 states and 2411 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2024 states and 2411 edges.
+Getting accepting SCCs... 
+Found 47 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2239 assertions on stack... Done!
+AQS Built, contains 1537 states and 1902 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1537 states and 1902 edges.
+Getting accepting SCCs... 
+Found 114 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2255 assertions on stack... Done!
+AQS Built, contains 1625 states and 2019 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1625 states and 2019 edges.
+Getting accepting SCCs... 
+Found 100 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2271 assertions on stack... Done!
+AQS Built, contains 2580 states and 3219 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2580 states and 3219 edges.
+Getting accepting SCCs... 
+Found 57 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2335 assertions on stack... Done!
+AQS Built, contains 2033 states and 2599 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2033 states and 2599 edges.
+Getting accepting SCCs... 
+Found 42 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2351 assertions on stack... Done!
+AQS Built, contains 1633 states and 1877 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1633 states and 1877 edges.
+Getting accepting SCCs... 
+Found 16 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2415 assertions on stack... Done!
+AQS Built, contains 1654 states and 1871 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1654 states and 1871 edges.
+Getting accepting SCCs... 
+Found 17 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2479 assertions on stack... Done!
+AQS Built, contains 2308 states and 2792 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2308 states and 2792 edges.
+Getting accepting SCCs... 
+Found 39 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2495 assertions on stack... Done!
+AQS Built, contains 2647 states and 3319 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2647 states and 3319 edges.
+Getting accepting SCCs... 
+Found 58 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2527 assertions on stack... Done!
+AQS Built, contains 2127 states and 2587 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2127 states and 2587 edges.
+Getting accepting SCCs... 
+Found 29 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2591 assertions on stack... Done!
+AQS Built, contains 2040 states and 2601 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2040 states and 2601 edges.
+Getting accepting SCCs... 
+Found 42 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2655 assertions on stack... Done!
+AQS Built, contains 2392 states and 2945 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2392 states and 2945 edges.
+Getting accepting SCCs... 
+Found 94 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2719 assertions on stack... Done!
+AQS Built, contains 2443 states and 3193 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2443 states and 3193 edges.
+Getting accepting SCCs... 
+Found 66 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2783 assertions on stack... Done!
+AQS Built, contains 2289 states and 2926 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2289 states and 2926 edges.
+Getting accepting SCCs... 
+Found 20 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2815 assertions on stack... Done!
+AQS Built, contains 2327 states and 2923 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2327 states and 2923 edges.
+Getting accepting SCCs... 
+Found 137 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2879 assertions on stack... Done!
+AQS Built, contains 885 states and 1106 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 885 states and 1106 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 893 states and 1106 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2935 assertions on stack... Done!
+AQS Built, contains 1478 states and 1630 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1478 states and 1630 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1488 states and 1630 edges.
+Getting accepting SCCs... 
+Found 3 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 2991 assertions on stack... Done!
+AQS Built, contains 1403 states and 1529 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1403 states and 1529 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1411 states and 1529 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3047 assertions on stack... Done!
+AQS Built, contains 1589 states and 1842 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1589 states and 1842 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1599 states and 1842 edges.
+Getting accepting SCCs... 
+Found 3 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3103 assertions on stack... Done!
+AQS Built, contains 1315 states and 1496 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1315 states and 1496 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1325 states and 1496 edges.
+Getting accepting SCCs... 
+Found 3 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3159 assertions on stack... Done!
+AQS Built, contains 1079 states and 1306 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1079 states and 1306 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1087 states and 1306 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3215 assertions on stack... Done!
+AQS Built, contains 1451 states and 1609 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1451 states and 1609 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1461 states and 1609 edges.
+Getting accepting SCCs... 
+Found 3 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3271 assertions on stack... Done!
+AQS Built, contains 1376 states and 1591 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1376 states and 1591 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1386 states and 1591 edges.
+Getting accepting SCCs... 
+Found 3 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3327 assertions on stack... Done!
+AQS Built, contains 1429 states and 1559 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1429 states and 1559 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1437 states and 1559 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3383 assertions on stack... Done!
+AQS Built, contains 3989 states and 5445 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 3989 states and 5445 edges.
+Getting accepting SCCs... 
+Found 50 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3447 assertions on stack... Done!
+AQS Built, contains 2724 states and 3414 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2724 states and 3414 edges.
+Getting accepting SCCs... 
+Found 28 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3479 assertions on stack... Done!
+AQS Built, contains 1543 states and 1710 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1543 states and 1710 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1553 states and 1710 edges.
+Getting accepting SCCs... 
+Found 3 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3535 assertions on stack... Done!
+AQS Built, contains 2598 states and 3200 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2598 states and 3200 edges.
+Getting accepting SCCs... 
+Found 44 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3599 assertions on stack... Done!
+AQS Built, contains 2725 states and 3407 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2725 states and 3407 edges.
+Getting accepting SCCs... 
+Found 28 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3631 assertions on stack... Done!
+UNSAT! Relaxed bound to 6
+Checking SAT with 3631 assertions on stack... Done!
+AQS Built, contains 1567 states and 1767 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1567 states and 1767 edges.
+Getting accepting SCCs... 
+Found 24 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3695 assertions on stack... Done!
+AQS Built, contains 964 states and 1086 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 964 states and 1086 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 972 states and 1086 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3751 assertions on stack... Done!
+AQS Built, contains 1352 states and 1495 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1352 states and 1495 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1360 states and 1495 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3807 assertions on stack... Done!
+AQS Built, contains 1149 states and 1203 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1149 states and 1203 edges.
+Getting accepting SCCs... 
+Found 8 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3871 assertions on stack... Done!
+AQS Built, contains 1103 states and 1278 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1103 states and 1278 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1111 states and 1278 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3927 assertions on stack... Done!
+AQS Built, contains 1797 states and 2046 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1797 states and 2046 edges.
+Getting accepting SCCs... 
+Found 42 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 3959 assertions on stack... Done!
+AQS Built, contains 1384 states and 1509 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1384 states and 1509 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1392 states and 1509 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4015 assertions on stack... Done!
+AQS Built, contains 1410 states and 1618 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1410 states and 1618 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1415 states and 1618 edges.
+Getting accepting SCCs... 
+Found 6 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4023 assertions on stack... Done!
+AQS Built, contains 2401 states and 2944 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2401 states and 2944 edges.
+Getting accepting SCCs... 
+Found 74 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4087 assertions on stack... Done!
+AQS Built, contains 1711 states and 1965 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1711 states and 1965 edges.
+Getting accepting SCCs... 
+Found 38 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4151 assertions on stack... Done!
+AQS Built, contains 2438 states and 3154 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2438 states and 3154 edges.
+Getting accepting SCCs... 
+Found 92 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4215 assertions on stack... Done!
+AQS Built, contains 2123 states and 2623 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2123 states and 2623 edges.
+Getting accepting SCCs... 
+Found 70 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4279 assertions on stack... Done!
+AQS Built, contains 1744 states and 2020 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1744 states and 2020 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1753 states and 2020 edges.
+Getting accepting SCCs... 
+Found 4 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4303 assertions on stack... Done!
+AQS Built, contains 2269 states and 2819 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2269 states and 2819 edges.
+Getting accepting SCCs... 
+Found 76 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4367 assertions on stack... Done!
+AQS Built, contains 1641 states and 1872 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1641 states and 1872 edges.
+Getting accepting SCCs... 
+Found 45 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4431 assertions on stack... Done!
+AQS Built, contains 1555 states and 1734 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1555 states and 1734 edges.
+Getting accepting SCCs... 
+Found 30 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4495 assertions on stack... Done!
+AQS Built, contains 1537 states and 1807 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1537 states and 1807 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1546 states and 1807 edges.
+Getting accepting SCCs... 
+Found 4 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4519 assertions on stack... Done!
+AQS Built, contains 2860 states and 3644 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2860 states and 3644 edges.
+Getting accepting SCCs... 
+Found 32 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4551 assertions on stack... Done!
+AQS Built, contains 4121 states and 5826 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 4121 states and 5826 edges.
+Getting accepting SCCs... 
+Found 60 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4615 assertions on stack... Done!
+AQS Built, contains 2828 states and 3656 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2828 states and 3656 edges.
+Getting accepting SCCs... 
+Found 32 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4679 assertions on stack... Done!
+AQS Built, contains 3171 states and 4074 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 3171 states and 4074 edges.
+Getting accepting SCCs... 
+Found 36 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4711 assertions on stack... Done!
+AQS Built, contains 2810 states and 3446 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2810 states and 3446 edges.
+Getting accepting SCCs... 
+Found 36 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4743 assertions on stack... Done!
+AQS Built, contains 2081 states and 2310 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2081 states and 2310 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 2093 states and 2310 edges.
+Getting accepting SCCs... 
+Found 1 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4799 assertions on stack... Done!
+AQS Built, contains 3044 states and 3946 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 3044 states and 3946 edges.
+Getting accepting SCCs... 
+Found 40 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4815 assertions on stack... Done!
+AQS Built, contains 2244 states and 2723 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2244 states and 2723 edges.
+Getting accepting SCCs... 
+Found 56 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4831 assertions on stack... Done!
+AQS Built, contains 3044 states and 4251 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 3044 states and 4251 edges.
+Getting accepting SCCs... 
+Found 40 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4895 assertions on stack... Done!
+AQS Built, contains 3044 states and 4211 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 3044 states and 4211 edges.
+Getting accepting SCCs... 
+Found 40 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4911 assertions on stack... Done!
+AQS Built, contains 4043 states and 5492 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 4043 states and 5492 edges.
+Getting accepting SCCs... 
+Found 68 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 4975 assertions on stack... Done!
+AQS Built, contains 2544 states and 3030 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2544 states and 3030 edges.
+Getting accepting SCCs... 
+Found 30 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5007 assertions on stack... Done!
+AQS Built, contains 2399 states and 2989 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2399 states and 2989 edges.
+Getting accepting SCCs... 
+Found 54 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5023 assertions on stack... Done!
+AQS Built, contains 1784 states and 2076 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1784 states and 2076 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1792 states and 2076 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5079 assertions on stack... Done!
+AQS Built, contains 1468 states and 1665 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1468 states and 1665 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1473 states and 1665 edges.
+Getting accepting SCCs... 
+Found 8 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5087 assertions on stack... Done!
+AQS Built, contains 1711 states and 1980 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1711 states and 1980 edges.
+Getting accepting SCCs... 
+Found 30 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5151 assertions on stack... Done!
+AQS Built, contains 2056 states and 2585 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2056 states and 2585 edges.
+Getting accepting SCCs... 
+Found 75 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5215 assertions on stack... Done!
+AQS Built, contains 1720 states and 2117 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1720 states and 2117 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1729 states and 2117 edges.
+Getting accepting SCCs... 
+Found 4 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5239 assertions on stack... Done!
+AQS Built, contains 1874 states and 2198 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1874 states and 2198 edges.
+Getting accepting SCCs... 
+Found 43 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5303 assertions on stack... Done!
+AQS Built, contains 1655 states and 1897 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1655 states and 1897 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1664 states and 1897 edges.
+Getting accepting SCCs... 
+Found 4 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5327 assertions on stack... Done!
+AQS Built, contains 2268 states and 2852 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2268 states and 2852 edges.
+Getting accepting SCCs... 
+Found 76 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5391 assertions on stack... Done!
+AQS Built, contains 1920 states and 2297 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1920 states and 2297 edges.
+Getting accepting SCCs... 
+Found 58 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5455 assertions on stack... Done!
+AQS Built, contains 1781 states and 2086 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1781 states and 2086 edges.
+Getting accepting SCCs... 
+Found 56 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5519 assertions on stack... Done!
+AQS Built, contains 1517 states and 1690 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1517 states and 1690 edges.
+Getting accepting SCCs... 
+Found 30 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5583 assertions on stack... Done!
+AQS Built, contains 2390 states and 2976 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2390 states and 2976 edges.
+Getting accepting SCCs... 
+Found 54 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5599 assertions on stack... Done!
+AQS Built, contains 2177 states and 2460 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2177 states and 2460 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 2189 states and 2460 edges.
+Getting accepting SCCs... 
+Found 1 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5655 assertions on stack... Done!
+AQS Built, contains 752 states and 812 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 752 states and 812 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 760 states and 812 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5711 assertions on stack... Done!
+AQS Built, contains 1566 states and 1802 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1566 states and 1802 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1574 states and 1802 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5767 assertions on stack... Done!
+AQS Built, contains 3044 states and 4243 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 3044 states and 4243 edges.
+Getting accepting SCCs... 
+Found 40 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5783 assertions on stack... Done!
+AQS Built, contains 3973 states and 5668 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 3973 states and 5668 edges.
+Getting accepting SCCs... 
+Found 42 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5847 assertions on stack... Done!
+AQS Built, contains 2088 states and 2436 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2088 states and 2436 edges.
+Getting accepting SCCs... 
+Found 47 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5863 assertions on stack... Done!
+AQS Built, contains 2841 states and 3673 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2841 states and 3673 edges.
+Getting accepting SCCs... 
+Found 32 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5927 assertions on stack... Done!
+AQS Built, contains 793 states and 899 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 793 states and 899 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 801 states and 899 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 5983 assertions on stack... Done!
+AQS Built, contains 3495 states and 4631 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 3495 states and 4631 edges.
+Getting accepting SCCs... 
+Found 36 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6015 assertions on stack... Done!
+AQS Built, contains 3044 states and 3946 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 3044 states and 3946 edges.
+Getting accepting SCCs... 
+Found 40 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6031 assertions on stack... Done!
+UNSAT! Relaxed bound to 7
+Checking SAT with 6031 assertions on stack... Done!
+AQS Built, contains 2274 states and 2800 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2274 states and 2800 edges.
+Getting accepting SCCs... 
+Found 30 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6063 assertions on stack... Done!
+AQS Built, contains 2103 states and 2649 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2103 states and 2649 edges.
+Getting accepting SCCs... 
+Found 28 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6079 assertions on stack... Done!
+AQS Built, contains 2172 states and 2792 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2172 states and 2792 edges.
+Getting accepting SCCs... 
+Found 28 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6143 assertions on stack... Done!
+AQS Built, contains 3946 states and 5914 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 3946 states and 5914 edges.
+Getting accepting SCCs... 
+Found 57 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6207 assertions on stack... Done!
+AQS Built, contains 2364 states and 3240 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2364 states and 3240 edges.
+Getting accepting SCCs... 
+Found 22 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6223 assertions on stack... Done!
+AQS Built, contains 2364 states and 3240 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2364 states and 3240 edges.
+Getting accepting SCCs... 
+Found 22 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6239 assertions on stack... Done!
+AQS Built, contains 3934 states and 6065 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 3934 states and 6065 edges.
+Getting accepting SCCs... 
+Found 57 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6303 assertions on stack... Done!
+AQS Built, contains 1549 states and 1852 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1549 states and 1852 edges.
+Getting accepting SCCs... 
+Found 32 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6367 assertions on stack... Done!
+AQS Built, contains 908 states and 1160 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 908 states and 1160 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 916 states and 1160 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6423 assertions on stack... Done!
+AQS Built, contains 948 states and 1238 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 948 states and 1238 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 956 states and 1238 edges.
+Getting accepting SCCs... 
+Found 5 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6479 assertions on stack... Done!
+AQS Built, contains 2642 states and 3146 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2642 states and 3146 edges.
+Getting accepting SCCs... 
+Found 73 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6543 assertions on stack... Done!
+AQS Built, contains 2272 states and 2661 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2272 states and 2661 edges.
+Getting accepting SCCs... 
+Found 32 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6559 assertions on stack... Done!
+AQS Built, contains 1307 states and 1441 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1307 states and 1441 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1311 states and 1441 edges.
+Getting accepting SCCs... 
+Found 9 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6583 assertions on stack... Done!
+AQS Built, contains 1885 states and 2185 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1885 states and 2185 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1889 states and 2185 edges.
+Getting accepting SCCs... 
+Found 8 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6607 assertions on stack... Done!
+AQS Built, contains 1940 states and 2157 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1940 states and 2157 edges.
+Getting accepting SCCs... 
+Found 38 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6671 assertions on stack... Done!
+AQS Built, contains 2497 states and 3250 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 2497 states and 3250 edges.
+Getting accepting SCCs... 
+Found 121 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6735 assertions on stack... Done!
+AQS Built, contains 1522 states and 1806 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1522 states and 1806 edges.
+Getting accepting SCCs... 
+Found 48 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6751 assertions on stack... Done!
+AQS Built, contains 1559 states and 1791 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1559 states and 1791 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1569 states and 1791 edges.
+Getting accepting SCCs... 
+Found 3 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6807 assertions on stack... Done!
+AQS Built, contains 1272 states and 1428 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1272 states and 1428 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1282 states and 1428 edges.
+Getting accepting SCCs... 
+Found 3 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6863 assertions on stack... Done!
+AQS Built, contains 1515 states and 1756 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1515 states and 1756 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1525 states and 1756 edges.
+Getting accepting SCCs... 
+Found 3 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+Found fair accepting SCC
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6919 assertions on stack... Done!
+AQS Built, contains 1473 states and 1559 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1473 states and 1559 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1485 states and 1559 edges.
+Getting accepting SCCs... 
+Found 1 accepting SCCs
+Checking Fairness of SCCs...
+Found fair accepting SCC
+computed weakest precondition
+Checking SAT with 6975 assertions on stack... Done!
+AQS Built, contains 1482 states and 1565 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 1482 states and 1565 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 1494 states and 1565 edges.
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Found Correct Completion!
+With Bound = 7, Model:
+Model for uninterpreted function:
+(Update1-Ui-Proc1 Data2 Up2) -> {
+    false true -> true
+    true false -> true
+    false false -> true
+    true true -> true
+}
+
+Model for uninterpreted function:
+(Update1-Di-Proc1 Data2 Up2) -> {
+    false true -> true
+    true false -> false
+    false false -> true
+    true true -> false
+}
+
+Model for uninterpreted function:
+(Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3) -> {
+    true false true false false false -> false
+    false true true false false false -> true
+    true true true false true false -> false
+    true false true false true false -> false
+    true false false false false false -> true
+    false true true true false true -> true
+    false true true false true false -> true
+    false false true false false false -> false
+    true true true true false false -> false
+    true true true true true true -> false
+    false false false false false false -> false
+    false false false false true false -> false
+    false false true true true true -> false
+    false false true true false false -> false
+    false false false true false false -> false
+    true true true true false true -> false
+    true true true true true false -> false
+    true false false false true false -> true
+    false false false true false true -> false
+    false true false true true false -> false
+    true true false true true true -> false
+    true true false true false true -> false
+    true true true false false false -> false
+    true false false true false false -> true
+    true false true true true true -> false
+    false true false true false false -> true
+    false true false false false false -> false
+    true false false true true false -> true
+    true false true true false false -> true
+    true false false true true true -> false
+    true false true true false true -> true
+    true false false true false true -> true
+    false false true true true false -> false
+    false true true true true false -> true
+    false true true true false false -> true
+    false false true false true false -> false
+    false true false false true false -> false
+    true true false true true false -> false
+    false false false true true false -> false
+    true true false false true false -> false
+    true false true true true false -> true
+    false true false true true true -> false
+    true true false false false false -> false
+    false true false true false true -> true
+    false false true true false true -> false
+    true true false true false false -> false
+    false true true true true true -> false
+    false false false true true true -> false
+}
+
+Model for uninterpreted function:
+(Update2-Ui-Proc1 Data2 Up2) -> {
+    true true -> false
+    false true -> false
+}
+
+Model for uninterpreted function:
+(Update2-Di-Proc1 Data2 Up2) -> {
+    true true -> true
+    false true -> false
+}
+
+Model for uninterpreted function:
+(Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3) -> {
+    true false true false false false -> false
+    false true true false false false -> false
+    true true true false true false -> true
+    true false true false true false -> false
+    true false false false false false -> false
+    false true true true false true -> false
+    false true true false true false -> false
+    false false true false false false -> false
+    true true true true false false -> false
+    true true true true true true -> false
+    false false false false false false -> false
+    false false false false true false -> true
+    false false true true true true -> false
+    false false true true false false -> false
+    false false false true false false -> false
+    true true true true false true -> false
+    true true true true true false -> true
+    true false false false true false -> false
+    false false false true false true -> false
+    false true false true true false -> true
+    true true false true true true -> false
+    true true false true false true -> false
+    true true true false false false -> false
+    true false false true false false -> false
+    true false true true true true -> false
+    false true false true false false -> false
+    false true false false false false -> false
+    true false false true true false -> true
+    true false true true false false -> false
+    true false false true true true -> true
+    true false true true false true -> false
+    true false false true false true -> false
+    false false true true true false -> false
+    false true true true true false -> true
+    false true true true false false -> false
+    false false true false true false -> false
+    false true false false true false -> false
+    true true false true true false -> false
+    false false false true true false -> true
+    true true false false true false -> false
+    true false true true true false -> false
+    false true false true true true -> false
+    true true false false false false -> false
+    false true false true false true -> false
+    false false true true false true -> false
+    true true false true false false -> false
+    false true true true true true -> true
+    false false false true true true -> false
+}
+
+Solver Stats:
+
+----------------------------------------------------------------
+Solve Time: 236.57 (s)
+Initial Asserts: 911
+Final Asserts: 6975
+Num Iterations: 131
+Total SMT Time: 55179063 (uS)
+Min SMT Time: 4202 (uS)
+Max SMT Time: 6548064 (uS)
+Avg SMT Time: 421214 (uS)
+Final Bound: 7
+----------------------------------------------------------------
+Z3 Solver Stats:
+
+----------------------------------------------------------------
+(:add-rows            2645
+ :added-eqs           7081881
+ :arith-conflicts     1929
+ :assert-diseq        33073
+ :assert-lower        59702
+ :assert-upper        37579
+ :binary-propagations 23019681
+ :bound-prop          71358
+ :conflicts           13280
+ :decisions           154322
+ :del-clause          4752
+ :eq-adapter          32018
+ :final-checks        124
+ :fixed-eqs           10840
+ :minimized-lits      178190
+ :mk-clause           53224
+ :num-checks          131
+ :offset-eqs          1372
+ :pivots              16451
+ :propagations        27637011
+ :restarts            82)
+----------------------------------------------------------------
+# of legitimate states: 12
+Dijkstra4SynthesizeProcesses.cpp, 1280: Return.
