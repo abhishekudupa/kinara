@@ -1,0 +1,134 @@
+With Bound = 12, Model:
+Model for uninterpreted function:
+(Update2-Ui-Proc1 Data2 Up2) -> {
+    true true -> false
+    false true -> false
+}
+
+Model for uninterpreted function:
+(Update2-Di-Proc1 Data2 Up2) -> {
+    true true -> true
+    false true -> false
+}
+
+Model for uninterpreted function:
+(Guard2-Proc1 Data1 Data2 Data3 Up1 Up2 Up3) -> {
+    true true true true false false -> false
+    false true false true true false -> false
+    true false true false true false -> false
+    false false false true true false -> true
+    true false true true false false -> false
+    true true false true true false -> false
+    true true false false false false -> false
+    false true false false false false -> false
+    false true false true false false -> false
+    true true false true false false -> false
+    false false true false false false -> false
+    true false false false false false -> false
+    true false true true true false -> false
+    false true true true true false -> true
+    true false false false true false -> true
+    false true true true false false -> false
+    true false true false false false -> false
+    false true true false false false -> false
+    false false true true true false -> false
+    false false false false true false -> true
+    true true false false true false -> false
+    true false true true true true -> false
+    true true true false false false -> false
+    true true true true true false -> true
+    false false true true false false -> false
+    false false true false true false -> false
+    true false false true false false -> false
+    false false false true false false -> false
+    false true false true false true -> false
+    true true false true false true -> false
+    false false false false false false -> false
+    false false false true false true -> false
+    false true true false true false -> true
+    false false false true true true -> false
+    false true false false true false -> false
+    false true false true true true -> false
+    false true true true false true -> false
+    false true true true true true -> false
+    true true true false true false -> true
+    true false false true false true -> false
+    true false false true true true -> false
+    true false true true false true -> false
+    true true false true true true -> false
+    false false true true true true -> false
+    true true true true false true -> false
+    true false false true true false -> true
+    false false true true false true -> false
+    true true true true true true -> false
+}
+
+Model for uninterpreted function:
+(Update1-Ui-Proc1 Data2 Up2) -> {
+    false true -> true
+    false false -> true
+    true true -> true
+    true false -> true
+}
+
+Model for uninterpreted function:
+(Update1-Di-Proc1 Data2 Up2) -> {
+    false true -> true
+    false false -> true
+    true true -> false
+    true false -> false
+}
+
+Model for uninterpreted function:
+(Guard1-Proc1 Data1 Data2 Data3 Up1 Up2 Up3) -> {
+    true true true true false false -> false
+    false true false true true false -> true
+    true false true false true false -> true
+    false false false true true false -> false
+    true false true true false false -> true
+    true true false true true false -> false
+    true true false false false false -> false
+    false true false false false false -> true
+    false true false true false false -> true
+    true true false true false false -> false
+    false false true false false false -> false
+    true false false false false false -> true
+    true false true true true false -> true
+    false true true true true false -> true
+    true false false false true false -> true
+    false true true true false false -> true
+    true false true false false false -> true
+    false true true false false false -> true
+    false false true true true false -> false
+    false false false false true false -> false
+    true true false false true false -> false
+    true false true true true true -> true
+    true true true false false false -> false
+    true true true true true false -> false
+    false false true true false false -> false
+    false false true false true false -> false
+    true false false true false false -> true
+    false false false true false false -> false
+    false true false true false true -> true
+    true true false true false true -> false
+    false false false false false false -> false
+    false false false true false true -> false
+    false true true false true false -> true
+    false false false true true true -> false
+    false true false false true false -> true
+    false true false true true true -> true
+    false true true true false true -> true
+    false true true true true true -> true
+    true true true false true false -> false
+    true false false true false true -> true
+    true false false true true true -> true
+    true false true true false true -> true
+    true true false true true true -> false
+    false false true true true true -> false
+    true true true true false true -> false
+    true false false true true false -> true
+    false false true true false true -> false
+    true true true true true true -> false
+}
+
+Solver Stats:
