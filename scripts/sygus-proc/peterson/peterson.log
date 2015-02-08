@@ -1,0 +1,45 @@
+Model for uninterpreted function:
+(L3CriticalGuard Pid Pid1 FlagArray[PidType::0] FlagArray[PidType::1] Turn) -> {
+    PidType::1 PidType::0 false false PidType::undef -> false
+    PidType::0 PidType::1 true false PidType::0 -> false
+    PidType::0 PidType::1 false false PidType::0 -> false
+    PidType::1 PidType::0 false false PidType::0 -> false
+    PidType::1 PidType::0 true false PidType::0 -> false
+    PidType::1 PidType::0 false true PidType::undef -> false
+    PidType::1 PidType::0 true true PidType::0 -> false
+    PidType::0 PidType::1 false false PidType::undef -> false
+    PidType::1 PidType::0 false true PidType::0 -> true
+    PidType::0 PidType::1 true true PidType::undef -> false
+    PidType::0 PidType::1 false true PidType::0 -> false
+    PidType::0 PidType::1 false true PidType::undef -> false
+    PidType::0 PidType::1 true true PidType::0 -> true
+    PidType::1 PidType::0 true true PidType::undef -> false
+}
+
+Model for uninterpreted function:
+(L1L2Flag Pid Pid1 FlagArray[PidType::0] FlagArray[PidType::1] Turn) -> {
+    PidType::0 PidType::1 false false PidType::0 -> true
+    PidType::1 PidType::0 false false PidType::0 -> true
+    PidType::1 PidType::0 true false PidType::0 -> true
+    PidType::1 PidType::1 false false PidType::undef -> true
+    PidType::0 PidType::0 false false PidType::undef -> true
+    PidType::0 PidType::1 false true PidType::undef -> true
+    PidType::1 PidType::1 false false PidType::0 -> true
+    PidType::0 PidType::1 false true PidType::0 -> true
+    PidType::0 PidType::0 false true PidType::undef -> true
+    PidType::0 PidType::1 false false PidType::undef -> true
+    PidType::1 PidType::1 true false PidType::0 -> true
+    PidType::1 PidType::0 false false PidType::undef -> true
+    PidType::0 PidType::0 false true PidType::0 -> true
+    PidType::0 PidType::0 false false PidType::0 -> true
+}
+
+Model for uninterpreted function:
+(CriticalL1Flag Pid Pid1 FlagArray[PidType::0] FlagArray[PidType::1] Turn) -> {
+    PidType::1 PidType::1 false true PidType::0 -> false
+    PidType::1 PidType::1 true true PidType::0 -> false
+    PidType::0 PidType::0 true true PidType::0 -> false
+    PidType::1 PidType::0 true true PidType::0 -> false
+    PidType::0 PidType::1 true true PidType::0 -> false
+    PidType::1 PidType::0 false true PidType::0 -> false
+}

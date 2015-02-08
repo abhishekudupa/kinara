@@ -1,0 +1,30 @@
+; (L3CriticalGuard Pid Pid1 FlagArray[PidType::P0] FlagArray[PidType::P1] Turn)
+(set-logic LIA)
+
+(define-sort PidType (Enum (P0 P1 undef)))
+
+(synth-fun L3CriticalGuard ((Pid PidType) (Pid1 PidType) (f0 Bool) (f1 Bool) (Turn PidType)) Bool
+    ((Start Bool (true false
+                 f0 f1
+                 (= StartPid StartPid)
+                 (not Start)
+                 (and Start Start)
+                 (or Start Start)))
+     (StartPid PidType (Pid Pid1 Turn))))
+
+(constraint (= (L3CriticalGuard PidType::P1 PidType::P0 false false PidType::undef) false))
+(constraint (= (L3CriticalGuard PidType::P0 PidType::P1 true false PidType::P0) false))
+(constraint (= (L3CriticalGuard PidType::P0 PidType::P1 false false PidType::P0) false))
+(constraint (= (L3CriticalGuard PidType::P1 PidType::P0 false false PidType::P0) false))
+(constraint (= (L3CriticalGuard PidType::P1 PidType::P0 true false PidType::P0) false))
+(constraint (= (L3CriticalGuard PidType::P1 PidType::P0 false true PidType::undef) false))
+(constraint (= (L3CriticalGuard PidType::P1 PidType::P0 true true PidType::P0) false))
+(constraint (= (L3CriticalGuard PidType::P0 PidType::P1 false false PidType::undef) false))
+(constraint (= (L3CriticalGuard PidType::P1 PidType::P0 false true PidType::P0) true))
+(constraint (= (L3CriticalGuard PidType::P0 PidType::P1 true true PidType::undef) false))
+(constraint (= (L3CriticalGuard PidType::P0 PidType::P1 false true PidType::P0) false))
+(constraint (= (L3CriticalGuard PidType::P0 PidType::P1 false true PidType::undef) false))
+(constraint (= (L3CriticalGuard PidType::P0 PidType::P1 true true PidType::P0) true))
+(constraint (= (L3CriticalGuard PidType::P1 PidType::P0 true true PidType::undef) false))
+
+(check-synth)
