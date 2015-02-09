@@ -23,8 +23,8 @@ CXXFLAGS+=-I $(PROJECT_ROOT)/../../thirdparty/sparsehash
 
 PROJECT_EXECUTABLES?=PingPongChan Flip FlipSimple PingPongChanBug ABP \
 	ABP_generated MSI Fischer Dijkstra4 \
-	MSIC2D PingPongChanSimpleBug PingPongChanSynth MSIC2DSynth ElevatorIncomplete Dijkstra4Synth \
-	PetersonBug PetersonSynth PetersonMoreSynth
+	MSIC2D MSIC2D3 PingPongChanSimpleBug PingPongChanSynth MSIC2DSynth ElevatorIncomplete Dijkstra4Synth \
+	PetersonBug PetersonSynth
 
 
 libboost_FULL_PATH=$(PROJECT_ROOT)/../../thirdparty/boost-local/boost_install/install.ph

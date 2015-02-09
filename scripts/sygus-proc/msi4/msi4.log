@@ -1,0 +1,2144 @@
+Checking SAT with 64 assertions on stack... Done!
+AQS Built, contains 16755 states and 58116 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 36 error(s)... Done!
+Checking SAT with 62011 assertions on stack... Done!
+UNSAT! Relaxed bound to 1
+Checking SAT with 62011 assertions on stack... Done!
+UNSAT! Relaxed bound to 2
+Checking SAT with 62011 assertions on stack... Done!
+UNSAT! Relaxed bound to 3
+Checking SAT with 62011 assertions on stack... Done!
+AQS Built, contains 21665 states and 71531 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62012 assertions on stack... Done!
+AQS Built, contains 19668 states and 65387 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62013 assertions on stack... Done!
+AQS Built, contains 19668 states and 65385 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62014 assertions on stack... Done!
+AQS Built, contains 19668 states and 65385 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62015 assertions on stack... Done!
+AQS Built, contains 19668 states and 65385 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62016 assertions on stack... Done!
+AQS Built, contains 19981 states and 65983 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62020 assertions on stack... Done!
+AQS Built, contains 19981 states and 65983 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62024 assertions on stack... Done!
+AQS Built, contains 19981 states and 65983 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62028 assertions on stack... Done!
+AQS Built, contains 19981 states and 65983 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62032 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62033 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62034 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62035 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62036 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62037 assertions on stack... Done!
+AQS Built, contains 22342 states and 71088 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62038 assertions on stack... Done!
+AQS Built, contains 22342 states and 71088 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62039 assertions on stack... Done!
+AQS Built, contains 22342 states and 71088 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62040 assertions on stack... Done!
+AQS Built, contains 23088 states and 73386 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62041 assertions on stack... Done!
+AQS Built, contains 22342 states and 71088 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62042 assertions on stack... Done!
+AQS Built, contains 22342 states and 71088 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62043 assertions on stack... Done!
+AQS Built, contains 23547 states and 74736 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62044 assertions on stack... Done!
+AQS Built, contains 23631 states and 75258 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62045 assertions on stack... Done!
+AQS Built, contains 20444 states and 66511 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62047 assertions on stack... Done!
+AQS Built, contains 22850 states and 72801 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62048 assertions on stack... Done!
+AQS Built, contains 22342 states and 71088 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62049 assertions on stack... Done!
+AQS Built, contains 22462 states and 71452 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62050 assertions on stack... Done!
+AQS Built, contains 22342 states and 71088 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62051 assertions on stack... Done!
+AQS Built, contains 22342 states and 71088 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62052 assertions on stack... Done!
+AQS Built, contains 22342 states and 71088 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62053 assertions on stack... Done!
+AQS Built, contains 22342 states and 71088 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62054 assertions on stack... Done!
+AQS Built, contains 22810 states and 72553 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62055 assertions on stack... Done!
+AQS Built, contains 22171 states and 70953 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62057 assertions on stack... Done!
+AQS Built, contains 22342 states and 71088 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62058 assertions on stack... Done!
+AQS Built, contains 23127 states and 73544 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62059 assertions on stack... Done!
+AQS Built, contains 22727 states and 72746 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62061 assertions on stack... Done!
+AQS Built, contains 20748 states and 68116 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62062 assertions on stack... Done!
+AQS Built, contains 20748 states and 68116 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62063 assertions on stack... Done!
+AQS Built, contains 20748 states and 68116 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62064 assertions on stack... Done!
+AQS Built, contains 22021 states and 72257 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62065 assertions on stack... Done!
+AQS Built, contains 21065 states and 68718 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62066 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62067 assertions on stack... Done!
+AQS Built, contains 18847 states and 63489 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62068 assertions on stack... Done!
+AQS Built, contains 18659 states and 62885 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62069 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62070 assertions on stack... Done!
+AQS Built, contains 18847 states and 63489 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62071 assertions on stack... Done!
+AQS Built, contains 24001 states and 76834 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62072 assertions on stack... Done!
+AQS Built, contains 57344 states and 183995 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62073 assertions on stack... Done!
+AQS Built, contains 18701 states and 63195 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62074 assertions on stack... Done!
+AQS Built, contains 23365 states and 75226 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62076 assertions on stack... Done!
+AQS Built, contains 20289 states and 67881 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62077 assertions on stack... Done!
+AQS Built, contains 19587 states and 65973 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62078 assertions on stack... Done!
+AQS Built, contains 23047 states and 74394 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62082 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62083 assertions on stack... Done!
+AQS Built, contains 18843 states and 63146 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62084 assertions on stack... Done!
+AQS Built, contains 18843 states and 63146 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62085 assertions on stack... Done!
+AQS Built, contains 19683 states and 66043 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62086 assertions on stack... Done!
+AQS Built, contains 21577 states and 69838 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62087 assertions on stack... Done!
+AQS Built, contains 20377 states and 68107 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62088 assertions on stack... Done!
+AQS Built, contains 23012 states and 73034 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62090 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62091 assertions on stack... Done!
+AQS Built, contains 18847 states and 63489 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62092 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62093 assertions on stack... Done!
+AQS Built, contains 23059 states and 74182 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62094 assertions on stack... Done!
+AQS Built, contains 23170 states and 73338 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62098 assertions on stack... Done!
+AQS Built, contains 21031 states and 68656 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62100 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62102 assertions on stack... Done!
+AQS Built, contains 18831 states and 63437 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62106 assertions on stack... Done!
+AQS Built, contains 18632 states and 62796 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62110 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62112 assertions on stack... Done!
+AQS Built, contains 18831 states and 63437 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62116 assertions on stack... Done!
+AQS Built, contains 24378 states and 77876 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62118 assertions on stack... Done!
+AQS Built, contains 57518 states and 184631 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62120 assertions on stack... Done!
+AQS Built, contains 18685 states and 63169 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62124 assertions on stack... Done!
+AQS Built, contains 22133 states and 72352 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62128 assertions on stack... Done!
+AQS Built, contains 20273 states and 67857 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62132 assertions on stack... Done!
+AQS Built, contains 19576 states and 65946 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62136 assertions on stack... Done!
+AQS Built, contains 23244 states and 75016 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62140 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62142 assertions on stack... Done!
+AQS Built, contains 18993 states and 63399 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62144 assertions on stack... Done!
+AQS Built, contains 18965 states and 63399 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62146 assertions on stack... Done!
+AQS Built, contains 19891 states and 66439 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62148 assertions on stack... Done!
+AQS Built, contains 21577 states and 69838 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62150 assertions on stack... Done!
+AQS Built, contains 20593 states and 68531 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62152 assertions on stack... Done!
+AQS Built, contains 23170 states and 73338 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62156 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62158 assertions on stack... Done!
+AQS Built, contains 18831 states and 63437 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62162 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62164 assertions on stack... Done!
+AQS Built, contains 23233 states and 74818 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62166 assertions on stack... Done!
+UNSAT! Relaxed bound to 4
+Checking SAT with 62166 assertions on stack... Done!
+AQS Built, contains 24648 states and 79011 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62167 assertions on stack... Done!
+AQS Built, contains 21581 states and 70223 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62168 assertions on stack... Done!
+AQS Built, contains 22091 states and 72287 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62169 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62170 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62171 assertions on stack... Done!
+AQS Built, contains 22540 states and 73013 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62173 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62175 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62177 assertions on stack... Done!
+AQS Built, contains 24648 states and 79011 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62178 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62179 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62180 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62181 assertions on stack... Done!
+AQS Built, contains 22681 states and 73894 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62182 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62183 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62184 assertions on stack... Done!
+AQS Built, contains 22601 states and 73891 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62185 assertions on stack... Done!
+AQS Built, contains 22601 states and 73891 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62186 assertions on stack... Done!
+AQS Built, contains 21821 states and 70174 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62187 assertions on stack... Done!
+AQS Built, contains 22669 states and 73926 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62188 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62189 assertions on stack... Done!
+AQS Built, contains 22712 states and 73247 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62190 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62191 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62192 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62193 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62194 assertions on stack... Done!
+AQS Built, contains 22589 states and 73802 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62195 assertions on stack... Done!
+AQS Built, contains 21849 states and 70228 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62196 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62197 assertions on stack... Done!
+AQS Built, contains 23022 states and 75147 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62198 assertions on stack... Done!
+AQS Built, contains 22540 states and 73013 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62200 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62201 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62202 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62203 assertions on stack... Done!
+AQS Built, contains 22601 states and 73891 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62204 assertions on stack... Done!
+AQS Built, contains 22091 states and 72287 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62205 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62206 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62207 assertions on stack... Done!
+AQS Built, contains 22540 states and 73013 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62209 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62210 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62211 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62212 assertions on stack... Done!
+AQS Built, contains 22681 states and 73894 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62213 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62214 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62215 assertions on stack... Done!
+AQS Built, contains 22601 states and 73891 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62216 assertions on stack... Done!
+AQS Built, contains 22601 states and 73891 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62217 assertions on stack... Done!
+AQS Built, contains 21821 states and 70174 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62218 assertions on stack... Done!
+AQS Built, contains 22669 states and 73926 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62219 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62220 assertions on stack... Done!
+AQS Built, contains 22712 states and 73247 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62221 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62222 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62223 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62224 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62225 assertions on stack... Done!
+AQS Built, contains 22589 states and 73802 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62226 assertions on stack... Done!
+AQS Built, contains 21849 states and 70228 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62227 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62228 assertions on stack... Done!
+AQS Built, contains 23022 states and 75147 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62229 assertions on stack... Done!
+AQS Built, contains 22540 states and 73013 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62231 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62232 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62233 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62234 assertions on stack... Done!
+AQS Built, contains 22601 states and 73891 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62235 assertions on stack... Done!
+AQS Built, contains 22811 states and 73634 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62236 assertions on stack... Done!
+AQS Built, contains 21183 states and 68769 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62237 assertions on stack... Done!
+AQS Built, contains 22989 states and 74186 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62239 assertions on stack... Done!
+UNSAT! Relaxed bound to 5
+Checking SAT with 62239 assertions on stack... Done!
+AQS Built, contains 22512 states and 73528 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62240 assertions on stack... Done!
+AQS Built, contains 22512 states and 73528 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62241 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62242 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62243 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62244 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62245 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62246 assertions on stack... Done!
+AQS Built, contains 22029 states and 71984 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62247 assertions on stack... Done!
+AQS Built, contains 23935 states and 75932 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62250 assertions on stack... Done!
+AQS Built, contains 24224 states and 76222 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62251 assertions on stack... Done!
+UNSAT! Relaxed bound to 6
+Checking SAT with 62251 assertions on stack... Done!
+AQS Built, contains 22540 states and 73013 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62253 assertions on stack... Done!
+AQS Built, contains 25291 states and 82073 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62254 assertions on stack... Done!
+AQS Built, contains 25232 states and 81945 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62256 assertions on stack... Done!
+AQS Built, contains 22540 states and 73013 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62258 assertions on stack... Done!
+AQS Built, contains 29355 states and 94227 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62259 assertions on stack... Done!
+AQS Built, contains 35856 states and 115765 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62260 assertions on stack... Done!
+AQS Built, contains 26076 states and 81168 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62261 assertions on stack... Done!
+AQS Built, contains 24484 states and 81088 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62262 assertions on stack... Done!
+AQS Built, contains 21384 states and 70734 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62263 assertions on stack... Done!
+AQS Built, contains 35856 states and 115765 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62264 assertions on stack... Done!
+AQS Built, contains 29125 states and 93952 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62266 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62267 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62268 assertions on stack... Done!
+AQS Built, contains 21394 states and 70406 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62270 assertions on stack... Done!
+AQS Built, contains 21352 states and 70349 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62272 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62273 assertions on stack... Done!
+AQS Built, contains 24439 states and 76688 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62274 assertions on stack... Done!
+AQS Built, contains 21352 states and 70349 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62276 assertions on stack... Done!
+AQS Built, contains 22533 states and 73026 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62277 assertions on stack... Done!
+AQS Built, contains 22115 states and 71838 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62278 assertions on stack... Done!
+AQS Built, contains 22617 states and 73548 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62279 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62280 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62281 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62282 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62283 assertions on stack... Done!
+AQS Built, contains 22070 states and 71668 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62284 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62285 assertions on stack... Done!
+AQS Built, contains 21318 states and 69360 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62286 assertions on stack... Done!
+AQS Built, contains 21358 states and 70364 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62288 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62289 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62290 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62291 assertions on stack... Done!
+AQS Built, contains 21792 states and 70835 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62292 assertions on stack... Done!
+AQS Built, contains 21838 states and 71095 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62293 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62294 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62295 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62296 assertions on stack... Done!
+AQS Built, contains 26339 states and 84418 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62297 assertions on stack... Done!
+AQS Built, contains 26971 states and 87926 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62298 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62299 assertions on stack... Done!
+AQS Built, contains 22615 states and 73543 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62300 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62301 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62302 assertions on stack... Done!
+AQS Built, contains 21974 states and 71197 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62304 assertions on stack... Done!
+AQS Built, contains 21974 states and 71197 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62306 assertions on stack... Done!
+AQS Built, contains 21318 states and 69358 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62307 assertions on stack... Done!
+AQS Built, contains 21330 states and 69383 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62309 assertions on stack... Done!
+AQS Built, contains 21330 states and 69383 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62311 assertions on stack... Done!
+AQS Built, contains 21336 states and 69416 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62313 assertions on stack... Done!
+AQS Built, contains 21318 states and 69360 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62314 assertions on stack... Done!
+AQS Built, contains 21974 states and 71199 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62316 assertions on stack... Done!
+AQS Built, contains 21936 states and 70854 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62318 assertions on stack... Done!
+AQS Built, contains 21336 states and 69398 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62320 assertions on stack... Done!
+AQS Built, contains 21336 states and 69398 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62322 assertions on stack... Done!
+AQS Built, contains 21336 states and 69398 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62324 assertions on stack... Done!
+AQS Built, contains 21336 states and 69398 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62326 assertions on stack... Done!
+AQS Built, contains 21336 states and 69398 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62328 assertions on stack... Done!
+AQS Built, contains 21336 states and 69398 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62330 assertions on stack... Done!
+AQS Built, contains 21336 states and 69398 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62332 assertions on stack... Done!
+AQS Built, contains 28275 states and 88801 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62336 assertions on stack... Done!
+AQS Built, contains 26608 states and 83988 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62337 assertions on stack... Done!
+AQS Built, contains 28800 states and 91580 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62338 assertions on stack... Done!
+AQS Built, contains 27315 states and 87152 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62339 assertions on stack... Done!
+AQS Built, contains 23462 states and 76103 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62341 assertions on stack... Done!
+AQS Built, contains 27732 states and 87760 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62342 assertions on stack... Done!
+AQS Built, contains 23954 states and 77199 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62343 assertions on stack... Done!
+AQS Built, contains 27483 states and 85294 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62344 assertions on stack... Done!
+AQS Built, contains 27483 states and 85294 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62345 assertions on stack... Done!
+AQS Built, contains 27981 states and 86682 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62346 assertions on stack... Done!
+AQS Built, contains 27483 states and 85294 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62347 assertions on stack... Done!
+AQS Built, contains 31198 states and 101513 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62348 assertions on stack... Done!
+AQS Built, contains 27888 states and 88850 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62349 assertions on stack... Done!
+AQS Built, contains 30280 states and 96767 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62350 assertions on stack... Done!
+AQS Built, contains 39316 states and 123728 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62351 assertions on stack... Done!
+AQS Built, contains 30138 states and 98589 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62352 assertions on stack... Done!
+AQS Built, contains 28572 states and 91352 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62353 assertions on stack... Done!
+AQS Built, contains 27634 states and 88310 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62354 assertions on stack... Done!
+AQS Built, contains 29616 states and 94997 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62355 assertions on stack... Done!
+AQS Built, contains 28470 states and 91217 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62356 assertions on stack... Done!
+AQS Built, contains 66016 states and 209120 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62357 assertions on stack... Done!
+AQS Built, contains 27876 states and 86566 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62358 assertions on stack... Done!
+AQS Built, contains 39833 states and 126808 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62359 assertions on stack... Done!
+AQS Built, contains 39833 states and 126808 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62360 assertions on stack... Done!
+AQS Built, contains 39833 states and 126808 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62361 assertions on stack... Done!
+AQS Built, contains 41812 states and 130548 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62362 assertions on stack... Done!
+UNSAT! Relaxed bound to 7
+Checking SAT with 62362 assertions on stack... Done!
+AQS Built, contains 20982 states and 68570 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62363 assertions on stack... Done!
+AQS Built, contains 24224 states and 76222 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62364 assertions on stack... Done!
+AQS Built, contains 23029 states and 73463 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62365 assertions on stack... Done!
+AQS Built, contains 21750 states and 71297 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62367 assertions on stack... Done!
+AQS Built, contains 25467 states and 82242 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62368 assertions on stack... Done!
+AQS Built, contains 22543 states and 73231 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62369 assertions on stack... Done!
+AQS Built, contains 23026 states and 73451 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62370 assertions on stack... Done!
+AQS Built, contains 24224 states and 76222 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62371 assertions on stack... Done!
+AQS Built, contains 23026 states and 73451 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62372 assertions on stack... Done!
+AQS Built, contains 21750 states and 71297 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62374 assertions on stack... Done!
+AQS Built, contains 25467 states and 82242 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62375 assertions on stack... Done!
+AQS Built, contains 22543 states and 73231 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62376 assertions on stack... Done!
+AQS Built, contains 23029 states and 73463 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62377 assertions on stack... Done!
+AQS Built, contains 22141 states and 72728 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62379 assertions on stack... Done!
+AQS Built, contains 20473 states and 67978 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62380 assertions on stack... Done!
+AQS Built, contains 20422 states and 67837 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62381 assertions on stack... Done!
+AQS Built, contains 26211 states and 85752 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62382 assertions on stack... Done!
+AQS Built, contains 22221 states and 72734 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62383 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62384 assertions on stack... Done!
+AQS Built, contains 22813 states and 74513 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62385 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62386 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62387 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62388 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62389 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62390 assertions on stack... Done!
+AQS Built, contains 22941 states and 75081 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62391 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62392 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62393 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62394 assertions on stack... Done!
+AQS Built, contains 22811 states and 74426 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62395 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62396 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62397 assertions on stack... Done!
+AQS Built, contains 22973 states and 75097 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62398 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62399 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62400 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62401 assertions on stack... Done!
+AQS Built, contains 22973 states and 75097 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62402 assertions on stack... Done!
+AQS Built, contains 22853 states and 74787 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62403 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62404 assertions on stack... Done!
+AQS Built, contains 23296 states and 76174 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62405 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62406 assertions on stack... Done!
+AQS Built, contains 22813 states and 74513 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62407 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62408 assertions on stack... Done!
+AQS Built, contains 26211 states and 85752 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62409 assertions on stack... Done!
+AQS Built, contains 22221 states and 72734 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62410 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62411 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62412 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62413 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62414 assertions on stack... Done!
+AQS Built, contains 22811 states and 74426 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62415 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62416 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62417 assertions on stack... Done!
+AQS Built, contains 22941 states and 75081 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62418 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62419 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62420 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62421 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62422 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62423 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62424 assertions on stack... Done!
+AQS Built, contains 22973 states and 75097 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62425 assertions on stack... Done!
+AQS Built, contains 23296 states and 76174 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62426 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62427 assertions on stack... Done!
+AQS Built, contains 22853 states and 74787 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62428 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62429 assertions on stack... Done!
+AQS Built, contains 22221 states and 72732 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62430 assertions on stack... Done!
+AQS Built, contains 22973 states and 75097 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62431 assertions on stack... Done!
+AQS Built, contains 25703 states and 82343 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62433 assertions on stack... Done!
+AQS Built, contains 21431 states and 72357 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62434 assertions on stack... Done!
+AQS Built, contains 24193 states and 78946 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62435 assertions on stack... Done!
+AQS Built, contains 25541 states and 82429 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62437 assertions on stack... Done!
+AQS Built, contains 21577 states and 69830 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62439 assertions on stack... Done!
+AQS Built, contains 21264 states and 69232 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62440 assertions on stack... Done!
+AQS Built, contains 42581 states and 136129 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62442 assertions on stack... Done!
+AQS Built, contains 26994 states and 86133 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62443 assertions on stack... Done!
+AQS Built, contains 27264 states and 86812 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62444 assertions on stack... Done!
+AQS Built, contains 26994 states and 86133 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62445 assertions on stack... Done!
+AQS Built, contains 27308 states and 87081 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62446 assertions on stack... Done!
+AQS Built, contains 27308 states and 87081 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62447 assertions on stack... Done!
+AQS Built, contains 26994 states and 86133 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62448 assertions on stack... Done!
+AQS Built, contains 26994 states and 86133 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62449 assertions on stack... Done!
+AQS Built, contains 27308 states and 87081 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62450 assertions on stack... Done!
+AQS Built, contains 27308 states and 87081 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62451 assertions on stack... Done!
+AQS Built, contains 27308 states and 87081 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62452 assertions on stack... Done!
+AQS Built, contains 27308 states and 87081 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62453 assertions on stack... Done!
+AQS Built, contains 27308 states and 87081 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62454 assertions on stack... Done!
+AQS Built, contains 35020 states and 111925 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62455 assertions on stack... Done!
+AQS Built, contains 38283 states and 121015 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62456 assertions on stack... Done!
+AQS Built, contains 43726 states and 136142 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62457 assertions on stack... Done!
+AQS Built, contains 43726 states and 136142 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62458 assertions on stack... Done!
+AQS Built, contains 30058 states and 94584 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62459 assertions on stack... Done!
+AQS Built, contains 37710 states and 119994 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62460 assertions on stack... Done!
+AQS Built, contains 43726 states and 136142 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62461 assertions on stack... Done!
+AQS Built, contains 46727 states and 146064 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62462 assertions on stack... Done!
+AQS Built, contains 45453 states and 148760 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62463 assertions on stack... Done!
+AQS Built, contains 42810 states and 139482 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62464 assertions on stack... Done!
+AQS Built, contains 42806 states and 139482 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62465 assertions on stack... Done!
+AQS Built, contains 38518 states and 123662 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62466 assertions on stack... Done!
+AQS Built, contains 39191 states and 124081 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62467 assertions on stack... Done!
+AQS Built, contains 45393 states and 144880 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62469 assertions on stack... Done!
+AQS Built, contains 42814 states and 139482 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62470 assertions on stack... Done!
+AQS Built, contains 37099 states and 119583 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62471 assertions on stack... Done!
+UNSAT! Relaxed bound to 8
+Checking SAT with 62471 assertions on stack... Done!
+AQS Built, contains 22664 states and 74119 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62472 assertions on stack... Done!
+AQS Built, contains 23632 states and 76600 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62473 assertions on stack... Done!
+AQS Built, contains 52919 states and 171366 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62474 assertions on stack... Done!
+AQS Built, contains 26772 states and 87284 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62475 assertions on stack... Done!
+AQS Built, contains 29039 states and 93071 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62476 assertions on stack... Done!
+AQS Built, contains 28659 states and 92232 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62477 assertions on stack... Done!
+AQS Built, contains 30250 states and 96171 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62479 assertions on stack... Done!
+AQS Built, contains 29778 states and 95029 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62480 assertions on stack... Done!
+AQS Built, contains 30140 states and 96629 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62481 assertions on stack... Done!
+AQS Built, contains 30140 states and 96629 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62482 assertions on stack... Done!
+AQS Built, contains 30140 states and 96629 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62483 assertions on stack... Done!
+AQS Built, contains 29729 states and 96004 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62484 assertions on stack... Done!
+AQS Built, contains 44081 states and 140730 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62485 assertions on stack... Done!
+AQS Built, contains 48199 states and 158943 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62486 assertions on stack... Done!
+AQS Built, contains 29682 states and 94376 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62487 assertions on stack... Done!
+AQS Built, contains 40015 states and 126488 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62488 assertions on stack... Done!
+AQS Built, contains 28188 states and 91059 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62489 assertions on stack... Done!
+AQS Built, contains 39125 states and 123375 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62490 assertions on stack... Done!
+AQS Built, contains 21012 states and 68948 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62492 assertions on stack... Done!
+AQS Built, contains 20774 states and 68389 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62494 assertions on stack... Done!
+AQS Built, contains 20774 states and 68389 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62496 assertions on stack... Done!
+AQS Built, contains 20774 states and 68389 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62498 assertions on stack... Done!
+AQS Built, contains 57306 states and 186756 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62499 assertions on stack... Done!
+AQS Built, contains 22091 states and 72285 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62500 assertions on stack... Done!
+AQS Built, contains 45593 states and 143316 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62501 assertions on stack... Done!
+AQS Built, contains 47400 states and 148167 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62502 assertions on stack... Done!
+AQS Built, contains 85938 states and 270021 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62503 assertions on stack... Done!
+AQS Built, contains 38936 states and 125102 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62504 assertions on stack... Done!
+AQS Built, contains 42605 states and 136225 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62505 assertions on stack... Done!
+AQS Built, contains 59598 states and 188097 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62506 assertions on stack... Done!
+AQS Built, contains 59598 states and 188097 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62507 assertions on stack... Done!
+AQS Built, contains 59598 states and 188097 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62508 assertions on stack... Done!
+UNSAT! Relaxed bound to 9
+Checking SAT with 62508 assertions on stack... Done!
+AQS Built, contains 21826 states and 71055 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62509 assertions on stack... Done!
+AQS Built, contains 20681 states and 68104 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62510 assertions on stack... Done!
+AQS Built, contains 21448 states and 70880 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62511 assertions on stack... Done!
+AQS Built, contains 36287 states and 116950 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62512 assertions on stack... Done!
+AQS Built, contains 36287 states and 116950 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62513 assertions on stack... Done!
+AQS Built, contains 30371 states and 95533 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62514 assertions on stack... Done!
+AQS Built, contains 27681 states and 89594 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62515 assertions on stack... Done!
+AQS Built, contains 27681 states and 89594 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62516 assertions on stack... Done!
+AQS Built, contains 27681 states and 89594 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62517 assertions on stack... Done!
+AQS Built, contains 27681 states and 89594 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62518 assertions on stack... Done!
+AQS Built, contains 27681 states and 89594 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62519 assertions on stack... Done!
+AQS Built, contains 27681 states and 89594 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62520 assertions on stack... Done!
+AQS Built, contains 42839 states and 136700 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62521 assertions on stack... Done!
+AQS Built, contains 35434 states and 113620 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62522 assertions on stack... Done!
+AQS Built, contains 42576 states and 136014 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62524 assertions on stack... Done!
+AQS Built, contains 34711 states and 109915 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62525 assertions on stack... Done!
+AQS Built, contains 34711 states and 109915 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62526 assertions on stack... Done!
+AQS Built, contains 34711 states and 109915 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62527 assertions on stack... Done!
+AQS Built, contains 37800 states and 117278 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62528 assertions on stack... Done!
+AQS Built, contains 27681 states and 89594 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62529 assertions on stack... Done!
+AQS Built, contains 28296 states and 91317 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62531 assertions on stack... Done!
+AQS Built, contains 27681 states and 89594 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62532 assertions on stack... Done!
+AQS Built, contains 26771 states and 85548 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62533 assertions on stack... Done!
+AQS Built, contains 27071 states and 86460 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62534 assertions on stack... Done!
+AQS Built, contains 26668 states and 85448 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62535 assertions on stack... Done!
+AQS Built, contains 38584 states and 124203 edges. 
+AQS contains one or more errors, and may not be complete.
+Building Constraints for 2 error(s)... Done!
+Checking SAT with 62536 assertions on stack... Done!
+AQS Built, contains 61262 states and 202334 edges. 
+Constructing Product...
+Product construction complete!
+Product Structure contains 144925 states and 466459 edges.
+Getting accepting SCCs... 
+Found 1018 accepting SCCs
+Checking Fairness of SCCs...
+Getting accepting SCCs... 
+Found 64 accepting SCCs
+Checking Fairness of SCCs...
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 198078 states and 627641 edges.
+Getting accepting SCCs... 
+Found 3882 accepting SCCs
+Checking Fairness of SCCs...
+Getting accepting SCCs... 
+Found 192 accepting SCCs
+Checking Fairness of SCCs...
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Constructing Product...
+Product construction complete!
+Product Structure contains 145636 states and 460368 edges.
+Getting accepting SCCs... 
+Found 701 accepting SCCs
+Checking Fairness of SCCs...
+Getting accepting SCCs... 
+Found 0 accepting SCCs
+No accepting SCCs!
+No liveness violations found!
+Found Correct Completion!
+With Bound = 9, Model:
+Model for uninterpreted function:
+(Update_Cache_9_C_IM_FWD_InvAckMsgType_state AckCounter CacheID CacheID1 Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::0 -> C_IM
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::1 ValueType::0 -> C_IM
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::1 -> C_IM
+}
+
+Model for uninterpreted function:
+(Update_Cache_8_C_IM_FWD_InvAckMsgType_PendingWrite AckCounter CacheID CacheID1 Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::0 -> ValueType::0
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::1 ValueType::0 -> ValueType::0
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::1 -> ValueType::1
+}
+
+Model for uninterpreted function:
+(Update_Cache_7_C_IM_FWD_InvAckMsgType_FwdToCache AckCounter CacheID CacheID1 Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::0 -> CacheIDType::0
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::1 ValueType::0 -> CacheIDType::1
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::1 -> CacheIDType::0
+}
+
+Model for uninterpreted function:
+(Update_Cache_6_C_IM_FWD_InvAckMsgType_Data AckCounter CacheID CacheID1 Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::0 -> ValueType::undef
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::1 ValueType::0 -> ValueType::undef
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::1 -> ValueType::undef
+}
+
+Model for uninterpreted function:
+(Update_Cache_5_C_IM_FWD_InvAckMsgType_AckCounter AckCounter CacheID CacheID1 Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::0 -> 0
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::1 ValueType::0 -> 0
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::1 -> 0
+}
+
+Model for uninterpreted function:
+(SynGuard_Cache_1_C_IM_FWD_InvAckMsgType AckCounter CacheID CacheID1 Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::0 -> true
+    -1 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::undef -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::1 CacheIDType::undef ValueType::0 -> true
+    1 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::0 -> true
+    1 CacheIDType::0 CacheIDType::1 ValueType::1 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::1 ValueType::undef -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::1 CacheIDType::1 ValueType::0 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::0 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::undef ValueType::undef -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::0 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::1 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::undef -> true
+    -1 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::undef -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::1 ValueType::0 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::1 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::0 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::undef -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::0 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::1 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::1 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::1 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::0 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::0 -> true
+    -1 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::undef -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::undef -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::0 -> true
+    1 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::1 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::undef ValueType::1 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::1 ValueType::undef -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::0 -> true
+    -1 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::1 ValueType::undef -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::undef -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::1 ValueType::0 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::1 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::0 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::undef ValueType::0 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::1 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::undef -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::undef -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::undef ValueType::1 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::1 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::1 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::undef -> true
+}
+
+Model for uninterpreted function:
+(Update_Directory_2_D_BUSY_WB_DataMsgD2CType_NumSharers ActiveID CacheID NumSharers Owner Sharers[CacheIDType::0] Sharers[CacheIDType::1]) -> {
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::1 false false -> 0
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::0 false false -> 0
+}
+
+Model for uninterpreted function:
+(Update_Directory_1_D_BUSY_WB_DataMsgD2CType_Data ActiveID CacheID Data NumSharers Owner Sharers[CacheIDType::0] Sharers[CacheIDType::1]) -> {
+    CacheIDType::0 CacheIDType::0 ValueType::0 1 CacheIDType::1 false false -> ValueType::0
+    CacheIDType::1 CacheIDType::1 ValueType::0 1 CacheIDType::0 false false -> ValueType::0
+    CacheIDType::0 CacheIDType::0 ValueType::1 1 CacheIDType::1 false false -> ValueType::1
+    CacheIDType::1 CacheIDType::1 ValueType::1 1 CacheIDType::0 false false -> ValueType::1
+}
+
+Model for uninterpreted function:
+(Update_Directory_0_D_BUSY_WB_DataMsgD2CType_ActiveID ActiveID CacheID NumSharers Owner Sharers[CacheIDType::0] Sharers[CacheIDType::1]) -> {
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::1 false false -> CacheIDType::0
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::0 false false -> CacheIDType::1
+}
+
+Model for uninterpreted function:
+(SynGuard_Directory_0_D_BUSY_WB_DataMsgD2CType ActiveID CacheID NumSharers Owner Sharers[CacheIDType::0] Sharers[CacheIDType::1]) -> {
+    CacheIDType::0 CacheIDType::0 0 CacheIDType::undef false false -> false
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::1 false false -> true
+    CacheIDType::undef CacheIDType::0 2 CacheIDType::undef true true -> false
+    CacheIDType::undef CacheIDType::0 1 CacheIDType::undef true false -> false
+    CacheIDType::1 CacheIDType::0 2 CacheIDType::1 false true -> false
+    CacheIDType::undef CacheIDType::0 1 CacheIDType::1 false true -> false
+    CacheIDType::0 CacheIDType::0 2 CacheIDType::1 true true -> false
+    CacheIDType::undef CacheIDType::0 1 CacheIDType::0 true false -> false
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::undef false true -> false
+    CacheIDType::1 CacheIDType::0 1 CacheIDType::undef true false -> false
+    CacheIDType::1 CacheIDType::0 1 CacheIDType::0 true false -> false
+    CacheIDType::1 CacheIDType::0 1 CacheIDType::1 false false -> false
+    CacheIDType::1 CacheIDType::0 0 CacheIDType::undef false false -> false
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::0 false false -> false
+    CacheIDType::0 CacheIDType::0 0 CacheIDType::0 false false -> false
+    CacheIDType::1 CacheIDType::0 1 CacheIDType::0 false false -> false
+    CacheIDType::1 CacheIDType::0 2 CacheIDType::undef false true -> false
+    CacheIDType::0 CacheIDType::0 2 CacheIDType::undef true true -> false
+    CacheIDType::0 CacheIDType::0 0 CacheIDType::1 false false -> false
+    CacheIDType::1 CacheIDType::0 1 CacheIDType::undef false false -> false
+    CacheIDType::1 CacheIDType::0 0 CacheIDType::1 false false -> false
+    CacheIDType::0 CacheIDType::0 2 CacheIDType::0 true true -> false
+    CacheIDType::1 CacheIDType::0 2 CacheIDType::0 false true -> false
+    CacheIDType::0 CacheIDType::0 2 CacheIDType::1 true false -> false
+    CacheIDType::0 CacheIDType::1 2 CacheIDType::0 true false -> false
+    CacheIDType::1 CacheIDType::1 2 CacheIDType::1 false true -> false
+    CacheIDType::1 CacheIDType::1 2 CacheIDType::1 true true -> false
+    CacheIDType::0 CacheIDType::0 2 CacheIDType::undef true false -> false
+    CacheIDType::0 CacheIDType::1 0 CacheIDType::1 false false -> false
+    CacheIDType::0 CacheIDType::1 2 CacheIDType::undef true false -> false
+    CacheIDType::1 CacheIDType::1 0 CacheIDType::1 false false -> false
+    CacheIDType::undef CacheIDType::0 0 CacheIDType::undef false false -> false
+    CacheIDType::0 CacheIDType::1 1 CacheIDType::1 false false -> false
+    CacheIDType::undef CacheIDType::0 1 CacheIDType::undef false true -> false
+    CacheIDType::1 CacheIDType::1 2 CacheIDType::undef false true -> false
+    CacheIDType::0 CacheIDType::1 1 CacheIDType::0 false false -> false
+    CacheIDType::0 CacheIDType::1 2 CacheIDType::1 true false -> false
+    CacheIDType::0 CacheIDType::1 2 CacheIDType::0 true true -> false
+    CacheIDType::0 CacheIDType::1 2 CacheIDType::undef true true -> false
+    CacheIDType::undef CacheIDType::1 1 CacheIDType::1 false true -> false
+    CacheIDType::1 CacheIDType::1 0 CacheIDType::0 false false -> false
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::undef false false -> false
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::0 true false -> false
+    CacheIDType::undef CacheIDType::1 2 CacheIDType::undef true true -> false
+    CacheIDType::1 CacheIDType::1 2 CacheIDType::0 true true -> false
+    CacheIDType::undef CacheIDType::1 1 CacheIDType::undef true false -> false
+    CacheIDType::1 CacheIDType::0 2 CacheIDType::0 true true -> false
+    CacheIDType::0 CacheIDType::0 2 CacheIDType::0 true false -> false
+    CacheIDType::1 CacheIDType::1 0 CacheIDType::undef false false -> false
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::undef true false -> false
+    CacheIDType::1 CacheIDType::1 2 CacheIDType::undef true true -> false
+    CacheIDType::0 CacheIDType::1 2 CacheIDType::1 true true -> false
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::0 false false -> true
+    CacheIDType::1 CacheIDType::0 2 CacheIDType::undef true true -> false
+    CacheIDType::0 CacheIDType::1 1 CacheIDType::undef true false -> false
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::undef true false -> false
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::1 false false -> false
+    CacheIDType::1 CacheIDType::0 2 CacheIDType::1 true true -> false
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::undef false false -> false
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::1 false true -> false
+    CacheIDType::1 CacheIDType::0 1 CacheIDType::undef false true -> false
+    CacheIDType::0 CacheIDType::1 0 CacheIDType::0 false false -> false
+    CacheIDType::0 CacheIDType::1 1 CacheIDType::undef false true -> false
+    CacheIDType::0 CacheIDType::1 1 CacheIDType::undef false false -> false
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::undef false true -> false
+    CacheIDType::0 CacheIDType::1 1 CacheIDType::1 false true -> false
+    CacheIDType::undef CacheIDType::1 1 CacheIDType::0 true false -> false
+    CacheIDType::1 CacheIDType::0 0 CacheIDType::0 false false -> false
+    CacheIDType::undef CacheIDType::1 1 CacheIDType::undef false true -> false
+    CacheIDType::1 CacheIDType::1 2 CacheIDType::0 false true -> false
+    CacheIDType::0 CacheIDType::1 0 CacheIDType::undef false false -> false
+    CacheIDType::undef CacheIDType::1 0 CacheIDType::undef false false -> false
+}
+
+Model for uninterpreted function:
+(Update_Cache_4_C_II_SENDACK_EVAckMsgType_state AckCounter CacheID Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 ValueType::undef CacheIDType::0 ValueType::undef -> C_I
+    0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::undef -> C_I
+    0 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::undef -> C_I
+    0 CacheIDType::0 ValueType::undef CacheIDType::1 ValueType::undef -> C_I
+}
+
+Model for uninterpreted function:
+(Update_Cache_3_C_II_SENDACK_EVAckMsgType_PendingWrite AckCounter CacheID Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 ValueType::undef CacheIDType::0 ValueType::undef -> ValueType::undef
+    0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::undef -> ValueType::undef
+    0 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::undef -> ValueType::undef
+    0 CacheIDType::0 ValueType::undef CacheIDType::1 ValueType::undef -> ValueType::undef
+}
+
+Model for uninterpreted function:
+(Update_Directory_8_D_BUSY_WB_DataMsgD2CType_OutMsg.NumAcks ActiveID CacheID NumSharers Owner Sharers[CacheIDType::0] Sharers[CacheIDType::1]) -> {
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::1 false false -> 0
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::0 false false -> 0
+}
+
+Model for uninterpreted function:
+(Update_Cache_2_C_II_SENDACK_EVAckMsgType_FwdToCache AckCounter CacheID Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 ValueType::undef CacheIDType::0 ValueType::undef -> CacheIDType::0
+    0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::undef -> CacheIDType::undef
+    0 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::undef -> CacheIDType::undef
+    0 CacheIDType::0 ValueType::undef CacheIDType::1 ValueType::undef -> CacheIDType::1
+}
+
+Model for uninterpreted function:
+(Update_Directory_7_D_BUSY_WB_DataMsgD2CType_OutMsg.Data ActiveID CacheID Data NumSharers Owner Sharers[CacheIDType::0] Sharers[CacheIDType::1]) -> {
+    CacheIDType::0 CacheIDType::0 ValueType::0 1 CacheIDType::1 false false -> ValueType::0
+    CacheIDType::1 CacheIDType::1 ValueType::0 1 CacheIDType::0 false false -> ValueType::0
+    CacheIDType::0 CacheIDType::0 ValueType::1 1 CacheIDType::1 false false -> ValueType::1
+    CacheIDType::1 CacheIDType::1 ValueType::1 1 CacheIDType::0 false false -> ValueType::1
+}
+
+Model for uninterpreted function:
+(Update_Cache_1_C_II_SENDACK_EVAckMsgType_Data AckCounter CacheID Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 ValueType::undef CacheIDType::0 ValueType::undef -> ValueType::undef
+    0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::undef -> ValueType::undef
+    0 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::undef -> ValueType::undef
+    0 CacheIDType::0 ValueType::undef CacheIDType::1 ValueType::undef -> ValueType::undef
+}
+
+Model for uninterpreted function:
+(Update_Directory_6_D_BUSY_WB_DataMsgD2CType_Sharers[CacheIDType::1] ActiveID CacheID NumSharers Owner Sharers[CacheIDType::0] Sharers[CacheIDType::1]) -> {
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::1 false false -> false
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::0 false false -> false
+}
+
+Model for uninterpreted function:
+(Update_Cache_0_C_II_SENDACK_EVAckMsgType_AckCounter AckCounter CacheID Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 ValueType::undef CacheIDType::0 ValueType::undef -> 0
+    0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::undef -> 0
+    0 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::undef -> 0
+    0 CacheIDType::0 ValueType::undef CacheIDType::1 ValueType::undef -> 0
+}
+
+Model for uninterpreted function:
+(Update_Directory_5_D_BUSY_WB_DataMsgD2CType_Sharers[CacheIDType::0] ActiveID CacheID NumSharers Owner Sharers[CacheIDType::0] Sharers[CacheIDType::1]) -> {
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::1 false false -> false
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::0 false false -> false
+}
+
+Model for uninterpreted function:
+(SynGuard_Cache_0_C_II_SENDACK_EVAckMsgType AckCounter CacheID Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 ValueType::1 CacheIDType::0 ValueType::0 -> true
+    0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::undef -> true
+    0 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 ValueType::0 CacheIDType::0 ValueType::undef -> true
+    0 CacheIDType::1 ValueType::0 CacheIDType::0 ValueType::0 -> true
+    0 CacheIDType::1 ValueType::0 CacheIDType::0 ValueType::1 -> true
+    1 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 ValueType::1 CacheIDType::0 ValueType::1 -> true
+    1 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::1 -> true
+    1 CacheIDType::1 ValueType::1 CacheIDType::0 ValueType::0 -> true
+    0 CacheIDType::1 ValueType::1 CacheIDType::undef ValueType::undef -> true
+    1 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::1 -> true
+    0 CacheIDType::1 ValueType::undef CacheIDType::0 ValueType::0 -> true
+    0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::1 -> true
+    1 CacheIDType::1 ValueType::undef CacheIDType::0 ValueType::0 -> true
+    1 CacheIDType::1 ValueType::1 CacheIDType::undef ValueType::0 -> true
+    -1 CacheIDType::1 ValueType::1 CacheIDType::0 ValueType::undef -> true
+    -1 CacheIDType::1 ValueType::0 CacheIDType::0 ValueType::undef -> true
+    1 CacheIDType::1 ValueType::0 CacheIDType::0 ValueType::0 -> true
+    0 CacheIDType::1 ValueType::1 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::1 -> true
+    1 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::0 -> true
+    1 CacheIDType::1 ValueType::1 CacheIDType::0 ValueType::1 -> true
+    1 CacheIDType::1 ValueType::0 CacheIDType::0 ValueType::1 -> true
+    0 CacheIDType::0 ValueType::0 CacheIDType::1 ValueType::0 -> true
+    -1 CacheIDType::0 ValueType::0 CacheIDType::1 ValueType::undef -> true
+    1 CacheIDType::1 ValueType::1 CacheIDType::undef ValueType::1 -> true
+    0 CacheIDType::0 ValueType::0 CacheIDType::1 ValueType::undef -> true
+    0 CacheIDType::1 ValueType::1 CacheIDType::undef ValueType::1 -> true
+    0 CacheIDType::1 ValueType::undef CacheIDType::0 ValueType::undef -> true
+    0 CacheIDType::0 ValueType::1 CacheIDType::1 ValueType::0 -> true
+    1 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::0 -> true
+    1 CacheIDType::1 ValueType::undef CacheIDType::0 ValueType::1 -> true
+    0 CacheIDType::0 ValueType::undef CacheIDType::1 ValueType::undef -> true
+    0 CacheIDType::1 ValueType::undef CacheIDType::0 ValueType::1 -> true
+    1 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::0 -> true
+    1 CacheIDType::0 ValueType::1 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::0 ValueType::1 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 ValueType::1 CacheIDType::0 ValueType::undef -> true
+    0 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::undef -> true
+    0 CacheIDType::0 ValueType::undef CacheIDType::1 ValueType::0 -> true
+    0 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::undef -> true
+    0 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::0 -> true
+    -1 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::undef -> true
+    0 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::undef -> true
+}
+
+Model for uninterpreted function:
+(Update_Directory_4_D_BUSY_WB_DataMsgD2CType_state ActiveID CacheID NumSharers Owner Sharers[CacheIDType::0] Sharers[CacheIDType::1]) -> {
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::1 false false -> D_BUSY
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::0 false false -> D_BUSY
+}
+
+Model for uninterpreted function:
+(Update_Directory_3_D_BUSY_WB_DataMsgD2CType_Owner ActiveID CacheID NumSharers Owner Sharers[CacheIDType::0] Sharers[CacheIDType::1]) -> {
+    CacheIDType::0 CacheIDType::0 1 CacheIDType::1 false false -> CacheIDType::1
+    CacheIDType::1 CacheIDType::1 1 CacheIDType::0 false false -> CacheIDType::0
+}
+
+Model for uninterpreted function:
+(SynGuard_Cache_2_C_SM_FWD_InvAckMsgType AckCounter CacheID CacheID1 Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::undef -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::undef -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::1 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::1 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::1 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::undef ValueType::1 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::undef ValueType::undef -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::undef -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::undef -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::1 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::0 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::0 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::1 -> true
+    -1 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::undef -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::0 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::1 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::0 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::1 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::1 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::1 ValueType::0 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::1 ValueType::0 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::0 ValueType::1 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::1 ValueType::undef -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::1 -> true
+    1 CacheIDType::0 CacheIDType::1 ValueType::1 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::1 CacheIDType::1 ValueType::0 -> true
+    1 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::1 ValueType::undef -> true
+    1 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::1 CacheIDType::undef ValueType::0 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::0 -> true
+    -1 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::undef -> true
+    -1 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::undef -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::undef ValueType::0 -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::0 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::undef -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::undef ValueType::1 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::undef -> true
+    1 CacheIDType::1 CacheIDType::0 ValueType::undef CacheIDType::undef ValueType::0 -> true
+    -1 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::1 ValueType::undef -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::undef ValueType::0 -> true
+    0 CacheIDType::0 CacheIDType::1 ValueType::undef CacheIDType::undef ValueType::undef -> true
+}
+
+Model for uninterpreted function:
+(Update_Cache_10_C_SM_FWD_InvAckMsgType_AckCounter AckCounter CacheID CacheID1 Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::0 -> 0
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::0 -> 0
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::1 -> 0
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::1 -> 0
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::1 ValueType::0 -> 0
+}
+
+Model for uninterpreted function:
+(Update_Cache_11_C_SM_FWD_InvAckMsgType_Data AckCounter CacheID CacheID1 Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::0 -> ValueType::0
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::0 -> ValueType::1
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::1 -> ValueType::0
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::1 -> ValueType::1
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::1 ValueType::0 -> ValueType::0
+}
+
+Model for uninterpreted function:
+(Update_Cache_12_C_SM_FWD_InvAckMsgType_FwdToCache AckCounter CacheID CacheID1 Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::0 -> CacheIDType::0
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::0 -> CacheIDType::0
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::1 -> CacheIDType::0
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::1 -> CacheIDType::0
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::1 ValueType::0 -> CacheIDType::1
+}
+
+Model for uninterpreted function:
+(Update_Cache_13_C_SM_FWD_InvAckMsgType_PendingWrite AckCounter CacheID CacheID1 Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::0 -> ValueType::0
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::0 -> ValueType::0
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::1 -> ValueType::1
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::1 -> ValueType::1
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::1 ValueType::0 -> ValueType::0
+}
+
+Model for uninterpreted function:
+(Update_Cache_14_C_SM_FWD_InvAckMsgType_state AckCounter CacheID CacheID1 Data FwdToCache PendingWrite) -> {
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::0 -> C_IM
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::0 -> C_IM
+    0 CacheIDType::1 CacheIDType::0 ValueType::0 CacheIDType::0 ValueType::1 -> C_IM
+    0 CacheIDType::1 CacheIDType::0 ValueType::1 CacheIDType::0 ValueType::1 -> C_IM
+    0 CacheIDType::0 CacheIDType::1 ValueType::0 CacheIDType::1 ValueType::0 -> C_IM
+}
+
+Solver Stats:
+
+----------------------------------------------------------------
+Solve Time: 1545.2 (s)
+Initial Asserts: 61981
+Final Asserts: 62536
+Num Iterations: 419
+Total SMT Time: 898108139 (uS)
+Min SMT Time: 711 (uS)
+Max SMT Time: 62123590 (uS)
+Avg SMT Time: 2.14346e+06 (uS)
+Final Bound: 9
+----------------------------------------------------------------
+Z3 Solver Stats:
+
+----------------------------------------------------------------
+(:add-rows                575584
+ :added-eqs               658933543
+ :arith-conflicts         17155
+ :assert-diseq            65924387
+ :assert-lower            27983387
+ :assert-upper            109644713
+ :binary-propagations     422288022
+ :bound-prop              588442
+ :conflicts               40823
+ :datatype-accessor-ax    1799
+ :datatype-constructor-ax 5389288
+ :datatype-occurs-check   17548
+ :datatype-splits         11675770
+ :decisions               3597105
+ :del-clause              1652473
+ :dyn-ack                 4
+ :eq-adapter              20445964
+ :final-checks            409
+ :fixed-eqs               9038537
+ :minimized-lits          372433
+ :mk-clause               1721605
+ :num-checks              418
+ :offset-eqs              9029554
+ :pivots                  578260
+ :propagations            534427969
+ :restarts                314)
+----------------------------------------------------------------
