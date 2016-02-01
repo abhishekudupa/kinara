@@ -13,7 +13,7 @@ To build:
 4. cd ../z3-4.3.2
 5. make
 6. cd ../../
-7. make
+7. make eoptlto
 
 Look in the test/mc directory for some examples on how to use the API
 
