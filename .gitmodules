@@ -1,9 +1,9 @@
 [submodule "thirdparty/boost-local"]
 	path = thirdparty/boost-local
-	url = acggrid25.seas.upenn.edu:/home1/a/audupa/work/gitroot/boost-local
+	url = https://github.com/abhishekudupa/boost-local.git
 [submodule "thirdparty/z3-4.3.1"]
 	path = thirdparty/z3-4.3.1
-	url = acggrid25.seas.upenn.edu:/home1/a/audupa/work/gitroot/z3-4.3.1.git
+	url = https://github.com/abhishekudupa/z3-4.3.1.git
 [submodule "thirdparty/z3-4.3.2"]
 	path = thirdparty/z3-4.3.2
-	url = acggrid25.seas.upenn.edu:/home1/a/audupa/work/gitroot/z3-4.3.2.git
+	url = https://github.com/abhishekudupa/z3-4.3.2.git
