@@ -6,6 +6,7 @@ To download sources:
 git clone --recursive https://github.com/abhishekudupa/kinara.git
 
 To build:
+
 1. Go to the base kinara directory.
 2. cd thirdparty/boost-local
 3. make
