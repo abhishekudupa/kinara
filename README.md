@@ -13,7 +13,13 @@ To build:
 4. cd ../z3-4.3.2
 5. make
 6. cd ../../
-7. make eoptlto
+7. make eopt
+8. cd test/mc (Optional)
+9. make eopt (Optional)
+
+NOTE: Build env requirements:
+- gcc >= 5.0
+- make >= 4.0
 
 Look in the test/mc directory for some examples on how to use the API
 
